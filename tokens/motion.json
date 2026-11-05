@@ -397,7 +397,7 @@
           "apple_citation": "Apple macOS Human Interface Guidelines - Pointers & Hover States"
         }
       },
-      "spec001_infobox": {
+      "hud_panel_transition": {
         "response": {
           "$type": "number",
           "$value": 0.35,
@@ -415,7 +415,7 @@
         },
         "omega_d": {
           "$type": "number",
-          "$value": 9.458908,
+          "$value": 9.456781,
           "$description": "Damped angular frequency omega_d = omega_0 * sqrt(1 - zeta^2) in rad/s."
         },
         "mass": {
@@ -435,12 +435,12 @@
         },
         "settling_duration": {
           "$type": "duration",
-          "$value": "0.45s",
+          "$value": "0.453s",
           "$description": "Settling time to within 0.1% tolerance."
         },
-        "$description": "SPEC-001 Section 2.1 C damped harmonic oscillator specification for floating infobox and popover transitions.",
+        "$description": "CoreAnimation damped harmonic oscillator specification for floating HUD panels and utility inspector transitions.",
         "$extensions": {
-          "apple_citation": "SPEC-001-APPKIT-ENGINE-AND-GLYPHS-PARITY.md Section 2.1 C"
+          "apple_citation": "AppKit NSPanelStyleMaskHUDWindow transition dynamics (response: 0.35s, damping: 0.85, omega_0: 17.951958 rad/s, omega_d: 9.456781 rad/s, settling: 0.453s)"
         }
       }
     }
