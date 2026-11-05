@@ -10,7 +10,7 @@
 
 While standard `egui` relies on content-driven streaming flow (where widgets automatically calculate margins and push the cursor), `egui-macview` introduces formal NIB-style retained layout bounds and explicit control framing.
 
-For detailed cross-platform rendering mechanics, coordinate transformations, and hardware comparison between macOS, Windows, and Linux, see [`ARCHITECTURE.md`](ARCHITECTURE.md).
+For the normative specification, mathematical coordinate transformations, MVC datamodel, and iterative implementation roadmap, see [`SPEC-001: Deterministic AppKit Layout Engine & Consumer Parity Specification`](SPEC-001-APPKIT-ENGINE-AND-GLYPHS-PARITY.md).
 
 ---
 
