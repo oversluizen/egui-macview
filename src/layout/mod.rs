@@ -2,6 +2,33 @@
 
 use egui::{Pos2, Rect, Ui, Vec2};
 
+/// Snaps a logical coordinate to the nearest physical hardware pixel boundary
+/// according to the Subpixel Snap Criterion (SPEC-001 §2.1 A):
+///
+/// $$x_{\text{pixel}} = \frac{\lfloor x_{\text{logical}} \cdot s + 0.5 \rfloor}{s}$$
+#[inline]
+pub fn subpixel_snap(logical: f32, scale_factor: f32) -> f32 {
+    let s = scale_factor.max(0.0001);
+    (logical * s + 0.5).floor() / s
+}
+
+/// Snaps a 2D logical point `Pos2` to hardware pixel boundaries.
+#[inline]
+pub fn subpixel_snap_pos(pos: Pos2, scale_factor: f32) -> Pos2 {
+    Pos2::new(
+        subpixel_snap(pos.x, scale_factor),
+        subpixel_snap(pos.y, scale_factor),
+    )
+}
+
+/// Snaps a logical `Rect` to hardware pixel boundaries.
+#[inline]
+pub fn subpixel_snap_rect(rect: Rect, scale_factor: f32) -> Rect {
+    let min = subpixel_snap_pos(rect.min, scale_factor);
+    let max = subpixel_snap_pos(rect.max, scale_factor);
+    Rect::from_min_max(min, max)
+}
+
 /// A logical geometry frame in AppKit points.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MacFrame {

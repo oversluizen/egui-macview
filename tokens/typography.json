@@ -1,0 +1,690 @@
+{
+  "$name": "egui-macview Typography & Tracking Tokens",
+  "$version": "1.0.0",
+  "$description": "W3C DTCG-compliant typography token catalog for egui-macview. Fully grounded in Apple Developer Documentation, macOS Human Interface Guidelines (HIG), Apple Advanced Typography (AAT) 'trak' table specifications, and AppKit NSFont / NSTextField metrics.",
+  "$extensions": {
+    "apple_documentation_urls": [
+      "https://developer.apple.com/design/human-interface-guidelines/typography",
+      "https://developer.apple.com/tutorials/data/design/human-interface-guidelines/typography.json",
+      "https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6trak.html",
+      "https://developer.apple.com/documentation/appkit/nsfont",
+      "https://developer.apple.com/documentation/coretext/kcttrackingattributename"
+    ]
+  },
+  "optical_sizing": {
+    "threshold": {
+      "$type": "dimension",
+      "$value": "20.0pt",
+      "$description": "Exact optical size breakpoint where Apple typography transitions from SF Pro Text to SF Pro Display.",
+      "$extensions": {
+        "rule": "font_size < 20.0pt -> SF Pro Text; font_size >= 20.0pt -> SF Pro Display",
+        "variable_font_axis": "opsz (optical size axis: 17.0 - 1024.0)",
+        "apple_citation": "Apple HIG Typography - Optical Sizes & WWDC Dynamic Type Specifications"
+      }
+    },
+    "subfamilies": {
+      "text": {
+        "family_name": {
+          "$type": "string",
+          "$value": "SF Pro Text"
+        },
+        "min_size": {
+          "$type": "dimension",
+          "$value": "6.0pt"
+        },
+        "max_size": {
+          "$type": "dimension",
+          "$value": "19.999pt"
+        },
+        "design_characteristics": {
+          "$type": "string",
+          "$value": "Wider counters, taller x-height, slightly heavier stems, and more open natural sidebearings to maintain legibility at reading scales."
+        }
+      },
+      "display": {
+        "family_name": {
+          "$type": "string",
+          "$value": "SF Pro Display"
+        },
+        "min_size": {
+          "$type": "dimension",
+          "$value": "20.0pt"
+        },
+        "max_size": {
+          "$type": "dimension",
+          "$value": "1024.0pt"
+        },
+        "design_characteristics": {
+          "$type": "string",
+          "$value": "Tighter letterforms, compact sidebearings, refined stroke contrasts, and narrower proportions for display and title impact."
+        }
+      }
+    }
+  },
+  "tracking_table": {
+    "$description": "Exact size-specific optical tracking values published by Apple in macOS / iOS Human Interface Guidelines for San Francisco (SF Pro). Measured in 1/1000 em and points (@1x / 144 ppi reference).",
+    "$extensions": {
+      "source": "Apple Human Interface Guidelines > Typography > macOS tracking values",
+      "formula_points_from_1000em": "tracking_pt = (tracking_1000em / 1000.0) * font_size_pt",
+      "formula_1000em_from_points": "tracking_1000em = (tracking_pt / font_size_pt) * 1000.0"
+    },
+    "sizes": {
+      "6pt": {
+        "font_size": {
+          "$type": "dimension",
+          "$value": "6.0pt"
+        },
+        "tracking_1000em": {
+          "$type": "number",
+          "$value": 41
+        },
+        "tracking_pt": {
+          "$type": "dimension",
+          "$value": "0.24pt"
+        },
+        "optical_cut": {
+          "$type": "string",
+          "$value": "SF Pro Text"
+        }
+      },
+      "7pt": {
+        "font_size": {
+          "$type": "dimension",
+          "$value": "7.0pt"
+        },
+        "tracking_1000em": {
+          "$type": "number",
+          "$value": 34
+        },
+        "tracking_pt": {
+          "$type": "dimension",
+          "$value": "0.23pt"
+        },
+        "optical_cut": {
+          "$type": "string",
+          "$value": "SF Pro Text"
+        }
+      },
+      "8pt": {
+        "font_size": {
+          "$type": "dimension",
+          "$value": "8.0pt"
+        },
+        "tracking_1000em": {
+          "$type": "number",
+          "$value": 26
+        },
+        "tracking_pt": {
+          "$type": "dimension",
+          "$value": "0.21pt"
+        },
+        "optical_cut": {
+          "$type": "string",
+          "$value": "SF Pro Text"
+        }
+      },
+      "9pt": {
+        "font_size": {
+          "$type": "dimension",
+          "$value": "9.0pt"
+        },
+        "tracking_1000em": {
+          "$type": "number",
+          "$value": 19
+        },
+        "tracking_pt": {
+          "$type": "dimension",
+          "$value": "0.17pt"
+        },
+        "optical_cut": {
+          "$type": "string",
+          "$value": "SF Pro Text"
+        }
+      },
+      "10pt": {
+        "font_size": {
+          "$type": "dimension",
+          "$value": "10.0pt"
+        },
+        "tracking_1000em": {
+          "$type": "number",
+          "$value": 12
+        },
+        "tracking_pt": {
+          "$type": "dimension",
+          "$value": "0.12pt"
+        },
+        "optical_cut": {
+          "$type": "string",
+          "$value": "SF Pro Text"
+        }
+      },
+      "11pt": {
+        "font_size": {
+          "$type": "dimension",
+          "$value": "11.0pt"
+        },
+        "tracking_1000em": {
+          "$type": "number",
+          "$value": 6
+        },
+        "tracking_pt": {
+          "$type": "dimension",
+          "$value": "0.06pt"
+        },
+        "optical_cut": {
+          "$type": "string",
+          "$value": "SF Pro Text"
+        }
+      },
+      "12pt": {
+        "font_size": {
+          "$type": "dimension",
+          "$value": "12.0pt"
+        },
+        "tracking_1000em": {
+          "$type": "number",
+          "$value": 0
+        },
+        "tracking_pt": {
+          "$type": "dimension",
+          "$value": "0.00pt"
+        },
+        "optical_cut": {
+          "$type": "string",
+          "$value": "SF Pro Text"
+        }
+      },
+      "13pt": {
+        "font_size": {
+          "$type": "dimension",
+          "$value": "13.0pt"
+        },
+        "tracking_1000em": {
+          "$type": "number",
+          "$value": -6
+        },
+        "tracking_pt": {
+          "$type": "dimension",
+          "$value": "-0.08pt"
+        },
+        "optical_cut": {
+          "$type": "string",
+          "$value": "SF Pro Text"
+        }
+      },
+      "14pt": {
+        "font_size": {
+          "$type": "dimension",
+          "$value": "14.0pt"
+        },
+        "tracking_1000em": {
+          "$type": "number",
+          "$value": -11
+        },
+        "tracking_pt": {
+          "$type": "dimension",
+          "$value": "-0.15pt"
+        },
+        "optical_cut": {
+          "$type": "string",
+          "$value": "SF Pro Text"
+        }
+      },
+      "15pt": {
+        "font_size": {
+          "$type": "dimension",
+          "$value": "15.0pt"
+        },
+        "tracking_1000em": {
+          "$type": "number",
+          "$value": -16
+        },
+        "tracking_pt": {
+          "$type": "dimension",
+          "$value": "-0.23pt"
+        },
+        "optical_cut": {
+          "$type": "string",
+          "$value": "SF Pro Text"
+        }
+      },
+      "16pt": {
+        "font_size": {
+          "$type": "dimension",
+          "$value": "16.0pt"
+        },
+        "tracking_1000em": {
+          "$type": "number",
+          "$value": -20
+        },
+        "tracking_pt": {
+          "$type": "dimension",
+          "$value": "-0.31pt"
+        },
+        "optical_cut": {
+          "$type": "string",
+          "$value": "SF Pro Text"
+        }
+      },
+      "17pt": {
+        "font_size": {
+          "$type": "dimension",
+          "$value": "17.0pt"
+        },
+        "tracking_1000em": {
+          "$type": "number",
+          "$value": -26
+        },
+        "tracking_pt": {
+          "$type": "dimension",
+          "$value": "-0.43pt"
+        },
+        "optical_cut": {
+          "$type": "string",
+          "$value": "SF Pro Text"
+        }
+      },
+      "18pt": {
+        "font_size": {
+          "$type": "dimension",
+          "$value": "18.0pt"
+        },
+        "tracking_1000em": {
+          "$type": "number",
+          "$value": -25
+        },
+        "tracking_pt": {
+          "$type": "dimension",
+          "$value": "-0.44pt"
+        },
+        "optical_cut": {
+          "$type": "string",
+          "$value": "SF Pro Text"
+        }
+      },
+      "19pt": {
+        "font_size": {
+          "$type": "dimension",
+          "$value": "19.0pt"
+        },
+        "tracking_1000em": {
+          "$type": "number",
+          "$value": -24
+        },
+        "tracking_pt": {
+          "$type": "dimension",
+          "$value": "-0.45pt"
+        },
+        "optical_cut": {
+          "$type": "string",
+          "$value": "SF Pro Text"
+        }
+      },
+      "20pt": {
+        "font_size": {
+          "$type": "dimension",
+          "$value": "20.0pt"
+        },
+        "tracking_1000em": {
+          "$type": "number",
+          "$value": -23
+        },
+        "tracking_pt": {
+          "$type": "dimension",
+          "$value": "-0.45pt"
+        },
+        "optical_cut": {
+          "$type": "string",
+          "$value": "SF Pro Display"
+        }
+      },
+      "21pt": {
+        "font_size": {
+          "$type": "dimension",
+          "$value": "21.0pt"
+        },
+        "tracking_1000em": {
+          "$type": "number",
+          "$value": -18
+        },
+        "tracking_pt": {
+          "$type": "dimension",
+          "$value": "-0.36pt"
+        },
+        "optical_cut": {
+          "$type": "string",
+          "$value": "SF Pro Display"
+        }
+      },
+      "22pt": {
+        "font_size": {
+          "$type": "dimension",
+          "$value": "22.0pt"
+        },
+        "tracking_1000em": {
+          "$type": "number",
+          "$value": -12
+        },
+        "tracking_pt": {
+          "$type": "dimension",
+          "$value": "-0.26pt"
+        },
+        "optical_cut": {
+          "$type": "string",
+          "$value": "SF Pro Display"
+        }
+      },
+      "23pt": {
+        "font_size": {
+          "$type": "dimension",
+          "$value": "23.0pt"
+        },
+        "tracking_1000em": {
+          "$type": "number",
+          "$value": -4
+        },
+        "tracking_pt": {
+          "$type": "dimension",
+          "$value": "-0.10pt"
+        },
+        "optical_cut": {
+          "$type": "string",
+          "$value": "SF Pro Display"
+        }
+      },
+      "24pt": {
+        "font_size": {
+          "$type": "dimension",
+          "$value": "24.0pt"
+        },
+        "tracking_1000em": {
+          "$type": "number",
+          "$value": 3
+        },
+        "tracking_pt": {
+          "$type": "dimension",
+          "$value": "0.07pt"
+        },
+        "optical_cut": {
+          "$type": "string",
+          "$value": "SF Pro Display"
+        }
+      },
+      "28pt": {
+        "font_size": {
+          "$type": "dimension",
+          "$value": "28.0pt"
+        },
+        "tracking_1000em": {
+          "$type": "number",
+          "$value": 14
+        },
+        "tracking_pt": {
+          "$type": "dimension",
+          "$value": "0.38pt"
+        },
+        "optical_cut": {
+          "$type": "string",
+          "$value": "SF Pro Display"
+        }
+      },
+      "34pt": {
+        "font_size": {
+          "$type": "dimension",
+          "$value": "34.0pt"
+        },
+        "tracking_1000em": {
+          "$type": "number",
+          "$value": 12
+        },
+        "tracking_pt": {
+          "$type": "dimension",
+          "$value": "0.40pt"
+        },
+        "optical_cut": {
+          "$type": "string",
+          "$value": "SF Pro Display"
+        }
+      }
+    }
+  },
+  "interpolation_models": {
+    "aat_trak_table": {
+      "method": {
+        "$type": "string",
+        "$value": "2D Linear / Piecewise Table Interpolation"
+      },
+      "description": {
+        "$type": "string",
+        "$value": "Apple Advanced Typography (AAT) 'trak' table standard: font layout engine interpolates between adjacent point-size stops using linear interpolation of per-size track values in FUnits."
+      },
+      "formula": {
+        "$type": "string",
+        "$value": "tracking(p) = y0 + (p - x0) / (x1 - x0) * (y1 - y0)"
+      },
+      "citation": "https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6trak.html"
+    },
+    "cubic_polynomial_model": {
+      "description": {
+        "$type": "string",
+        "$value": "Analytical cubic polynomial regression for SF Pro Text tracking (6pt <= p <= 20pt) computed via least-squares fit against Apple HIG ground truth."
+      },
+      "formula": {
+        "$type": "string",
+        "$value": "Tracking_pt(p) = a * p^3 + b * p^2 + c * p + d"
+      },
+      "coefficients_pt": {
+        "a": {
+          "$type": "number",
+          "$value": 0.00063705,
+          "$description": "Cubic coefficient (pt^-2)"
+        },
+        "b": {
+          "$type": "number",
+          "$value": -0.02544432,
+          "$description": "Quadratic coefficient (pt^-1)"
+        },
+        "c": {
+          "$type": "number",
+          "$value": 0.25807866,
+          "$description": "Linear coefficient (dimensionless)"
+        },
+        "d": {
+          "$type": "number",
+          "$value": -0.54399659,
+          "$description": "Constant offset (pt)"
+        }
+      },
+      "coefficients_1000em": {
+        "a": {
+          "$type": "number",
+          "$value": 0.02396514
+        },
+        "b": {
+          "$type": "number",
+          "$value": -0.62565539
+        },
+        "c": {
+          "$type": "number",
+          "$value": -1.61943666
+        },
+        "d": {
+          "$type": "number",
+          "$value": 67.50263234
+        }
+      },
+      "accuracy_metrics": {
+        "r_squared": {
+          "$type": "number",
+          "$value": 0.9942
+        },
+        "max_error_pt": {
+          "$type": "dimension",
+          "$value": "0.0497pt"
+        },
+        "mean_error_pt": {
+          "$type": "dimension",
+          "$value": "0.0134pt"
+        }
+      }
+    },
+    "spec_001_calibration": {
+      "description": {
+        "$type": "string",
+        "$value": "SPEC-001 Section 2.1 B benchmark points and calibration notes."
+      },
+      "benchmark_points": {
+        "p_11_pt": {
+          "spec_value": "-0.23pt",
+          "hig_ground_truth": "+0.06pt"
+        },
+        "p_13_pt": {
+          "spec_value": "-0.08pt",
+          "hig_ground_truth": "-0.08pt"
+        },
+        "p_17_pt": {
+          "spec_value": "0.00pt",
+          "hig_ground_truth": "-0.43pt"
+        }
+      },
+      "analysis": {
+        "$type": "string",
+        "$value": "In SPEC-001 line 74-76, 13pt matches HIG (-0.08pt). The 11pt spec value of -0.23pt matches the HIG 15pt value, and 17pt value of 0.00pt matches the HIG 12pt zero-crossing. The canonical HIG ground truth provides positive tracking at 11pt (+0.06pt) for optical legibility."
+      }
+    }
+  },
+  "appkit_control_metrics": {
+    "small_label": {
+      "control_size": {
+        "$type": "string",
+        "$value": "NSControlSizeSmall"
+      },
+      "font_size": {
+        "$type": "dimension",
+        "$value": "11.0pt"
+      },
+      "line_height": {
+        "$type": "dimension",
+        "$value": "14.0pt"
+      },
+      "baseline_offset_from_bottom": {
+        "$type": "dimension",
+        "$value": "3.55pt"
+      },
+      "baseline_from_top": {
+        "$type": "dimension",
+        "$value": "10.45pt"
+      },
+      "ascender": {
+        "$type": "dimension",
+        "$value": "10.45pt"
+      },
+      "descender": {
+        "$type": "dimension",
+        "$value": "-3.08pt"
+      },
+      "leading": {
+        "$type": "dimension",
+        "$value": "0.47pt"
+      },
+      "tracking": {
+        "$type": "dimension",
+        "$value": "0.06pt"
+      },
+      "tracking_1000em": {
+        "$type": "number",
+        "$value": 6
+      },
+      "apple_citation": "AppKit NSFont.smallSystemFontSize / NSLayoutManager defaultLineHeight"
+    },
+    "regular_label": {
+      "control_size": {
+        "$type": "string",
+        "$value": "NSControlSizeRegular"
+      },
+      "font_size": {
+        "$type": "dimension",
+        "$value": "13.0pt"
+      },
+      "line_height": {
+        "$type": "dimension",
+        "$value": "16.0pt"
+      },
+      "baseline_offset_from_bottom": {
+        "$type": "dimension",
+        "$value": "3.65pt"
+      },
+      "baseline_from_top": {
+        "$type": "dimension",
+        "$value": "12.35pt"
+      },
+      "ascender": {
+        "$type": "dimension",
+        "$value": "12.35pt"
+      },
+      "descender": {
+        "$type": "dimension",
+        "$value": "-3.65pt"
+      },
+      "leading": {
+        "$type": "dimension",
+        "$value": "0.00pt"
+      },
+      "tracking": {
+        "$type": "dimension",
+        "$value": "-0.08pt"
+      },
+      "tracking_1000em": {
+        "$type": "number",
+        "$value": -6
+      },
+      "apple_citation": "AppKit NSFont.systemFontSize / NSLayoutManager defaultLineHeight"
+    },
+    "compact_input": {
+      "control_size": {
+        "$type": "string",
+        "$value": "NSControlSizeSmall"
+      },
+      "cell_height": {
+        "$type": "dimension",
+        "$value": "18.0pt"
+      },
+      "font_size": {
+        "$type": "dimension",
+        "$value": "11.0pt"
+      },
+      "line_height": {
+        "$type": "dimension",
+        "$value": "14.0pt"
+      },
+      "fixed_baseline_from_top": {
+        "$type": "dimension",
+        "$value": "14.0pt",
+        "$description": "Fixed baseline alignment from top edge of cell for numerical glyph and icon alignment."
+      },
+      "baseline_offset_from_bottom": {
+        "$type": "dimension",
+        "$value": "4.0pt",
+        "$description": "18.0pt cell height - 14.0pt fixed baseline from top = 4.0pt baseline offset from bottom."
+      },
+      "padding_horizontal": {
+        "$type": "dimension",
+        "$value": "4.0pt"
+      },
+      "padding_vertical": {
+        "$type": "dimension",
+        "$value": "2.0pt"
+      },
+      "tracking": {
+        "$type": "dimension",
+        "$value": "0.06pt"
+      },
+      "tracking_1000em": {
+        "$type": "number",
+        "$value": 6
+      },
+      "apple_citation": "SPEC-001 Section 3 Item 4 & Section 4.1 Input Cell Metrics"
+    }
+  }
+}
