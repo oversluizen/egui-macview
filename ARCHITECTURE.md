@@ -8,7 +8,7 @@
 
 `egui-macview` is an independent, cross-platform Rust library built on top of `egui` and `wgpu`. Its primary mission is to bridge the architectural chasm between **macOS AppKit (Retained Mode, Strict AutoLayout & MVC)** and **egui (Immediate Mode, Streaming Content-Driven Flow)**.
 
-In standard `egui`, widgets dynamically push cursor positions based on font metrics, automatic margins, and padding. When attempting to recreate pixel-exact macOS interfaces designed in AppKit NIB files (such as Glyphs 4, Sketch, or Xcode), immediate-mode streaming causes layout instability, unpredictable margins, and clipping.
+In standard `egui`, widgets dynamically push cursor positions based on font metrics, automatic margins, and padding. When attempting to recreate pixel-exact macOS interfaces designed in AppKit NIB files, immediate-mode streaming causes layout instability, unpredictable margins, and clipping.
 
 `egui-macview` introduces a formal **MacView / Model-View-Controller (MVC)** abstraction layer:
 1. **Mathematical Determinism**: Coordinate bounds, cell dimensions ($18.0\,\text{pt}$ compact inputs), and container frames are calculated *prior* to rendering. Clipping and overflowing become mathematically impossible.
@@ -71,14 +71,14 @@ A typographic studio or precision graphics tool operates in three strictly isola
 ```
 
 ### 4.1 Concrete Dimensional Calculation Example
-Consider a standard macOS Glyphs 4 Inspector Infobox on a Windows display configured at **150% fractional scaling** (`scale = 1.5`):
+Consider a standard two-row macOS Inspector panel on a display configured at **150% fractional scaling** (`scale = 1.5`):
 
 1. **Model Domain**:
-   - The active glyph ('H') defines a Left Sidebearing of $45\,\text{u}$.
-   - The Controller retrieves $45\,\text{u}$ and formats the string `"45"`. The Model knows nothing about UI bounds.
+   - The underlying application entity provides numeric values (e.g. coordinates or dimensions).
+   - The Controller formats the values into display strings. The Model knows nothing about UI bounds.
 2. **View Domain (`egui-macview`)**:
-   - The Infobox container has fixed NIB bounds: **$250.0 \times 63.0\,\text{pt}$**.
-   - Compartment budget: Header takes $22.0\,\text{pt}$; lower metrics area has **$41.0\,\text{pt}$**.
+   - The panel container has fixed AppKit NIB bounds: **$250.0 \times 63.0\,\text{pt}$**.
+   - Compartment budget: Header takes $22.0\,\text{pt}$; lower controls area has **$41.0\,\text{pt}$**.
    - Row 1 Cell Height: $18.0\,\text{pt}$
    - Vertical Gap: $1.0\,\text{pt}$
    - Row 2 Cell Height: $18.0\,\text{pt}$
