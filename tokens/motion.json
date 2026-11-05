@@ -1,0 +1,448 @@
+{
+  "$name": "egui-macview Motion Tokens",
+  "$version": "1.0.0",
+  "$description": "W3C DTCG-compliant motion and spring physics token catalog for egui-macview. Fully grounded in Apple CoreAnimation (QuartzCore), WebKit SpringSolver, AppKit NSAnimationContext, and SwiftUI Spring specifications.",
+  "physics_foundations": {
+    "differential_equation": {
+      "$type": "string",
+      "$value": "m * x''(t) + c * x'(t) + k * (x(t) - x_target) = 0",
+      "$description": "Standard second-order linear ordinary differential equation for a damped harmonic oscillator.",
+      "$extensions": {
+        "apple_citation": "Apple Developer Documentation - CASpringAnimation; WebCore/platform/graphics/SpringSolver.h"
+      }
+    },
+    "settling_duration_formula": {
+      "$type": "string",
+      "$value": "t_settle = -ln(epsilon * sqrt(1 - zeta^2)) / (zeta * omega_0) ≈ 2 * m * ln(1 / epsilon) / c",
+      "$description": "Estimated time for oscillation amplitude to decay below rest tolerance epsilon (typically epsilon = 0.001 or 1/1000).",
+      "$extensions": {
+        "apple_citation": "Apple Developer Documentation - CASpringAnimation.settlingDuration; WebKit SpringSolver envelope decay"
+      }
+    },
+    "conversion_formulas": {
+      "stiffness_from_response": {
+        "$type": "string",
+        "$value": "k = m * (2 * pi / response)^2",
+        "$description": "Converts undamped natural cycle period (response) to physical stiffness coefficient k."
+      },
+      "damping_from_damping_ratio": {
+        "$type": "string",
+        "$value": "c = 4 * pi * dampingRatio * m / response = 2 * dampingRatio * sqrt(k * m)",
+        "$description": "Converts dampingRatio (zeta) and response to physical damping coefficient c."
+      },
+      "response_from_physics": {
+        "$type": "string",
+        "$value": "response = 2 * pi * sqrt(m / k) = 2 * pi / omega_0",
+        "$description": "Converts mass m and stiffness k to undamped cycle period (response)."
+      },
+      "damping_ratio_from_physics": {
+        "$type": "string",
+        "$value": "dampingRatio = c / (2 * sqrt(k * m))",
+        "$description": "Converts damping c, mass m, and stiffness k to dimensionless damping ratio zeta."
+      },
+      "damping_ratio_from_bounce": {
+        "$type": "string",
+        "$value": "zeta = bounce >= 0 ? (1.0 - bounce) : (1.0 / (1.0 + bounce))",
+        "$description": "Converts SwiftUI WWDC23 perceptual bounce to damping ratio zeta."
+      }
+    }
+  },
+  "motion": {
+    "caspring_default": {
+      "mass": {
+        "$type": "number",
+        "$value": 1.0,
+        "$description": "The mass of the object attached to the end of the spring.",
+        "$extensions": { "apple_citation": "https://developer.apple.com/documentation/quartzcore/caspringanimation/1522030-mass" }
+      },
+      "stiffness": {
+        "$type": "number",
+        "$value": 100.0,
+        "$description": "The spring stiffness coefficient (tension).",
+        "$extensions": { "apple_citation": "https://developer.apple.com/documentation/quartzcore/caspringanimation/1522190-stiffness" }
+      },
+      "damping": {
+        "$type": "number",
+        "$value": 10.0,
+        "$description": "The damping coefficient due to friction.",
+        "$extensions": { "apple_citation": "https://developer.apple.com/documentation/quartzcore/caspringanimation/1523626-damping" }
+      },
+      "initial_velocity": {
+        "$type": "number",
+        "$value": 0.0,
+        "$description": "The initial velocity of the object attached to the spring at t=0.",
+        "$extensions": { "apple_citation": "https://developer.apple.com/documentation/quartzcore/caspringanimation/1522437-initialvelocity" }
+      },
+      "natural_frequency": {
+        "$type": "number",
+        "$value": 10.0,
+        "$description": "Undamped angular frequency omega_0 = sqrt(k / m) in rad/s."
+      },
+      "damping_ratio": {
+        "$type": "number",
+        "$value": 0.50,
+        "$description": "Damping ratio zeta = c / (2 * sqrt(k * m)). Underdamped (zeta < 1.0)."
+      },
+      "damped_frequency": {
+        "$type": "number",
+        "$value": 8.660254,
+        "$description": "Damped angular frequency omega_d = omega_0 * sqrt(1 - zeta^2) in rad/s."
+      },
+      "response": {
+        "$type": "number",
+        "$value": 0.6283185,
+        "$description": "Equivalent perceptual response period T = 2 * pi / omega_0 in seconds."
+      },
+      "settling_duration": {
+        "$type": "duration",
+        "$value": "1.38s",
+        "$description": "Calculated settling duration at epsilon = 0.001 (1/1000) rest threshold.",
+        "$extensions": { "apple_citation": "https://developer.apple.com/documentation/quartzcore/caspringanimation/1523455-settlingduration" }
+      },
+      "$description": "Default CoreAnimation CASpringAnimation physical parameters (underdamped harmonic oscillator).",
+      "$extensions": { "apple_citation": "Apple QuartzCore CASpringAnimation Default Properties" }
+    },
+    "swiftui_spring_default": {
+      "response": {
+        "$type": "number",
+        "$value": 0.55,
+        "$description": "Nominal duration of one undamped cycle in seconds."
+      },
+      "damping_ratio": {
+        "$type": "number",
+        "$value": 1.0,
+        "$description": "Damping fraction. Modern SwiftUI defaults to 1.0 (critically damped, no overshoot); legacy defaulted to 0.825."
+      },
+      "blend_duration": {
+        "$type": "number",
+        "$value": 0.0,
+        "$description": "Duration over which to blend previous velocity into the spring transition."
+      },
+      "mass": {
+        "$type": "number",
+        "$value": 1.0,
+        "$description": "Normalized system mass."
+      },
+      "stiffness": {
+        "$type": "number",
+        "$value": 130.495,
+        "$description": "Physical stiffness k = m * (2*pi/0.55)^2."
+      },
+      "damping": {
+        "$type": "number",
+        "$value": 22.848,
+        "$description": "Physical damping c = 4*pi*1.0*1.0/0.55."
+      },
+      "settling_duration": {
+        "$type": "duration",
+        "$value": "0.60s",
+        "$description": "Settling duration for critically damped spring to reach 99.9% target state."
+      },
+      "$description": "Standard SwiftUI Animation.spring() default preset (iOS 17+ / macOS 14+).",
+      "$extensions": { "apple_citation": "https://developer.apple.com/documentation/swiftui/animation/spring(response:dampingfraction:blendduration:)" }
+    },
+    "swiftui_interactive": {
+      "response": {
+        "$type": "number",
+        "$value": 0.15,
+        "$description": "Ultra-low latency response period for gesture tracking in seconds."
+      },
+      "damping_ratio": {
+        "$type": "number",
+        "$value": 0.86,
+        "$description": "Damping fraction tuned for fluid finger/cursor tracking without lag."
+      },
+      "blend_duration": {
+        "$type": "number",
+        "$value": 0.25,
+        "$description": "Transition blend window for seamless interactive gesture interrupts."
+      },
+      "mass": {
+        "$type": "number",
+        "$value": 1.0,
+        "$description": "Normalized system mass."
+      },
+      "stiffness": {
+        "$type": "number",
+        "$value": 1754.596,
+        "$description": "Physical stiffness k = m * (2*pi/0.15)^2."
+      },
+      "damping": {
+        "$type": "number",
+        "$value": 72.047,
+        "$description": "Physical damping c = 4*pi*0.86*1.0/0.15."
+      },
+      "settling_duration": {
+        "$type": "duration",
+        "$value": "0.19s",
+        "$description": "Settling duration for interactive spring."
+      },
+      "$description": "SwiftUI Animation.interactiveSpring() preset for real-time drag and gesture tracking.",
+      "$extensions": { "apple_citation": "https://developer.apple.com/documentation/swiftui/animation/interactivespring(response:dampingfraction:blendduration:)" }
+    },
+    "swiftui_smooth": {
+      "duration": {
+        "$type": "number",
+        "$value": 0.50,
+        "$description": "Nominal settling duration in seconds."
+      },
+      "bounce": {
+        "$type": "number",
+        "$value": 0.0,
+        "$description": "Zero bounce: critically damped motion without overshoot."
+      },
+      "extra_bounce": {
+        "$type": "number",
+        "$value": 0.0,
+        "$description": "Default extra bounce parameter."
+      },
+      "damping_ratio": {
+        "$type": "number",
+        "$value": 1.0,
+        "$description": "Effective damping ratio zeta = 1.0 - bounce."
+      },
+      "stiffness": {
+        "$type": "number",
+        "$value": 157.914,
+        "$description": "Physical stiffness k = (2*pi/0.50)^2."
+      },
+      "damping": {
+        "$type": "number",
+        "$value": 25.133,
+        "$description": "Physical damping c = 4*pi*1.0/0.50."
+      },
+      "$description": "SwiftUI Animation.smooth preset for gentle, fluid UI layout transitions without wobble.",
+      "$extensions": { "apple_citation": "https://developer.apple.com/documentation/swiftui/animation/smooth(duration:extrabounce:)" }
+    },
+    "swiftui_snappy": {
+      "duration": {
+        "$type": "number",
+        "$value": 0.50,
+        "$description": "Nominal duration in seconds (customizable down to 0.3s for compact UI elements)."
+      },
+      "bounce": {
+        "$type": "number",
+        "$value": 0.15,
+        "$description": "Subtle 15% bounce providing crisp, tactile feedback."
+      },
+      "extra_bounce": {
+        "$type": "number",
+        "$value": 0.0,
+        "$description": "Default extra bounce parameter."
+      },
+      "damping_ratio": {
+        "$type": "number",
+        "$value": 0.85,
+        "$description": "Effective damping ratio zeta = 1.0 - bounce = 0.85."
+      },
+      "stiffness": {
+        "$type": "number",
+        "$value": 157.914,
+        "$description": "Physical stiffness k for duration = 0.5s."
+      },
+      "damping": {
+        "$type": "number",
+        "$value": 21.363,
+        "$description": "Physical damping c for duration = 0.5s and zeta = 0.85."
+      },
+      "$description": "SwiftUI Animation.snappy preset for responsive UI components, button clicks, and switches.",
+      "$extensions": { "apple_citation": "https://developer.apple.com/documentation/swiftui/animation/snappy(duration:extrabounce:)" }
+    },
+    "swiftui_bouncy": {
+      "duration": {
+        "$type": "number",
+        "$value": 0.50,
+        "$description": "Nominal duration in seconds."
+      },
+      "bounce": {
+        "$type": "number",
+        "$value": 0.30,
+        "$description": "Pronounced 30% bounce for expressive, playful UI feedback."
+      },
+      "extra_bounce": {
+        "$type": "number",
+        "$value": 0.0,
+        "$description": "Default extra bounce parameter."
+      },
+      "damping_ratio": {
+        "$type": "number",
+        "$value": 0.70,
+        "$description": "Effective damping ratio zeta = 1.0 - bounce = 0.70."
+      },
+      "stiffness": {
+        "$type": "number",
+        "$value": 157.914,
+        "$description": "Physical stiffness k for duration = 0.5s."
+      },
+      "damping": {
+        "$type": "number",
+        "$value": 17.593,
+        "$description": "Physical damping c for duration = 0.5s and zeta = 0.70."
+      },
+      "$description": "SwiftUI Animation.bouncy preset for notification badges, lively confirmations, and icons.",
+      "$extensions": { "apple_citation": "https://developer.apple.com/documentation/swiftui/animation/bouncy(duration:extrabounce:)" }
+    },
+    "macos_presets": {
+      "popover_transition": {
+        "duration": {
+          "$type": "duration",
+          "$value": "0.20s",
+          "$description": "AppKit NSPopover default presentation and dismissal duration."
+        },
+        "response": {
+          "$type": "number",
+          "$value": 0.35,
+          "$description": "Spring response cycle time for organic popover scale and fade expansion."
+        },
+        "damping_ratio": {
+          "$type": "number",
+          "$value": 0.85,
+          "$description": "Subtle damping ratio avoiding distracting bounce while feeling natural."
+        },
+        "timing_function": {
+          "$type": "string",
+          "$value": "cubic-bezier(0.16, 1.0, 0.3, 1.0)",
+          "$description": "Equivalent CAMediaTimingFunction curve for non-spring runtimes."
+        },
+        "$description": "macOS AppKit NSPopover open and close transition physics.",
+        "$extensions": {
+          "apple_citation": "Apple AppKit NSPopover; SPEC-001 Section 2.1 C; NSAnimationContext.runAnimationGroup"
+        }
+      },
+      "sheet_window_presentation": {
+        "duration": {
+          "$type": "duration",
+          "$value": "0.20s",
+          "$description": "macOS system-wide standard sheet drop-down and window resize animation time."
+        },
+        "response": {
+          "$type": "number",
+          "$value": 0.40,
+          "$description": "Spring response period for window frame transitions."
+        },
+        "damping_ratio": {
+          "$type": "number",
+          "$value": 1.0,
+          "$description": "Critically damped (zeta = 1.0) preventing window contents from wobbling."
+        },
+        "timing_function": {
+          "$type": "string",
+          "$value": "cubic-bezier(0.25, 0.1, 0.25, 1.0)",
+          "$description": "Standard AppKit ease-out timing curve."
+        },
+        "$description": "macOS AppKit NSWindow sheet drop-down and frame resize animation.",
+        "$extensions": {
+          "apple_citation": "Apple AppKit NSWindow animationResizeTime(_:) / NSWindowResizeTime global default"
+        }
+      },
+      "toggle_switch_thumb": {
+        "duration": {
+          "$type": "duration",
+          "$value": "0.25s",
+          "$description": "AppKit NSSwitch / UIKit UISwitch thumb slider transition duration."
+        },
+        "response": {
+          "$type": "number",
+          "$value": 0.30,
+          "$description": "Fast spring response for tactile thumb snap."
+        },
+        "damping_ratio": {
+          "$type": "number",
+          "$value": 0.80,
+          "$description": "Slight settle overshoot providing physical toggle feel."
+        },
+        "mass": {
+          "$type": "number",
+          "$value": 0.2,
+          "$description": "Lightweight thumb mass for fast initial acceleration."
+        },
+        "stiffness": {
+          "$type": "number",
+          "$value": 200.0,
+          "$description": "High stiffness ensuring immediate responsiveness to mouse release."
+        },
+        "damping": {
+          "$type": "number",
+          "$value": 20.0,
+          "$description": "Damping friction coefficient preventing excessive jitter."
+        },
+        "$description": "macOS NSSwitch and iOS UISwitch thumb slider physics.",
+        "$extensions": {
+          "apple_citation": "Apple AppKit NSSwitch animator().state; CALayer thumb animation parameters"
+        }
+      },
+      "hover_highlight": {
+        "duration": {
+          "$type": "duration",
+          "$value": "0.12s",
+          "$description": "Micro-interaction duration for cursor hover enter/exit states."
+        },
+        "response": {
+          "$type": "number",
+          "$value": 0.15,
+          "$description": "Ultra-fast response for instantaneous cursor tracking."
+        },
+        "damping_ratio": {
+          "$type": "number",
+          "$value": 1.0,
+          "$description": "Critically damped to avoid distracting oscillations on desktop hover."
+        },
+        "timing_function": {
+          "$type": "string",
+          "$value": "cubic-bezier(0.0, 0.0, 0.2, 1.0)",
+          "$description": "Rapid ease-out curve."
+        },
+        "$description": "macOS button hover highlights, toolbar item active states, and selection scale.",
+        "$extensions": {
+          "apple_citation": "Apple macOS Human Interface Guidelines - Pointers & Hover States"
+        }
+      },
+      "spec001_infobox": {
+        "response": {
+          "$type": "number",
+          "$value": 0.35,
+          "$description": "Cycle period T_0 = 0.35s in seconds."
+        },
+        "damping_ratio": {
+          "$type": "number",
+          "$value": 0.85,
+          "$description": "Dimensionless damping ratio zeta = 0.85 (critically underdamped)."
+        },
+        "omega_0": {
+          "$type": "number",
+          "$value": 17.951958,
+          "$description": "Undamped angular frequency omega_0 = 2 * pi / 0.35 in rad/s."
+        },
+        "omega_d": {
+          "$type": "number",
+          "$value": 9.458908,
+          "$description": "Damped angular frequency omega_d = omega_0 * sqrt(1 - zeta^2) in rad/s."
+        },
+        "mass": {
+          "$type": "number",
+          "$value": 1.0,
+          "$description": "Normalized mass m = 1.0."
+        },
+        "stiffness": {
+          "$type": "number",
+          "$value": 322.2727,
+          "$description": "Physical stiffness k = m * omega_0^2 in N/m."
+        },
+        "damping": {
+          "$type": "number",
+          "$value": 30.51833,
+          "$description": "Physical damping c = 2 * zeta * sqrt(k * m) in N*s/m."
+        },
+        "settling_duration": {
+          "$type": "duration",
+          "$value": "0.45s",
+          "$description": "Settling time to within 0.1% tolerance."
+        },
+        "$description": "SPEC-001 Section 2.1 C damped harmonic oscillator specification for floating infobox and popover transitions.",
+        "$extensions": {
+          "apple_citation": "SPEC-001-APPKIT-ENGINE-AND-GLYPHS-PARITY.md Section 2.1 C"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,756 @@
+{
+  "$name": "egui-macview Design Tokens",
+  "$version": "1.0.0",
+  "$description": "W3C DTCG-compliant design token catalog for egui-macview. Fully grounded in Apple AppKit, macOS Human Interface Guidelines, Apple Typography specifications, and CoreAnimation spring physics.",
+  "macview": {
+    "metrics": {
+      "control": {
+        "focus_ring": {
+          "stroke_width": {
+            "$type": "dimension",
+            "$value": "3.0pt",
+            "$description": "Focus ring halo thickness.",
+            "$extensions": { "apple_citation": "AppKit NSFocusRingPlacementOutside standard stroke width" }
+          },
+          "offset": {
+            "$type": "dimension",
+            "$value": "1.0pt",
+            "$description": "Distance between control outer edge and focus ring halo inner edge.",
+            "$extensions": { "apple_citation": "AppKit NSFocusRingPlacementOutside standard margin" }
+          },
+          "corner_radius_delta": {
+            "$type": "dimension",
+            "$value": "2.0pt",
+            "$description": "Added radius for the outer focus halo to maintain concentricity with control squircle.",
+            "$extensions": { "apple_citation": "macOS HIG Focus Ring Concentricity" }
+          }
+        },
+        "text_field": {
+          "regular": {
+            "height": {
+              "$type": "dimension",
+              "$value": "22.0pt",
+              "$description": "Standard intrinsic height for single-line NSTextField with NSControlSize.regular.",
+              "$extensions": { "apple_citation": "Apple AppKit NSTextField / HIG Component Metrics (macOS 11-15)" }
+            },
+            "font_size": {
+              "$type": "dimension",
+              "$value": "13.0pt",
+              "$description": "Standard system font size for NSControlSize.regular.",
+              "$extensions": { "apple_citation": "NSFont.systemFontSize(for: .regular)" }
+            },
+            "corner_radius": {
+              "$type": "dimension",
+              "$value": "6.0pt",
+              "$description": "Continuous curvature squircle corner radius for regular rounded text fields.",
+              "$extensions": { "apple_citation": "macOS Human Interface Guidelines - Text Fields (Big Sur+)" }
+            },
+            "padding_horizontal": {
+              "$type": "dimension",
+              "$value": "7.0pt",
+              "$description": "Horizontal text container inset from bezel to text origin.",
+              "$extensions": { "apple_citation": "NSTextFieldCell titleRect(forBounds:) default inset" }
+            },
+            "padding_vertical": {
+              "$type": "dimension",
+              "$value": "2.0pt",
+              "$description": "Vertical text margin within the 22pt cell bounding box.",
+              "$extensions": { "apple_citation": "WebKit RenderThemeMac.mm NSTextFieldCell metrics" }
+            }
+          },
+          "small": {
+            "height": {
+              "$type": "dimension",
+              "$value": "19.0pt",
+              "$description": "Compact intrinsic height for single-line NSTextField with NSControlSize.small.",
+              "$extensions": { "apple_citation": "Apple AppKit NSTextField / HIG Component Metrics (macOS 11-15)" }
+            },
+            "font_size": {
+              "$type": "dimension",
+              "$value": "11.0pt",
+              "$description": "Standard system font size for NSControlSize.small.",
+              "$extensions": { "apple_citation": "NSFont.systemFontSize(for: .small)" }
+            },
+            "corner_radius": {
+              "$type": "dimension",
+              "$value": "4.0pt",
+              "$description": "Continuous curvature squircle corner radius for small rounded text fields.",
+              "$extensions": { "apple_citation": "macOS Human Interface Guidelines - Text Fields (Compact/Small)" }
+            },
+            "padding_horizontal": {
+              "$type": "dimension",
+              "$value": "4.0pt",
+              "$description": "Compact horizontal text container inset.",
+              "$extensions": { "apple_citation": "NSTextFieldCell small control size drawing bounds" }
+            },
+            "padding_vertical": {
+              "$type": "dimension",
+              "$value": "1.5pt",
+              "$description": "Vertical padding for small text field cells.",
+              "$extensions": { "apple_citation": "WebKit RenderThemeMac.mm small text field metrics" }
+            }
+          },
+          "compact_infobox": {
+            "height": {
+              "$type": "dimension",
+              "$value": "18.0pt",
+              "$description": "Exact input cell height for dense inspector panels and infoboxes.",
+              "$extensions": { "apple_citation": "SPEC-001 Section 4.1 / AppKit Dense Inspector Cells" }
+            },
+            "font_size": {
+              "$type": "dimension",
+              "$value": "11.0pt",
+              "$description": "Compact numeric typographic scale matching SF Pro Text 11pt.",
+              "$extensions": { "apple_citation": "SPEC-001 Section 2.1 B & 4.1" }
+            },
+            "corner_radius": {
+              "$type": "dimension",
+              "$value": "3.0pt",
+              "$description": "Tight corner radius for 18pt floating infobox cells.",
+              "$extensions": { "apple_citation": "SPEC-001 Section 4.1" }
+            },
+            "padding_horizontal": {
+              "$type": "dimension",
+              "$value": "4.0pt",
+              "$description": "Horizontal margin for numeric cell content.",
+              "$extensions": { "apple_citation": "SPEC-001 Section 4.1" }
+            },
+            "padding_vertical": {
+              "$type": "dimension",
+              "$value": "1.0pt",
+              "$description": "Vertical margin ensuring zero clipping guarantee.",
+              "$extensions": { "apple_citation": "SPEC-001 Section 4.1 Zero-Clipping Guarantee" }
+            }
+          },
+          "mini": {
+            "height": {
+              "$type": "dimension",
+              "$value": "15.0pt",
+              "$description": "Miniature intrinsic height for single-line NSTextField with NSControlSize.mini.",
+              "$extensions": { "apple_citation": "Apple AppKit NSControlSizeMini" }
+            },
+            "font_size": {
+              "$type": "dimension",
+              "$value": "9.0pt",
+              "$description": "Standard system font size for NSControlSize.mini.",
+              "$extensions": { "apple_citation": "NSFont.systemFontSize(for: .mini)" }
+            },
+            "corner_radius": {
+              "$type": "dimension",
+              "$value": "3.0pt",
+              "$description": "Mini control corner radius.",
+              "$extensions": { "apple_citation": "AppKit NSControlSizeMini Bezel Style" }
+            }
+          },
+          "large": {
+            "height": {
+              "$type": "dimension",
+              "$value": "28.0pt",
+              "$description": "Large intrinsic height for single-line NSTextField with NSControlSize.large.",
+              "$extensions": { "apple_citation": "Apple AppKit NSControlSizeLarge" }
+            },
+            "font_size": {
+              "$type": "dimension",
+              "$value": "16.0pt",
+              "$description": "Standard system font size for NSControlSize.large.",
+              "$extensions": { "apple_citation": "NSFont.systemFontSize(for: .large)" }
+            },
+            "corner_radius": {
+              "$type": "dimension",
+              "$value": "8.0pt",
+              "$description": "Prominent corner radius for large text fields.",
+              "$extensions": { "apple_citation": "macOS HIG Large Control Styling" }
+            }
+          }
+        },
+        "button": {
+          "regular": {
+            "height": {
+              "$type": "dimension",
+              "$value": "22.0pt",
+              "$description": "Standard macOS push button height.",
+              "$extensions": { "apple_citation": "Apple AppKit NSButton BezelStyleRounded" }
+            },
+            "corner_radius": {
+              "$type": "dimension",
+              "$value": "6.0pt",
+              "$description": "Standard macOS push button corner radius in Big Sur+.",
+              "$extensions": { "apple_citation": "macOS Human Interface Guidelines - Buttons" }
+            },
+            "padding_horizontal": {
+              "$type": "dimension",
+              "$value": "12.0pt",
+              "$description": "Horizontal button label margin.",
+              "$extensions": { "apple_citation": "AppKit NSButtonCell horizontal inset" }
+            }
+          },
+          "small": {
+            "height": {
+              "$type": "dimension",
+              "$value": "18.0pt",
+              "$description": "Compact macOS push button height.",
+              "$extensions": { "apple_citation": "Apple AppKit NSButton NSControlSizeSmall" }
+            },
+            "corner_radius": {
+              "$type": "dimension",
+              "$value": "4.0pt",
+              "$description": "Corner radius for small push buttons.",
+              "$extensions": { "apple_citation": "macOS HIG Buttons (Small)" }
+            },
+            "padding_horizontal": {
+              "$type": "dimension",
+              "$value": "8.0pt",
+              "$description": "Compact horizontal button label margin.",
+              "$extensions": { "apple_citation": "AppKit NSButtonCell small control size" }
+            }
+          }
+        },
+        "segmented": {
+          "regular": {
+            "height": {
+              "$type": "dimension",
+              "$value": "22.0pt",
+              "$description": "Standard NSSegmentedControl height.",
+              "$extensions": { "apple_citation": "Apple AppKit NSSegmentedControl" }
+            },
+            "corner_radius": {
+              "$type": "dimension",
+              "$value": "6.0pt",
+              "$description": "Container outer corner radius.",
+              "$extensions": { "apple_citation": "macOS HIG Segmented Controls" }
+            },
+            "indicator_radius": {
+              "$type": "dimension",
+              "$value": "5.0pt",
+              "$description": "Active selection pill corner radius.",
+              "$extensions": { "apple_citation": "macOS HIG Segmented Controls Active Pill" }
+            }
+          },
+          "small": {
+            "height": {
+              "$type": "dimension",
+              "$value": "18.0pt",
+              "$description": "Compact NSSegmentedControl height.",
+              "$extensions": { "apple_citation": "Apple AppKit NSSegmentedControl NSControlSizeSmall" }
+            },
+            "corner_radius": {
+              "$type": "dimension",
+              "$value": "4.0pt",
+              "$description": "Container outer corner radius for small segmented controls.",
+              "$extensions": { "apple_citation": "macOS HIG Segmented Controls (Small)" }
+            },
+            "indicator_radius": {
+              "$type": "dimension",
+              "$value": "3.5pt",
+              "$description": "Active selection pill corner radius for small segmented controls.",
+              "$extensions": { "apple_citation": "macOS HIG Segmented Controls (Small)" }
+            }
+          }
+        }
+      },
+      "toolbar": {
+        "traffic_lights_inset": {
+          "$type": "dimension",
+          "$value": "70.0pt",
+          "$description": "Leading toolbar margin clearing the traffic light button cluster in unified titlebars.",
+          "$extensions": { "apple_citation": "macOS HIG Window Anatomy & Unified Toolbars" }
+        },
+        "height_unified": {
+          "value": "52.0pt",
+          "$type": "dimension",
+          "$description": "Standard unified titlebar and toolbar height in modern macOS (Big Sur through Sequoia).",
+          "$extensions": { "apple_citation": "macOS Human Interface Guidelines - Window Anatomy & Unified Toolbars" }
+        },
+        "height_compact": {
+          "value": "44.0pt",
+          "$type": "dimension",
+          "$description": "Standard baseline / compact toolbar height (SPEC-001 Top Toolbar).",
+          "$extensions": { "apple_citation": "Apple HIG Toolbars / SPEC-001 Section 4.1" }
+        },
+        "icon_size": {
+          "value": "20.0pt",
+          "$type": "dimension",
+          "$description": "Vector template icon bounding box (20x20pt).",
+          "$extensions": { "apple_citation": "macOS HIG SF Symbols / SPEC-001 Section 4.1" }
+        },
+        "hit_target_width": {
+          "value": "32.0pt",
+          "$type": "dimension",
+          "$description": "Standard width for interactive toolbar item target zone.",
+          "$extensions": { "apple_citation": "SPEC-001 Section 4.1 / Apple HIG Toolbars" }
+        },
+        "hit_target_height": {
+          "value": "28.0pt",
+          "$type": "dimension",
+          "$description": "Standard height for interactive toolbar item target zone.",
+          "$extensions": { "apple_citation": "SPEC-001 Section 4.1 / Apple HIG Toolbars" }
+        },
+        "hit_target_min": {
+          "value": "28.0pt",
+          "$type": "dimension",
+          "$description": "Minimum accessible pointer interaction hit target in macOS HIG.",
+          "$extensions": { "apple_citation": "macOS Human Interface Guidelines - Pointers & Accessibility Targets" }
+        },
+        "item_spacing": {
+          "value": "8.0pt",
+          "$type": "dimension",
+          "$description": "Standard inter-item gap between adjacent toolbar buttons.",
+          "$extensions": { "apple_citation": "macOS HIG Toolbars layout spacing" }
+        },
+        "item_spacing_compact": {
+          "value": "6.0pt",
+          "$type": "dimension",
+          "$description": "Tight inter-item gap for dense toolbars.",
+          "$extensions": { "apple_citation": "AppKit NSToolbar default item minimum spacing" }
+        },
+        "edge_padding": {
+          "value": "10.0pt",
+          "$type": "dimension",
+          "$description": "Standard padding from toolbar edge to first tool item.",
+          "$extensions": { "apple_citation": "macOS HIG Toolbars edge insets" }
+        }
+      },
+      "popover": {
+        "arrow_base_width": {
+          "value": "24.0pt",
+          "$type": "dimension",
+          "$description": "Width of the NSPopover anchor arrow base where it joins the popover body.",
+          "$extensions": { "apple_citation": "AppKit _NSPopoverFrame / GNUstep libs-gui NSPopover layout standard" }
+        },
+        "arrow_height": {
+          "value": "12.0pt",
+          "$type": "dimension",
+          "$description": "Height of the NSPopover anchor arrow from base to apex.",
+          "$extensions": { "apple_citation": "AppKit _NSPopoverFrame geometry standard" }
+        },
+        "arrow_tip_radius": {
+          "value": "2.5pt",
+          "$type": "dimension",
+          "$description": "Corner radius rounding the sharp apex of the anchor arrow.",
+          "$extensions": { "apple_citation": "AppKit _NSPopoverFrame continuous path specification" }
+        },
+        "arrow_base_radius": {
+          "value": "3.0pt",
+          "$type": "dimension",
+          "$description": "Tangential fillet radius blending arrow base into popover frame.",
+          "$extensions": { "apple_citation": "AppKit _NSPopoverFrame continuous path specification" }
+        },
+        "corner_radius": {
+          "value": "10.0pt",
+          "$type": "dimension",
+          "$description": "Continuous squircle corner radius for macOS NSPopover window frames (Big Sur+).",
+          "$extensions": { "apple_citation": "macOS HIG Popovers / NSPopoverFrame _cornerRadius" }
+        },
+        "border_width": {
+          "value": "1.0pt",
+          "$type": "dimension",
+          "$description": "Border stroke width (or 0.5pt under hardware subpixel snap on 2x displays).",
+          "$extensions": { "apple_citation": "SPEC-001 Section 2.1 A & Section 4.1" }
+        },
+        "base_infobox_width": {
+          "value": "178.0pt",
+          "$type": "dimension",
+          "$description": "Floating infobox base compartment width.",
+          "$extensions": { "apple_citation": "SPEC-001 Section 4.1" }
+        },
+        "base_infobox_height": {
+          "value": "63.0pt",
+          "$type": "dimension",
+          "$description": "Floating infobox base compartment height (zero clipping guarantee).",
+          "$extensions": { "apple_citation": "SPEC-001 Section 4.1 Zero-Clipping Guarantee" }
+        },
+        "wing_width": {
+          "value": "84.0pt",
+          "$type": "dimension",
+          "$description": "Floating infobox wing compartment width.",
+          "$extensions": { "apple_citation": "SPEC-001 Section 4.1" }
+        },
+        "wing_height": {
+          "value": "44.0pt",
+          "$type": "dimension",
+          "$description": "Floating infobox wing compartment height.",
+          "$extensions": { "apple_citation": "SPEC-001 Section 4.1" }
+        },
+        "full_popover_width": {
+          "value": "178.0pt",
+          "$type": "dimension",
+          "$description": "Expanded popover width.",
+          "$extensions": { "apple_citation": "SPEC-001 Section 4.1" }
+        },
+        "full_popover_height": {
+          "value": "259.0pt",
+          "$type": "dimension",
+          "$description": "Expanded popover height.",
+          "$extensions": { "apple_citation": "SPEC-001 Section 4.1" }
+        },
+        "shadow_blur": {
+          "value": "18.0pt",
+          "$type": "dimension",
+          "$description": "Primary window drop shadow Gaussian blur radius.",
+          "$extensions": { "apple_citation": "macOS HIG Window & Popover Shadow Specifications" }
+        },
+        "shadow_y_offset": {
+          "value": "6.0pt",
+          "$type": "dimension",
+          "$description": "Primary window drop shadow vertical offset.",
+          "$extensions": { "apple_citation": "macOS HIG Window & Popover Shadow Specifications" }
+        }
+      }
+    },
+    "color": {
+      "aqua": {
+        "window_background": {
+          "$type": "color",
+          "$value": "#ECECEC",
+          "$description": "Standard window background surface color for Aqua Light mode.",
+          "$extensions": { "apple_citation": "NSColor.windowBackgroundColor in NSAppearanceNameAqua" }
+        },
+        "control_background": {
+          "$type": "color",
+          "$value": "#FFFFFF",
+          "$description": "Background surface color for large controls, text fields, and tables in Aqua Light mode.",
+          "$extensions": { "apple_citation": "NSColor.controlBackgroundColor in NSAppearanceNameAqua" }
+        },
+        "control": {
+          "$type": "color",
+          "$value": "#EAEAEA",
+          "$description": "Flat surface color of controls and push buttons in Aqua Light mode.",
+          "$extensions": { "apple_citation": "NSColor.controlColor in NSAppearanceNameAqua (resolves #EAEAEA)" }
+        },
+        "control_accent": {
+          "$type": "color",
+          "$value": "#007AFF",
+          "$description": "System primary blue accent color for interactive controls in Light mode.",
+          "$extensions": { "apple_citation": "NSColor.controlAccentColor / Color.accentColor in Light Appearance" }
+        },
+        "selected_control": {
+          "$type": "color",
+          "$value": "#B3D7FF",
+          "$description": "Surface background color of a selected control in Aqua Light mode.",
+          "$extensions": { "apple_citation": "NSColor.selectedControlColor in NSAppearanceNameAqua" }
+        },
+        "selected_control_inactive": {
+          "$type": "color",
+          "$value": "#DCDCDC",
+          "$description": "Selection surface color when control/window is unfocused.",
+          "$extensions": { "apple_citation": "NSColor.secondarySelectedControlColor in NSAppearanceNameAqua" }
+        },
+        "separator": {
+          "$type": "color",
+          "$value": "rgba(0, 0, 0, 0.10)",
+          "$description": "Hairline separator border stroke in Aqua Light mode (resolves to #D5D5D5 on #ECECEC).",
+          "$extensions": { "apple_citation": "NSColor.separatorColor in NSAppearanceNameAqua" }
+        },
+        "placeholder_text": {
+          "$type": "color",
+          "$value": "rgba(0, 0, 0, 0.25)",
+          "$description": "Placeholder/hint text color in Aqua Light mode.",
+          "$extensions": { "apple_citation": "NSColor.placeholderTextColor in NSAppearanceNameAqua" }
+        },
+        "keyboard_focus_indicator": {
+          "$type": "color",
+          "$value": "rgba(0, 103, 244, 0.50)",
+          "$description": "Outer focus ring halo stroke color for keyboard-navigated controls.",
+          "$extensions": { "apple_citation": "NSColor.keyboardFocusIndicatorColor (NSFocusRingPlacementOutside)" }
+        }
+      },
+      "dark_aqua": {
+        "window_background": {
+          "$type": "color",
+          "$value": "#323232",
+          "$description": "Standard window background surface color for DarkAqua (Dark mode).",
+          "$extensions": { "apple_citation": "NSColor.windowBackgroundColor in NSAppearanceNameDarkAqua" }
+        },
+        "control_background": {
+          "$type": "color",
+          "$value": "#1E1E1E",
+          "$description": "Background surface color for large controls, text fields, and tables in DarkAqua.",
+          "$extensions": { "apple_citation": "NSColor.controlBackgroundColor in NSAppearanceNameDarkAqua" }
+        },
+        "control": {
+          "$type": "color",
+          "$value": "#3A3A3A",
+          "$description": "Flat surface color of controls and push buttons in DarkAqua.",
+          "$extensions": { "apple_citation": "NSColor.controlColor in NSAppearanceNameDarkAqua" }
+        },
+        "control_accent": {
+          "$type": "color",
+          "$value": "#0A84FF",
+          "$description": "System primary blue accent color for interactive controls in Dark mode.",
+          "$extensions": { "apple_citation": "NSColor.controlAccentColor / Color.accentColor in Dark Appearance" }
+        },
+        "selected_control": {
+          "$type": "color",
+          "$value": "#3F638B",
+          "$description": "Surface background color of a selected control in DarkAqua.",
+          "$extensions": { "apple_citation": "NSColor.selectedControlColor in NSAppearanceNameDarkAqua" }
+        },
+        "selected_control_inactive": {
+          "$type": "color",
+          "$value": "#3F3F3F",
+          "$description": "Selection surface color when control/window is unfocused in Dark mode.",
+          "$extensions": { "apple_citation": "NSColor.secondarySelectedControlColor in NSAppearanceNameDarkAqua" }
+        },
+        "separator": {
+          "$type": "color",
+          "$value": "rgba(255, 255, 255, 0.10)",
+          "$description": "Hairline separator border stroke in DarkAqua (resolves to #474747 on #323232).",
+          "$extensions": { "apple_citation": "NSColor.separatorColor in NSAppearanceNameDarkAqua" }
+        },
+        "placeholder_text": {
+          "$type": "color",
+          "$value": "rgba(255, 255, 255, 0.25)",
+          "$description": "Placeholder/hint text color in DarkAqua.",
+          "$extensions": { "apple_citation": "NSColor.placeholderTextColor in NSAppearanceNameDarkAqua" }
+        },
+        "keyboard_focus_indicator": {
+          "$type": "color",
+          "$value": "rgba(0, 103, 244, 0.50)",
+          "$description": "Outer focus ring halo stroke color for keyboard-navigated controls in Dark mode.",
+          "$extensions": { "apple_citation": "NSColor.keyboardFocusIndicatorColor in NSAppearanceNameDarkAqua" }
+        }
+      }
+    },
+    "typography": {
+      "tracking_table": {
+        "pt_6": {
+          "size_pt": 6,
+          "subfamily": "SF Pro Text",
+          "tracking_em_1000": 41,
+          "tracking_pt": 0.24,
+          "$description": "Letter spacing for 6pt text (positive tracking for legibility).",
+          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+        },
+        "pt_7": {
+          "size_pt": 7,
+          "subfamily": "SF Pro Text",
+          "tracking_em_1000": 34,
+          "tracking_pt": 0.23,
+          "$description": "Letter spacing for 7pt text.",
+          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+        },
+        "pt_8": {
+          "size_pt": 8,
+          "subfamily": "SF Pro Text",
+          "tracking_em_1000": 26,
+          "tracking_pt": 0.21,
+          "$description": "Letter spacing for 8pt text.",
+          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+        },
+        "pt_9": {
+          "size_pt": 9,
+          "subfamily": "SF Pro Text",
+          "tracking_em_1000": 19,
+          "tracking_pt": 0.17,
+          "$description": "Letter spacing for 9pt text (NSFont.systemFontSize(for: .mini)).",
+          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+        },
+        "pt_10": {
+          "size_pt": 10,
+          "subfamily": "SF Pro Text",
+          "tracking_em_1000": 12,
+          "tracking_pt": 0.12,
+          "$description": "Letter spacing for 10pt text.",
+          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+        },
+        "pt_11": {
+          "size_pt": 11,
+          "subfamily": "SF Pro Text",
+          "tracking_em_1000": 6,
+          "tracking_pt": 0.06,
+          "$description": "Letter spacing for 11pt text (NSFont.systemFontSize(for: .small)).",
+          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+        },
+        "pt_12": {
+          "size_pt": 12,
+          "subfamily": "SF Pro Text",
+          "tracking_em_1000": 0,
+          "tracking_pt": 0.00,
+          "$description": "Neutral baseline letter spacing for 12pt text.",
+          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+        },
+        "pt_13": {
+          "size_pt": 13,
+          "subfamily": "SF Pro Text",
+          "tracking_em_1000": -6,
+          "tracking_pt": -0.08,
+          "$description": "Letter spacing for 13pt text (NSFont.systemFontSize(for: .regular)).",
+          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+        },
+        "pt_14": {
+          "size_pt": 14,
+          "subfamily": "SF Pro Text",
+          "tracking_em_1000": -11,
+          "tracking_pt": -0.15,
+          "$description": "Letter spacing for 14pt text.",
+          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+        },
+        "pt_15": {
+          "size_pt": 15,
+          "subfamily": "SF Pro Text",
+          "tracking_em_1000": -16,
+          "tracking_pt": -0.23,
+          "$description": "Letter spacing for 15pt text.",
+          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+        },
+        "pt_16": {
+          "size_pt": 16,
+          "subfamily": "SF Pro Text",
+          "tracking_em_1000": -20,
+          "tracking_pt": -0.31,
+          "$description": "Letter spacing for 16pt text (NSFont.systemFontSize(for: .large)).",
+          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+        },
+        "pt_17": {
+          "size_pt": 17,
+          "subfamily": "SF Pro Text",
+          "tracking_em_1000": -26,
+          "tracking_pt": -0.43,
+          "$description": "Letter spacing for 17pt body text.",
+          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+        },
+        "pt_18": {
+          "size_pt": 18,
+          "subfamily": "SF Pro Text",
+          "tracking_em_1000": -25,
+          "tracking_pt": -0.44,
+          "$description": "Letter spacing for 18pt subhead text.",
+          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+        },
+        "pt_19": {
+          "size_pt": 19,
+          "subfamily": "SF Pro Text",
+          "tracking_em_1000": -24,
+          "tracking_pt": -0.45,
+          "$description": "Letter spacing for 19pt text.",
+          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+        },
+        "pt_20": {
+          "size_pt": 20,
+          "subfamily": "SF Pro Display",
+          "tracking_em_1000": -23,
+          "tracking_pt": -0.45,
+          "$description": "Letter spacing for 20pt display text (Display optical threshold).",
+          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+        },
+        "pt_21": {
+          "size_pt": 21,
+          "subfamily": "SF Pro Display",
+          "tracking_em_1000": -18,
+          "tracking_pt": -0.36,
+          "$description": "Letter spacing for 21pt headline text.",
+          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+        },
+        "pt_22": {
+          "size_pt": 22,
+          "subfamily": "SF Pro Display",
+          "tracking_em_1000": -12,
+          "tracking_pt": -0.26,
+          "$description": "Letter spacing for 22pt title text.",
+          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+        },
+        "pt_23": {
+          "size_pt": 23,
+          "subfamily": "SF Pro Display",
+          "tracking_em_1000": -4,
+          "tracking_pt": -0.10,
+          "$description": "Letter spacing for 23pt text.",
+          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+        },
+        "pt_24": {
+          "size_pt": 24,
+          "subfamily": "SF Pro Display",
+          "tracking_em_1000": 3,
+          "tracking_pt": 0.07,
+          "$description": "Letter spacing for 24pt title text.",
+          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+        }
+      },
+      "polynomial_spec001": {
+        "description": "Polynomial curve tracking for compact numeric cells defined in SPEC-001 Section 2.1 B.",
+        "quadratic_inspector_fit": {
+          "formula": "Tracking(p) = -0.00916667 * p^2 + 0.295000 * p - 2.365833",
+          "coefficients": { "a2": -0.00916667, "a1": 0.295000, "a0": -2.365833 }
+        },
+        "cubic_apple_hig_fit": {
+          "formula": "Tracking(p) = a * p^3 + b * p^2 + c * p + d",
+          "coefficients": {
+            "a": 0.000864840354,
+            "b": -0.0339060217,
+            "c": 0.355814827,
+            "d": -0.891241741
+          }
+        },
+        "points": {
+          "p11": { "pt": 11.0, "tracking_pt": -0.23 },
+          "p13": { "pt": 13.0, "tracking_pt": -0.08 },
+          "p17": { "pt": 17.0, "tracking_pt": 0.00 }
+        }
+      }
+    },
+    "motion": {
+      "caspring_default": {
+        "mass": 1.0,
+        "stiffness": 100.0,
+        "damping": 10.0,
+        "omega_0": 10.0,
+        "damping_ratio": 0.50,
+        "response": 0.628318,
+        "$description": "CoreAnimation CASpringAnimation default physical constants (underdamped, natural bounce).",
+        "$extensions": { "apple_citation": "Apple Developer Documentation - CASpringAnimation (mass=1, stiffness=100, damping=10)" }
+      },
+      "swiftui_spring_default": {
+        "mass": 1.0,
+        "stiffness": 130.50,
+        "damping": 22.85,
+        "omega_0": 11.423973,
+        "damping_ratio": 1.0,
+        "response": 0.55,
+        "$description": "SwiftUI Animation.spring() modern default parameters (iOS 17+ / macOS 14+ critically damped).",
+        "$extensions": { "apple_citation": "Apple Developer Documentation - SwiftUI Animation.spring(response: 0.55, dampingFraction: 1.0)" }
+      },
+      "swiftui_snappy": {
+        "mass": 1.0,
+        "stiffness": 438.65,
+        "damping": 35.60,
+        "omega_0": 20.943951,
+        "damping_ratio": 0.85,
+        "response": 0.30,
+        "$description": "SwiftUI Animation.snappy preset for responsive UI elements, switches, and compact panels.",
+        "$extensions": { "apple_citation": "Apple Developer Documentation - SwiftUI Animation.snappy (duration: 0.3, extraBounce: 0.1)" }
+      },
+      "swiftui_bouncy": {
+        "mass": 1.0,
+        "stiffness": 157.91,
+        "damping": 17.59,
+        "omega_0": 12.566371,
+        "damping_ratio": 0.70,
+        "response": 0.50,
+        "$description": "SwiftUI Animation.bouncy preset for playful micro-interactions and badges.",
+        "$extensions": { "apple_citation": "Apple Developer Documentation - SwiftUI Animation.bouncy (duration: 0.5, extraBounce: 0.2)" }
+      },
+      "swiftui_smooth": {
+        "mass": 1.0,
+        "stiffness": 246.74,
+        "damping": 31.42,
+        "omega_0": 15.707963,
+        "damping_ratio": 1.0,
+        "response": 0.40,
+        "$description": "SwiftUI Animation.smooth preset for fluid transitions without overshoot.",
+        "$extensions": { "apple_citation": "Apple Developer Documentation - SwiftUI Animation.smooth (duration: 0.4, extraBounce: 0.0)" }
+      },
+      "spec001_infobox": {
+        "mass": 1.0,
+        "stiffness": 322.27,
+        "damping": 30.52,
+        "omega_0": 17.951958,
+        "omega_d": 9.456781,
+        "damping_ratio": 0.85,
+        "response": 0.35,
+        "settling_duration": 0.452637,
+        "$description": "SPEC-001 Section 2.1 C damped harmonic oscillator specification for floating infobox and popover transitions.",
+        "$extensions": { "apple_citation": "SPEC-001 Section 2.1 C (response: 0.35s, damping: 0.85, omega_0: 17.951958 rad/s, omega_d: 9.456781 rad/s, settling: 0.453s)" }
+      }
+    }
+  }
+}

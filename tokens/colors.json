@@ -1,0 +1,481 @@
+{
+  "$schema": "https://design-tokens.github.io/community-group/format/",
+  "name": "Apple macOS AppKit Semantic System Colors (NSColor)",
+  "version": "1.0.0",
+  "description": "Verified sRGB and Hex color specifications for Apple's dynamic NSColor semantic system colors on macOS (Aqua Light and Dark Mode appearances) for egui-macview.",
+  "color": {
+    "windowBackground": {
+      "light": {
+        "$type": "color",
+        "$value": "#ECECEC",
+        "$description": "The standard background color for macOS windows in Aqua Light appearance.",
+        "$extensions": {
+          "appkit": {
+            "symbol": "NSColor.windowBackgroundColor",
+            "documentation": "https://developer.apple.com/documentation/appkit/nscolor/1528622-windowbackgroundcolor",
+            "appearance": "NSAppearanceNameAqua",
+            "srgb": { "r": 236, "g": 236, "b": 236, "a": 1.0 },
+            "normalized": [0.9255, 0.9255, 0.9255, 1.0]
+          }
+        }
+      },
+      "dark": {
+        "$type": "color",
+        "$value": "#323232",
+        "$description": "The standard background color for macOS windows in Dark Mode appearance.",
+        "$extensions": {
+          "appkit": {
+            "symbol": "NSColor.windowBackgroundColor",
+            "documentation": "https://developer.apple.com/documentation/appkit/nscolor/1528622-windowbackgroundcolor",
+            "appearance": "NSAppearanceNameDarkAqua",
+            "srgb": { "r": 50, "g": 50, "b": 50, "a": 1.0 },
+            "normalized": [0.1961, 0.1961, 0.1961, 1.0]
+          }
+        }
+      }
+    },
+    "underPageBackground": {
+      "light": {
+        "$type": "color",
+        "$value": "#969696E6",
+        "$description": "The color to use for the backdrop area behind pages in a document view (Light appearance).",
+        "$extensions": {
+          "appkit": {
+            "symbol": "NSColor.underPageBackgroundColor",
+            "documentation": "https://developer.apple.com/documentation/appkit/nscolor/1534433-underpagebackgroundcolor",
+            "appearance": "NSAppearanceNameAqua",
+            "srgb": { "r": 150, "g": 150, "b": 150, "a": 0.90 },
+            "normalized": [0.5882, 0.5882, 0.5882, 0.90],
+            "solidFallbackHex": "#969696"
+          }
+        }
+      },
+      "dark": {
+        "$type": "color",
+        "$value": "#282828",
+        "$description": "The color to use for the backdrop area behind pages in a document view (Dark appearance).",
+        "$extensions": {
+          "appkit": {
+            "symbol": "NSColor.underPageBackgroundColor",
+            "documentation": "https://developer.apple.com/documentation/appkit/nscolor/1534433-underpagebackgroundcolor",
+            "appearance": "NSAppearanceNameDarkAqua",
+            "srgb": { "r": 40, "g": 40, "b": 40, "a": 1.0 },
+            "normalized": [0.1569, 0.1569, 0.1569, 1.0]
+          }
+        }
+      }
+    },
+    "controlBackground": {
+      "light": {
+        "$type": "color",
+        "$value": "#FFFFFF",
+        "$description": "The background color for large controls, input fields, tables, lists, and clip views in Light appearance.",
+        "$extensions": {
+          "appkit": {
+            "symbol": "NSColor.controlBackgroundColor",
+            "documentation": "https://developer.apple.com/documentation/appkit/nscolor/1534122-controlbackgroundcolor",
+            "appearance": "NSAppearanceNameAqua",
+            "srgb": { "r": 255, "g": 255, "b": 255, "a": 1.0 },
+            "normalized": [1.0, 1.0, 1.0, 1.0]
+          }
+        }
+      },
+      "dark": {
+        "$type": "color",
+        "$value": "#1E1E1E",
+        "$description": "The background color for large controls, input fields, tables, lists, and clip views in Dark appearance.",
+        "$extensions": {
+          "appkit": {
+            "symbol": "NSColor.controlBackgroundColor",
+            "documentation": "https://developer.apple.com/documentation/appkit/nscolor/1534122-controlbackgroundcolor",
+            "appearance": "NSAppearanceNameDarkAqua",
+            "srgb": { "r": 30, "g": 30, "b": 30, "a": 1.0 },
+            "normalized": [0.1176, 0.1176, 0.1176, 1.0]
+          }
+        }
+      }
+    },
+    "control": {
+      "light": {
+        "$type": "color",
+        "$value": "#FFFFFF",
+        "$description": "The color used for the flat surface faces of standard controls and buttons (Light appearance).",
+        "$extensions": {
+          "appkit": {
+            "symbol": "NSColor.controlColor",
+            "documentation": "https://developer.apple.com/documentation/appkit/nscolor/1535408-controlcolor",
+            "appearance": "NSAppearanceNameAqua",
+            "srgb": { "r": 255, "g": 255, "b": 255, "a": 1.0 },
+            "normalized": [1.0, 1.0, 1.0, 1.0],
+            "bezelStrokeHex": "#E5E5E5"
+          }
+        }
+      },
+      "dark": {
+        "$type": "color",
+        "$value": "#3A3A3A",
+        "$description": "The color used for the flat surface faces of standard controls and buttons (Dark appearance).",
+        "$extensions": {
+          "appkit": {
+            "symbol": "NSColor.controlColor",
+            "documentation": "https://developer.apple.com/documentation/appkit/nscolor/1535408-controlcolor",
+            "appearance": "NSAppearanceNameDarkAqua",
+            "srgb": { "r": 58, "g": 58, "b": 58, "a": 1.0 },
+            "normalized": [0.2275, 0.2275, 0.2275, 1.0],
+            "bezelStrokeHex": "#4A4A4A"
+          }
+        }
+      }
+    },
+    "selectedControl": {
+      "light": {
+        "$type": "color",
+        "$value": "#B3D7FF",
+        "$description": "The color used for the face of selected controls in active windows (Light appearance with default Blue accent).",
+        "$extensions": {
+          "appkit": {
+            "symbol": "NSColor.selectedControlColor",
+            "documentation": "https://developer.apple.com/documentation/appkit/nscolor/1533924-selectedcontrolcolor",
+            "appearance": "NSAppearanceNameAqua",
+            "srgb": { "r": 179, "g": 215, "b": 255, "a": 1.0 },
+            "normalized": [0.7020, 0.8431, 1.0, 1.0]
+          }
+        }
+      },
+      "dark": {
+        "$type": "color",
+        "$value": "#183353",
+        "$description": "The color used for the face of selected controls in active windows (Dark appearance with default Blue accent).",
+        "$extensions": {
+          "appkit": {
+            "symbol": "NSColor.selectedControlColor",
+            "documentation": "https://developer.apple.com/documentation/appkit/nscolor/1533924-selectedcontrolcolor",
+            "appearance": "NSAppearanceNameDarkAqua",
+            "srgb": { "r": 24, "g": 51, "b": 83, "a": 1.0 },
+            "normalized": [0.0941, 0.2000, 0.3255, 1.0]
+          }
+        }
+      }
+    },
+    "controlAccent": {
+      "light": {
+        "$type": "color",
+        "$value": "#007AFF",
+        "$description": "The default macOS system accent blue color for interactive controls in Light appearance.",
+        "$extensions": {
+          "appkit": {
+            "symbol": "NSColor.controlAccentColor / NSColor.systemBlue",
+            "documentation": "https://developer.apple.com/documentation/appkit/nscolor/3000782-controlaccentcolor",
+            "higDocumentation": "https://developer.apple.com/design/human-interface-guidelines/color",
+            "appearance": "NSAppearanceNameAqua",
+            "srgb": { "r": 0, "g": 122, "b": 255, "a": 1.0 },
+            "normalized": [0.0, 0.4784, 1.0, 1.0]
+          }
+        }
+      },
+      "dark": {
+        "$type": "color",
+        "$value": "#0A84FF",
+        "$description": "The macOS system accent blue color tuned for contrast against dark backgrounds in Dark appearance.",
+        "$extensions": {
+          "appkit": {
+            "symbol": "NSColor.controlAccentColor / NSColor.systemBlue",
+            "documentation": "https://developer.apple.com/documentation/appkit/nscolor/3000782-controlaccentcolor",
+            "higDocumentation": "https://developer.apple.com/design/human-interface-guidelines/color",
+            "appearance": "NSAppearanceNameDarkAqua",
+            "srgb": { "r": 10, "g": 132, "b": 255, "a": 1.0 },
+            "normalized": [0.0392, 0.5176, 1.0, 1.0]
+          }
+        }
+      }
+    },
+    "secondarySelectedControl": {
+      "light": {
+        "$type": "color",
+        "$value": "#D1D1D1",
+        "$description": "The color used for selected controls in inactive (non-key) windows or views (Light appearance).",
+        "$extensions": {
+          "appkit": {
+            "symbol": "NSColor.secondarySelectedControlColor",
+            "documentation": "https://developer.apple.com/documentation/appkit/nscolor/1526438-secondaryselectedcontrolcolor",
+            "appearance": "NSAppearanceNameAqua",
+            "srgb": { "r": 209, "g": 209, "b": 209, "a": 1.0 },
+            "normalized": [0.8196, 0.8196, 0.8196, 1.0]
+          }
+        }
+      },
+      "dark": {
+        "$type": "color",
+        "$value": "#464646",
+        "$description": "The color used for selected controls in inactive (non-key) windows or views (Dark appearance).",
+        "$extensions": {
+          "appkit": {
+            "symbol": "NSColor.secondarySelectedControlColor",
+            "documentation": "https://developer.apple.com/documentation/appkit/nscolor/1526438-secondaryselectedcontrolcolor",
+            "appearance": "NSAppearanceNameDarkAqua",
+            "srgb": { "r": 70, "g": 70, "b": 70, "a": 1.0 },
+            "normalized": [0.2745, 0.2745, 0.2745, 1.0]
+          }
+        }
+      }
+    },
+    "separator": {
+      "light": {
+        "$type": "color",
+        "$value": "#0000001A",
+        "$description": "The color used for thin 1px lines and dividers between sections of content (Light appearance).",
+        "$extensions": {
+          "appkit": {
+            "symbol": "NSColor.separatorColor",
+            "documentation": "https://developer.apple.com/documentation/appkit/nscolor/2881233-separatorcolor",
+            "appearance": "NSAppearanceNameAqua",
+            "srgb": { "r": 0, "g": 0, "b": 0, "a": 0.10 },
+            "normalized": [0.0, 0.0, 0.0, 0.10],
+            "solidBlendedOnWhite": "#E5E5E5"
+          }
+        }
+      },
+      "dark": {
+        "$type": "color",
+        "$value": "#FFFFFF1A",
+        "$description": "The color used for thin 1px lines and dividers between sections of content (Dark appearance).",
+        "$extensions": {
+          "appkit": {
+            "symbol": "NSColor.separatorColor",
+            "documentation": "https://developer.apple.com/documentation/appkit/nscolor/2881233-separatorcolor",
+            "appearance": "NSAppearanceNameDarkAqua",
+            "srgb": { "r": 255, "g": 255, "b": 255, "a": 0.10 },
+            "normalized": [1.0, 1.0, 1.0, 0.10],
+            "solidBlendedOnDark": "#282828"
+          }
+        }
+      }
+    },
+    "text": {
+      "light": {
+        "$type": "color",
+        "$value": "#000000",
+        "$description": "The primary color used for text within document contents and controls (Light appearance).",
+        "$extensions": {
+          "appkit": {
+            "symbol": "NSColor.textColor",
+            "documentation": "https://developer.apple.com/documentation/appkit/nscolor/1531770-textcolor",
+            "appearance": "NSAppearanceNameAqua",
+            "srgb": { "r": 0, "g": 0, "b": 0, "a": 1.0 },
+            "normalized": [0.0, 0.0, 0.0, 1.0]
+          }
+        }
+      },
+      "dark": {
+        "$type": "color",
+        "$value": "#FFFFFF",
+        "$description": "The primary color used for text within document contents and controls (Dark appearance).",
+        "$extensions": {
+          "appkit": {
+            "symbol": "NSColor.textColor",
+            "documentation": "https://developer.apple.com/documentation/appkit/nscolor/1531770-textcolor",
+            "appearance": "NSAppearanceNameDarkAqua",
+            "srgb": { "r": 255, "g": 255, "b": 255, "a": 1.0 },
+            "normalized": [1.0, 1.0, 1.0, 1.0]
+          }
+        }
+      }
+    },
+    "label": {
+      "light": {
+        "$type": "color",
+        "$value": "#000000D9",
+        "$description": "The primary color for prominent UI text labels (85% opacity black in Light appearance).",
+        "$extensions": {
+          "appkit": {
+            "symbol": "NSColor.labelColor",
+            "documentation": "https://developer.apple.com/documentation/appkit/nscolor/1528654-labelcolor",
+            "appearance": "NSAppearanceNameAqua",
+            "srgb": { "r": 0, "g": 0, "b": 0, "a": 0.85 },
+            "normalized": [0.0, 0.0, 0.0, 0.85],
+            "solidBlendedOnWhite": "#262626"
+          }
+        }
+      },
+      "dark": {
+        "$type": "color",
+        "$value": "#FFFFFFD9",
+        "$description": "The primary color for prominent UI text labels (85% opacity white in Dark appearance).",
+        "$extensions": {
+          "appkit": {
+            "symbol": "NSColor.labelColor",
+            "documentation": "https://developer.apple.com/documentation/appkit/nscolor/1528654-labelcolor",
+            "appearance": "NSAppearanceNameDarkAqua",
+            "srgb": { "r": 255, "g": 255, "b": 255, "a": 0.85 },
+            "normalized": [1.0, 1.0, 1.0, 0.85],
+            "solidBlendedOnDark": "#DCDCDC"
+          }
+        }
+      }
+    },
+    "secondaryLabel": {
+      "light": {
+        "$type": "color",
+        "$value": "#00000080",
+        "$description": "The color used for secondary text labels, subheadings, and captions (50% opacity black in Light appearance).",
+        "$extensions": {
+          "appkit": {
+            "symbol": "NSColor.secondaryLabelColor",
+            "documentation": "https://developer.apple.com/documentation/appkit/nscolor/1529688-secondarylabelcolor",
+            "appearance": "NSAppearanceNameAqua",
+            "srgb": { "r": 0, "g": 0, "b": 0, "a": 0.50 },
+            "normalized": [0.0, 0.0, 0.0, 0.50],
+            "solidBlendedOnWhite": "#808080"
+          }
+        }
+      },
+      "dark": {
+        "$type": "color",
+        "$value": "#FFFFFF8C",
+        "$description": "The color used for secondary text labels, subheadings, and captions (55% opacity white in Dark appearance).",
+        "$extensions": {
+          "appkit": {
+            "symbol": "NSColor.secondaryLabelColor",
+            "documentation": "https://developer.apple.com/documentation/appkit/nscolor/1529688-secondarylabelcolor",
+            "appearance": "NSAppearanceNameDarkAqua",
+            "srgb": { "r": 255, "g": 255, "b": 255, "a": 0.55 },
+            "normalized": [1.0, 1.0, 1.0, 0.55],
+            "solidBlendedOnDark": "#8C8C8C"
+          }
+        }
+      }
+    },
+    "tertiaryLabel": {
+      "light": {
+        "$type": "color",
+        "$value": "#00000042",
+        "$description": "The color used for tertiary text labels, disabled content, and subtle hints (26% opacity black in Light appearance).",
+        "$extensions": {
+          "appkit": {
+            "symbol": "NSColor.tertiaryLabelColor",
+            "documentation": "https://developer.apple.com/documentation/appkit/nscolor/1528157-tertiarylabelcolor",
+            "appearance": "NSAppearanceNameAqua",
+            "srgb": { "r": 0, "g": 0, "b": 0, "a": 0.26 },
+            "normalized": [0.0, 0.0, 0.0, 0.26],
+            "solidBlendedOnWhite": "#BCBCBC"
+          }
+        }
+      },
+      "dark": {
+        "$type": "color",
+        "$value": "#FFFFFF40",
+        "$description": "The color used for tertiary text labels, disabled content, and subtle hints (25% opacity white in Dark appearance).",
+        "$extensions": {
+          "appkit": {
+            "symbol": "NSColor.tertiaryLabelColor",
+            "documentation": "https://developer.apple.com/documentation/appkit/nscolor/1528157-tertiarylabelcolor",
+            "appearance": "NSAppearanceNameDarkAqua",
+            "srgb": { "r": 255, "g": 255, "b": 255, "a": 0.25 },
+            "normalized": [1.0, 1.0, 1.0, 0.25],
+            "solidBlendedOnDark": "#4D4D4D"
+          }
+        }
+      }
+    },
+    "quaternaryLabel": {
+      "light": {
+        "$type": "color",
+        "$value": "#0000001A",
+        "$description": "The color used for quaternary elements, subtle watermark-like labels, or faint separators (10% opacity black in Light appearance).",
+        "$extensions": {
+          "appkit": {
+            "symbol": "NSColor.quaternaryLabelColor",
+            "documentation": "https://developer.apple.com/documentation/appkit/nscolor/1534438-quaternarylabelcolor",
+            "appearance": "NSAppearanceNameAqua",
+            "srgb": { "r": 0, "g": 0, "b": 0, "a": 0.10 },
+            "normalized": [0.0, 0.0, 0.0, 0.10],
+            "solidBlendedOnWhite": "#E5E5E5"
+          }
+        }
+      },
+      "dark": {
+        "$type": "color",
+        "$value": "#FFFFFF1A",
+        "$description": "The color used for quaternary elements, subtle watermark-like labels, or faint separators (10% opacity white in Dark appearance).",
+        "$extensions": {
+          "appkit": {
+            "symbol": "NSColor.quaternaryLabelColor",
+            "documentation": "https://developer.apple.com/documentation/appkit/nscolor/1534438-quaternarylabelcolor",
+            "appearance": "NSAppearanceNameDarkAqua",
+            "srgb": { "r": 255, "g": 255, "b": 255, "a": 0.10 },
+            "normalized": [1.0, 1.0, 1.0, 0.10],
+            "solidBlendedOnDark": "#282828"
+          }
+        }
+      }
+    },
+    "placeholderText": {
+      "light": {
+        "$type": "color",
+        "$value": "#00000040",
+        "$description": "The color used for placeholder text in controls or text input fields (25% opacity black in Light appearance).",
+        "$extensions": {
+          "appkit": {
+            "symbol": "NSColor.placeholderTextColor",
+            "documentation": "https://developer.apple.com/documentation/appkit/nscolor/1531604-placeholdertextcolor",
+            "appearance": "NSAppearanceNameAqua",
+            "srgb": { "r": 0, "g": 0, "b": 0, "a": 0.25 },
+            "normalized": [0.0, 0.0, 0.0, 0.25],
+            "solidBlendedOnWhite": "#BFBFBF"
+          }
+        }
+      },
+      "dark": {
+        "$type": "color",
+        "$value": "#FFFFFF40",
+        "$description": "The color used for placeholder text in controls or text input fields (25% opacity white in Dark appearance).",
+        "$extensions": {
+          "appkit": {
+            "symbol": "NSColor.placeholderTextColor",
+            "documentation": "https://developer.apple.com/documentation/appkit/nscolor/1531604-placeholdertextcolor",
+            "appearance": "NSAppearanceNameDarkAqua",
+            "srgb": { "r": 255, "g": 255, "b": 255, "a": 0.25 },
+            "normalized": [1.0, 1.0, 1.0, 0.25],
+            "solidBlendedOnDark": "#4A4A4A"
+          }
+        }
+      }
+    },
+    "keyboardFocusIndicator": {
+      "light": {
+        "$type": "color",
+        "$value": "#0067F480",
+        "$description": "The blue focus glow ring indicator color used for focused controls (Light appearance).",
+        "$extensions": {
+          "appkit": {
+            "symbol": "NSColor.keyboardFocusIndicatorColor",
+            "documentation": "https://developer.apple.com/documentation/appkit/nscolor/1528612-keyboardfocusindicatorcolor",
+            "appearance": "NSAppearanceNameAqua",
+            "srgb": { "r": 0, "g": 103, "b": 244, "a": 0.50 },
+            "normalized": [0.0, 0.4039, 0.9569, 0.50],
+            "solidBlendedOnWhite": "#80B3FA",
+            "focusRingStrokeWidth": "2px",
+            "focusRingBlur": "3px"
+          }
+        }
+      },
+      "dark": {
+        "$type": "color",
+        "$value": "#0A84FF80",
+        "$description": "The blue focus glow ring indicator color tuned for dark backgrounds (Dark appearance).",
+        "$extensions": {
+          "appkit": {
+            "symbol": "NSColor.keyboardFocusIndicatorColor",
+            "documentation": "https://developer.apple.com/documentation/appkit/nscolor/1528612-keyboardfocusindicatorcolor",
+            "appearance": "NSAppearanceNameDarkAqua",
+            "srgb": { "r": 10, "g": 132, "b": 255, "a": 0.50 },
+            "normalized": [0.0392, 0.5176, 1.0, 0.50],
+            "solidBlendedOnDark": "#0A4F8A",
+            "focusRingStrokeWidth": "2px",
+            "focusRingBlur": "3px"
+          }
+        }
+      }
+    }
+  }
+}
