@@ -40,6 +40,22 @@ impl<'a> MacInputCell<'a> {
         }
     }
 
+    /// Creates a cell directly with an existing `egui::Id` without double-hashing.
+    pub fn with_id(id: egui::Id, value: &'a mut String) -> Self {
+        Self {
+            id,
+            value,
+            theme: None,
+            width: None,
+            height: None,
+            font_size: None,
+            corner_radius: None,
+            next_focus_id: None,
+            prev_focus_id: None,
+            placeholder: None,
+        }
+    }
+
     /// Injects dynamic theme to eliminate hardcoded metrics and colors.
     pub fn theme(mut self, theme: &'a MacTheme) -> Self {
         self.theme = Some(theme);
@@ -98,6 +114,10 @@ impl<'a> MacInputCell<'a> {
 
         let desired_size = Vec2::new(width, height);
         let (rect, mut response) = ui.allocate_exact_size(desired_size, egui::Sense::click_and_drag());
+
+        if response.clicked() {
+            ui.memory_mut(|m| m.request_focus(self.id));
+        }
 
         let is_focused = ui.memory(|m| m.has_focus(self.id));
         let painter = ui.painter_at(rect);
