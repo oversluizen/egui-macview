@@ -33,6 +33,7 @@ fn test_token_catalog_deserialization() {
     assert_eq!(ctrl.text_field.regular.corner_radius.points(), 6.0);
     assert_eq!(ctrl.text_field.small.height.points(), 19.0);
     assert_eq!(ctrl.text_field.compact_infobox.height.points(), 18.0);
+    assert_eq!(ctrl.text_field.compact().height.points(), 18.0);
     assert_eq!(ctrl.text_field.mini.height.points(), 15.0);
     assert_eq!(ctrl.text_field.large.height.points(), 28.0);
 
@@ -117,6 +118,12 @@ fn test_caspring_analytical_precision() {
         "Rest tolerance violation at t_settle: |x(t) - 1.0| = {}",
         (spring_default.evaluate(t_settle_def) - 1.0).abs()
     );
+
+    // Verify physical parameterization equivalence (mass=1.0, stiffness=100.0, damping=10.0)
+    let spring_phys = CASpring::from_physical(1.0, 100.0, 10.0);
+    assert!((spring_phys.omega_0() - 10.0).abs() < tolerance);
+    assert!((spring_phys.omega_d() - 8.660254).abs() < tolerance);
+    assert_eq!(spring_phys.damping_ratio, 0.5);
 
     // 2. hud_panel_transition: response=0.35, damping_ratio=0.85 -> omega_0=17.951958, omega_d=9.456781, t_settle~0.453s
     let hud_spring = CASpring::new(0.35, 0.85);

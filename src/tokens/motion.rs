@@ -23,6 +23,14 @@ impl MotionPresetToken {
     pub fn to_spring(&self) -> crate::motion::CASpring {
         crate::motion::CASpring::new(self.response, self.damping_ratio)
     }
+
+    pub fn to_spring_physical(&self) -> Option<crate::motion::CASpring> {
+        if self.mass > 0.0 && self.stiffness > 0.0 && self.damping > 0.0 {
+            Some(crate::motion::CASpring::from_physical(self.mass, self.stiffness, self.damping))
+        } else {
+            None
+        }
+    }
 }
 
 /// Motion token collection.

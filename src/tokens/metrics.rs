@@ -28,9 +28,17 @@ pub struct TextFieldSizeMetrics {
 pub struct TextFieldMetrics {
     pub regular: TextFieldSizeMetrics,
     pub small: TextFieldSizeMetrics,
+    #[serde(alias = "compact")]
     pub compact_infobox: TextFieldSizeMetrics,
     pub mini: TextFieldSizeMetrics,
     pub large: TextFieldSizeMetrics,
+}
+
+impl TextFieldMetrics {
+    #[inline]
+    pub fn compact(&self) -> &TextFieldSizeMetrics {
+        &self.compact_infobox
+    }
 }
 
 /// Push button metrics for a specific size tier.
