@@ -83,3 +83,40 @@ impl<'a> MacFlexView<'a> {
         Self { ui, available_rect }
     }
 }
+
+/// Deterministic horizontal row container with fixed height and spacing budget.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct MacRow {
+    pub y_offset: f32,
+    pub height: f32,
+    pub cursor_x: f32,
+    pub item_spacing: f32,
+    pub container_width: f32,
+}
+
+impl MacRow {
+    pub fn new(y_offset: f32, height: f32, container_width: f32, item_spacing: f32) -> Self {
+        Self {
+            y_offset,
+            height,
+            cursor_x: 0.0,
+            item_spacing,
+            container_width,
+        }
+    }
+
+    /// Allocates next cell of width `width`, advancing cursor with spacing.
+    /// Returns relative bounds `(x, y, width, height)`.
+    pub fn allocate_cell(&mut self, width: f32) -> (f32, f32, f32, f32) {
+        let x = self.cursor_x;
+        let y = self.y_offset;
+        let h = self.height;
+        self.cursor_x += width + self.item_spacing;
+        (x, y, width, h)
+    }
+
+    /// Returns remaining horizontal budget in points.
+    pub fn remaining_width(&self) -> f32 {
+        (self.container_width - self.cursor_x).max(0.0)
+    }
+}

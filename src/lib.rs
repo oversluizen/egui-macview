@@ -4,9 +4,15 @@ pub mod layout;
 pub mod controls;
 pub mod motion;
 pub mod surfaces;
+pub mod theme;
 pub mod tokens;
 
-pub use layout::{subpixel_snap, subpixel_snap_pos, subpixel_snap_rect, MacFixedView, MacFlexView, MacFrame};
+pub use theme::{MacAppearance, MacTheme};
+
+pub use layout::{
+    subpixel_snap, subpixel_snap_pos, subpixel_snap_rect, MacFixedView, MacFlexView, MacFrame,
+    MacRow,
+};
 pub use controls::{MacButtonCell, MacInputCell, MacSegmentedControl, MacToggle};
 pub use motion::CASpring;
 pub use tokens::{
