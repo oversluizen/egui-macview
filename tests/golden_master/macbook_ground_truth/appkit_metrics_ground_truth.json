@@ -1,0 +1,36 @@
+{
+  "segmented_theme": {
+    "w": 120.0,
+    "h": 24.0
+  },
+  "segmented_units": {
+    "w": 163.0,
+    "h": 24.0
+  },
+  "slider": {
+    "w": 130.0,
+    "h": 24.0
+  },
+  "stepper": {
+    "w": 19.0,
+    "h": 28.0
+  },
+  "popup_button": {
+    "w": 150.0,
+    "h": 24.0
+  },
+  "color_well": {
+    "w": 44.0,
+    "h": 23.0
+  },
+  "button": {
+    "w": 177.0,
+    "h": 32.0
+  },
+  "caspring": {
+    "mass": 1.0,
+    "stiffness": 100.0,
+    "damping": 10.0,
+    "settling_duration": 1.4727003346780927
+  }
+}

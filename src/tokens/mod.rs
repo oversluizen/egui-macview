@@ -12,9 +12,11 @@ pub mod typography;
 pub use color::{MacAppearanceColors, MacColorTokens};
 pub use dtcg::{ColorValue, DimensionValue};
 pub use metrics::{
-    ButtonMetrics, ButtonSizeMetrics, FocusRingMetrics, MacControlMetrics, MacMetricsTokens,
-    PopoverMetrics, SegmentedMetrics, SegmentedSizeMetrics, TextFieldMetrics, TextFieldSizeMetrics,
-    ToolbarMetrics,
+    ButtonMetrics, ButtonSizeMetrics, ColorWellMetrics, FocusRingMetrics, LayoutMetrics,
+    MacControlMetrics, MacMetricsTokens, OutlineViewMetrics, PopUpButtonMetrics, PopoverMetrics,
+    ScrollViewMetrics, SearchFieldMetrics, SegmentedMetrics, SegmentedSizeMetrics, SliderMetrics,
+    SplitViewMetrics, StackViewMetrics, StepperMetrics, TextFieldMetrics, TextFieldSizeMetrics,
+    ThumbnailCellMetrics, ToggleMetrics, ToolbarMetrics,
 };
 pub use motion::{MacMotionTokens, MotionPresetToken};
 pub use typography::{
@@ -27,29 +29,48 @@ use serde::{Deserialize, Serialize};
 /// Inner container grouping the token subcategories.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MacViewTokens {
+    /// Geometry and dimension tokens.
     pub metrics: MacMetricsTokens,
+    /// Semantic color palettes for Aqua and DarkAqua.
     pub color: MacColorTokens,
+    /// SF Pro typography and tracking tokens.
     pub typography: MacTypographyTokens,
+    /// Spring physics and animation preset tokens.
     pub motion: MacMotionTokens,
 }
 
 /// Root token catalog deserialized from `tokens/design_tokens.json`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MacDesignTokens {
+    /// Token catalog schema name.
     #[serde(rename = "$name", default)]
     pub name: String,
+    /// Token catalog schema version string.
     #[serde(rename = "$version", default)]
     pub version: String,
+    /// Catalog description.
     #[serde(rename = "$description", default)]
     pub description: String,
+    /// Root namespace holding all token subcategories.
     pub macview: MacViewTokens,
 }
 
 impl MacDesignTokens {
     /// Loads default design tokens from embedded `tokens/design_tokens.json`.
+    ///
+    /// Executes parsing within a dedicated stack thread (4MB) to guarantee immunity
+    /// against stack overflows on platforms with restricted default main stacks.
     pub fn load_default() -> Self {
-        Self::from_json(include_str!("../../tokens/design_tokens.json"))
-            .expect("Failed to parse embedded tokens/design_tokens.json")
+        std::thread::Builder::new()
+            .name("mac_token_loader".into())
+            .stack_size(4 * 1024 * 1024)
+            .spawn(|| {
+                Self::from_json(include_str!("../../tokens/design_tokens.json"))
+                    .expect("Failed to parse embedded tokens/design_tokens.json")
+            })
+            .expect("Failed to spawn token loader thread")
+            .join()
+            .expect("Token loader panicked")
     }
 
     /// Deserializes `MacDesignTokens` from a JSON string.
@@ -57,31 +78,109 @@ impl MacDesignTokens {
         serde_json::from_str(json)
     }
 
+    /// Accesses control metrics tokens.
     #[inline]
     pub fn control_metrics(&self) -> &MacControlMetrics {
         &self.macview.metrics.control
     }
 
+    /// Accesses toolbar metrics tokens.
     #[inline]
     pub fn toolbar_metrics(&self) -> &ToolbarMetrics {
         &self.macview.metrics.toolbar
     }
 
+    /// Accesses popover and panel metrics tokens.
     #[inline]
     pub fn popover_metrics(&self) -> &PopoverMetrics {
         &self.macview.metrics.popover
     }
 
+    /// Accesses split view metrics tokens.
+    #[inline]
+    pub fn split_view_metrics(&self) -> &SplitViewMetrics {
+        &self.macview.metrics.split_view
+    }
+
+    /// Accesses layout container metrics tokens.
+    #[inline]
+    pub fn layout_metrics(&self) -> &LayoutMetrics {
+        &self.macview.metrics.layout
+    }
+
+    /// Accesses scroll view metrics tokens.
+    #[inline]
+    pub fn scroll_view_metrics(&self) -> &ScrollViewMetrics {
+        &self.macview.metrics.layout.scroll_view
+    }
+
+    /// Accesses stack view metrics tokens.
+    #[inline]
+    pub fn stack_view_metrics(&self) -> &StackViewMetrics {
+        &self.macview.metrics.layout.stack_view
+    }
+
+    /// Accesses outline view metrics tokens.
+    #[inline]
+    pub fn outline_view_metrics(&self) -> &OutlineViewMetrics {
+        &self.macview.metrics.control.outline_view
+    }
+
+    /// Accesses slider metrics tokens.
+    #[inline]
+    pub fn slider_metrics(&self) -> &SliderMetrics {
+        &self.macview.metrics.control.slider
+    }
+
+    /// Accesses thumbnail metrics tokens.
+    #[inline]
+    pub fn thumbnail_metrics(&self) -> &ThumbnailCellMetrics {
+        &self.macview.metrics.control.thumbnail
+    }
+
+    /// Accesses popup button metrics tokens.
+    #[inline]
+    pub fn popup_button_metrics(&self) -> &PopUpButtonMetrics {
+        &self.macview.metrics.control.popup_button
+    }
+
+    /// Accesses search field metrics tokens.
+    #[inline]
+    pub fn search_field_metrics(&self) -> &SearchFieldMetrics {
+        &self.macview.metrics.control.search_field
+    }
+
+    /// Accesses stepper metrics tokens.
+    #[inline]
+    pub fn stepper_metrics(&self) -> &StepperMetrics {
+        &self.macview.metrics.control.stepper
+    }
+
+    /// Accesses color well metrics tokens.
+    #[inline]
+    pub fn color_well_metrics(&self) -> &ColorWellMetrics {
+        &self.macview.metrics.control.color_well
+    }
+
+    /// Accesses toggle switch metrics tokens.
+    #[inline]
+    pub fn toggle_metrics(&self) -> &ToggleMetrics {
+        &self.macview.metrics.control.toggle
+    }
+
+    /// Accesses semantic color tokens.
     #[inline]
     pub fn colors(&self) -> &MacColorTokens {
         &self.macview.color
     }
 
+    /// Accesses typography and optical tracking tokens.
     #[inline]
     pub fn typography(&self) -> &MacTypographyTokens {
         &self.macview.typography
     }
 
+    /// Accesses CoreAnimation motion preset tokens.
     #[inline]
     pub fn motion(&self) -> &MacMotionTokens {
         &self.macview.motion

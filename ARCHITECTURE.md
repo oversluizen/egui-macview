@@ -58,10 +58,10 @@ To achieve true macOS visual fidelity on non-macOS hardware (Windows DirectX and
 
 ## 4. The 3 Coordinate Spaces: Model vs. View vs. Screen
 
-A typographic studio or precision graphics tool operates in three strictly isolated dimensional domains:
+A precision desktop application or graphics tool operates in three strictly isolated dimensional domains:
 
 ```
-[ 1. MODEL SPACE ]         Font Units (u)          UPM = 1000u, LSB = 45u
+[ 1. MODEL SPACE ]         Domain Units (u)        Model coordinate space (e.g. width = 1000u, x = 45u)
         │
         ▼ (Viewport Transform: Zoom & Pan)
 [ 2. VIEW SPACE ]          AppKit Points (pt)      Container = 250x63 pt, Cell = 54x18 pt
@@ -125,34 +125,52 @@ Consider a standard two-row macOS Inspector panel on a display configured at **1
 ## 6. Architecture & Module Decomposition
 
 ```
-crates/egui-macview/
+egui-macview/
 ├── Cargo.toml
 ├── README.md
-├── ARCHITECTURE.md                  (This canonical reference)
+├── CHANGELOG.md                            (Keep a Changelog & SemVer release history)
+├── ARCHITECTURE.md                         (Architectural design & coordinate systems)
+├── specs/                                  (Modular normative specification suite)
+│   ├── SPEC-INDEX.md                       (Central index & version matrix)
+│   ├── SPEC-001-DESIGN-TOKENS-AND-WCAG.md
+│   ├── SPEC-002-CONTROLS-AND-MICRO-ANIMATIONS.md
+│   ├── SPEC-003-LAYOUT-ENGINES.md
+│   ├── SPEC-004-CORE-ANIMATION-PHYSICS.md
+│   ├── SPEC-005-WINDOW-FRAMING-AND-CONTROLS.md
+│   └── SPEC-006-INSPECTOR-ARCHITECTURE.md
+├── tokens/                                 (W3C DTCG Token Catalogs)
+│   ├── design_tokens.json
+│   └── typography.json
 ├── src/
-│   ├── lib.rs                       (Crate root & public facade)
+│   ├── lib.rs                              (Crate root & public facade)
 │   ├── layout/
-│   │   ├── mod.rs
-│   │   ├── mac_frame.rs             (NIB geometry, Rect pt math)
-│   │   ├── fixed_view.rs            (Absolute pt positioning)
-│   │   └── flex_view.rs             (AutoLayout springs & struts)
+│   │   ├── mod.rs                          (MacFixedView, MacFlexView, MacRow)
+│   │   └── split_view.rs                   (MacSplitView AppKit pane divider)
 │   ├── controls/
 │   │   ├── mod.rs
-│   │   ├── input_cell.rs            (18pt zero-margin compact cell)
-│   │   ├── button_cell.rs           (AppKit template image tinting)
-│   │   ├── segmented_control.rs     (Segmented pill switcher)
-│   │   ├── toggle_switch.rs         (macOS pill toggle)
-│   │   └── slider.rs                (Continuous axis slider)
+│   │   ├── button_cell.rs                  (MacButtonCell template image tinting)
+│   │   ├── input_cell.rs                   (MacInputCell 18pt compact transactional cell)
+│   │   ├── outline_view.rs                 (MacOutlineView hierarchical tree)
+│   │   ├── segmented.rs                    (MacSegmentedControl pill switcher)
+│   │   ├── slider.rs                       (MacSlider continuous tracking)
+│   │   ├── thumbnail_cell.rs               (MacThumbnailCell 24x24 canvas cell)
+│   │   └── toggle.rs                       (MacToggle macOS pill toggle)
 │   ├── motion/
-│   │   ├── mod.rs
-│   │   ├── ca_spring.rs             (Closed-form damped oscillator)
-│   │   └── timing_functions.rs      (Apple ease-in / ease-out curves)
-│   └── surfaces/
-│       ├── mod.rs
-│       ├── panel.rs                 (NSPanel HUD floating container)
-│       └── popover.rs               (NSPopover with anchor chevron)
+│   │   └── mod.rs                          (CASpring closed-form damped oscillator)
+│   ├── surfaces/
+│   │   └── mod.rs                          (MacPanel HUD floating container)
+│   ├── theme/
+│   │   └── mod.rs                          (MacTheme, MacAppearance dynamic resolver)
+│   └── tokens/
+│       ├── mod.rs                          (TokenCatalog root loader)
+│       ├── color.rs                        (AppKit dynamic semantic colors)
+│       ├── dtcg.rs                         (W3C DTCG deserializer & parser)
+│       ├── metrics.rs                      (Control, layout & typography metrics)
+│       ├── motion.rs                       (Spring stiffness & damping tokens)
+│       └── typography.rs                   (Optical tracking tables & tracking formulas)
 └── tests/
-    ├── layout_oracle_tests.rs       (Mathematical zero-clipping proofs)
-    ├── spring_physics_tests.rs      (Damped oscillator convergence)
-    └── visual_regression_tests.rs   (Headless SSIM diffing)
+    ├── appkit_primitives_tests.rs          (Split view, outline view, slider, thumbnail tests)
+    ├── cots_red_baseline_tests.rs          (CASpring analytical precision, subpixel snap)
+    ├── high_assurance_invariants_tests.rs  (FSM cyclic preservation, transactional rollback)
+    └── zero_hardcoding_and_primitive_tests.rs (DTCG tokens, row budget, theme dynamic metrics)
 ```

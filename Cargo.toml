@@ -1,13 +1,20 @@
 [package]
 name = "egui-macview"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
-authors = ["Jaco Hoving", "Patrix UI & Rendering Team"]
+authors = ["Jaco Oversluizen", "egui-macview contributors"]
 description = "Deterministic macOS AppKit Layout Engine, Authentic Control Primitive Suite, and CoreAnimation Physics Runtime for egui."
+repository = "https://github.com/oversluizen/egui-macview"
+documentation = "https://docs.rs/egui-macview"
 readme = "README.md"
 keywords = ["egui", "macos", "appkit", "gui", "layout"]
 categories = ["gui"]
+autotests = false
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
 egui = { version = "0.37.0", default-features = false }
@@ -15,5 +22,47 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
 [dev-dependencies]
+eframe = "0.37.0"
 image = "0.25"
 proptest = "1.6"
+
+[[test]]
+name = "appkit_primitives_tests"
+path = "tests/appkit_primitives_tests.rs"
+
+[[test]]
+name = "architecture_guard_tests"
+path = "tests/architecture_guard_tests.rs"
+
+[[test]]
+name = "cots_red_baseline_tests"
+path = "tests/cots_red_baseline_tests.rs"
+
+[[test]]
+name = "high_assurance_invariants_tests"
+path = "tests/high_assurance_invariants_tests.rs"
+
+[[test]]
+name = "macbook_parity_differential_tests"
+path = "tests/macbook_parity_differential_tests.rs"
+
+[[test]]
+name = "micro_animations_and_hud_tests"
+path = "tests/micro_animations_and_hud_tests.rs"
+
+[[test]]
+name = "wcag_contrast_and_visuals_tests"
+path = "tests/wcag_contrast_and_visuals_tests.rs"
+
+[[test]]
+name = "zero_hardcoding_and_primitive_tests"
+path = "tests/zero_hardcoding_and_primitive_tests.rs"
+
+[[test]]
+name = "menu_and_palette_tests"
+path = "tests/menu_and_palette_tests.rs"
+
+[[test]]
+name = "undo_and_feedback_tests"
+path = "tests/undo_and_feedback_tests.rs"
+

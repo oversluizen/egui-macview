@@ -5,9 +5,38 @@
 
 use serde::{Deserialize, Serialize};
 
+/// Authentic macOS CoreAnimation damped harmonic oscillator spring model.
+///
+/// Matches Apple's `CASpringAnimation` and SwiftUI `.spring(response:dampingRatio:)`.
+/// Provides exact closed-form analytical solutions for underdamped ($\zeta < 1$),
+/// critically damped ($\zeta = 1$), and overdamped ($\zeta > 1$) regimes without
+/// numerical Euler drift or floating-point overflow.
+///
+/// # Example
+///
+/// ```rust
+/// use egui_macview::CASpring;
+///
+/// // Create a responsive spring (0.35s period, 0.85 damping ratio)
+/// let spring = CASpring::new(0.35, 0.85);
+///
+/// // Evaluate position x(t) in [0.0, 1.0]
+/// let x_start = spring.evaluate(0.0);
+/// let x_mid = spring.evaluate(0.15);
+/// let x_settled = spring.evaluate(spring.settling_duration());
+///
+/// assert_eq!(x_start, 0.0);
+/// assert!(x_mid > 0.0 && x_mid < 1.1);
+/// assert!((x_settled - 1.0).abs() < 0.005);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct CASpring {
+    /// Perceptual oscillation period $T_0$ in seconds ($\ge 0.0001$).
     pub response: f32,
+    /// Dimensionless damping ratio $\zeta$ ($\ge 0.0$).
+    /// - $\zeta < 1.0$: Underdamped (oscillates with decaying overshoot).
+    /// - $\zeta = 1.0$: Critically damped (fastest decay with zero overshoot).
+    /// - $\zeta > 1.0$: Overdamped (smooth monotonic decay without oscillation).
     pub damping_ratio: f32,
 }
 
@@ -28,6 +57,13 @@ impl CASpring {
             response: response.max(0.0001),
             damping_ratio: damping_ratio.max(0.0),
         }
+    }
+
+    /// Creates a `CASpring` using Apple SwiftUI / AppKit perceptual parameters
+    /// `response` (in seconds) and `damping_ratio`.
+    #[inline]
+    pub fn from_perceptual(response: f32, damping_ratio: f32) -> Self {
+        Self::new(response, damping_ratio)
     }
 
     /// Creates a `CASpring` from undamped angular frequency $\omega_0$ (in rad/s)
@@ -80,6 +116,22 @@ impl CASpring {
     }
 
     /// Evaluates displacement $x(t) \in [0.0, 1.0]$ at time $t$ in seconds.
+    #[inline]
+    pub fn position_at(&self, t: f32) -> f32 {
+        self.evaluate(t)
+    }
+
+    /// Theoretical peak overshoot ratio over resting state (0.0 if critically or overdamped).
+    pub fn overshoot_ratio(&self) -> f32 {
+        let zeta = self.damping_ratio;
+        if (0.0..1.0).contains(&zeta) {
+            (-std::f32::consts::PI * zeta / (1.0 - zeta * zeta).sqrt()).exp()
+        } else {
+            0.0
+        }
+    }
+
+    /// Evaluates displacement $x(t) \in [0.0, 1.0]$ at time $t$ in seconds.
     pub fn evaluate(&self, t: f32) -> f32 {
         if t <= 0.0 {
             return 0.0;
@@ -95,7 +147,8 @@ impl CASpring {
             if decay == 0.0 {
                 1.0
             } else {
-                let envelope = decay * ((omega_d * t).cos() + (zeta * omega0 / omega_d) * (omega_d * t).sin());
+                let envelope =
+                    decay * ((omega_d * t).cos() + (zeta * omega0 / omega_d) * (omega_d * t).sin());
                 1.0 - envelope
             }
         } else if (zeta - 1.0).abs() < 1e-5 {

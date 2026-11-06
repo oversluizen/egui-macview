@@ -8,6 +8,9 @@
 //! 4. Subpixel snap criterion under fractional Windows DPI scaling (s = 1.50).
 //! 5. SF Pro dynamic typography cubic tracking optical bounds against Apple HIG.
 
+use std::fs;
+use std::path::Path;
+
 use egui_macview::layout::{subpixel_snap, subpixel_snap_pos, subpixel_snap_rect};
 use egui_macview::motion::CASpring;
 use egui_macview::tokens::{sf_pro_tracking, MacDesignTokens};
@@ -19,7 +22,8 @@ fn test_token_catalog_deserialization() {
 
     // Verify metadata
     assert_eq!(tokens.name, "egui-macview Design Tokens");
-    assert_eq!(tokens.version, "1.0.0");
+    assert_eq!(tokens.version, "0.2.0");
+    assert_eq!(egui_macview::VERSION, "0.2.0");
     assert!(!tokens.description.is_empty());
 
     // Verify Control Metrics
@@ -50,6 +54,11 @@ fn test_token_catalog_deserialization() {
     assert_eq!(tb.icon_size.points(), 20.0);
     assert_eq!(tb.hit_target_width.points(), 32.0);
     assert_eq!(tb.hit_target_height.points(), 28.0);
+    assert_eq!(tb.caption_button_width.points(), 46.0);
+    assert_eq!(tb.caption_button_height.points(), 32.0);
+    assert_eq!(tb.caption_icon_size.points(), 10.0);
+    assert_eq!(tb.traffic_light_radius.points(), 6.0);
+    assert_eq!(tb.traffic_light_spacing.points(), 8.0);
 
     // Verify Popover Metrics
     let pop = tokens.popover_metrics();
@@ -180,7 +189,12 @@ fn test_compact_hud_panel_budget_zero_clipping() {
     assert_eq!(available_body_budget, 41.0);
 
     // 2-row layout with two 18.0pt compact cells and 1.0pt vertical gap
-    let cell_height = tokens.control_metrics().text_field.compact_infobox.height.points();
+    let cell_height = tokens
+        .control_metrics()
+        .text_field
+        .compact_infobox
+        .height
+        .points();
     assert_eq!(cell_height, 18.0);
 
     let vertical_gap = 1.0;
@@ -245,9 +259,21 @@ fn test_sf_pro_dynamic_tracking_optical_bounds() {
     let typo = tokens.typography();
 
     // 1. Verify exact Apple HIG ground truth tracking table points
-    let pt6_table = typo.tracking_table.get("pt_6").expect("pt_6 entry missing").tracking_pt;
-    let pt12_table = typo.tracking_table.get("pt_12").expect("pt_12 entry missing").tracking_pt;
-    let pt20_table = typo.tracking_table.get("pt_20").expect("pt_20 entry missing").tracking_pt;
+    let pt6_table = typo
+        .tracking_table
+        .get("pt_6")
+        .expect("pt_6 entry missing")
+        .tracking_pt;
+    let pt12_table = typo
+        .tracking_table
+        .get("pt_12")
+        .expect("pt_12 entry missing")
+        .tracking_pt;
+    let pt20_table = typo
+        .tracking_table
+        .get("pt_20")
+        .expect("pt_20 entry missing")
+        .tracking_pt;
 
     assert_eq!(pt6_table, 0.24, "HIG table pt_6 must be +0.24pt");
     assert_eq!(pt12_table, 0.00, "HIG table pt_12 must be neutral 0.00pt");
@@ -259,7 +285,11 @@ fn test_sf_pro_dynamic_tracking_optical_bounds() {
     let track_20 = typo.tracking_for_size(20.0);
 
     // 6pt: Positive loose tracking for small text optical legibility
-    assert!(track_6 > 0.15, "6pt tracking must be positive loose: got {}", track_6);
+    assert!(
+        track_6 > 0.15,
+        "6pt tracking must be positive loose: got {}",
+        track_6
+    );
     assert!(
         (track_6 - 0.24).abs() < 0.05,
         "6pt tracking polynomial deviation too large: {}",
@@ -274,7 +304,11 @@ fn test_sf_pro_dynamic_tracking_optical_bounds() {
     );
 
     // 20pt: Display threshold negative tight tracking
-    assert!(track_20 < -0.35, "20pt tracking must be negative display tight: got {}", track_20);
+    assert!(
+        track_20 < -0.35,
+        "20pt tracking must be negative display tight: got {}",
+        track_20
+    );
     assert!(
         (track_20 - (-0.45)).abs() < 0.05,
         "20pt tracking polynomial deviation too large: {}",
@@ -289,4 +323,66 @@ fn test_sf_pro_dynamic_tracking_optical_bounds() {
     assert!((sf_pro_tracking(6.0) as f64 - track_6).abs() < 1e-4);
     assert!((sf_pro_tracking(12.0) as f64 - track_12).abs() < 1e-4);
     assert!((sf_pro_tracking(20.0) as f64 - track_20).abs() < 1e-4);
+}
+
+/// Test 6: Verifies 1-to-1 version synchronization across Cargo.toml, CHANGELOG.md, design_tokens.json, and all specs in specs/.
+#[test]
+fn test_version_synchronization_invariants() {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+
+    // 1. Cargo.toml version
+    let cargo_toml = fs::read_to_string(manifest_dir.join("Cargo.toml")).expect("read Cargo.toml");
+    assert!(
+        cargo_toml.contains("version = \"0.2.0\""),
+        "Cargo.toml must have version = \"0.2.0\""
+    );
+
+    // 2. Exported crate version constant
+    assert_eq!(egui_macview::VERSION, "0.2.0");
+
+    // 3. Design tokens version
+    let tokens = MacDesignTokens::load_default();
+    assert_eq!(tokens.version, "0.2.0");
+
+    // 4. CHANGELOG.md strictly documents [0.2.0] - 2026-11-06 and [0.1.0] - 2026-11-05
+    let changelog =
+        fs::read_to_string(manifest_dir.join("CHANGELOG.md")).expect("read CHANGELOG.md");
+    assert!(
+        changelog.contains("## [0.2.0] - 2026-11-06"),
+        "CHANGELOG.md must contain header '## [0.2.0] - 2026-11-06'"
+    );
+    assert!(
+        changelog.contains("## [0.1.0] - 2026-11-05"),
+        "CHANGELOG.md must contain header '## [0.1.0] - 2026-11-05'"
+    );
+
+    // 5. All specs in specs/ have Document Version 0.2.0, baseline 0.1.0 and milestone 0.2.0
+    let specs_dir = manifest_dir.join("specs");
+    let entries = fs::read_dir(&specs_dir).expect("read specs dir");
+    let mut spec_count = 0;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.extension().is_some_and(|ext| ext == "md") {
+            spec_count += 1;
+            let content = fs::read_to_string(&path).expect("read spec file");
+            let file_name = path.file_name().unwrap_or_default().to_string_lossy();
+
+            assert!(
+                content.contains("**Document Version** | `0.2.0`"),
+                "{file_name} missing Document Version `0.2.0`"
+            );
+            assert!(
+                content.contains("`0.1.0`") && content.contains("2026-11-05"),
+                "{file_name} missing baseline 0.1.0 in Revision History"
+            );
+            assert!(
+                content.contains("`0.2.0`") && content.contains("2026-11-06"),
+                "{file_name} missing milestone 0.2.0 in Revision History"
+            );
+        }
+    }
+    assert!(
+        spec_count >= 7,
+        "Expected at least 7 specs, found {spec_count}"
+    );
 }

@@ -3,12 +3,31 @@
 //! Grounded in macOS HIG and W3C DTCG tokens via `MacTheme`.
 //! Fully data-driven: zero hardcoded colors, radiuses, or padding metrics.
 
-use egui::{
-    Color32, CornerRadius, Key, Response, Stroke, StrokeKind, Ui, Vec2,
-};
 use crate::theme::MacTheme;
+use egui::{Color32, CornerRadius, Key, Response, Stroke, StrokeKind, Ui, Vec2};
 
-/// Authentic macOS compact text entry cell (AppKit NSTextFieldCell style).
+/// Authentic macOS compact text entry cell (AppKit `NSTextFieldCell` style).
+///
+/// Features transactional input buffering, Escape rollback, Return confirmation,
+/// deterministic Tab-chain cyclic focus navigation, and theme-driven focus ring styling.
+///
+/// # Example
+///
+/// ```rust
+/// use egui_macview::{MacInputCell, MacTheme};
+///
+/// # let ctx = egui::Context::default();
+/// # let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
+/// let theme = MacTheme::default();
+/// let mut text = String::from("Hello macOS");
+///
+/// MacInputCell::new("input_demo", &mut text)
+///     .theme(&theme)
+///     .placeholder("Type here...")
+///     .show(ui);
+/// # });
+/// # output.textures_delta.clear();
+/// ```
 pub struct MacInputCell<'a> {
     id: egui::Id,
     value: &'a mut String,
@@ -23,6 +42,7 @@ pub struct MacInputCell<'a> {
 }
 
 impl<'a> MacInputCell<'a> {
+    /// Creates a new `MacInputCell` bound to `value` and identified by `id_source`.
     pub fn new(id_source: impl std::hash::Hash + std::fmt::Debug, value: &'a mut String) -> Self {
         #[allow(deprecated)]
         let id = egui::Id::new(id_source);
@@ -62,21 +82,25 @@ impl<'a> MacInputCell<'a> {
         self
     }
 
+    /// Overrides cell width in points.
     pub fn width(mut self, width: f32) -> Self {
         self.width = Some(width);
         self
     }
 
+    /// Overrides cell height in points (defaults to token text field height).
     pub fn height(mut self, height: f32) -> Self {
         self.height = Some(height);
         self
     }
 
+    /// Overrides font size in points.
     pub fn font_size(mut self, font_size: f32) -> Self {
         self.font_size = Some(font_size);
         self
     }
 
+    /// Sets placeholder text displayed when the text field is empty and unfocused.
     pub fn placeholder(mut self, text: &'a str) -> Self {
         self.placeholder = Some(text);
         self
@@ -94,6 +118,7 @@ impl<'a> MacInputCell<'a> {
         self
     }
 
+    /// Renders the input cell into `ui` and handles keyboard/focus interaction.
     pub fn show(self, ui: &mut Ui) -> Response {
         let fallback_theme;
         let theme = match self.theme {
@@ -108,12 +133,15 @@ impl<'a> MacInputCell<'a> {
         let ring_metrics = theme.focus_ring();
 
         let height = self.height.unwrap_or_else(|| metrics.height.points());
-        let width = self.width.unwrap_or(44.0);
+        let width = self.width.unwrap_or_else(|| metrics.default_width.points());
         let font_size = self.font_size.unwrap_or_else(|| metrics.font_size.points());
-        let corner_radius = self.corner_radius.unwrap_or_else(|| metrics.corner_radius.points());
+        let corner_radius = self
+            .corner_radius
+            .unwrap_or_else(|| metrics.corner_radius.points());
 
         let desired_size = Vec2::new(width, height);
-        let (rect, mut response) = ui.allocate_exact_size(desired_size, egui::Sense::click_and_drag());
+        let (rect, mut response) =
+            ui.allocate_exact_size(desired_size, egui::Sense::click_and_drag());
 
         if response.clicked() {
             ui.memory_mut(|m| m.request_focus(self.id));
@@ -141,11 +169,9 @@ impl<'a> MacInputCell<'a> {
         // 2. Control background and border
         let bg_color = theme.control_background();
         let border_stroke = if is_focused {
-            Stroke::new(1.0, theme.control_accent())
-        } else if response.hovered() {
-            Stroke::new(1.0, theme.separator())
+            Stroke::new(metrics.border_width.points(), theme.control_accent())
         } else {
-            Stroke::new(1.0, theme.separator())
+            Stroke::new(metrics.border_width.points(), theme.separator())
         };
 
         painter.rect(
@@ -173,16 +199,21 @@ impl<'a> MacInputCell<'a> {
         }
 
         // 4. Inner text edit
+        let shrink_pad = metrics
+            .padding_horizontal
+            .as_ref()
+            .map(|d| d.points())
+            .unwrap_or_else(|| metrics.corner_radius.points());
         let mut child_ui = ui.new_child(
             egui::UiBuilder::new()
-                .max_rect(rect.shrink(2.0))
+                .max_rect(rect.shrink(shrink_pad))
                 .layout(egui::Layout::left_to_right(egui::Align::Center)),
         );
 
         let mut text_edit = egui::TextEdit::singleline(self.value)
             .id(self.id)
             .font(egui::FontId::proportional(font_size))
-            .desired_width(width - 4.0)
+            .desired_width(width - shrink_pad * 2.0)
             .frame(egui::Frame::NONE);
 
         if let Some(hint) = self.placeholder {

@@ -661,7 +661,7 @@
       "fixed_baseline_from_top": {
         "$type": "dimension",
         "$value": "14.0pt",
-        "$description": "Fixed baseline alignment from top edge of cell for numerical glyph and icon alignment."
+        "$description": "Fixed baseline alignment from top edge of cell for numerical character and icon alignment."
       },
       "baseline_offset_from_bottom": {
         "$type": "dimension",
