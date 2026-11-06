@@ -12,6 +12,103 @@ use super::item::MacMenuItemKind;
 use super::model::NSMenu;
 use crate::theme::MacTheme;
 
+/// Navigation result when processing keyboard input inside a cascading submenu.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SubmenuKeyboardResult {
+    /// Action identifier triggered by Enter or Space.
+    pub action: Option<String>,
+    /// Updated child highlight index.
+    pub new_sub_highlight: Option<usize>,
+    /// Whether keyboard input was consumed by this submenu level.
+    pub consumed: bool,
+}
+
+/// Advances or decrements index to the next enabled non-separator item in a submenu.
+pub fn step_submenu_highlight(
+    child_menu: &NSMenu,
+    curr: Option<usize>,
+    forward: bool,
+) -> Option<usize> {
+    let len = child_menu.items.len();
+    if len == 0 {
+        return None;
+    }
+    let start = if forward {
+        curr.map_or(0, |c| (c + 1) % len)
+    } else {
+        curr.map_or(len.saturating_sub(1), |c| (c + len - 1) % len)
+    };
+    for step in 0..len {
+        let candidate = if forward {
+            (start + step) % len
+        } else {
+            (start + len - (step % len)) % len
+        };
+        if let Some(it) = child_menu.items.get(candidate) {
+            if it.enabled && !matches!(it.kind, MacMenuItemKind::Separator) {
+                return Some(candidate);
+            }
+        }
+    }
+    None
+}
+
+/// Processes keyboard navigation events targeting an active submenu.
+pub fn handle_submenu_input(
+    child_menu: &NSMenu,
+    sub_highlight: Option<usize>,
+    input: &egui::InputState,
+) -> SubmenuKeyboardResult {
+    if let Some(curr) = sub_highlight {
+        if input.key_pressed(egui::Key::Escape) || input.key_pressed(egui::Key::ArrowLeft) {
+            return SubmenuKeyboardResult {
+                action: None,
+                new_sub_highlight: None,
+                consumed: true,
+            };
+        }
+        if input.key_pressed(egui::Key::ArrowDown) {
+            let next = step_submenu_highlight(child_menu, Some(curr), true);
+            return SubmenuKeyboardResult {
+                action: None,
+                new_sub_highlight: next.or(Some(curr)),
+                consumed: true,
+            };
+        }
+        if input.key_pressed(egui::Key::ArrowUp) {
+            let prev = step_submenu_highlight(child_menu, Some(curr), false);
+            return SubmenuKeyboardResult {
+                action: None,
+                new_sub_highlight: prev.or(Some(curr)),
+                consumed: true,
+            };
+        }
+        if input.key_pressed(egui::Key::Enter) || input.key_pressed(egui::Key::Space) {
+            if let Some(item) = child_menu.items.get(curr) {
+                if item.enabled {
+                    if let MacMenuItemKind::Action { id, .. } = &item.kind {
+                        return SubmenuKeyboardResult {
+                            action: Some(id.clone()),
+                            new_sub_highlight: None,
+                            consumed: true,
+                        };
+                    }
+                }
+            }
+            return SubmenuKeyboardResult {
+                action: None,
+                new_sub_highlight: Some(curr),
+                consumed: true,
+            };
+        }
+    }
+    SubmenuKeyboardResult {
+        action: None,
+        new_sub_highlight: sub_highlight,
+        consumed: false,
+    }
+}
+
 /// Renders a cascading submenu popover adjacent to its parent menu item.
 pub fn render_submenu_popover(
     child_menu: &NSMenu,
@@ -19,6 +116,7 @@ pub fn render_submenu_popover(
     sub_pos: Pos2,
     theme: &MacTheme,
     ctx: &egui::Context,
+    highlighted_idx: Option<usize>,
 ) -> Option<String> {
     let metrics = theme.popup_button();
     let item_height = metrics.menu_item_height.points();
@@ -64,9 +162,10 @@ pub fn render_submenu_popover(
                 }
 
                 let s_resp = sub_ui.interact(s_rect, sub_id.with(s_idx), Sense::click());
-                let s_hover = s_resp.hovered() && sub_item.enabled;
+                let is_highlighted = highlighted_idx == Some(s_idx);
+                let s_active = (s_resp.hovered() || is_highlighted) && sub_item.enabled;
 
-                if s_hover {
+                if s_active {
                     painter.rect(
                         s_rect,
                         CornerRadius::same(corner_r),
@@ -78,7 +177,7 @@ pub fn render_submenu_popover(
 
                 let s_color = if !sub_item.enabled {
                     theme.placeholder_text()
-                } else if s_hover {
+                } else if s_active {
                     Color32::WHITE
                 } else {
                     theme.label()
@@ -114,4 +213,108 @@ pub fn render_submenu_popover(
         });
 
     triggered
+}
+
+/// Orchestrates keyboard navigation across top-level menus and cascading submenus.
+pub fn handle_menu_bar_navigation(
+    menus: &[NSMenu],
+    open_menu_idx: &mut Option<usize>,
+    highlighted_item_idx: &mut Option<usize>,
+    sub_highlight: &mut Option<usize>,
+    input: &egui::InputState,
+) -> Option<String> {
+    let m_idx = (*open_menu_idx)?;
+    let menu = menus.get(m_idx)?;
+
+    let current_is_sub = highlighted_item_idx
+        .and_then(|i| menu.items.get(i))
+        .and_then(|it| match &it.kind {
+            MacMenuItemKind::Submenu { menu: c } => Some(c),
+            _ => None,
+        });
+
+    if let Some(child_menu) = current_is_sub {
+        let res = handle_submenu_input(child_menu, *sub_highlight, input);
+        if res.consumed {
+            *sub_highlight = res.new_sub_highlight;
+            if let Some(act) = res.action {
+                *open_menu_idx = None;
+                *highlighted_item_idx = None;
+                *sub_highlight = None;
+                return Some(act);
+            }
+            return None;
+        } else if sub_highlight.is_none() && input.key_pressed(egui::Key::ArrowRight) {
+            *sub_highlight = step_submenu_highlight(child_menu, None, true);
+            return None;
+        }
+    }
+
+    if sub_highlight.is_none() {
+        if input.key_pressed(egui::Key::Escape) {
+            *open_menu_idx = None;
+            *highlighted_item_idx = None;
+            return None;
+        }
+        if input.key_pressed(egui::Key::ArrowRight) {
+            let next_m = (m_idx + 1) % menus.len();
+            *open_menu_idx = Some(next_m);
+            *highlighted_item_idx = Some(0);
+            return None;
+        }
+        if input.key_pressed(egui::Key::ArrowLeft) {
+            let prev_m = (m_idx + menus.len() - 1) % menus.len();
+            *open_menu_idx = Some(prev_m);
+            *highlighted_item_idx = Some(0);
+            return None;
+        }
+        if input.key_pressed(egui::Key::ArrowDown) {
+            let len = menu.items.len();
+            if len > 0 {
+                let curr = highlighted_item_idx.unwrap_or(0);
+                for step in 1..=len {
+                    let next = (curr + step) % len;
+                    if let Some(item) = menu.items.get(next) {
+                        if item.enabled && !matches!(item.kind, MacMenuItemKind::Separator) {
+                            *highlighted_item_idx = Some(next);
+                            break;
+                        }
+                    }
+                }
+            }
+            return None;
+        }
+        if input.key_pressed(egui::Key::ArrowUp) {
+            let len = menu.items.len();
+            if len > 0 {
+                let curr = highlighted_item_idx.unwrap_or(0);
+                for step in 1..=len {
+                    let prev = (curr + len - (step % len)) % len;
+                    if let Some(item) = menu.items.get(prev) {
+                        if item.enabled && !matches!(item.kind, MacMenuItemKind::Separator) {
+                            *highlighted_item_idx = Some(prev);
+                            break;
+                        }
+                    }
+                }
+            }
+            return None;
+        }
+        if input.key_pressed(egui::Key::Enter) || input.key_pressed(egui::Key::Space) {
+            if let Some(i_idx) = *highlighted_item_idx {
+                if let Some(item) = menu.items.get(i_idx) {
+                    if item.enabled {
+                        if let MacMenuItemKind::Action { id, .. } = &item.kind {
+                            let act = id.clone();
+                            *open_menu_idx = None;
+                            *highlighted_item_idx = None;
+                            return Some(act);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    None
 }

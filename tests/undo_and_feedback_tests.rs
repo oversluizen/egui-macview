@@ -348,3 +348,102 @@ fn test_context_menu_attach_to_and_oversized_clamping() {
     // Without secondary click, remains closed
     assert!(!is_open);
 }
+
+#[test]
+fn test_context_menu_arrow_down_when_unselected() {
+    let ctx = Context::default();
+    let theme = MacTheme::new(MacAppearance::DarkAqua);
+
+    let items = vec![
+        NSMenuItem::action("First", "action.first"),
+        NSMenuItem::action("Second", "action.second"),
+        NSMenuItem::action("Third", "action.third"),
+    ];
+
+    let mut is_open = true;
+    let mut selected_idx = None; // Unselected initial state
+    let mut spawn_pos = Pos2::new(100.0, 100.0);
+
+    let mut raw_down = RawInput::default();
+    raw_down.events.push(Event::Key {
+        key: Key::ArrowDown,
+        physical_key: None,
+        pressed: true,
+        repeat: false,
+        modifiers: Modifiers::default(),
+    });
+
+    let mut out = ctx.run_ui(raw_down, |ui| {
+        let menu = MacContextMenu::new(&items, &mut is_open, &mut spawn_pos, &mut selected_idx)
+            .theme(&theme);
+        menu.show(ui);
+    });
+    out.textures_delta.clear();
+
+    assert_eq!(
+        selected_idx,
+        Some(0),
+        "ArrowDown when unselected must highlight item 0, not skip it"
+    );
+}
+
+#[test]
+fn test_context_menu_secondary_click_trigger() {
+    let ctx = Context::default();
+
+    let items = vec![NSMenuItem::action("Inspect", "action.inspect")];
+    let mut is_open = false;
+    let mut spawn_pos = Pos2::ZERO;
+    let mut selected_idx = None;
+
+    let click_pos = Pos2::new(60.0, 30.0);
+
+    // Frame 1: Register widget in layout & move pointer over it
+    let mut raw_init = RawInput::default();
+    raw_init.events.push(Event::PointerMoved(click_pos));
+    let mut out1 = ctx.run_ui(raw_init, |ui| {
+        let (rect, _resp) = ui.allocate_exact_size(Vec2::new(120.0, 60.0), egui::Sense::click());
+        let _ = rect;
+    });
+    out1.textures_delta.clear();
+
+    // Frame 2: Press secondary button down on registered widget
+    let mut raw_down = RawInput::default();
+    raw_down.events.push(Event::PointerButton {
+        pos: click_pos,
+        button: egui::PointerButton::Secondary,
+        pressed: true,
+        modifiers: Modifiers::default(),
+    });
+    let mut out2 = ctx.run_ui(raw_down, |ui| {
+        let (rect, _resp) = ui.allocate_exact_size(Vec2::new(120.0, 60.0), egui::Sense::click());
+        let _ = rect;
+    });
+    out2.textures_delta.clear();
+
+    // Frame 3: Release secondary button -> fires secondary_clicked()
+    let mut raw_up = RawInput::default();
+    raw_up.events.push(Event::PointerButton {
+        pos: click_pos,
+        button: egui::PointerButton::Secondary,
+        pressed: false,
+        modifiers: Modifiers::default(),
+    });
+
+    let mut out3 = ctx.run_ui(raw_up, |ui| {
+        let mut menu = MacContextMenu::new(&items, &mut is_open, &mut spawn_pos, &mut selected_idx);
+        let (rect, resp) = ui.allocate_exact_size(Vec2::new(120.0, 60.0), egui::Sense::click());
+        menu.attach_to(&resp);
+        let _ = rect;
+    });
+    out3.textures_delta.clear();
+
+    assert!(
+        is_open,
+        "Secondary click (right-click) on interactive widget must trigger context menu"
+    );
+    assert_eq!(
+        spawn_pos, click_pos,
+        "Context menu spawn position must match pointer position"
+    );
+}

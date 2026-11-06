@@ -5,8 +5,8 @@
 
 use crate::theme::MacTheme;
 use egui::{
-    Align2, Area, Color32, CornerRadius, FontId, Key, Order, Pos2, Rect, Sense, Stroke, StrokeKind,
-    Ui, Vec2,
+    Align2, Area, Color32, CornerRadius, FontId, Order, Pos2, Rect, Sense, Stroke, StrokeKind, Ui,
+    Vec2,
 };
 
 pub use super::item::{MacKeyboardShortcut, MacMenuItemKind, NSMenuItem};
@@ -47,50 +47,23 @@ impl<'a> MacMenuBar<'a> {
 
     /// Processes keyboard shortcuts globally across all menus and submenus.
     pub fn handle_shortcuts(&self, input: &egui::InputState) -> Option<String> {
-        for menu in self.menus {
-            if let Some(action) = Self::find_shortcut_in_items(&menu.items, input) {
-                return Some(action);
-            }
-        }
-        None
+        self.menus.iter().find_map(|m| m.find_shortcut(input))
     }
 
-    fn find_shortcut_in_items(items: &[NSMenuItem], input: &egui::InputState) -> Option<String> {
-        for item in items {
-            if !item.enabled {
-                continue;
-            }
-            match &item.kind {
-                MacMenuItemKind::Action {
-                    id,
-                    shortcut: Some(sc),
-                } => {
-                    if sc.matches(input) {
-                        return Some(id.clone());
-                    }
-                }
-                MacMenuItemKind::Submenu { menu } => {
-                    if let Some(act) = Self::find_shortcut_in_items(&menu.items, input) {
-                        return Some(act);
-                    }
-                }
-                _ => {}
-            }
-        }
-        None
-    }
-
-    /// Navigates to the next enabled item in the currently open menu.
-    pub fn navigate_next(&mut self) {
+    fn step_highlighted(&mut self, forward: bool) {
         if let Some(m_idx) = *self.open_menu_idx {
             if let Some(menu) = self.menus.get(m_idx) {
-                let items_len = menu.items.len();
-                if items_len == 0 {
+                let len = menu.items.len();
+                if len == 0 {
                     return;
                 }
                 let curr = self.highlighted_item_idx.unwrap_or(0);
-                for step in 1..=items_len {
-                    let next = (curr + step) % items_len;
+                for step in 1..=len {
+                    let next = if forward {
+                        (curr + step) % len
+                    } else {
+                        (curr + len - (step % len)) % len
+                    };
                     if let Some(item) = menu.items.get(next) {
                         if item.enabled && !matches!(item.kind, MacMenuItemKind::Separator) {
                             *self.highlighted_item_idx = Some(next);
@@ -102,26 +75,14 @@ impl<'a> MacMenuBar<'a> {
         }
     }
 
+    /// Navigates to the next enabled item in the currently open menu.
+    pub fn navigate_next(&mut self) {
+        self.step_highlighted(true);
+    }
+
     /// Navigates to the previous enabled item in the currently open menu.
     pub fn navigate_prev(&mut self) {
-        if let Some(m_idx) = *self.open_menu_idx {
-            if let Some(menu) = self.menus.get(m_idx) {
-                let items_len = menu.items.len();
-                if items_len == 0 {
-                    return;
-                }
-                let curr = self.highlighted_item_idx.unwrap_or(0);
-                for step in 1..=items_len {
-                    let prev = (curr + items_len - (step % items_len)) % items_len;
-                    if let Some(item) = menu.items.get(prev) {
-                        if item.enabled && !matches!(item.kind, MacMenuItemKind::Separator) {
-                            *self.highlighted_item_idx = Some(prev);
-                            break;
-                        }
-                    }
-                }
-            }
-        }
+        self.step_highlighted(false);
     }
 
     /// Closes all open menus.
@@ -150,48 +111,21 @@ impl<'a> MacMenuBar<'a> {
 
     /// Handles keyboard navigation events when a menu is open.
     pub fn handle_navigation_input(&mut self, input: &egui::InputState) -> Option<String> {
-        if self.open_menu_idx.is_none() {
-            return None;
-        }
+        let mut sub = None;
+        super::submenu::handle_menu_bar_navigation(
+            self.menus,
+            self.open_menu_idx,
+            self.highlighted_item_idx,
+            &mut sub,
+            input,
+        )
+    }
 
-        if input.key_pressed(Key::Escape) {
-            self.close();
-            return None;
-        }
-
-        if input.key_pressed(Key::ArrowDown) {
-            self.navigate_next();
-            return None;
-        }
-
-        if input.key_pressed(Key::ArrowUp) {
-            self.navigate_prev();
-            return None;
-        }
-
-        if input.key_pressed(Key::ArrowRight) {
-            if let Some(m_idx) = *self.open_menu_idx {
-                let next_m = (m_idx + 1) % self.menus.len();
-                *self.open_menu_idx = Some(next_m);
-                *self.highlighted_item_idx = Some(0);
-            }
-            return None;
-        }
-
-        if input.key_pressed(Key::ArrowLeft) {
-            if let Some(m_idx) = *self.open_menu_idx {
-                let prev_m = (m_idx + self.menus.len() - 1) % self.menus.len();
-                *self.open_menu_idx = Some(prev_m);
-                *self.highlighted_item_idx = Some(0);
-            }
-            return None;
-        }
-
-        if input.key_pressed(Key::Enter) || input.key_pressed(Key::Space) {
-            return self.activate_highlighted();
-        }
-
-        None
+    /// Returns the currently active submenu highlight index, if any.
+    pub fn submenu_highlight(ctx: &egui::Context) -> Option<usize> {
+        #[allow(deprecated)]
+        let id = egui::Id::new("mac_menu_bar_submenu_highlight");
+        ctx.data(|d| d.get_temp(id))
     }
 
     /// Renders the menu bar into the given UI, returning triggered action if any.
@@ -205,15 +139,35 @@ impl<'a> MacMenuBar<'a> {
             }
         };
 
+        #[allow(deprecated)]
+        let sub_temp_id = egui::Id::new("mac_menu_bar_submenu_highlight");
+        let mut sub_highlight: Option<usize> = ui.ctx().data(|d| d.get_temp(sub_temp_id));
+
         // First check shortcuts
         if let Some(action) = ui.input(|i| self.handle_shortcuts(i)) {
             self.close();
+            ui.ctx().data_mut(|d| d.remove_temp::<usize>(sub_temp_id));
             return Some(action);
         }
 
-        // Then check active navigation keys
-        if let Some(action) = ui.input(|i| self.handle_navigation_input(i)) {
+        // Process menu and submenu keyboard navigation
+        if let Some(action) = ui.input(|i| {
+            super::submenu::handle_menu_bar_navigation(
+                self.menus,
+                self.open_menu_idx,
+                self.highlighted_item_idx,
+                &mut sub_highlight,
+                i,
+            )
+        }) {
+            ui.ctx().data_mut(|d| d.remove_temp::<usize>(sub_temp_id));
             return Some(action);
+        }
+
+        if let Some(s_idx) = sub_highlight {
+            ui.ctx().data_mut(|d| d.insert_temp(sub_temp_id, s_idx));
+        } else {
+            ui.ctx().data_mut(|d| d.remove_temp::<usize>(sub_temp_id));
         }
 
         let bar_height = theme.popup_button().height.points();
@@ -414,15 +368,21 @@ impl<'a> MacMenuBar<'a> {
 
                             // Cascading submenu popover
                             if let MacMenuItemKind::Submenu { menu: child_menu } = &item.kind {
-                                if (is_highlighted || resp.hovered()) && item.enabled {
+                                let sub_is_active = is_highlighted && sub_highlight.is_some();
+                                if (is_highlighted || resp.hovered() || sub_is_active)
+                                    && item.enabled
+                                {
                                     let sub_id = area_id.with("submenu").with(i_idx);
                                     let sub_pos = Pos2::new(popup_pos.x + min_width, item_y);
+                                    let child_hl =
+                                        if is_highlighted { sub_highlight } else { None };
                                     if let Some(act) = super::submenu::render_submenu_popover(
                                         child_menu,
                                         sub_id,
                                         sub_pos,
                                         theme,
                                         pop_ui.ctx(),
+                                        child_hl,
                                     ) {
                                         triggered_action = Some(act);
                                         self.close();

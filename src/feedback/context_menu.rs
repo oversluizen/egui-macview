@@ -106,17 +106,17 @@ impl<'a> MacContextMenu<'a> {
         }
 
         if input.key_pressed(Key::ArrowDown) {
-            let curr = self.selected_idx.unwrap_or(0);
-            for step in 1..=items_len {
-                let next = (curr + step) % items_len;
-                if let Some(item) = self.items.get(next) {
+            let start = self.selected_idx.map_or(0, |idx| (idx + 1) % items_len);
+            for step in 0..items_len {
+                let candidate = (start + step) % items_len;
+                if let Some(item) = self.items.get(candidate) {
                     if item.enabled
                         && !matches!(
                             item.kind,
                             crate::navigation::menu::MacMenuItemKind::Separator
                         )
                     {
-                        *self.selected_idx = Some(next);
+                        *self.selected_idx = Some(candidate);
                         break;
                     }
                 }
@@ -125,17 +125,21 @@ impl<'a> MacContextMenu<'a> {
         }
 
         if input.key_pressed(Key::ArrowUp) {
-            let curr = self.selected_idx.unwrap_or(0);
-            for step in 1..=items_len {
-                let prev = (curr + items_len - (step % items_len)) % items_len;
-                if let Some(item) = self.items.get(prev) {
+            let start = self
+                .selected_idx
+                .map_or(items_len.saturating_sub(1), |idx| {
+                    (idx + items_len - 1) % items_len
+                });
+            for step in 0..items_len {
+                let candidate = (start + items_len - (step % items_len)) % items_len;
+                if let Some(item) = self.items.get(candidate) {
                     if item.enabled
                         && !matches!(
                             item.kind,
                             crate::navigation::menu::MacMenuItemKind::Separator
                         )
                     {
-                        *self.selected_idx = Some(prev);
+                        *self.selected_idx = Some(candidate);
                         break;
                     }
                 }

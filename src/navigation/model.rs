@@ -38,7 +38,41 @@ impl NSMenu {
         self
     }
 
-    /// Default macOS "File" menu.
+    /// Recursively searches for a matching keyboard shortcut in this menu.
+    pub fn find_shortcut(&self, input: &egui::InputState) -> Option<String> {
+        Self::find_shortcut_in_items(&self.items, input)
+    }
+
+    /// Recursively searches items for a matching keyboard shortcut.
+    pub fn find_shortcut_in_items(
+        items: &[NSMenuItem],
+        input: &egui::InputState,
+    ) -> Option<String> {
+        for item in items {
+            if !item.enabled {
+                continue;
+            }
+            match &item.kind {
+                super::item::MacMenuItemKind::Action {
+                    id,
+                    shortcut: Some(sc),
+                } => {
+                    if sc.matches(input) {
+                        return Some(id.clone());
+                    }
+                }
+                super::item::MacMenuItemKind::Submenu { menu } => {
+                    if let Some(act) = Self::find_shortcut_in_items(&menu.items, input) {
+                        return Some(act);
+                    }
+                }
+                _ => {}
+            }
+        }
+        None
+    }
+
+    /// Default macOS "File" menu (SPEC-007 §2.2).
     pub fn default_file_menu() -> Self {
         Self::new("File")
             .item(NSMenuItem::action_with_shortcut(
@@ -57,6 +91,8 @@ impl NSMenu {
                 "file.save",
                 MacKeyboardShortcut::cmd(Key::S),
             ))
+            .item(NSMenuItem::action("Export...", "file.export"))
+            .item(NSMenuItem::separator())
             .item(NSMenuItem::action_with_shortcut(
                 "Close Window",
                 "file.close",
@@ -64,7 +100,7 @@ impl NSMenu {
             ))
     }
 
-    /// Default macOS "Edit" menu.
+    /// Default macOS "Edit" menu (SPEC-007 §2.2).
     pub fn default_edit_menu() -> Self {
         Self::new("Edit")
             .item(NSMenuItem::action_with_shortcut(
@@ -100,7 +136,7 @@ impl NSMenu {
             ))
     }
 
-    /// Default macOS "View" menu.
+    /// Default macOS "View" menu (SPEC-007 §2.2).
     pub fn default_view_menu() -> Self {
         Self::new("View")
             .item(NSMenuItem::action_with_shortcut(
@@ -118,16 +154,51 @@ impl NSMenu {
                 "view.zoom_reset",
                 MacKeyboardShortcut::cmd(Key::Num0),
             ))
+            .item(NSMenuItem::separator())
+            .item(NSMenuItem::action(
+                "Toggle Inspector",
+                "view.toggle_inspector",
+            ))
+            .item(NSMenuItem::action("Fullscreen", "view.fullscreen"))
     }
 
-    /// Default macOS "Help" menu.
+    /// Default macOS "Window" menu (SPEC-007 §2.2).
+    pub fn default_window_menu() -> Self {
+        Self::new("Window")
+            .item(NSMenuItem::action_with_shortcut(
+                "Minimize",
+                "window.minimize",
+                MacKeyboardShortcut::cmd(Key::M),
+            ))
+            .item(NSMenuItem::action("Zoom", "window.zoom"))
+            .item(NSMenuItem::separator())
+            .item(NSMenuItem::action(
+                "Bring All to Front",
+                "window.bring_all_to_front",
+            ))
+    }
+
+    /// Default macOS "Help" menu (SPEC-007 §2.2).
     pub fn default_help_menu() -> Self {
         Self::new("Help")
+            .item(NSMenuItem::action("Documentation", "help.documentation"))
             .item(NSMenuItem::action_with_shortcut(
-                "Command Palette...",
-                "help.command_palette",
+                "Keyboard Shortcuts...",
+                "help.shortcuts",
                 MacKeyboardShortcut::cmd(Key::K),
             ))
+            .item(NSMenuItem::separator())
             .item(NSMenuItem::action("About", "help.about"))
+    }
+
+    /// Standard root menu bar containing all 5 standard top-level menus (SPEC-007 §2.2).
+    pub fn default_menu_bar() -> Vec<Self> {
+        vec![
+            Self::default_file_menu(),
+            Self::default_edit_menu(),
+            Self::default_view_menu(),
+            Self::default_window_menu(),
+            Self::default_help_menu(),
+        ]
     }
 }

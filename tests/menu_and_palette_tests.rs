@@ -384,3 +384,229 @@ fn test_canvas_footer_zoom_preset_selection() {
     });
     out.textures_delta.clear();
 }
+
+#[test]
+fn test_command_palette_escape_clears_query_before_close() {
+    let ctx = Context::default();
+    let theme = MacTheme::new(MacAppearance::DarkAqua);
+
+    let items = vec![
+        CommandPaletteItem::new("cmd.save", "Save Document"),
+        CommandPaletteItem::new("cmd.export", "Export Document"),
+    ];
+
+    let mut palette = MacCommandPalette::new(items).open(true);
+    palette.set_query("export");
+    assert_eq!(palette.query(), "export");
+    assert!(palette.is_open());
+
+    // 1. First Escape press: clears search query, remains open
+    let mut raw_escape1 = RawInput::default();
+    raw_escape1.events.push(Event::Key {
+        key: Key::Escape,
+        physical_key: None,
+        pressed: true,
+        repeat: false,
+        modifiers: Modifiers::default(),
+    });
+
+    let mut out1 = ctx.run_ui(raw_escape1, |ui| {
+        palette.show(ui.ctx(), &theme);
+    });
+    out1.textures_delta.clear();
+
+    assert!(
+        palette.is_open(),
+        "First Escape when query is non-empty must NOT close palette"
+    );
+    assert_eq!(
+        palette.query(),
+        "",
+        "First Escape must clear the search query"
+    );
+    assert_eq!(palette.selected_index, 0);
+
+    // 2. Second Escape press: closes palette
+    let mut raw_escape2 = RawInput::default();
+    raw_escape2.events.push(Event::Key {
+        key: Key::Escape,
+        physical_key: None,
+        pressed: true,
+        repeat: false,
+        modifiers: Modifiers::default(),
+    });
+
+    let mut out2 = ctx.run_ui(raw_escape2, |ui| {
+        palette.show(ui.ctx(), &theme);
+    });
+    out2.textures_delta.clear();
+
+    assert!(
+        !palette.is_open(),
+        "Second Escape when query is empty must close palette"
+    );
+}
+
+#[test]
+fn test_menu_bar_submenu_keyboard_navigation() {
+    let ctx = Context::default();
+    let theme = MacTheme::new(MacAppearance::DarkAqua);
+
+    let export_menu = NSMenu::with_items(
+        "Export",
+        vec![
+            NSMenuItem::action("Export as PDF", "export.pdf"),
+            NSMenuItem::action("Export as PNG", "export.png"),
+        ],
+    );
+
+    let file_menu = NSMenu::with_items(
+        "File",
+        vec![
+            NSMenuItem::action("New", "file.new"),
+            NSMenuItem::submenu("Export As...", export_menu),
+            NSMenuItem::action("Close", "file.close"),
+        ],
+    );
+
+    let menus = vec![file_menu];
+    let mut open_menu_idx = Some(0);
+    let mut highlighted_item_idx = Some(1); // On "Export As..." submenu
+
+    // 1. Arrow Right on Submenu item: expands submenu popover and highlights child item 0
+    let mut raw_right = RawInput::default();
+    raw_right.events.push(Event::Key {
+        key: Key::ArrowRight,
+        physical_key: None,
+        pressed: true,
+        repeat: false,
+        modifiers: Modifiers::default(),
+    });
+
+    let mut out1 = ctx.run_ui(raw_right, |ui| {
+        let bar =
+            MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx).theme(&theme);
+        let _ = bar.show(ui);
+    });
+    out1.textures_delta.clear();
+
+    // Check temp state stored in ctx
+    let sub_hl = MacMenuBar::submenu_highlight(&ctx);
+    assert_eq!(
+        sub_hl,
+        Some(0),
+        "ArrowRight on submenu must expand child menu and select item 0"
+    );
+
+    // 2. Arrow Down inside submenu: advances child highlight from 0 to 1
+    let mut raw_down = RawInput::default();
+    raw_down.events.push(Event::Key {
+        key: Key::ArrowDown,
+        physical_key: None,
+        pressed: true,
+        repeat: false,
+        modifiers: Modifiers::default(),
+    });
+
+    let mut out2 = ctx.run_ui(raw_down, |ui| {
+        let bar =
+            MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx).theme(&theme);
+        let _ = bar.show(ui);
+    });
+    out2.textures_delta.clear();
+
+    let sub_hl = MacMenuBar::submenu_highlight(&ctx);
+    assert_eq!(
+        sub_hl,
+        Some(1),
+        "ArrowDown in submenu must advance child selection to 1"
+    );
+
+    // 3. Arrow Left inside submenu: collapses submenu and returns highlight to parent item
+    let mut raw_left = RawInput::default();
+    raw_left.events.push(Event::Key {
+        key: Key::ArrowLeft,
+        physical_key: None,
+        pressed: true,
+        repeat: false,
+        modifiers: Modifiers::default(),
+    });
+
+    let mut out3 = ctx.run_ui(raw_left, |ui| {
+        let bar =
+            MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx).theme(&theme);
+        let _ = bar.show(ui);
+    });
+    out3.textures_delta.clear();
+
+    let sub_hl = MacMenuBar::submenu_highlight(&ctx);
+    assert_eq!(
+        sub_hl, None,
+        "ArrowLeft in submenu must collapse child popover"
+    );
+    assert_eq!(
+        highlighted_item_idx,
+        Some(1),
+        "Parent item must remain highlighted"
+    );
+
+    // 4. Arrow Right then Enter: expands submenu and fires child item action
+    let mut raw_right2 = RawInput::default();
+    raw_right2.events.push(Event::Key {
+        key: Key::ArrowRight,
+        physical_key: None,
+        pressed: true,
+        repeat: false,
+        modifiers: Modifiers::default(),
+    });
+    let mut out4a = ctx.run_ui(raw_right2, |ui| {
+        let bar =
+            MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx).theme(&theme);
+        let _ = bar.show(ui);
+    });
+    out4a.textures_delta.clear();
+
+    let mut raw_enter = RawInput::default();
+    raw_enter.events.push(Event::Key {
+        key: Key::Enter,
+        physical_key: None,
+        pressed: true,
+        repeat: false,
+        modifiers: Modifiers::default(),
+    });
+
+    let mut triggered = None;
+    let mut out4b = ctx.run_ui(raw_enter, |ui| {
+        let bar =
+            MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx).theme(&theme);
+        triggered = bar.show(ui);
+    });
+    out4b.textures_delta.clear();
+
+    assert_eq!(triggered, Some("export.pdf".to_string()));
+    assert_eq!(open_menu_idx, None);
+}
+
+#[test]
+fn test_standard_menu_bar_presets_spec_007() {
+    let bar = NSMenu::default_menu_bar();
+    assert_eq!(
+        bar.len(),
+        5,
+        "SPEC-007 §2.2 requires 5 standard top-level menus"
+    );
+    assert_eq!(bar[0].title, "File");
+    assert_eq!(bar[1].title, "Edit");
+    assert_eq!(bar[2].title, "View");
+    assert_eq!(bar[3].title, "Window");
+    assert_eq!(bar[4].title, "Help");
+
+    // Shortcut formatting checks
+    assert_eq!(MacKeyboardShortcut::cmd(Key::Plus).format_text(), "Ctrl++");
+    assert_eq!(MacKeyboardShortcut::cmd(Key::Minus).format_text(), "Ctrl+-");
+    assert_eq!(MacKeyboardShortcut::cmd(Key::Num0).format_text(), "Ctrl+0");
+    assert_eq!(
+        MacKeyboardShortcut::cmd_shift(Key::Z).format_text(),
+        "Ctrl+Shift+Z"
+    );
+}

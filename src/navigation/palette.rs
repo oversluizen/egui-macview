@@ -262,7 +262,12 @@ impl MacCommandPalette {
         }
 
         if input.key_pressed(Key::Escape) {
-            self.close();
+            if !self.query.is_empty() {
+                self.query.clear();
+                self.selected_index = 0;
+            } else {
+                self.close();
+            }
             return None;
         }
 

@@ -50,6 +50,16 @@ impl MacKeyboardShortcut {
         }
     }
 
+    /// Constructs a Cmd+Alt shortcut (`Ctrl+Alt+key` or `Cmd+Option+key`).
+    pub const fn cmd_alt(key: Key) -> Self {
+        Self {
+            key,
+            command: true,
+            shift: false,
+            alt: true,
+        }
+    }
+
     /// Checks if the input state matches this keyboard shortcut.
     pub fn matches(&self, input: &egui::InputState) -> bool {
         let input_cmd = input.modifiers.command || input.modifiers.ctrl || input.modifiers.mac_cmd;
@@ -96,7 +106,21 @@ impl MacKeyboardShortcut {
         if self.shift {
             s.push_str("Shift+");
         }
-        s.push_str(&format!("{:?}", self.key));
+        match self.key {
+            Key::Num0 => s.push('0'),
+            Key::Num1 => s.push('1'),
+            Key::Num2 => s.push('2'),
+            Key::Num3 => s.push('3'),
+            Key::Num4 => s.push('4'),
+            Key::Num5 => s.push('5'),
+            Key::Num6 => s.push('6'),
+            Key::Num7 => s.push('7'),
+            Key::Num8 => s.push('8'),
+            Key::Num9 => s.push('9'),
+            Key::Plus => s.push('+'),
+            Key::Minus => s.push('-'),
+            _ => s.push_str(&format!("{:?}", self.key)),
+        }
         s
     }
 }
