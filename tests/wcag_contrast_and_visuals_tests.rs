@@ -217,16 +217,34 @@ fn test_mac_background_style_text_levels() {
         Color32::from_white_alpha(179)
     );
 
-    // Light style text colors delegate to theme
+    // Light style text colors delegate to Aqua semantic palette (ensuring dark text regardless of theme mode)
     let light_style = MacBackgroundStyle::Light;
-    assert_eq!(light_style.primary_text_color(&theme), theme.label());
+    assert_eq!(
+        light_style.primary_text_color(&theme),
+        theme.tokens().colors().aqua.label.to_color32()
+    );
     assert_eq!(
         light_style.secondary_text_color(&theme),
-        theme.secondary_label()
+        theme.tokens().colors().aqua.secondary_label.to_color32()
     );
     assert_eq!(
         light_style.tertiary_text_color(&theme),
-        theme.placeholder_text()
+        theme.tokens().colors().aqua.placeholder_text.to_color32()
+    );
+
+    // Critical invariant: In DarkAqua mode, Light background style MUST still produce dark text!
+    let dark_theme = MacTheme::new(MacAppearance::DarkAqua);
+    let light_fg_in_dark_theme = light_style.primary_text_color(&dark_theme);
+    assert_ne!(
+        light_fg_in_dark_theme,
+        dark_theme.label(),
+        "Light background style in DarkAqua must NOT use white label text!"
+    );
+    let white_bg = Color32::from_rgb(255, 255, 255);
+    let contrast_in_dark_mode = crate_contrast_ratio(light_fg_in_dark_theme, white_bg);
+    assert!(
+        contrast_in_dark_mode >= 4.5,
+        "Light background style primary text in DarkAqua must meet >= 4.5:1 against white, got {contrast_in_dark_mode:.2}:1"
     );
 }
 

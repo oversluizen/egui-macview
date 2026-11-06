@@ -74,6 +74,55 @@ fn test_macbook_segmented_control_geometry_parity() {
 }
 
 #[test]
+fn test_macbook_extended_controls_geometry_parity() {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let ground_truth_path = manifest_dir
+        .join("tests")
+        .join("golden_master")
+        .join("macbook_ground_truth")
+        .join("appkit_metrics_ground_truth.json");
+
+    let content = fs::read_to_string(&ground_truth_path).expect("Read MacBook ground truth JSON");
+    let v: serde_json::Value = serde_json::from_str(&content).expect("Parse ground truth JSON");
+
+    let theme = MacTheme::default();
+
+    // 1. Slider bounding height parity (AppKit NSSlider with ticks: 24pt, track: 3pt, thumb: 16pt)
+    let native_slider_h = v["slider"]["h"].as_f64().unwrap() as f32;
+    let our_slider_with_ticks_h = theme.slider().thumb_size.points()
+        + theme.slider().tick_offset.points()
+        + theme.slider().tick_height.points();
+    assert!(
+        (our_slider_with_ticks_h - native_slider_h).abs() <= 1.0,
+        "Slider with ticks height divergence: our={our_slider_with_ticks_h}pt vs native={native_slider_h}pt"
+    );
+
+    // 2. Stepper height parity (AppKit NSStepper: 28pt)
+    let native_stepper_h = v["stepper"]["h"].as_f64().unwrap() as f32;
+    let our_stepper_h = theme.stepper().height.points();
+    assert!(
+        (our_stepper_h - native_stepper_h).abs() <= 6.0,
+        "Stepper height divergence: our={our_stepper_h}pt vs native={native_stepper_h}pt"
+    );
+
+    // 3. ColorWell height parity (AppKit NSColorWell: 23pt)
+    let native_well_h = v["color_well"]["h"].as_f64().unwrap() as f32;
+    let our_well_h = theme.color_well().height.points();
+    assert!(
+        (our_well_h - native_well_h).abs() <= 2.0,
+        "Color well height divergence: our={our_well_h}pt vs native={native_well_h}pt"
+    );
+
+    // 4. Push Button height parity (AppKit NSButton rounded: 22-32pt)
+    let native_button_h = v["button"]["h"].as_f64().unwrap() as f32;
+    let our_button_h = theme.button().regular.height.points();
+    assert!(
+        (our_button_h - native_button_h).abs() <= 12.0,
+        "Button height divergence: our={our_button_h}pt vs native={native_button_h}pt"
+    );
+}
+
+#[test]
 fn test_macbook_golden_master_bitmaps_integrity() {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     let golden_dir = manifest_dir
@@ -117,4 +166,44 @@ fn test_macbook_golden_master_bitmaps_integrity() {
             "Golden bitmap has invalid empty dimensions"
         );
     }
+}
+
+/// Tier 2 Live Parity Test: Connects to Jaco's physical MacBook Air via SSH
+/// and validates the remote PyObjC / AppKit ground-truth rendering engine.
+///
+/// Run explicitly with:
+/// `cargo test --test macbook_parity_differential_tests -- --ignored`
+#[test]
+#[ignore]
+fn test_live_macbook_ssh_connectivity_and_parity_harness() {
+    use std::process::Command;
+
+    // Check SSH connection to Host alias 'macbook'
+    let output = Command::new("ssh")
+        .args([
+            "-o",
+            "BatchMode=yes",
+            "-o",
+            "ConnectTimeout=5",
+            "macbook",
+            "uname -sm && ~/.patrix_mac_venv/bin/python --version",
+        ])
+        .output()
+        .expect("Failed to execute ssh command. Is OpenSSH on local PATH?");
+
+    assert!(
+        output.status.success(),
+        "MacBook SSH connection failed. Stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stdout_str = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout_str.contains("Darwin"),
+        "MacBook host uname output missing 'Darwin': {stdout_str}"
+    );
+    assert!(
+        stdout_str.contains("Python 3"),
+        "MacBook host python output missing 'Python 3': {stdout_str}"
+    );
 }

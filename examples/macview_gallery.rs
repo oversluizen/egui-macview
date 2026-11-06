@@ -1086,9 +1086,10 @@ impl SidebarState {
                     // Child 1.1: Interactive Canvas
                     let sel_canvas = self.selected_node == "Interactive Canvas";
                     let resp = tree.row("node_canvas", 1, false, &mut false, sel_canvas, |row| {
+                        let bg_style = theme.selected_control_background_style();
                         row.thumbnail(|painter, rect| {
                             let icon_color = if sel_canvas {
-                                Color32::WHITE
+                                bg_style.primary_text_color(theme)
                             } else {
                                 theme.control_accent()
                             };
@@ -1112,13 +1113,13 @@ impl SidebarState {
                             |painter, rect, active| {
                                 let color = if active {
                                     if sel_canvas {
-                                        Color32::WHITE
+                                        bg_style.primary_text_color(theme)
                                     } else {
                                         theme.control_accent()
                                     }
                                 } else {
                                     if sel_canvas {
-                                        Color32::from_white_alpha(140)
+                                        bg_style.secondary_text_color(theme)
                                     } else {
                                         theme.placeholder_text()
                                     }
@@ -1132,13 +1133,13 @@ impl SidebarState {
                             |painter, rect, active| {
                                 let color = if active {
                                     if sel_canvas {
-                                        Color32::WHITE
+                                        bg_style.primary_text_color(theme)
                                     } else {
                                         theme.selected_control()
                                     }
                                 } else {
                                     if sel_canvas {
-                                        Color32::from_white_alpha(140)
+                                        bg_style.secondary_text_color(theme)
                                     } else {
                                         theme.placeholder_text()
                                     }
@@ -1154,9 +1155,10 @@ impl SidebarState {
                     // Child 1.2: Vector Assets
                     let sel_vector = self.selected_node == "Vector Assets";
                     let resp = tree.row("node_vector", 1, false, &mut false, sel_vector, |row| {
+                        let bg_style = theme.selected_control_background_style();
                         row.thumbnail(|painter, rect| {
                             let icon_color = if sel_vector {
-                                Color32::WHITE
+                                bg_style.primary_text_color(theme)
                             } else {
                                 theme.system_green()
                             };
@@ -1175,13 +1177,13 @@ impl SidebarState {
                             |painter, rect, active| {
                                 let color = if active {
                                     if sel_vector {
-                                        Color32::WHITE
+                                        bg_style.primary_text_color(theme)
                                     } else {
                                         theme.system_green()
                                     }
                                 } else {
                                     if sel_vector {
-                                        Color32::from_white_alpha(140)
+                                        bg_style.secondary_text_color(theme)
                                     } else {
                                         theme.placeholder_text()
                                     }
@@ -1195,13 +1197,13 @@ impl SidebarState {
                             |painter, rect, active| {
                                 let color = if active {
                                     if sel_vector {
-                                        Color32::WHITE
+                                        bg_style.primary_text_color(theme)
                                     } else {
                                         theme.selected_control()
                                     }
                                 } else {
                                     if sel_vector {
-                                        Color32::from_white_alpha(140)
+                                        bg_style.secondary_text_color(theme)
                                     } else {
                                         theme.placeholder_text()
                                     }
@@ -1233,9 +1235,10 @@ impl SidebarState {
                 if self.expanded_tokens {
                     let sel_tokens = self.selected_node == "W3C DTCG Tokens";
                     let resp = tree.row("node_dtcg", 1, false, &mut false, sel_tokens, |row| {
+                        let bg_style = theme.selected_control_background_style();
                         row.thumbnail(|painter, rect| {
                             let icon_color = if sel_tokens {
-                                Color32::WHITE
+                                bg_style.primary_text_color(theme)
                             } else {
                                 theme.selected_control()
                             };
@@ -1248,13 +1251,13 @@ impl SidebarState {
                             |painter, rect, active| {
                                 let color = if active {
                                     if sel_tokens {
-                                        Color32::WHITE
+                                        bg_style.primary_text_color(theme)
                                     } else {
                                         theme.control_accent()
                                     }
                                 } else {
                                     if sel_tokens {
-                                        Color32::from_white_alpha(140)
+                                        bg_style.secondary_text_color(theme)
                                     } else {
                                         theme.placeholder_text()
                                     }
@@ -1287,9 +1290,10 @@ impl SidebarState {
                     // Mode 0: Default NIB
                     let sel_nib = self.selected_node == "Default NIB Inspector";
                     let resp_nib = tree.row("node_nib", 1, false, &mut false, sel_nib, |row| {
+                        let bg_style = theme.selected_control_background_style();
                         row.thumbnail(|painter, rect| {
                             let icon_color = if sel_nib {
-                                Color32::WHITE
+                                bg_style.primary_text_color(theme)
                             } else {
                                 theme.control_accent()
                             };
@@ -1310,9 +1314,10 @@ impl SidebarState {
                     // Mode 1: Compact HUD
                     let sel_hud = self.selected_node == "Compact HUD Preset";
                     let resp_hud = tree.row("node_hud", 1, false, &mut false, sel_hud, |row| {
+                        let bg_style = theme.selected_control_background_style();
                         row.thumbnail(|painter, rect| {
                             let icon_color = if sel_hud {
-                                Color32::WHITE
+                                bg_style.primary_text_color(theme)
                             } else {
                                 Color32::from_black_alpha(200)
                             };
@@ -1332,9 +1337,10 @@ impl SidebarState {
                     // Mode 2: Expanded Pro
                     let sel_exp = self.selected_node == "Expanded Pro Preset";
                     let resp_exp = tree.row("node_exp", 1, false, &mut false, sel_exp, |row| {
+                        let bg_style = theme.selected_control_background_style();
                         row.thumbnail(|painter, rect| {
                             let icon_color = if sel_exp {
-                                Color32::WHITE
+                                bg_style.primary_text_color(theme)
                             } else {
                                 theme.selected_control()
                             };

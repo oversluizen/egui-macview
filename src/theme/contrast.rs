@@ -75,33 +75,33 @@ impl MacBackgroundStyle {
     /// Primary text color guaranteeing >= 4.5:1 WCAG contrast against this background.
     ///
     /// - `Dark` => 100% white (`#FFFFFF`)
-    /// - `Light` => dynamic theme label color (`theme.label()`)
+    /// - `Light` => dark primary label color from Aqua tokens (`#262626`)
     pub fn primary_text_color(&self, theme: &MacTheme) -> Color32 {
         match self {
             Self::Dark => Color32::from_rgb(255, 255, 255),
-            Self::Light => theme.label(),
+            Self::Light => theme.tokens().colors().aqua.label.to_color32(),
         }
     }
 
     /// Secondary text color (subtitles, captions, metadata).
     ///
     /// - `Dark` => 85% white (`rgba(255, 255, 255, 0.85)`)
-    /// - `Light` => dynamic theme secondary label color (`theme.secondary_label()`)
+    /// - `Light` => dark secondary label color from Aqua tokens (`#6E6E73`)
     pub fn secondary_text_color(&self, theme: &MacTheme) -> Color32 {
         match self {
             Self::Dark => Color32::from_white_alpha(217),
-            Self::Light => theme.secondary_label(),
+            Self::Light => theme.tokens().colors().aqua.secondary_label.to_color32(),
         }
     }
 
     /// Tertiary text color (placeholders, disabled hints).
     ///
     /// - `Dark` => 70% white (`rgba(255, 255, 255, 0.70)`)
-    /// - `Light` => theme placeholder text (`theme.placeholder_text()`)
+    /// - `Light` => dark placeholder text color from Aqua tokens
     pub fn tertiary_text_color(&self, theme: &MacTheme) -> Color32 {
         match self {
             Self::Dark => Color32::from_white_alpha(179),
-            Self::Light => theme.placeholder_text(),
+            Self::Light => theme.tokens().colors().aqua.placeholder_text.to_color32(),
         }
     }
 

@@ -28,7 +28,7 @@
 
 When engineering applications in Rust (`egui`) intended to look, feel, and behave indistinguishably from native macOS software, visual inspection ("vibecoding") is strictly prohibited by [[GL-1015-industry-software-and-testing-standards|GL-1015]] and [[GL-1016-remote-parity-and-differential-testing|GL-1016]].
 
-SPEC-008 standardizes an automated, reproducible, and project-agnostic **Cross-Platform Differential Testing Harness** connecting:
+SPEC-009 implements and binds the vault-wide [[GL-1016-remote-parity-and-differential-testing|GL-1016]] (UDP-01) standard to `egui-macview`, connecting:
 1. **Local Developer Host (Windows / Linux):** Headless rendering of `egui` components into uncompressed 32-bit RGBA framebuffers.
 2. **Physical macOS Reference Host (MacBook Air via SSH):** Native AppKit / Quartz offscreen rendering into reference PNGs and geometry ground-truth JSONs.
 3. **Automated Mathematical Comparator (`macbook-diff.py`):** Pure-Python deterministic engine enforcing ISO 25010 structural similarity ($\text{SSIM} \ge 0.990$) and CIE DE2000 color parities ($\Delta E_{00} \le 1.5$).
