@@ -85,53 +85,24 @@ impl<'a> MacCanvasFooter<'a> {
         let text_color = theme.secondary_label();
         let mut action = None;
 
-        // 1. Leading Zone: Breadcrumbs (truncated so they never spill into center or trailing zones)
-        let mut breadcrumb_str = String::new();
-        for (idx, crumb) in self.breadcrumbs.iter().enumerate() {
-            if idx > 0 {
-                breadcrumb_str.push_str(" > ");
-            }
-            breadcrumb_str.push_str(crumb);
-        }
-
-        if !breadcrumb_str.is_empty() {
-            let crumb_max_w = (container_width * 0.35)
-                .min(rect.center().x - rect.left() - 90.0)
-                .max(10.0);
-            let crumb_rect = Rect::from_min_size(
-                Pos2::new(rect.left() + item_spacing, rect.top()),
-                Vec2::new(crumb_max_w, footer_height),
-            );
-            let mut crumb_ui = ui.new_child(
-                egui::UiBuilder::new()
-                    .max_rect(crumb_rect)
-                    .layout(egui::Layout::left_to_right(egui::Align::Center)),
-            );
-            crumb_ui.add(
-                egui::Label::new(
-                    egui::RichText::new(&breadcrumb_str)
-                        .font(font_id)
-                        .color(text_color),
-                )
-                .truncate(),
-            );
-        }
-
         // 2. Trailing Zone: Zoom Presets (50% | 100% | 200%) via Layout::right_to_left
+        let zoom_presets = [2.0f32, 1.0f32, 0.5f32];
+        let preset_btn_width = 36.0f32;
+        let preset_btn_height = 18.0f32;
+        let zoom_gap = 2.0f32;
+        let zoom_cluster_width = (preset_btn_width * 3.0) + (zoom_gap * 2.0); // 112.0pt
+        let zoom_left = (rect.right() - item_spacing - zoom_cluster_width).max(rect.left() + item_spacing);
+
         let zoom_area = Rect::from_min_max(
-            Pos2::new(rect.center().x + 90.0, rect.top()),
+            Pos2::new(zoom_left, rect.top()),
             Pos2::new(rect.right() - item_spacing, rect.bottom()),
         );
-        if zoom_area.width() > 0.0 {
+        if zoom_area.width() >= zoom_cluster_width - 1.0 {
             let mut zoom_ui = ui.new_child(
                 egui::UiBuilder::new()
                     .max_rect(zoom_area)
                     .layout(egui::Layout::right_to_left(egui::Align::Center)),
             );
-
-            let zoom_presets = [2.0f32, 1.0f32, 0.5f32];
-            let preset_btn_width = 36.0f32;
-            let preset_btn_height = 18.0f32;
 
             for (z_idx, &preset) in zoom_presets.iter().enumerate() {
                 let (btn_rect, resp) = zoom_ui.allocate_exact_size(
@@ -176,22 +147,76 @@ impl<'a> MacCanvasFooter<'a> {
                 }
 
                 if z_idx + 1 < zoom_presets.len() {
-                    zoom_ui.add_space(2.0);
+                    zoom_ui.add_space(zoom_gap);
                 }
             }
         }
 
-        // 3. Center Zone: Coordinate readout
+        // 1. Leading Zone: Breadcrumbs (truncated so they never spill into center or trailing zones)
+        let mut breadcrumb_str = String::new();
+        for (idx, crumb) in self.breadcrumbs.iter().enumerate() {
+            if idx > 0 {
+                breadcrumb_str.push_str(" > ");
+            }
+            breadcrumb_str.push_str(crumb);
+        }
+
+        let mut crumb_end_x = rect.left() + item_spacing;
+        if !breadcrumb_str.is_empty() {
+            let max_avail_for_crumbs = (zoom_left - crumb_end_x - item_spacing * 2.0 - 150.0).max(0.0);
+            let crumb_max_w = (container_width * 0.35).min(max_avail_for_crumbs);
+            if crumb_max_w > 10.0 {
+                let crumb_rect = Rect::from_min_size(
+                    Pos2::new(crumb_end_x, rect.top()),
+                    Vec2::new(crumb_max_w, footer_height),
+                );
+                let mut crumb_ui = ui.new_child(
+                    egui::UiBuilder::new()
+                        .max_rect(crumb_rect)
+                        .layout(egui::Layout::left_to_right(egui::Align::Center)),
+                );
+                crumb_ui.add(
+                    egui::Label::new(
+                        egui::RichText::new(&breadcrumb_str)
+                            .font(font_id)
+                            .color(text_color),
+                    )
+                    .truncate(),
+                );
+                crumb_end_x += crumb_max_w;
+            }
+        }
+
+        // 3. Center Zone: Coordinate readout strictly bounded and clipped
         if let Some(pos) = self.cursor_pos {
-            let coord_text = format!("X: {:.1} pt   Y: {:.1} pt", pos.x, pos.y);
-            let coord_rect = Rect::from_center_size(rect.center(), Vec2::new(160.0, footer_height));
-            ui.painter().text(
-                coord_rect.center(),
-                Align2::CENTER_CENTER,
-                coord_text,
-                FontId::monospace(10.5),
-                theme.secondary_label(),
-            );
+            let center_min_x = crumb_end_x + item_spacing;
+            let center_max_x = zoom_left - item_spacing;
+            let avail_w = center_max_x - center_min_x;
+
+            if avail_w >= 75.0 {
+                let (coord_text, needed_w) = if avail_w >= 155.0 {
+                    (format!("X: {:.1} pt   Y: {:.1} pt", pos.x, pos.y), 155.0f32)
+                } else {
+                    (format!("{:.0}, {:.0} pt", pos.x, pos.y), 75.0f32)
+                };
+
+                let center_x = rect.center().x.clamp(
+                    center_min_x + needed_w * 0.5,
+                    center_max_x - needed_w * 0.5,
+                );
+                let clip_rect = Rect::from_min_max(
+                    Pos2::new(center_min_x, rect.top()),
+                    Pos2::new(center_max_x, rect.bottom()),
+                );
+
+                ui.painter_at(clip_rect).text(
+                    Pos2::new(center_x, rect.center().y),
+                    Align2::CENTER_CENTER,
+                    coord_text,
+                    FontId::monospace(10.5),
+                    theme.secondary_label(),
+                );
+            }
         }
 
         action

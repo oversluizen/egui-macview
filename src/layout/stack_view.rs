@@ -131,9 +131,12 @@ impl<'a> MacStackUi<'a> {
             let label_color = self.theme.secondary_label();
             let font_size = self.theme.stack_view().section_header_font_size.points();
             let font_id = FontId::proportional(font_size);
-            self.ui.add(egui::Label::new(
-                egui::RichText::new(title).font(font_id).color(label_color),
-            ));
+            self.ui.add(
+                egui::Label::new(
+                    egui::RichText::new(title).font(font_id).color(label_color),
+                )
+                .wrap_mode(egui::TextWrapMode::Extend),
+            );
             self.advance_spacing();
         }
 

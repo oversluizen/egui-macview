@@ -317,9 +317,10 @@ struct GalleryApp {
     appearance: MacAppearance,
     window_controls_style: WindowControlsStyle,
     inspector_mode: InspectorMode,
+    last_inspector_mode: InspectorMode,
     is_maximized: bool,
     left_split_pos: f32,
-    right_split_pos: f32,
+    inspector_width: f32,
     card: RefCell<CardModel>,
     sidebar: SidebarState,
     center: CenterState,
@@ -372,9 +373,10 @@ impl GalleryApp {
             appearance: MacAppearance::Aqua,
             window_controls_style: WindowControlsStyle::AppleTrafficLights,
             inspector_mode: InspectorMode::ExpandedPro,
+            last_inspector_mode: InspectorMode::ExpandedPro,
             is_maximized: false,
             left_split_pos: 240.0,
-            right_split_pos: 590.0,
+            inspector_width: 360.0,
             card: RefCell::new(CardModel::default()),
             sidebar: SidebarState::default(),
             center: CenterState::default(),
@@ -526,19 +528,32 @@ impl eframe::App for GalleryApp {
         );
 
         let mut left_split_pos = self.left_split_pos;
-        let mut right_split_pos = self.right_split_pos;
 
-        // Auto-adapt right split position depending on inspector mode
+        // Auto-adapt target inspector width if inspector mode changed
         let target_inspector_width = match self.inspector_mode {
-            InspectorMode::DefaultNib => 260.0,
+            InspectorMode::DefaultNib => 320.0,
             InspectorMode::CompactHud => 240.0,
-            InspectorMode::ExpandedPro => 380.0,
+            InspectorMode::ExpandedPro => 360.0,
         };
-        let available_body_w = work_rect.width() - left_split_pos;
-        let ideal_right_split = (available_body_w - target_inspector_width).max(340.0);
-        if (right_split_pos - ideal_right_split).abs() > 140.0 {
-            right_split_pos = ideal_right_split;
+        if self.last_inspector_mode != self.inspector_mode {
+            self.inspector_width = target_inspector_width;
+            self.last_inspector_mode = self.inspector_mode;
         }
+
+        let available_body_w = work_rect.width() - left_split_pos;
+        let min_canvas_w = 340.0;
+        let min_inspector_w = match self.inspector_mode {
+            InspectorMode::ExpandedPro => 340.0,
+            InspectorMode::DefaultNib => 280.0,
+            InspectorMode::CompactHud => 220.0,
+        };
+
+        // AppKit NSSplitViewController right-anchoring:
+        // The right inspector pane preserves its fixed/preferred width, while the center
+        // canvas is elastic and dynamically absorbs 100% of window resize deltas.
+        let max_inspector_w = (available_body_w - min_canvas_w).max(min_inspector_w);
+        let current_inspector_w = self.inspector_width.clamp(min_inspector_w, max_inspector_w);
+        let mut right_split_pos = (available_body_w - current_inspector_w).max(min_canvas_w);
 
         let sidebar = &mut self.sidebar;
         let center = &mut self.center;
@@ -576,12 +591,8 @@ impl eframe::App for GalleryApp {
                     &mut right_split_pos,
                 )
                 .theme(&theme)
-                .min_first(340.0)
-                .max_first(700.0)
-                .min_second(match inspector_mode {
-                    InspectorMode::ExpandedPro => 360.0,
-                    _ => 220.0,
-                })
+                .min_first(min_canvas_w)
+                .min_second(min_inspector_w)
                 .show(
                     body_ui,
                     |center_ui| {
@@ -595,7 +606,7 @@ impl eframe::App for GalleryApp {
         );
 
         self.left_split_pos = left_split_pos;
-        self.right_split_pos = right_split_pos;
+        self.inspector_width = (available_body_w - right_split_pos).clamp(min_inspector_w, max_inspector_w);
     }
 }
 
@@ -649,8 +660,8 @@ impl GalleryApp {
             traffic_y,
         );
 
-        // Strategy 2 Presentation: Apple Traffic Lights (Leading / Left)
-        if self.window_controls_style == WindowControlsStyle::AppleTrafficLights {
+        // Zone 1 (Leading Zone): Apple Traffic Lights (Leading / Left)
+        let leading_end_x = if self.window_controls_style == WindowControlsStyle::AppleTrafficLights {
             let (close_fill, close_border) = theme.traffic_light_close();
             let (min_fill, min_border) = theme.traffic_light_minimize();
             let (zoom_fill, zoom_border) = theme.traffic_light_zoom();
@@ -754,26 +765,12 @@ impl GalleryApp {
                     Stroke::new(1.0, symbol_col),
                 );
             }
-        }
-
-        // Window Title
-        let title_font = FontId::proportional(theme.text_field().regular.font_size.points());
-        let title_color = theme.label();
-        let title_pos = if self.window_controls_style == WindowControlsStyle::AppleTrafficLights {
-            pos2(zoom_pos.x + 24.0, traffic_y)
+            zoom_pos.x + traffic_radius + 16.0
         } else {
-            pos2(rect.min.x + 18.0, traffic_y)
+            rect.min.x + 16.0
         };
-        let title_str = format!(
-            "macview_gallery v{} (AppKit macOS 15 Parity)",
-            egui_macview::VERSION
-        );
-        let title_galley =
-            painter.layout_no_wrap(title_str, title_font, title_color);
-        let title_right = title_pos.x + title_galley.size().x;
-        painter.galley(title_pos, title_galley, title_color);
 
-        // Strategy 2 Presentation: Windows 11 Caption Buttons (Trailing / Right)
+        // Zone 3 (Trailing Zone): Windows 11 Caption Buttons (if enabled) + Trailing Controls
         let btn_w = theme.toolbar_metrics().caption_button_width.points();
         let icon_box_size = theme.toolbar_metrics().caption_icon_size.points();
         let half_icon = icon_box_size * 0.5;
@@ -937,12 +934,13 @@ impl GalleryApp {
             16.0
         };
 
-        // Right Toolbar Controls via Layout::right_to_left so they never overlap the title on Ctrl + +
+        // Trailing Controls via Layout::right_to_left
         let right_area = Rect::from_min_max(
-            pos2(title_right + 12.0, rect.min.y),
+            pos2(leading_end_x + 8.0, rect.min.y),
             pos2(rect.max.x - right_offset, rect.max.y),
         );
 
+        let mut trailing_start_x = rect.max.x - right_offset;
         if right_area.width() > 0.0 {
             let mut right_ui = ui.new_child(
                 egui::UiBuilder::new()
@@ -1018,6 +1016,54 @@ impl GalleryApp {
             );
             if spot_btn.clicked() {
                 self.palette.toggle();
+            }
+
+            if right_ui.min_rect().is_positive() {
+                trailing_start_x = right_ui.min_rect().left();
+            }
+        }
+
+        // Zone 2 (Center Zone): Window Title (AppKit 3-zone flex layout with dynamic centering & truncation)
+        let title_min_x = leading_end_x + 8.0;
+        let title_max_x = trailing_start_x - 12.0;
+        let available_title_w = title_max_x - title_min_x;
+
+        if available_title_w >= 40.0 {
+            let title_font = FontId::proportional(theme.text_field().regular.font_size.points());
+            let title_color = theme.label();
+            let title_str = format!(
+                "macview_gallery v{} (AppKit macOS 15 Parity)",
+                egui_macview::VERSION
+            );
+
+            let full_galley = painter.layout_no_wrap(title_str.clone(), title_font.clone(), title_color);
+            let full_w = full_galley.size().x;
+
+            let center_x = rect.center().x;
+            let centered_min_x = center_x - full_w * 0.5;
+            let centered_max_x = center_x + full_w * 0.5;
+
+            // Center if space allows without colliding with leading or trailing controls;
+            // otherwise leading-align or gracefully truncate with an ellipsis.
+            if full_w <= available_title_w && centered_min_x >= title_min_x && centered_max_x <= title_max_x {
+                let pos = pos2(centered_min_x, traffic_y - full_galley.size().y * 0.5);
+                painter.galley(pos, full_galley, title_color);
+            } else if full_w <= available_title_w {
+                let pos = pos2(title_min_x, traffic_y - full_galley.size().y * 0.5);
+                painter.galley(pos, full_galley, title_color);
+            } else {
+                let format = egui::TextFormat {
+                    font_id: title_font,
+                    color: title_color,
+                    ..Default::default()
+                };
+                let mut job = egui::text::LayoutJob::single_section(title_str, format);
+                job.wrap.max_width = available_title_w;
+                job.wrap.max_rows = 1;
+                job.wrap.break_anywhere = false;
+                let truncated_galley = painter.layout_job(job);
+                let pos = pos2(title_min_x, traffic_y - truncated_galley.size().y * 0.5);
+                painter.galley(pos, truncated_galley, title_color);
             }
         }
     }
@@ -1989,14 +2035,23 @@ impl InspectorState {
             theme.window_background(),
         );
 
-        match mode {
-            InspectorMode::ExpandedPro => {
-                self.render_expanded_pro(ui, theme, &mut card);
-            }
-            _ => {
-                self.render_default_nib(ui, theme, &mut card);
-            }
-        }
+        MacScrollView::new("gallery_inspector_scroll")
+            .theme(theme)
+            .vertical(true)
+            .horizontal(false)
+            .max_height(avail_rect.height())
+            .max_width(avail_rect.width())
+            .show(ui, |scroll_ui| {
+                scroll_ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
+                match mode {
+                    InspectorMode::ExpandedPro => {
+                        self.render_expanded_pro(scroll_ui, theme, &mut card);
+                    }
+                    _ => {
+                        self.render_default_nib(scroll_ui, theme, &mut card);
+                    }
+                }
+            });
     }
 
     /// Renders the Expanded Pro Inspector (Mode 2) with 3 top segmented tabs:
