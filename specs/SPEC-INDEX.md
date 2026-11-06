@@ -38,6 +38,7 @@ The `egui-macview` specification suite provides the formal normative requirement
 | [**SPEC-008 (Symbols)**](SPEC-008-APPKIT-SYMBOLS-AND-ICONS.md) | AppKit Vector Symbols, Iconography & CupertinoIcons Engine | `0.4.0-draft` | Draft / Normative | `tests/symbol_tests.rs` |
 | [**SPEC-008 (Feedback)**](SPEC-008-STATE-INTEGRITY-AND-FEEDBACK.md) | State Integrity, Context Menus & Micro-Feedback Architecture | `0.4.0-draft` | Draft / Normative | `tests/undo_and_feedback_tests.rs` |
 | [**SPEC-009**](SPEC-009-CROSS-PLATFORM-DIFFERENTIAL-HARNESS.md) | Cross-Platform Parity and Remote Differential Testing Harness | `0.3.0` | Accepted / Normative | `tests/macbook_parity_differential_tests.rs` |
+| [**SPEC-010**](SPEC-010-INTERACTIVE-GALLERY-CONTROLS-AND-ICONOGRAPHY.md) | Interactive Gallery Controls, Bidirectional State Binding & Iconography Parity | `0.3.1` | Accepted / Normative | `tests/micro_animations_and_hud_tests.rs`, `tests/symbol_tests.rs` |
 
 ---
 
@@ -63,6 +64,7 @@ The roadmap coordinates modular capability additions across designated release m
 | Canvas Footer & Zoom HUD ($24\,\text{pt}$) | `src/navigation/` | Milestone 0.3.0 | SPEC-007 | `tests/menu_and_palette_tests.rs` | Released |
 | Spotlight Command Palette (`Cmd+K`) | `src/navigation/` | Milestone 0.3.0 | SPEC-007 | `tests/menu_and_palette_tests.rs` | Released |
 | Remote Differential Testing Harness | `tests/` & scripts | Milestone 0.3.0 | SPEC-009 | `tests/macbook_parity_differential_tests.rs` | Accepted / Normative |
+| Interactive Gallery Controls & SF Symbols | `examples/` & `src/symbols` | Milestone 0.3.1 | SPEC-010 | `tests/micro_animations_and_hud_tests.rs`, `tests/symbol_tests.rs` | Released / Normative |
 | `NSUndoManager` Ringbuffer ($C=50$) | `src/state/` | Milestone 0.4.0 | SPEC-008 | `tests/undo_and_feedback_tests.rs` | Implemented (Draft Oracle) |
 | Viewport-Clamped Context Menus | `src/feedback/` | Milestone 0.4.0 | SPEC-008 | `tests/undo_and_feedback_tests.rs` | Implemented (Draft Oracle) |
 | Animated Floating Toasts (`CASpring`, $2.5\,\text{s}$) | `src/feedback/` | Milestone 0.4.0 | SPEC-008 | `tests/undo_and_feedback_tests.rs` | Implemented (Draft Oracle) |
@@ -78,6 +80,7 @@ All core specifications in this repository maintain exact version parity with th
 | **v0.1.0** | `0.1.0` | 2026-11-05 | Baseline release: `MacButtonCell`, `MacInputCell`, `MacSegmentedControl`, `MacToggle`, `MacFixedView`, `MacFlexView`, `MacRow`, `CASpring` initial physics, W3C DTCG token catalog parser. |
 | **v0.2.0** | `0.2.0` | 2026-11-06 | Previous milestone: Extended AppKit suite (`MacColorWell`, `MacOutlineView`, `MacPopUpButton`, `MacSearchField`, `MacSlider`, `MacStepper`, `MacThumbnailCell`), generic layout suite (`MacScrollView`, `MacStackView`, `MacSplitView`), `WindowControlsStyle` strategy (`AppleTrafficLights`, `WindowsCaptionButtons`, `NativeHost`), 3-tier inspector architecture (Compact HUD, Default NIB, Expanded Pro), modular specification decomposition under `specs/` (SPEC-001 through SPEC-006). Previews SPEC-007 and SPEC-008 navigation & feedback extensions. |
 | **v0.3.0** | `0.3.0` | 2026-11-06 | Milestone 0.3.0 release: Promoted SPEC-007 to official release status. Full desktop navigation suite (`MacMenuBar`, `NSMenu`, `NSMenuItem` with cascading submenus and keyboard accelerators), deterministic 24pt canvas footer (`MacCanvasFooter` with breadcrumbs and zoom presets), Spotlight command palette modal HUD (`MacCommandPalette` with fuzzy subsequence scoring and Escape clearing mechanics), and formal `MacBackgroundStyle` dynamic contrast engine ($L \le 0.179 \implies$ Dark / On-Accent White text, $L > 0.179 \implies$ Light / Dark text) ensuring WCAG 2.1 AA $\ge 4.5:1$ contrast. |
+| **v0.3.1** | `0.3.1` | 2026-11-06 | Milestone 0.3.1 release: Cross-platform parity (SPEC-010), Intel HD 5000 OpenGL fallback (`glow`), OS-adaptive window decorations (`decorations = true` on Windows, `false` on macOS), full bidirectional state binding (Zero Dead Controls: Preset popup, live scale slider, corner stepper, units formatter, CASpring touch pulse), rich vector iconography via `MacSymbol` (Cupertino SF Symbols), and cross-platform Spotlight Command Palette shortcut handling (`⌘K` / `Ctrl+K`). |
 
 ---
 

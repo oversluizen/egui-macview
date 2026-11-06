@@ -385,6 +385,15 @@ fn test_version_synchronization_invariants() {
                     content.contains("Milestone 0.3.0"),
                     "{file_name} missing Target Milestone `Milestone 0.3.0`"
                 );
+            } else if file_name.starts_with("SPEC-010") {
+                assert!(
+                    content.contains("**Document Version** | `0.3.1`"),
+                    "{file_name} missing Document Version `0.3.1`"
+                );
+                assert!(
+                    content.contains("Milestone 0.3.1"),
+                    "{file_name} missing Target Milestone `Milestone 0.3.1`"
+                );
             } else if file_name.starts_with("SPEC-008") {
                 assert!(
                     content.contains("**Document Version** | `0.4.0-draft`"),
