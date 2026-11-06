@@ -1,18 +1,47 @@
-//! `macview_gallery` — Interactive Desktop Showcase Example.
+//! `macview_gallery` — Comprehensive macOS AppKit Capability Showcase & Reference Architecture.
 //!
-//! Grounded in Apple macOS AppKit Human Interface Guidelines (HIG)
-//! and W3C DTCG Token Catalogues (`tokens/design_tokens.json`).
+//! Grounded in Apple macOS AppKit Human Interface Guidelines (HIG), W3C DTCG Token Catalogues,
+//! and GL-1015 (De Verankeringswet & High-Assurance Software Standards).
 //!
-//! Demonstrates the complete macOS AppKit suite on Windows 11:
-//! - Window Framing: Borderless macOS unified window with interactive traffic lights & window dragging.
-//! - Dynamic Theme Toggle: Aqua (Light) <-> DarkAqua (Dark).
-//! - 3-Tier Inspector Architecture:
-//!   - Mode 0: Default NIB Document Inspector (260pt standard property pane).
-//!   - Mode 1: Compact Pro HUD Palette (178x63pt floating semi-translucent dark infobox).
-//!   - Mode 2: Expanded Pro Inspector (380pt multi-deck tabs: Attributes, Metrics, Advanced Matrix).
-//! - Interactive Canvas: Real-time vector card transformed live by Affine Matrix (rotation, scale, skew)
-//!   and pulsed by `CASpring` harmonic oscillator motion physics.
-//! - Window Layout via `MacSplitView`: Left Sidebar, Center Canvas, Right Inspector.
+//! ## Architectural Structure & Developer Guide
+//!
+//! This example serves as a living reference implementation for developers building professional
+//! macOS-inspired desktop tools with `egui 0.37`. It showcases:
+//!
+//! ### 1. Unified Window & Layout Engine
+//! - **MacSplitView Dual Draggable Hairline Splitters**: Divides the workspace into Left Sidebar,
+//!   Center Work Area, and Right Inspector with persistent layout state and min/max constraints.
+//! - **3-Zone Toolbar**: Unified titlebar containing interactive AppKit traffic lights, breadcrumb path,
+//!   view switcher segmented controls, and search shortcuts.
+//! - **Dynamic Auto-Widening Menu Bar**: `MacMenuBar` with cascading submenus, global accelerators,
+//!   and dynamic pre-render width calculation guaranteeing $\ge 24\text{pt}$ clearance between
+//!   item titles and shortcut strings (`Ctrl+W` / `⌘W`) with zero visual overlap.
+//!
+//! ### 2. Master-Detail 4-Screen AppKit Navigator (`GalleryScreen`)
+//! - **Screen 1: Interactive Canvas & Physics**: 2D Affine Matrix transformations (rotation, scale,
+//!   shear, pan) driven live by inspector sliders and pulsed by `CASpring` harmonic oscillator physics.
+//!   Bound to the `[Left] [Center] [Right] [Fill]` Layout & Alignment Mask.
+//! - **Screen 2: Vector Assets Gallery**: Grid of 14 authentic `MacSymbol` vector TrueType glyphs with
+//!   instant fuzzy search (`⌘K` on macOS, `Ctrl+K` on Windows/Linux) and metadata inspection cards.
+//! - **Screen 3: W3C Design Tokens & WCAG Engine**: Live design token browser and real-time
+//!   relative luminance ($L \le 0.179$) and contrast evaluation engine with WCAG AA pass/fail badges.
+//! - **Screen 4: Layout Engines Playground**: Demonstrates `MacFixedView` (vector card, hardware
+//!   raster mask clipping without border bleed, cascading Core Animation springs) and `MacRow`
+//!   auto-budgeting container width simulator.
+//!
+//! ### 3. 3-Tier Inspector Architecture (`InspectorMode`)
+//! - **Mode 0: Default NIB Inspector**: Standard 260pt document property inspector.
+//! - **Mode 1: Compact HUD Palette**: Floating translucent 178x63pt utility infobox.
+//! - **Mode 2: Expanded Pro Inspector**: 380pt professional palette with multi-deck tabs:
+//!   Attributes, Metrics, and Advanced 2x2 Matrix notation.
+//!
+//! ### 4. Zero Dead Controls Policy
+//! Every control in this gallery—including toolbar segmented pills, inspector popup buttons,
+//! scale sliders, corner steppers with dynamic unit suffixes (`pt`, `px`, `%`), and canvas clicks—
+//! is bidirectionally bound to live application state with immediate visual feedback.
+//!
+//! All components are domain-agnostic and ready to be dropped into any `egui` application.
+
 
 #![cfg_attr(not(test), windows_subsystem = "windows")]
 

@@ -2,3 +2,5 @@
 /target_*/
 **/*.rs.bk
 Cargo.lock
+.agents/
+
