@@ -147,16 +147,33 @@ fn setup_system_or_custom_fonts(ctx: &egui::Context) {
 
 fn main() -> eframe::Result<()> {
     let renderer = match std::env::var("MACVIEW_RENDERER").as_deref() {
+        Ok("glow") => eframe::Renderer::Glow,
         Ok("wgpu") => eframe::Renderer::Wgpu,
-        _ => eframe::Renderer::Glow,
+        _ => {
+            #[cfg(target_os = "macos")]
+            {
+                eframe::Renderer::Glow
+            }
+            #[cfg(not(target_os = "macos"))]
+            {
+                eframe::Renderer::Wgpu
+            }
+        }
     };
+
+    #[cfg(target_os = "macos")]
+    let decorations = false;
+    #[cfg(not(target_os = "macos"))]
+    let decorations = true;
 
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([1120.0, 720.0])
             .with_min_inner_size([880.0, 520.0])
-            .with_decorations(false)
+            .with_decorations(decorations)
             .with_transparent(false)
+            .with_active(true)
+            .with_visible(true)
             .with_title(format!(
                 "macview_gallery v{} (AppKit macOS 15 Parity)",
                 egui_macview::VERSION
