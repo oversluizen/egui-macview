@@ -1,7 +1,10 @@
-//! macOS AppKit Panel & Popover Surfaces.
+//! macOS AppKit Panel, Popover & Card Surfaces.
 //!
 //! Grounded in macOS HIG and W3C DTCG tokens via [`MacTheme`].
 //! Fully data-driven: zero hardcoded colors or dimensions.
+
+pub mod card;
+pub use card::MacCard;
 
 use crate::theme::MacTheme;
 use egui::{CornerRadius, Pos2, Rect, Response, Stroke, StrokeKind, Ui, Vec2};

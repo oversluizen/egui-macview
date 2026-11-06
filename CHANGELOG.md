@@ -5,6 +5,20 @@ All notable changes to the `egui-macview` crate will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-11-06
+
+### Added
+- Mathematical specifications and implementation oracles for `MacBackgroundStyle` dynamic contrast engine (Light vs Dark) adhering to WCAG 2.1 Level AA relative luminance formula ($L = 0.2126R + 0.7152G + 0.0722B$) with an exact $L \le 0.179$ crossover threshold guaranteeing $\ge 4.5:1$ contrast across all dynamic accents and container fills.
+- `MacMenuBar` desktop navigation system with pure data-driven `NSMenu` / `NSMenuItem` trees, cascading submenu popovers, and global shortcut accelerators (`MacKeyboardShortcut`).
+- `MacCanvasFooter` deterministic $24\,\text{pt}$ layout container (`CANVAS_FOOTER_HEIGHT`) providing breadcrumb trails, coordinates readouts, and interactive zoom presets (`50% | 100% | 200%`).
+- `MacCommandPalette` floating Spotlight modal HUD ($480 \times 280\,\text{pt}$) with real-time fuzzy subsequence scoring, query filtering, keyboard arrow navigation, and `Escape` clearing mechanics.
+- Promoted `SPEC-007` (Desktop Navigation, Canvas Footer & Spotlight Command Palette) from draft to official released specification status.
+
+### Changed
+- Bumped crate version to `0.3.0`.
+- Polished desktop navigation controls and layout integration in `examples/macview_gallery.rs`.
+- Synchronized specification suite index and roadmap matrix in `SPEC-INDEX.md` marking Milestone 0.3.0 as Released.
+
 ## [0.2.0] - 2026-11-06
 
 ### Added
@@ -38,5 +52,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - W3C DTCG design token catalog parser (`tokens/design_tokens.json`, `tokens/typography.json`).
 - Baseline test suite validating token deserialization, layout budgets, and physical spring properties.
 
+[0.3.0]: https://github.com/oversluizen/egui-macview/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/oversluizen/egui-macview/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/oversluizen/egui-macview/releases/tag/v0.1.0

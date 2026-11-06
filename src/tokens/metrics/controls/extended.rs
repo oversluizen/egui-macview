@@ -120,6 +120,13 @@ pub struct OutlineViewMetrics {
     /// Outer padding around outline view content.
     #[serde(default = "default_outline_edge_padding")]
     pub edge_padding: DimensionValue,
+    /// Font size for section headers (11.0pt AppKit Small Caps).
+    #[serde(default = "default_outline_header_font_size")]
+    pub header_font_size: DimensionValue,
+}
+
+fn default_outline_header_font_size() -> DimensionValue {
+    DimensionValue::from_pt(11.0)
 }
 
 fn default_outline_chevron_stroke_width() -> DimensionValue {
@@ -159,6 +166,7 @@ impl Default for OutlineViewMetrics {
             chevron_depth: default_outline_chevron_depth(),
             item_spacing: default_outline_item_spacing(),
             edge_padding: default_outline_edge_padding(),
+            header_font_size: default_outline_header_font_size(),
         }
     }
 }
@@ -326,7 +334,7 @@ impl Default for SearchFieldMetrics {
     fn default() -> Self {
         Self {
             height: DimensionValue::from_pt(22.0),
-            corner_radius: DimensionValue::from_pt(11.0),
+            corner_radius: DimensionValue::from_pt(6.0),
             icon_size: DimensionValue::from_pt(12.0),
             icon_stroke_width: default_search_icon_stroke_width(),
             padding_horizontal: DimensionValue::from_pt(8.0),

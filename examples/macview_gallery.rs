@@ -20,12 +20,29 @@ use egui::{
 };
 use egui_macview::{
     theme::{MacAppearance, MacTheme, WindowControlsStyle},
-    CASpring, MacButtonCell, MacColorWell, MacFixedView, MacInputCell, MacOutlineView,
-    MacPopUpButton, MacPopover, MacPopoverArrowEdge, MacRow, MacScrollView, MacSearchField,
-    MacSegmentedControl, MacSlider, MacSplitOrientation, MacSplitView, MacStackOrientation,
-    MacStackView, MacStepper, MacThumbnailCell, MacToggle,
+    CASpring, CommandPaletteItem, MacBackgroundStyle, MacButtonCell, MacCanvasFooter,
+    MacCanvasFooterAction, MacColorWell, MacCommandPalette, MacFixedView, MacInputCell, MacMenuBar,
+    MacOutlineView, MacPopUpButton, MacPopover, MacPopoverArrowEdge, MacRow, MacScrollView,
+    MacSearchField, MacSegmentedControl, MacSlider, MacSplitOrientation, MacSplitView,
+    MacStackOrientation, MacStackView, MacStepper, MacThumbnailCell, MacToggle, NSMenu,
+    CANVAS_FOOTER_HEIGHT,
 };
 use std::cell::RefCell;
+
+#[allow(dead_code)]
+/// Formats uppercase section headers with optical tracking (thin-spaces between letters and wider word separation).
+fn format_tracked_small_caps(text: &str) -> String {
+    text.to_uppercase()
+        .split_whitespace()
+        .map(|word| {
+            word.chars()
+                .map(|c| c.to_string())
+                .collect::<Vec<_>>()
+                .join("\u{2009}")
+        })
+        .collect::<Vec<_>>()
+        .join("   ")
+}
 
 fn setup_system_or_custom_fonts(ctx: &egui::Context) {
     let mut fonts = egui::FontDefinitions::default();
@@ -61,6 +78,61 @@ fn setup_system_or_custom_fonts(ctx: &egui::Context) {
                 .entry(egui::FontFamily::Proportional)
                 .or_default()
                 .insert(0, "inter".to_owned());
+        }
+    }
+
+    let sf_mono_path = font_dir.join("SF-Mono-Regular.otf");
+    let cascadia_mono_path = std::path::Path::new("C:\\Windows\\Fonts").join("CascadiaMono.ttf");
+    let cascadia_code_path = std::path::Path::new("C:\\Windows\\Fonts").join("CascadiaCode.ttf");
+    let consolas_path = std::path::Path::new("C:\\Windows\\Fonts").join("consola.ttf");
+
+    if sf_mono_path.exists() {
+        if let Ok(bytes) = std::fs::read(&sf_mono_path) {
+            fonts.font_data.insert(
+                "sf_mono".to_owned(),
+                std::sync::Arc::new(egui::FontData::from_owned(bytes)),
+            );
+            fonts
+                .families
+                .entry(egui::FontFamily::Monospace)
+                .or_default()
+                .insert(0, "sf_mono".to_owned());
+        }
+    } else if cascadia_mono_path.exists() {
+        if let Ok(bytes) = std::fs::read(&cascadia_mono_path) {
+            fonts.font_data.insert(
+                "cascadia_mono".to_owned(),
+                std::sync::Arc::new(egui::FontData::from_owned(bytes)),
+            );
+            fonts
+                .families
+                .entry(egui::FontFamily::Monospace)
+                .or_default()
+                .insert(0, "cascadia_mono".to_owned());
+        }
+    } else if cascadia_code_path.exists() {
+        if let Ok(bytes) = std::fs::read(&cascadia_code_path) {
+            fonts.font_data.insert(
+                "cascadia_code".to_owned(),
+                std::sync::Arc::new(egui::FontData::from_owned(bytes)),
+            );
+            fonts
+                .families
+                .entry(egui::FontFamily::Monospace)
+                .or_default()
+                .insert(0, "cascadia_code".to_owned());
+        }
+    } else if consolas_path.exists() {
+        if let Ok(bytes) = std::fs::read(&consolas_path) {
+            fonts.font_data.insert(
+                "consolas".to_owned(),
+                std::sync::Arc::new(egui::FontData::from_owned(bytes)),
+            );
+            fonts
+                .families
+                .entry(egui::FontFamily::Monospace)
+                .or_default()
+                .insert(0, "consolas".to_owned());
         }
     }
 
@@ -166,7 +238,7 @@ impl Default for SidebarState {
             expanded_components: true,
             expanded_tokens: true,
             expanded_inspector: true,
-            selected_node: "Canvas Layer".to_string(),
+            selected_node: "Interactive Canvas".to_string(),
             vis_canvas: true,
             lock_canvas: false,
             vis_vector: true,
@@ -184,6 +256,10 @@ struct CenterState {
     bounce_spring: CASpring,
     bounce_start_time: Option<f64>,
     hud_pos: Pos2,
+    fixed_grid_snap: bool,
+    fixed_seg_idx: usize,
+    row_popup_idx: usize,
+    row_seg_idx: usize,
 }
 
 impl Default for CenterState {
@@ -199,6 +275,10 @@ impl Default for CenterState {
             bounce_spring: CASpring::from_perceptual(0.35, 0.65),
             bounce_start_time: None,
             hud_pos: Pos2::new(30.0, 36.0),
+            fixed_grid_snap: true,
+            fixed_seg_idx: 0,
+            row_popup_idx: 0,
+            row_seg_idx: 1,
         }
     }
 }
@@ -238,10 +318,50 @@ struct GalleryApp {
     sidebar: SidebarState,
     center: CenterState,
     inspector: InspectorState,
+    menus: Vec<NSMenu>,
+    open_menu_idx: Option<usize>,
+    highlighted_item_idx: Option<usize>,
+    palette: MacCommandPalette,
 }
 
 impl GalleryApp {
     fn new() -> Self {
+        let palette_items = vec![
+            CommandPaletteItem::new("theme.aqua", "Appearance: Switch to Aqua (Light)")
+                .category("Theme")
+                .keywords(&["light", "aqua", "theme"]),
+            CommandPaletteItem::new("theme.dark", "Appearance: Switch to DarkAqua (Dark)")
+                .category("Theme")
+                .keywords(&["dark", "darkaqua", "theme"]),
+            CommandPaletteItem::new("mode.nib", "Inspector: Default NIB (260pt)")
+                .category("Inspector")
+                .keywords(&["nib", "inspector", "default"]),
+            CommandPaletteItem::new("mode.hud", "Inspector: Compact HUD Palette")
+                .category("Inspector")
+                .keywords(&["hud", "compact", "floating"]),
+            CommandPaletteItem::new("mode.pro", "Inspector: Expanded Pro (380pt)")
+                .category("Inspector")
+                .keywords(&["pro", "expanded", "matrix"]),
+            CommandPaletteItem::new("canvas.pulse", "Physics: Trigger CASpring Pulse")
+                .category("Motion")
+                .keywords(&["spring", "bounce", "caspring", "physics"]),
+            CommandPaletteItem::new("matrix.reset", "Canvas: Reset Affine Transform to Identity")
+                .category("Canvas")
+                .keywords(&["matrix", "reset", "identity"]),
+            CommandPaletteItem::new("zoom.50", "View: Zoom to 50%")
+                .category("View")
+                .shortcut("Ctrl+-"),
+            CommandPaletteItem::new("zoom.100", "View: Zoom to 100% (Actual Size)")
+                .category("View")
+                .shortcut("Ctrl+0"),
+            CommandPaletteItem::new("zoom.200", "View: Zoom to 200%")
+                .category("View")
+                .shortcut("Ctrl++"),
+            CommandPaletteItem::new("help.shortcuts", "Help: Command Palette")
+                .category("Help")
+                .shortcut("⌘K / Ctrl+K"),
+        ];
+
         Self {
             appearance: MacAppearance::Aqua,
             window_controls_style: WindowControlsStyle::AppleTrafficLights,
@@ -253,6 +373,61 @@ impl GalleryApp {
             sidebar: SidebarState::default(),
             center: CenterState::default(),
             inspector: InspectorState::default(),
+            menus: NSMenu::default_menu_bar(),
+            open_menu_idx: None,
+            highlighted_item_idx: None,
+            palette: MacCommandPalette::new(palette_items),
+        }
+    }
+
+    fn handle_menu_action(&mut self, action: &str, ctx: &egui::Context) {
+        match action {
+            "theme.aqua" => self.appearance = MacAppearance::Aqua,
+            "theme.dark" => self.appearance = MacAppearance::DarkAqua,
+            "mode.nib" => self.inspector_mode = InspectorMode::DefaultNib,
+            "mode.hud" => self.inspector_mode = InspectorMode::CompactHud,
+            "mode.pro" => self.inspector_mode = InspectorMode::ExpandedPro,
+            "canvas.pulse" => {
+                self.center.bounce_start_time = Some(0.0);
+            }
+            "matrix.reset" => {
+                let mut c = self.card.borrow_mut();
+                c.rotation_deg = 0.0;
+                c.scale_pct = 100.0;
+                c.skew_deg = 0.0;
+            }
+            "zoom.50" => self.card.borrow_mut().scale_pct = 50.0,
+            "zoom.100" => self.card.borrow_mut().scale_pct = 100.0,
+            "zoom.200" => self.card.borrow_mut().scale_pct = 200.0,
+            "view.zoom_in" => {
+                let mut c = self.card.borrow_mut();
+                c.scale_pct = (c.scale_pct + 25.0).min(400.0);
+            }
+            "view.zoom_out" => {
+                let mut c = self.card.borrow_mut();
+                c.scale_pct = (c.scale_pct - 25.0).max(25.0);
+            }
+            "view.zoom_reset" => self.card.borrow_mut().scale_pct = 100.0,
+            "view.toggle_inspector" => {
+                self.inspector_mode = match self.inspector_mode {
+                    InspectorMode::ExpandedPro => InspectorMode::DefaultNib,
+                    _ => InspectorMode::ExpandedPro,
+                };
+            }
+            "view.fullscreen" | "window.zoom" => {
+                self.is_maximized = !self.is_maximized;
+                ctx.send_viewport_cmd(ViewportCommand::Maximized(self.is_maximized));
+            }
+            "file.close" => {
+                ctx.send_viewport_cmd(ViewportCommand::Close);
+            }
+            "window.minimize" => {
+                ctx.send_viewport_cmd(ViewportCommand::Minimized(true));
+            }
+            "help.shortcuts" => {
+                self.palette.open = true;
+            }
+            _ => {}
         }
     }
 }
@@ -285,9 +460,56 @@ impl eframe::App for GalleryApp {
             Rect::from_min_size(full_rect.min, vec2(full_rect.width(), toolbar_height));
         self.render_toolbar(ui, toolbar_rect, &theme);
 
-        // 2. Main Work Area (below toolbar) via MacSplitView
-        let work_rect = Rect::from_min_max(
+        // 2. Top Application Menu Bar (SPEC-007 §2)
+        let menu_bar_h = 24.0;
+        let menu_bar_rect = Rect::from_min_size(
             pos2(full_rect.min.x, full_rect.min.y + toolbar_height),
+            vec2(full_rect.width(), menu_bar_h),
+        );
+        let menu_painter = ui.painter_at(menu_bar_rect);
+        menu_painter.rect_filled(menu_bar_rect, CornerRadius::ZERO, theme.window_background());
+        menu_painter.line_segment(
+            [
+                pos2(menu_bar_rect.min.x, menu_bar_rect.max.y),
+                pos2(menu_bar_rect.max.x, menu_bar_rect.max.y),
+            ],
+            Stroke::new(1.0, theme.separator()),
+        );
+
+        let mut menu_ui = ui.new_child(
+            egui::UiBuilder::new()
+                .max_rect(menu_bar_rect)
+                .layout(Layout::left_to_right(Align::Center)),
+        );
+        menu_ui.add_space(8.0);
+        let menu_bar = MacMenuBar::new(
+            &self.menus,
+            &mut self.open_menu_idx,
+            &mut self.highlighted_item_idx,
+        )
+        .theme(&theme);
+
+        if let Some(action) = menu_bar.show(&mut menu_ui) {
+            self.handle_menu_action(&action, ui.ctx());
+        }
+
+        // Global Command Palette Shortcut Handling (Cmd+K / Ctrl+K)
+        let cmd = ui.input(|i| i.modifiers.command || i.modifiers.ctrl);
+        if cmd && ui.input(|i| i.key_pressed(egui::Key::K)) {
+            self.palette.toggle();
+        }
+
+        // Modal Command Palette HUD (Spotlight)
+        if let Some(action) = self.palette.show(ui.ctx(), &theme) {
+            self.handle_menu_action(&action, ui.ctx());
+        }
+
+        // 3. Main Work Area (below toolbar and menu bar) via MacSplitView
+        let work_rect = Rect::from_min_max(
+            pos2(
+                full_rect.min.x,
+                full_rect.min.y + toolbar_height + menu_bar_h,
+            ),
             pos2(full_rect.max.x, full_rect.max.y),
         );
 
@@ -783,6 +1005,26 @@ impl GalleryApp {
             .max(title_right + center_mode_w * 0.5 + 8.0);
         let center_mode_rect =
             Rect::from_center_size(pos2(center_x, rect.center().y), vec2(center_mode_w, 24.0));
+
+        // Spotlight Command Palette Button [ 🔍 ⌘K ]
+        let spot_w = 72.0;
+        let spot_rect = Rect::from_center_size(
+            pos2(
+                center_mode_rect.left() - spot_w * 0.5 - 12.0,
+                rect.center().y,
+            ),
+            vec2(spot_w, 24.0),
+        );
+        let mut spot_ui = ui.new_child(egui::UiBuilder::new().max_rect(spot_rect));
+        let spot_btn = spot_ui.add(
+            MacButtonCell::new("🔍 ⌘K")
+                .theme(theme)
+                .selected(self.palette.open),
+        );
+        if spot_btn.clicked() {
+            self.palette.toggle();
+        }
+
         let mut center_ui = ui.new_child(
             egui::UiBuilder::new()
                 .max_rect(center_mode_rect)
@@ -826,39 +1068,60 @@ impl SidebarState {
             .theme(theme)
             .show(ui, |tree| {
                 // Section 1: Components Hierarchy
-                tree.row(
+                let resp_comp = tree.row(
                     "node_comp_root",
                     0,
                     true,
                     &mut self.expanded_components,
                     false,
                     |row| {
-                        row.label("Components");
+                        row.header(&format_tracked_small_caps("Components"));
                     },
                 );
+                if resp_comp.clicked {
+                    self.expanded_components = !self.expanded_components;
+                }
 
                 if self.expanded_components {
-                    // Child 1.1: Canvas Layer
-                    let sel_canvas = self.selected_node == "Canvas Layer";
+                    // Child 1.1: Interactive Canvas
+                    let sel_canvas = self.selected_node == "Interactive Canvas";
                     let resp = tree.row("node_canvas", 1, false, &mut false, sel_canvas, |row| {
                         row.thumbnail(|painter, rect| {
-                            painter.rect(
-                                rect.shrink(3.0),
+                            let icon_color = if sel_canvas {
+                                Color32::WHITE
+                            } else {
+                                theme.control_accent()
+                            };
+                            // Vector Artboard / Canvas Icon
+                            painter.rect_stroke(
+                                rect.shrink(2.5),
                                 CornerRadius::same(2),
-                                theme.control_accent(),
-                                Stroke::NONE,
+                                Stroke::new(1.2, icon_color),
                                 StrokeKind::Inside,
                             );
+                            painter.rect_filled(
+                                rect.shrink(5.0),
+                                CornerRadius::same(1),
+                                icon_color,
+                            );
                         });
-                        row.label("Canvas Layer");
+                        row.label("Interactive Canvas");
                         row.accessory_custom(
                             "vis_canvas",
                             &mut self.vis_canvas,
                             |painter, rect, active| {
                                 let color = if active {
-                                    theme.control_accent()
+                                    if sel_canvas {
+                                        Color32::WHITE
+                                    } else {
+                                        theme.control_accent()
+                                    }
                                 } else {
-                                    theme.placeholder_text()
+                                    if sel_canvas {
+                                        Color32::from_white_alpha(140)
+                                    } else {
+                                        theme.placeholder_text()
+                                    }
                                 };
                                 painter.circle_filled(rect.center(), 3.5, color);
                             },
@@ -868,28 +1131,41 @@ impl SidebarState {
                             &mut self.lock_canvas,
                             |painter, rect, active| {
                                 let color = if active {
-                                    theme.selected_control()
+                                    if sel_canvas {
+                                        Color32::WHITE
+                                    } else {
+                                        theme.selected_control()
+                                    }
                                 } else {
-                                    theme.placeholder_text()
+                                    if sel_canvas {
+                                        Color32::from_white_alpha(140)
+                                    } else {
+                                        theme.placeholder_text()
+                                    }
                                 };
                                 painter.rect_filled(rect.shrink(4.0), CornerRadius::same(1), color);
                             },
                         );
                     });
                     if resp.is_selected {
-                        self.selected_node = "Canvas Layer".to_string();
+                        self.selected_node = "Interactive Canvas".to_string();
                     }
 
                     // Child 1.2: Vector Assets
                     let sel_vector = self.selected_node == "Vector Assets";
                     let resp = tree.row("node_vector", 1, false, &mut false, sel_vector, |row| {
                         row.thumbnail(|painter, rect| {
+                            let icon_color = if sel_vector {
+                                Color32::WHITE
+                            } else {
+                                theme.system_green()
+                            };
                             painter.line_segment(
                                 [
                                     pos2(rect.min.x + 3.0, rect.max.y - 3.0),
                                     pos2(rect.max.x - 3.0, rect.min.y + 3.0),
                                 ],
-                                Stroke::new(1.5, theme.system_green()),
+                                Stroke::new(1.5, icon_color),
                             );
                         });
                         row.label("Vector Assets");
@@ -898,9 +1174,17 @@ impl SidebarState {
                             &mut self.vis_vector,
                             |painter, rect, active| {
                                 let color = if active {
-                                    theme.system_green()
+                                    if sel_vector {
+                                        Color32::WHITE
+                                    } else {
+                                        theme.system_green()
+                                    }
                                 } else {
-                                    theme.placeholder_text()
+                                    if sel_vector {
+                                        Color32::from_white_alpha(140)
+                                    } else {
+                                        theme.placeholder_text()
+                                    }
                                 };
                                 painter.circle_filled(rect.center(), 3.5, color);
                             },
@@ -910,9 +1194,17 @@ impl SidebarState {
                             &mut self.lock_vector,
                             |painter, rect, active| {
                                 let color = if active {
-                                    theme.selected_control()
+                                    if sel_vector {
+                                        Color32::WHITE
+                                    } else {
+                                        theme.selected_control()
+                                    }
                                 } else {
-                                    theme.placeholder_text()
+                                    if sel_vector {
+                                        Color32::from_white_alpha(140)
+                                    } else {
+                                        theme.placeholder_text()
+                                    }
                                 };
                                 painter.rect_filled(rect.shrink(4.0), CornerRadius::same(1), color);
                             },
@@ -924,22 +1216,30 @@ impl SidebarState {
                 }
 
                 // Section 2: Tokens
-                tree.row(
+                let resp_tokens = tree.row(
                     "node_tokens_root",
                     0,
                     true,
                     &mut self.expanded_tokens,
                     false,
                     |row| {
-                        row.label("Design Tokens");
+                        row.header(&format_tracked_small_caps("Design Tokens"));
                     },
                 );
+                if resp_tokens.clicked {
+                    self.expanded_tokens = !self.expanded_tokens;
+                }
 
                 if self.expanded_tokens {
                     let sel_tokens = self.selected_node == "W3C DTCG Tokens";
                     let resp = tree.row("node_dtcg", 1, false, &mut false, sel_tokens, |row| {
                         row.thumbnail(|painter, rect| {
-                            painter.circle_filled(rect.center(), 6.0, theme.selected_control());
+                            let icon_color = if sel_tokens {
+                                Color32::WHITE
+                            } else {
+                                theme.selected_control()
+                            };
+                            painter.circle_filled(rect.center(), 6.0, icon_color);
                         });
                         row.label("W3C DTCG Tokens");
                         row.accessory_custom(
@@ -947,9 +1247,17 @@ impl SidebarState {
                             &mut self.vis_tokens,
                             |painter, rect, active| {
                                 let color = if active {
-                                    theme.control_accent()
+                                    if sel_tokens {
+                                        Color32::WHITE
+                                    } else {
+                                        theme.control_accent()
+                                    }
                                 } else {
-                                    theme.placeholder_text()
+                                    if sel_tokens {
+                                        Color32::from_white_alpha(140)
+                                    } else {
+                                        theme.placeholder_text()
+                                    }
                                 };
                                 painter.circle_filled(rect.center(), 3.5, color);
                             },
@@ -961,26 +1269,34 @@ impl SidebarState {
                 }
 
                 // Section 3: Inspector Presets
-                tree.row(
+                let resp_insp = tree.row(
                     "node_inspector_root",
                     0,
                     true,
                     &mut self.expanded_inspector,
                     false,
                     |row| {
-                        row.label("Inspector Presets");
+                        row.header(&format_tracked_small_caps("Inspector Presets"));
                     },
                 );
+                if resp_insp.clicked {
+                    self.expanded_inspector = !self.expanded_inspector;
+                }
 
                 if self.expanded_inspector {
                     // Mode 0: Default NIB
                     let sel_nib = self.selected_node == "Default NIB Inspector";
                     let resp_nib = tree.row("node_nib", 1, false, &mut false, sel_nib, |row| {
                         row.thumbnail(|painter, rect| {
+                            let icon_color = if sel_nib {
+                                Color32::WHITE
+                            } else {
+                                theme.control_accent()
+                            };
                             painter.rect_stroke(
                                 rect.shrink(3.0),
                                 CornerRadius::same(2),
-                                Stroke::new(1.0, theme.control_accent()),
+                                Stroke::new(1.0, icon_color),
                                 StrokeKind::Inside,
                             );
                         });
@@ -995,10 +1311,15 @@ impl SidebarState {
                     let sel_hud = self.selected_node == "Compact HUD Preset";
                     let resp_hud = tree.row("node_hud", 1, false, &mut false, sel_hud, |row| {
                         row.thumbnail(|painter, rect| {
+                            let icon_color = if sel_hud {
+                                Color32::WHITE
+                            } else {
+                                Color32::from_black_alpha(200)
+                            };
                             painter.rect_filled(
                                 rect.shrink(3.0),
                                 CornerRadius::same(2),
-                                Color32::from_black_alpha(200),
+                                icon_color,
                             );
                         });
                         row.label("Compact HUD (178x63)");
@@ -1012,10 +1333,15 @@ impl SidebarState {
                     let sel_exp = self.selected_node == "Expanded Pro Preset";
                     let resp_exp = tree.row("node_exp", 1, false, &mut false, sel_exp, |row| {
                         row.thumbnail(|painter, rect| {
+                            let icon_color = if sel_exp {
+                                Color32::WHITE
+                            } else {
+                                theme.selected_control()
+                            };
                             painter.rect_filled(
                                 rect.shrink(3.0),
                                 CornerRadius::same(2),
-                                theme.selected_control(),
+                                icon_color,
                             );
                         });
                         row.label("Expanded Pro (380pt)");
@@ -1066,11 +1392,41 @@ impl CenterState {
             .theme(theme)
             .placeholder("Filter components, tokens, Affine transforms, physics...")
             .width(search_rect.width())
+            .corner_radius(6.0)
             .show(&mut search_ui);
 
-        // Scrollable Canvas Area via MacScrollView
+        // Mount Canvas Footer (SPEC-007 §3) at Canvas Bottom
+        let footer_h = CANVAS_FOOTER_HEIGHT; // 24.0
+        let footer_rect = Rect::from_min_max(
+            pos2(avail_rect.min.x, avail_rect.max.y - footer_h),
+            avail_rect.max,
+        );
+
+        let mut footer_ui = ui.new_child(
+            egui::UiBuilder::new()
+                .max_rect(footer_rect)
+                .layout(Layout::left_to_right(Align::Center)),
+        );
+        let breadcrumbs = ["macview_gallery ▸ Canvas ▸ Hero Vector Card"];
+        let cursor_pos = ui
+            .input(|i| i.pointer.hover_pos())
+            .map(|p| pos2(p.x - avail_rect.min.x, p.y - avail_rect.min.y));
+        let current_zoom = card.scale_pct / 100.0;
+        let footer_action = MacCanvasFooter::new(&breadcrumbs, cursor_pos, current_zoom)
+            .theme(theme)
+            .height(footer_h)
+            .show(&mut footer_ui, footer_rect.width());
+
+        if let Some(MacCanvasFooterAction::SelectZoom(z)) = footer_action {
+            card.scale_pct = z * 100.0;
+        }
+
+        // Scrollable Canvas Area via MacScrollView (above footer)
         let scroll_top = search_rect.max.y + 12.0;
-        let scroll_rect = Rect::from_min_max(pos2(avail_rect.min.x, scroll_top), avail_rect.max);
+        let scroll_rect = Rect::from_min_max(
+            pos2(avail_rect.min.x, scroll_top),
+            pos2(avail_rect.max.x, avail_rect.max.y - footer_h),
+        );
 
         let mut scroll_container_ui = ui.new_child(
             egui::UiBuilder::new()
@@ -1216,21 +1572,25 @@ impl CenterState {
                         StrokeKind::Inside,
                     );
 
-                    // Content inside card
+                    // Content inside card with MacBackgroundStyle contrast guarantee
+                    let card_bg_style = MacBackgroundStyle::from_color(card_fill);
+                    let text_primary = card_bg_style.primary_text_color(theme);
+                    let text_secondary = card_bg_style.secondary_text_color(theme);
+
                     let card_p = content_ui.painter_at(card_rect);
                     card_p.text(
                         pos2(card_rect.center().x, card_rect.center().y - 12.0),
                         Align2::CENTER_CENTER,
                         &card.layer_name,
                         FontId::proportional(13.0),
-                        Color32::WHITE,
+                        text_primary,
                     );
                     card_p.text(
                         pos2(card_rect.center().x, card_rect.center().y + 12.0),
                         Align2::CENTER_CENTER,
                         format!("{:.0} × {:.0} pt | Scale: {:.0}%", card_w, card_h, card.scale_pct),
                         FontId::proportional(11.0),
-                        Color32::from_white_alpha(220),
+                        text_secondary,
                     );
                 } else {
                     // Affine transformed: render polygon
@@ -1252,20 +1612,24 @@ impl CenterState {
                         Stroke::new(1.5, theme.control_accent()),
                     ));
 
-                    // Center label
+                    // Center label with MacBackgroundStyle contrast guarantee
+                    let card_bg_style = MacBackgroundStyle::from_color(card_fill);
+                    let text_primary = card_bg_style.primary_text_color(theme);
+                    let text_secondary = card_bg_style.secondary_text_color(theme);
+
                     cp.text(
                         pos2(card_center.x, card_center.y - 10.0),
                         Align2::CENTER_CENTER,
                         &card.layer_name,
                         FontId::proportional(13.0),
-                        Color32::WHITE,
+                        text_primary,
                     );
                     cp.text(
                         pos2(card_center.x, card_center.y + 10.0),
                         Align2::CENTER_CENTER,
                         format!("θ: {:.1}° | S: {:.0}%", card.rotation_deg, card.scale_pct),
                         FontId::proportional(11.0),
-                        Color32::from_white_alpha(220),
+                        text_secondary,
                     );
                 }
 
@@ -1415,39 +1779,28 @@ impl CenterState {
 
                 let fixed_view = MacFixedView::new(content_ui, fixed_container_rect);
                 let subview_a = fixed_view.subview_rect(pos2(12.0, 12.0), vec2(100.0, 24.0));
-                let subview_b = fixed_view.subview_rect(pos2(124.0, 12.0), vec2(140.0, 24.0));
-                let subview_c = fixed_view.subview_rect(pos2(12.0, 48.0), vec2(252.0, 28.0));
+                let subview_b = fixed_view.subview_rect(pos2(124.0, 12.0), vec2(150.0, 24.0));
+                let subview_c = fixed_view.subview_rect(pos2(12.0, 48.0), vec2(262.0, 24.0));
 
-                let cell_font = FontId::proportional(
-                    theme.text_field().compact_infobox.font_size.points(),
-                );
-                let p = content_ui.painter_at(fixed_container_rect);
-                p.rect_filled(subview_a, CornerRadius::same(4), theme.control());
-                p.text(
-                    subview_a.center(),
-                    Align2::CENTER_CENTER,
-                    "Cell (12, 12)",
-                    cell_font.clone(),
-                    theme.label(),
-                );
+                let mut ui_a = content_ui.new_child(egui::UiBuilder::new().max_rect(subview_a));
+                ui_a.add(MacButtonCell::new("Primary Action").theme(theme));
 
-                p.rect_filled(subview_b, CornerRadius::same(4), theme.control());
-                p.text(
-                    subview_b.center(),
-                    Align2::CENTER_CENTER,
-                    "Cell (124, 12)",
-                    cell_font.clone(),
-                    theme.label(),
-                );
+                let mut ui_b = content_ui.new_child(egui::UiBuilder::new().max_rect(subview_b));
+                ui_b.horizontal(|h| {
+                    h.label(egui::RichText::new("Grid Snap:").size(11.0));
+                    h.add(MacToggle::new(&mut self.fixed_grid_snap).theme(theme));
+                });
 
-                p.rect_filled(subview_c, CornerRadius::same(4), theme.control());
-                p.text(
-                    subview_c.center(),
-                    Align2::CENTER_CENTER,
-                    "NIB Baseline Compartment [252 x 28 pt]",
-                    cell_font.clone(),
-                    theme.label(),
-                );
+                let mut ui_c = content_ui.new_child(egui::UiBuilder::new().max_rect(subview_c));
+                MacSegmentedControl::new(
+                    &["Vector Card", "Raster Mask", "Core Animation"],
+                    self.fixed_seg_idx,
+                )
+                .theme(theme)
+                .height(24.0)
+                .show(&mut ui_c, |idx| {
+                    self.fixed_seg_idx = idx;
+                });
 
                 content_ui.add_space(16.0);
 
@@ -1478,39 +1831,28 @@ impl CenterState {
                 let (x0, y0, w0, h0) = row.allocate_cell(80.0);
                 let (x1, y1, w1, h1) = row.allocate_cell(110.0);
                 let rem_w = row.remaining_width();
-                let (x2, y2, w2, h2) = row.allocate_cell(rem_w.min(130.0));
+                let (x2, y2, w2, h2) = row.allocate_cell(rem_w.min(150.0));
 
-                let rp = content_ui.painter_at(row_rect);
                 let r0 = Rect::from_min_size(pos2(row_rect.min.x + x0, y0), vec2(w0, h0));
                 let r1 = Rect::from_min_size(pos2(row_rect.min.x + x1, y1), vec2(w1, h1));
                 let r2 = Rect::from_min_size(pos2(row_rect.min.x + x2, y2), vec2(w2, h2));
 
-                rp.rect_filled(r0, CornerRadius::same(4), theme.control());
-                rp.text(
-                    r0.center(),
-                    Align2::CENTER_CENTER,
-                    "Fixed 80pt",
-                    cell_font.clone(),
-                    theme.label(),
-                );
+                let mut ui_r0 = content_ui.new_child(egui::UiBuilder::new().max_rect(r0));
+                ui_r0.add(MacButtonCell::new("Commit").theme(theme));
 
-                rp.rect_filled(r1, CornerRadius::same(4), theme.control());
-                rp.text(
-                    r1.center(),
-                    Align2::CENTER_CENTER,
-                    "Fixed 110pt",
-                    cell_font.clone(),
-                    theme.label(),
-                );
+                let mut ui_r1 = content_ui.new_child(egui::UiBuilder::new().max_rect(r1));
+                MacPopUpButton::new(&mut self.row_popup_idx, &["Preset A", "Preset B", "Preset C"])
+                    .theme(theme)
+                    .width(w1)
+                    .show(&mut ui_r1);
 
-                rp.rect_filled(r2, CornerRadius::same(4), theme.control());
-                rp.text(
-                    r2.center(),
-                    Align2::CENTER_CENTER,
-                    format!("Budget: {:.0}pt", w2),
-                    cell_font,
-                    theme.label(),
-                );
+                let mut ui_r2 = content_ui.new_child(egui::UiBuilder::new().max_rect(r2));
+                MacSegmentedControl::new(&["Fit", "Fill", "Stretch"], self.row_seg_idx)
+                    .theme(theme)
+                    .height(24.0)
+                    .show(&mut ui_r2, |idx| {
+                        self.row_seg_idx = idx;
+                    });
 
                 content_ui.add_space(16.0);
 
@@ -1857,7 +2199,7 @@ impl InspectorState {
 
                         let matrix_box = sec_ui.available_rect_before_wrap();
                         let m_rect =
-                            Rect::from_min_size(matrix_box.min, vec2(matrix_box.width(), 44.0));
+                            Rect::from_min_size(matrix_box.min, vec2(matrix_box.width(), 48.0));
                         let mp = sec_ui.painter_at(m_rect);
                         mp.rect_filled(m_rect, CornerRadius::same(4), theme.control());
                         mp.rect_stroke(
@@ -1867,24 +2209,24 @@ impl InspectorState {
                             StrokeKind::Inside,
                         );
 
-                        let font = FontId::monospace(10.5);
-                        let row1 = format!("│ {:>+6.3}  {:>+6.3} │   [ +tx: 0.00 ]", a, b);
-                        let row2 = format!("│ {:>+6.3}  {:>+6.3} │ + [ +ty: 0.00 ]", c, d);
+                        let font = FontId::monospace(11.0);
+                        let row1 = format!("│ {:>+6.3}   {:>+6.3} │", a, b);
+                        let row2 = format!("│ {:>+6.3}   {:>+6.3} │", c, d);
                         mp.text(
-                            pos2(m_rect.min.x + 12.0, m_rect.min.y + 12.0),
-                            Align2::LEFT_CENTER,
+                            pos2(m_rect.center().x, m_rect.min.y + 14.0),
+                            Align2::CENTER_CENTER,
                             row1,
                             font.clone(),
                             theme.label(),
                         );
                         mp.text(
-                            pos2(m_rect.min.x + 12.0, m_rect.min.y + 30.0),
-                            Align2::LEFT_CENTER,
+                            pos2(m_rect.center().x, m_rect.min.y + 34.0),
+                            Align2::CENTER_CENTER,
                             row2,
                             font,
                             theme.label(),
                         );
-                        sec_ui.allocate_exact_size(vec2(m_rect.width(), 46.0), Sense::hover());
+                        sec_ui.allocate_exact_size(vec2(m_rect.width(), 50.0), Sense::hover());
                     });
 
                     stack.add_section(Some("Continuous Transformation Controls"), |sec_ui| {

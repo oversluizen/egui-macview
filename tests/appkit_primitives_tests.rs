@@ -74,7 +74,7 @@ fn test_token_catalog_extended_primitives() {
     // 6. Search field metrics tokens
     let search = tokens.search_field_metrics();
     assert_eq!(search.height.points(), 22.0);
-    assert_eq!(search.corner_radius.points(), 11.0);
+    assert_eq!(search.corner_radius.points(), 6.0);
     assert_eq!(search.icon_size.points(), 12.0);
     assert_eq!(search.icon_stroke_width.points(), 1.2);
     assert_eq!(search.padding_horizontal.points(), 8.0);
@@ -124,7 +124,7 @@ fn test_theme_extended_resolvers_aqua_and_dark() {
     assert_eq!(light.split_view().divider_thickness.points(), 1.0);
     assert_eq!(light.outline_view().row_height.points(), 24.0);
     assert_eq!(light.popup_button().height.points(), 22.0);
-    assert_eq!(light.search_field().corner_radius.points(), 11.0);
+    assert_eq!(light.search_field().corner_radius.points(), 6.0);
     assert_eq!(light.stepper().width.points(), 14.0);
     assert_eq!(light.color_well().width.points(), 44.0);
     assert_eq!(light.scroll_view().scrollbar_thickness.points(), 7.0);

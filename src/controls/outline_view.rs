@@ -205,7 +205,8 @@ impl<'t> MacOutlineTree<'t> {
             let chevron_stroke = Stroke::new(
                 metrics.chevron_stroke_width.points(),
                 if selected {
-                    self.theme.control_accent()
+                    let bg_style = self.theme.selected_control_background_style();
+                    bg_style.primary_text_color(self.theme)
                 } else {
                     self.theme.placeholder_text()
                 },
@@ -312,7 +313,8 @@ impl<'a> MacOutlineRow<'a> {
         let font_size = self.theme.outline_view().font_size.points();
         let font_id = FontId::proportional(font_size);
         let text_color = if self.selected {
-            self.theme.control_accent()
+            let bg_style = self.theme.selected_control_background_style();
+            bg_style.primary_text_color(self.theme)
         } else {
             self.theme.label()
         };
@@ -320,6 +322,28 @@ impl<'a> MacOutlineRow<'a> {
             Pos2::new(label_rect.left(), label_rect.center().y),
             Align2::LEFT_CENTER,
             text,
+            font_id,
+            text_color,
+        );
+    }
+
+    /// Renders an AppKit Small Caps section header (uppercase with tracking and secondary label tint).
+    pub fn header(&mut self, text: &str) {
+        let spacing = self.theme.outline_view().content_spacing.points();
+        let avail_w = (self.accessory_cursor_right - self.cursor_x - spacing).max(0.0);
+        let label_rect = Rect::from_min_size(
+            Pos2::new(self.cursor_x, self.row_rect.top()),
+            Vec2::new(avail_w, self.row_rect.height()),
+        );
+        let painter = self.ui.painter_at(label_rect);
+        let font_size = self.theme.outline_view().header_font_size.points();
+        let font_id = FontId::proportional(font_size);
+        let text_color = self.theme.secondary_label();
+        let upper = text.to_uppercase();
+        painter.text(
+            Pos2::new(label_rect.left(), label_rect.center().y),
+            Align2::LEFT_CENTER,
+            upper,
             font_id,
             text_color,
         );

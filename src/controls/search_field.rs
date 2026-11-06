@@ -291,7 +291,8 @@ impl<'a> Widget for MacSearchField<'a> {
             // Centered 'X' cross symbol
             let x_span = metrics.clear_button_icon_padding.points();
             let cc = clear_rect.center();
-            let x_stroke = Stroke::new(icon_stroke, theme.control_background());
+            let x_color = theme.background_style(btn_bg).primary_text_color(theme);
+            let x_stroke = Stroke::new(icon_stroke, x_color);
             clear_painter.line_segment(
                 [
                     Pos2::new(cc.x - x_span, cc.y - x_span),

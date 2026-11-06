@@ -28,13 +28,15 @@ The `egui-macview` specification suite provides the formal normative requirement
 | Spec ID | Document Title | Version | Status | Primary Test Suite |
 | :--- | :--- | :--- | :--- | :--- |
 | [**SPEC-001**](SPEC-001-DESIGN-TOKENS-AND-WCAG.md) | Design Tokens, Optical Tracking & WCAG AA Contrast | `0.2.0` | Accepted | `tests/wcag_contrast_and_visuals_tests.rs`, `tests/zero_hardcoding_and_primitive_tests.rs` |
-| [**SPEC-002**](SPEC-002-CONTROLS-AND-MICRO-ANIMATIONS.md) | Authentic AppKit Controls & Micro-Animation Oracles | `0.2.0` | Accepted | `tests/appkit_primitives_tests.rs`, `tests/micro_animations_and_hud_tests.rs` |
+| [**SPEC-002 (Color)**](SPEC-002-DYNAMIC-COLOR-AND-TOKENS.md) | Dynamic Color, Tokens & MacBackgroundStyle Contrast Engine | `0.2.0` | Accepted | `tests/wcag_contrast_and_visuals_tests.rs`, `tests/zero_hardcoding_and_primitive_tests.rs` |
+| [**SPEC-002 (Controls)**](SPEC-002-CONTROLS-AND-MICRO-ANIMATIONS.md) | Authentic AppKit Controls & Micro-Animation Oracles | `0.2.0` | Accepted | `tests/appkit_primitives_tests.rs`, `tests/micro_animations_and_hud_tests.rs` |
 | [**SPEC-003**](SPEC-003-LAYOUT-ENGINES.md) | Deterministic Layout Engines & Subpixel Snap Rasterization | `0.2.0` | Accepted | `tests/cots_red_baseline_tests.rs`, `tests/appkit_primitives_tests.rs` |
 | [**SPEC-004**](SPEC-004-CORE-ANIMATION-PHYSICS.md) | CoreAnimation Spring Physics Runtime (`CASpring`) | `0.2.0` | Accepted | `tests/cots_red_baseline_tests.rs`, `tests/macbook_parity_differential_tests.rs` |
 | [**SPEC-005**](SPEC-005-WINDOW-FRAMING-AND-CONTROLS.md) | Window Framing, Drag Handling & Configurable Caption Controls | `0.2.0` | Accepted | `tests/micro_animations_and_hud_tests.rs` |
 | [**SPEC-006**](SPEC-006-INSPECTOR-ARCHITECTURE.md) | Three-Tier Inspector Architecture & Floating Surfaces | `0.2.0` | Accepted | `tests/cots_red_baseline_tests.rs`, `tests/micro_animations_and_hud_tests.rs` |
-| [**SPEC-007**](SPEC-007-DESKTOP-NAVIGATION-AND-PALETTE.md) | Desktop Navigation, Canvas Footer & Spotlight Command Palette | `0.3.0-draft` | Draft / Normative | `tests/menu_and_palette_tests.rs` |
+| [**SPEC-007**](SPEC-007-DESKTOP-NAVIGATION-AND-PALETTE.md) | Desktop Navigation, Canvas Footer & Spotlight Command Palette | `0.3.0` | Accepted | `tests/menu_and_palette_tests.rs` |
 | [**SPEC-008**](SPEC-008-STATE-INTEGRITY-AND-FEEDBACK.md) | State Integrity, Context Menus & Micro-Feedback Architecture | `0.4.0-draft` | Draft / Normative | `tests/undo_and_feedback_tests.rs` |
+| [**SPEC-009**](SPEC-009-CROSS-PLATFORM-DIFFERENTIAL-HARNESS.md) | Cross-Platform Parity and Remote Differential Testing Harness | `0.3.0` | Accepted / Normative | `tests/macbook_parity_differential_tests.rs` |
 
 ---
 
@@ -48,16 +50,18 @@ The roadmap coordinates modular capability additions across designated release m
 | :--- | :--- | :--- | :--- | :--- |
 | **Milestone 0.1.0** | `v0.1.0` (2026-11-05) | Core Engine, W3C DTCG Token Catalog & CASpring Physics | Shipped | SPEC-001, SPEC-003, SPEC-004 |
 | **Milestone 0.2.0** | `v0.2.0` (2026-11-06) | Extended AppKit Controls, Layout Engines & 3-Tier Inspector | Shipped | SPEC-001 through SPEC-006 |
-| **Milestone 0.3.0** | `v0.3.0` | Desktop Navigation, 24pt Canvas Footer & Spotlight Command Palette | Draft / Pre-release | SPEC-007 (`0.3.0-draft`) |
+| **Milestone 0.3.0** | `v0.3.0` (2026-11-06) | Desktop Navigation, 24pt Canvas Footer & Spotlight Command Palette | Released | SPEC-007 (`0.3.0`) |
 | **Milestone 0.4.0** | `v0.4.0` | State Integrity (`NSUndoManager`), Context Menus & Micro-Feedback | Draft / Pre-release | SPEC-008 (`0.4.0-draft`) |
 
 ### 2.2 Functional Capability Matrix
 
 | Capability Primitive | Module | Target Milestone | Spec ID | Verification Suite | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `MacMenuBar` / `NSMenu` / `NSMenuItem` | `src/navigation/` | Milestone 0.3.0 | SPEC-007 | `tests/menu_and_palette_tests.rs` | Implemented (Draft Oracle) |
-| Canvas Footer & Zoom HUD ($24\,\text{pt}$) | `src/navigation/` | Milestone 0.3.0 | SPEC-007 | `tests/menu_and_palette_tests.rs` | Implemented (Draft Oracle) |
-| Spotlight Command Palette (`Cmd+K`) | `src/navigation/` | Milestone 0.3.0 | SPEC-007 | `tests/menu_and_palette_tests.rs` | Implemented (Draft Oracle) |
+| `MacBackgroundStyle` Contrast Engine | `src/theme/` | Milestone 0.3.0 | SPEC-002 | `tests/wcag_contrast_and_visuals_tests.rs` | Released |
+| `MacMenuBar` / `NSMenu` / `NSMenuItem` | `src/navigation/` | Milestone 0.3.0 | SPEC-007 | `tests/menu_and_palette_tests.rs` | Released |
+| Canvas Footer & Zoom HUD ($24\,\text{pt}$) | `src/navigation/` | Milestone 0.3.0 | SPEC-007 | `tests/menu_and_palette_tests.rs` | Released |
+| Spotlight Command Palette (`Cmd+K`) | `src/navigation/` | Milestone 0.3.0 | SPEC-007 | `tests/menu_and_palette_tests.rs` | Released |
+| Remote Differential Testing Harness | `tests/` & scripts | Milestone 0.3.0 | SPEC-009 | `tests/macbook_parity_differential_tests.rs` | Accepted / Normative |
 | `NSUndoManager` Ringbuffer ($C=50$) | `src/state/` | Milestone 0.4.0 | SPEC-008 | `tests/undo_and_feedback_tests.rs` | Implemented (Draft Oracle) |
 | Viewport-Clamped Context Menus | `src/feedback/` | Milestone 0.4.0 | SPEC-008 | `tests/undo_and_feedback_tests.rs` | Implemented (Draft Oracle) |
 | Animated Floating Toasts (`CASpring`, $2.5\,\text{s}$) | `src/feedback/` | Milestone 0.4.0 | SPEC-008 | `tests/undo_and_feedback_tests.rs` | Implemented (Draft Oracle) |
@@ -71,7 +75,8 @@ All core specifications in this repository maintain exact version parity with th
 | Crate Release | Spec Suite Version | Release Date | Key Invariants & Milestones |
 | :--- | :--- | :--- | :--- |
 | **v0.1.0** | `0.1.0` | 2026-11-05 | Baseline release: `MacButtonCell`, `MacInputCell`, `MacSegmentedControl`, `MacToggle`, `MacFixedView`, `MacFlexView`, `MacRow`, `CASpring` initial physics, W3C DTCG token catalog parser. |
-| **v0.2.0** | `0.2.0` | 2026-11-06 | Current milestone: Extended AppKit suite (`MacColorWell`, `MacOutlineView`, `MacPopUpButton`, `MacSearchField`, `MacSlider`, `MacStepper`, `MacThumbnailCell`), generic layout suite (`MacScrollView`, `MacStackView`, `MacSplitView`), `WindowControlsStyle` strategy (`AppleTrafficLights`, `WindowsCaptionButtons`, `NativeHost`), 3-tier inspector architecture (Compact HUD, Default NIB, Expanded Pro), modular specification decomposition under `specs/` (SPEC-001 through SPEC-006). Previews SPEC-007 and SPEC-008 navigation & feedback extensions. |
+| **v0.2.0** | `0.2.0` | 2026-11-06 | Previous milestone: Extended AppKit suite (`MacColorWell`, `MacOutlineView`, `MacPopUpButton`, `MacSearchField`, `MacSlider`, `MacStepper`, `MacThumbnailCell`), generic layout suite (`MacScrollView`, `MacStackView`, `MacSplitView`), `WindowControlsStyle` strategy (`AppleTrafficLights`, `WindowsCaptionButtons`, `NativeHost`), 3-tier inspector architecture (Compact HUD, Default NIB, Expanded Pro), modular specification decomposition under `specs/` (SPEC-001 through SPEC-006). Previews SPEC-007 and SPEC-008 navigation & feedback extensions. |
+| **v0.3.0** | `0.3.0` | 2026-11-06 | Milestone 0.3.0 release: Promoted SPEC-007 to official release status. Full desktop navigation suite (`MacMenuBar`, `NSMenu`, `NSMenuItem` with cascading submenus and keyboard accelerators), deterministic 24pt canvas footer (`MacCanvasFooter` with breadcrumbs and zoom presets), Spotlight command palette modal HUD (`MacCommandPalette` with fuzzy subsequence scoring and Escape clearing mechanics), and formal `MacBackgroundStyle` dynamic contrast engine ($L \le 0.179 \implies$ Dark / On-Accent White text, $L > 0.179 \implies$ Light / Dark text) ensuring WCAG 2.1 AA $\ge 4.5:1$ contrast. |
 
 ---
 

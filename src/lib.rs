@@ -69,7 +69,10 @@ pub mod surfaces;
 pub mod theme;
 pub mod tokens;
 
-pub use theme::{MacAppearance, MacTheme, WindowControlsStyle};
+pub use theme::{
+    contrast_ratio, relative_luminance, MacAppearance, MacBackgroundStyle, MacTheme,
+    WindowControlsStyle,
+};
 
 pub use controls::{
     MacButtonCell, MacColorWell, MacInputCell, MacOutlineRow, MacOutlineRowResponse,
@@ -89,7 +92,7 @@ pub use navigation::{
     COMMAND_PALETTE_HEIGHT, COMMAND_PALETTE_WIDTH,
 };
 pub use state::{NSUndoManager, DEFAULT_UNDO_CAPACITY};
-pub use surfaces::{MacPanel, MacPopover, MacPopoverArrowEdge};
+pub use surfaces::{MacCard, MacPanel, MacPopover, MacPopoverArrowEdge};
 pub use tokens::{
     sf_pro_tracking, ColorWellMetrics, LayoutMetrics, MacColorTokens, MacControlMetrics,
     MacDesignTokens, MacMotionTokens, MacTypographyTokens, OutlineViewMetrics, PopUpButtonMetrics,

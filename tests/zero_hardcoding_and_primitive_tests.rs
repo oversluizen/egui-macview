@@ -114,7 +114,7 @@ fn test_theme_dynamic_geometry_metrics() {
 
     // Search field metrics
     assert_eq!(theme.search_field().height.points(), 22.0);
-    assert_eq!(theme.search_field().corner_radius.points(), 11.0);
+    assert_eq!(theme.search_field().corner_radius.points(), 6.0);
     assert_eq!(theme.search_field().icon_size.points(), 12.0);
     assert_eq!(theme.search_field().clear_button_size.points(), 14.0);
     assert_eq!(theme.search_field().clear_button_icon_padding.points(), 3.5);

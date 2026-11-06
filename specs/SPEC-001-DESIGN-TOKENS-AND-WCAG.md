@@ -99,6 +99,35 @@ $$\text{Contrast Ratio} = \frac{L_1 + 0.05}{L_2 + 0.05}$$
 2. **Secondary / Header Text (`theme.secondary_label()`):** $\ge 4.5:1$ against inspector headers and container panels.
 3. **Context Synchronization:** `MacTheme::apply_to_egui` MUST synchronize `egui::Visuals::light()` and `egui::Visuals::dark()` ensuring host text widgets automatically satisfy WCAG thresholds.
 
+### 4.3 `MacBackgroundStyle` Dynamic Contrast Engine (Light vs Dark)
+
+Controls, selection fills, and table rows dynamically resolve their foreground text and icon contrast against container or selection backgrounds via `MacBackgroundStyle` (`NSBackgroundStyle` AppKit equivalent):
+
+```rust
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum MacBackgroundStyle {
+    /// Background is light; foreground text and glyphs MUST be dark (minimum 4.5:1 contrast).
+    #[default]
+    Light,
+    /// Background is dark; foreground text and glyphs MUST be light / on-accent white (minimum 4.5:1 contrast).
+    Dark,
+}
+```
+
+#### 4.3.1 Mathematical Crossover Threshold Formulation
+To strictly satisfy WCAG 2.1 Level AA ($\ge 4.5:1$ contrast ratio) against arbitrary dynamic background colors $(R, G, B)$ with relative luminance $L = 0.2126 \cdot R_{\text{linear}} + 0.7152 \cdot G_{\text{linear}} + 0.0722 \cdot B_{\text{linear}}$:
+
+1. **Contrast against pure white foreground ($L_w = 1.0$):**
+   $$\text{Contrast}_{\text{white}} = \frac{1.0 + 0.05}{L + 0.05} = \frac{1.05}{L + 0.05} \ge 4.5 \iff 1.05 \ge 4.5(L + 0.05) \iff L \le \frac{1.05}{4.5} - 0.05 \approx 0.1833$$
+
+2. **Contrast against near-black foreground ($L_b \approx 0.0$):**
+   $$\text{Contrast}_{\text{dark}} = \frac{L + 0.05}{0.0 + 0.05} = 20 L + 1.0 \ge 4.5 \iff 20 L \ge 3.5 \iff L \ge 0.175$$
+
+The standards-compliant crossover threshold is established at $L_{\text{threshold}} = 0.179$:
+$$\text{BackgroundStyle}(L) = \begin{cases} \text{MacBackgroundStyle::Dark} \implies \text{On-Accent White Text } (L_w = 1.0) & \text{if } L \le 0.179 \\ \text{MacBackgroundStyle::Light} \implies \text{Dark / Near-Black Text } (L_b \approx 0.0) & \text{if } L > 0.179 \end{cases}$$
+
+This guarantees $\text{Contrast Ratio} \ge 4.5:1$ across all dynamic accent fills and container surfaces.
+
 ---
 
 ## 5. Strategy 2: Configurable Window Controls (`WindowControlsStyle`)

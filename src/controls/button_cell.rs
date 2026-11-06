@@ -135,7 +135,8 @@ impl<'a> Widget for MacButtonCell<'a> {
             StrokeKind::Inside,
         );
 
-        let text_color = theme.label();
+        let bg_style = theme.background_style(bg_color);
+        let text_color = bg_style.primary_text_color(theme);
 
         painter.text(
             rect.center(),

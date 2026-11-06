@@ -15,6 +15,11 @@ use egui::Color32;
 
 use std::sync::{Arc, OnceLock};
 
+pub mod contrast;
+pub use contrast::{
+    contrast_ratio, relative_luminance, srgb_channel_to_linear, MacBackgroundStyle,
+};
+
 static DEFAULT_TOKENS: OnceLock<Arc<MacDesignTokens>> = OnceLock::new();
 
 fn default_cached_tokens() -> Arc<MacDesignTokens> {
@@ -377,5 +382,25 @@ impl MacTheme {
             MacAppearance::Aqua => Color32::from_black_alpha(25),
             MacAppearance::DarkAqua => Color32::from_white_alpha(35),
         }
+    }
+
+    /// Resolves the `MacBackgroundStyle` (Light or Dark) for any background color.
+    pub fn background_style(&self, bg: Color32) -> MacBackgroundStyle {
+        MacBackgroundStyle::from_color(bg)
+    }
+
+    /// Resolves the `MacBackgroundStyle` for the window background.
+    pub fn window_background_style(&self) -> MacBackgroundStyle {
+        MacBackgroundStyle::from_color(self.window_background())
+    }
+
+    /// Resolves the `MacBackgroundStyle` for the control background.
+    pub fn control_background_style(&self) -> MacBackgroundStyle {
+        MacBackgroundStyle::from_color(self.control_background())
+    }
+
+    /// Resolves the `MacBackgroundStyle` for the selected control background.
+    pub fn selected_control_background_style(&self) -> MacBackgroundStyle {
+        MacBackgroundStyle::from_color(self.selected_control())
     }
 }

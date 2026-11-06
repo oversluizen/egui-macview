@@ -1,6 +1,6 @@
 {
   "$name": "egui-macview Design Tokens",
-  "$version": "0.2.0",
+  "$version": "0.3.0",
   "$description": "W3C DTCG-compliant design token catalog for egui-macview. Fully grounded in Apple AppKit, macOS Human Interface Guidelines, Apple Typography specifications, and CoreAnimation spring physics.",
   "macview": {
     "metrics": {
@@ -467,6 +467,12 @@
             "$value": "1.75pt",
             "$description": "Visual depth offset for disclosure chevron triangle.",
             "$extensions": { "apple_citation": "AppKit NSOutlineView disclosure chevron geometry" }
+          },
+          "header_font_size": {
+            "$type": "dimension",
+            "$value": "11.0pt",
+            "$description": "Font size for section headers (AppKit Small Caps).",
+            "$extensions": { "apple_citation": "AppKit NSOutlineView section header font size" }
           }
         },
         "popup_button": {
@@ -558,9 +564,9 @@
           },
           "corner_radius": {
             "$type": "dimension",
-            "$value": "11.0pt",
-            "$description": "Fully rounded pill corner radius for search fields.",
-            "$extensions": { "apple_citation": "macOS HIG Search Fields rounded pill" }
+            "$value": "6.0pt",
+            "$description": "Rounded squircle corner radius for search fields (macOS Big Sur+).",
+            "$extensions": { "apple_citation": "macOS HIG Search Fields rounded squircle" }
           },
           "icon_size": {
             "$type": "dimension",
