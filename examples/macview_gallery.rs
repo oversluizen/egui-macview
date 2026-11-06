@@ -146,16 +146,22 @@ fn setup_system_or_custom_fonts(ctx: &egui::Context) {
 }
 
 fn main() -> eframe::Result<()> {
+    let renderer = match std::env::var("MACVIEW_RENDERER").as_deref() {
+        Ok("wgpu") => eframe::Renderer::Wgpu,
+        _ => eframe::Renderer::Glow,
+    };
+
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_inner_size([1220.0, 800.0])
-            .with_min_inner_size([980.0, 620.0])
+            .with_inner_size([1120.0, 720.0])
+            .with_min_inner_size([880.0, 520.0])
             .with_decorations(false)
-            .with_transparent(true)
+            .with_transparent(false)
             .with_title(format!(
                 "macview_gallery v{} (AppKit macOS 15 Parity)",
                 egui_macview::VERSION
             )),
+        renderer,
         ..Default::default()
     };
     eframe::run_native(
