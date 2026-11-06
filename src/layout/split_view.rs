@@ -136,13 +136,9 @@ impl<'a> MacSplitView<'a> {
         self
     }
 
-    /// Renders the split container and both pane closures, returning their outputs.
-    pub fn show<R1, R2>(
-        mut self,
-        ui: &mut Ui,
-        first: impl FnOnce(&mut Ui) -> R1,
-        second: impl FnOnce(&mut Ui) -> R2,
-    ) -> (R1, R2) {
+    /// Computes the layout geometry, handles divider drag interaction and painting,
+    /// and returns `(first_rect, second_rect)` for caller-managed child rendering.
+    pub fn split_panes(&mut self, ui: &mut Ui) -> (Rect, Rect) {
         let fallback_theme;
         let theme = match self.theme {
             Some(t) => t,
@@ -321,6 +317,19 @@ impl<'a> MacSplitView<'a> {
                 StrokeKind::Inside,
             );
         }
+
+        (first_rect, second_rect)
+    }
+
+    /// Renders the split container and both pane closures, returning their outputs.
+    pub fn show<R1, R2>(
+        mut self,
+        ui: &mut Ui,
+        first: impl FnOnce(&mut Ui) -> R1,
+        second: impl FnOnce(&mut Ui) -> R2,
+    ) -> (R1, R2) {
+        let container_rect = ui.available_rect_before_wrap();
+        let (first_rect, second_rect) = self.split_panes(ui);
 
         // Render panes
         let mut ui1 = ui.new_child(UiBuilder::new().max_rect(first_rect));
