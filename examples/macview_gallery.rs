@@ -24,11 +24,11 @@ use egui_macview::{
     setup_symbols_font,
     theme::{MacAppearance, MacTheme, WindowControlsStyle},
     CASpring, CommandPaletteItem, MacBackgroundStyle, MacButtonCell, MacCanvasFooter,
-    MacCanvasFooterAction, MacColorWell, MacCommandPalette, MacFixedView, MacInputCell, MacMenuBar,
-    MacOutlineView, MacPopUpButton, MacPopover, MacPopoverArrowEdge, MacRow, MacScrollView,
-    MacSearchField, MacSegmentedControl, MacSlider, MacSplitOrientation, MacSplitView,
-    MacStackOrientation, MacStackView, MacStepper, MacSymbol, MacThumbnailCell, MacToggle, NSMenu,
-    CANVAS_FOOTER_HEIGHT,
+    MacCanvasFooterAction, MacColorWell, MacCommandPalette, MacFixedView, MacForm, MacInputCell,
+    MacMenuBar, MacOutlineView, MacPopUpButton, MacPopover, MacPopoverArrowEdge, MacRow,
+    MacScrollView, MacSearchField, MacSegmentedControl, MacSlider, MacSplitOrientation,
+    MacSplitView, MacStackOrientation, MacStackView, MacStepper, MacSymbol, MacThumbnailCell,
+    MacToggle, NSMenu, CANVAS_FOOTER_HEIGHT,
 };
 use std::cell::RefCell;
 
@@ -2057,7 +2057,7 @@ impl InspectorState {
     /// Renders the Expanded Pro Inspector (Mode 2) with 3 top segmented tabs:
     /// `[ Attributes | Metrics | Matrix ]`.
     fn render_expanded_pro(&mut self, ui: &mut Ui, theme: &MacTheme, card: &mut CardModel) {
-        // Top Multi-Deck Tab Selector
+        // Top Multi-Deck Tab Selector - Centered across inspector width according to Apple HIG
         ui.add_space(8.0);
         let tab_idx = match self.expanded_tab {
             ExpandedProTab::Attributes => 0,
@@ -2065,12 +2065,11 @@ impl InspectorState {
             ExpandedProTab::Matrix => 2,
         };
 
-        ui.horizontal(|h| {
-            h.add_space(10.0);
+        ui.vertical_centered(|c_ui| {
             MacSegmentedControl::new(&["Attributes", "Metrics", "Matrix"], tab_idx)
                 .theme(theme)
                 .height(24.0)
-                .show(h, |idx| {
+                .show(c_ui, |idx| {
                     self.expanded_tab = match idx {
                         0 => ExpandedProTab::Attributes,
                         1 => ExpandedProTab::Metrics,
@@ -2088,74 +2087,80 @@ impl InspectorState {
             .show(ui, |stack| match self.expanded_tab {
                 ExpandedProTab::Attributes => {
                     stack.add_section(Some("Layer Identity"), |sec_ui| {
-                        sec_ui.horizontal(|h| {
-                            h.label(egui::RichText::new("Name:").size(11.0));
-                            MacInputCell::with_id(
-                                Id::NULL.with("exp_layer_name"),
-                                &mut card.layer_name,
-                            )
+                        MacForm::new("exp_layer_identity_form")
                             .theme(theme)
-                            .width(180.0)
-                            .show(h);
-                        });
+                            .show(sec_ui, |form| {
+                                form.row_label(egui::RichText::new("Name:").size(11.0), |ui| {
+                                    MacInputCell::with_id(
+                                        Id::NULL.with("exp_layer_name"),
+                                        &mut card.layer_name,
+                                    )
+                                    .theme(theme)
+                                    .width(180.0)
+                                    .show(ui);
+                                });
+                            });
                     });
 
                     stack.add_section(Some("Appearance & Blending"), |sec_ui| {
-                        sec_ui.horizontal(|h| {
-                            h.label(egui::RichText::new("Opacity:").size(11.0));
-                            MacSlider::new(&mut card.opacity, 0.0..=100.0)
-                                .theme(theme)
-                                .ticks(5, true)
-                                .width(120.0)
-                                .show(h);
-                            h.label(
-                                egui::RichText::new(format!("{:.0}%", card.opacity)).size(10.5),
-                            );
-                        });
-
-                        sec_ui.add_space(4.0);
                         let blend_modes = ["Normal", "Multiply", "Screen", "Overlay"];
-                        sec_ui.horizontal(|h| {
-                            h.label(egui::RichText::new("Blend:").size(11.0));
-                            MacPopUpButton::new(&mut card.blend_mode_idx, &blend_modes)
-                                .theme(theme)
-                                .width(140.0)
-                                .show(h);
-                        });
+                        MacForm::new("exp_appearance_form")
+                            .theme(theme)
+                            .show(sec_ui, |form| {
+                                form.row_label(egui::RichText::new("Opacity:").size(11.0), |ui| {
+                                    MacSlider::new(&mut card.opacity, 0.0..=100.0)
+                                        .theme(theme)
+                                        .ticks(5, true)
+                                        .width(120.0)
+                                        .show(ui);
+                                    ui.label(
+                                        egui::RichText::new(format!("{:.0}%", card.opacity)).size(10.5),
+                                    );
+                                });
+                                form.row_label(egui::RichText::new("Blend:").size(11.0), |ui| {
+                                    MacPopUpButton::new(&mut card.blend_mode_idx, &blend_modes)
+                                        .theme(theme)
+                                        .width(140.0)
+                                        .show(ui);
+                                });
+                            });
                     });
 
                     stack.add_section(Some("Color Styles"), |sec_ui| {
-                        sec_ui.horizontal(|h| {
-                            h.label(egui::RichText::new("Fill Color:").size(11.0));
-                            MacColorWell::new(&mut card.fill_color).theme(theme).show(h);
-
-                            h.add_space(10.0);
-                            h.label(egui::RichText::new("Alpha Well:").size(11.0));
-                            MacColorWell::new(&mut card.alpha_color)
-                                .theme(theme)
-                                .show_alpha(true)
-                                .show(h);
-                        });
+                        MacForm::new("exp_color_styles_form")
+                            .theme(theme)
+                            .show(sec_ui, |form| {
+                                form.row_label(egui::RichText::new("Fill Color:").size(11.0), |ui| {
+                                    MacColorWell::new(&mut card.fill_color).theme(theme).show(ui);
+                                });
+                                form.row_label(egui::RichText::new("Alpha Well:").size(11.0), |ui| {
+                                    MacColorWell::new(&mut card.alpha_color)
+                                        .theme(theme)
+                                        .show_alpha(true)
+                                        .show(ui);
+                                });
+                            });
                     });
 
                     stack.add_section(Some("Shadow & Effects"), |sec_ui| {
-                        sec_ui.horizontal(|h| {
-                            h.label(egui::RichText::new("Drop Shadow:").size(11.0));
-                            h.add(MacToggle::new(&mut card.shadow_enabled).theme(theme));
-                        });
-                        if card.shadow_enabled {
-                            sec_ui.add_space(4.0);
-                            sec_ui.horizontal(|h| {
-                                h.label(egui::RichText::new("Blur Radius:").size(11.0));
-                                MacStepper::new(&mut card.shadow_blur, 0.0..=24.0, 1.0)
-                                    .theme(theme)
-                                    .show(h);
-                                h.label(
-                                    egui::RichText::new(format!("{:.0} pt", card.shadow_blur))
-                                        .size(10.5),
-                                );
+                        MacForm::new("exp_shadow_effects_form")
+                            .theme(theme)
+                            .show(sec_ui, |form| {
+                                form.row_label(egui::RichText::new("Drop Shadow:").size(11.0), |ui| {
+                                    ui.add(MacToggle::new(&mut card.shadow_enabled).theme(theme));
+                                });
+                                if card.shadow_enabled {
+                                    form.row_label(egui::RichText::new("Blur Radius:").size(11.0), |ui| {
+                                        MacStepper::new(&mut card.shadow_blur, 0.0..=24.0, 1.0)
+                                            .theme(theme)
+                                            .show(ui);
+                                        ui.label(
+                                            egui::RichText::new(format!("{:.0} pt", card.shadow_blur))
+                                                .size(10.5),
+                                        );
+                                    });
+                                }
                             });
-                        }
                     });
                 }
                 ExpandedProTab::Metrics => {
@@ -2164,55 +2169,54 @@ impl InspectorState {
                     let id_r = Id::NULL.with("exp_input_r");
 
                     stack.add_section(Some("Dimensions & Corner Radius"), |sec_ui| {
-                        sec_ui.horizontal(|h| {
-                            h.label(egui::RichText::new("W:").size(11.0));
-                            MacInputCell::with_id(id_w, &mut card.width)
-                                .theme(theme)
-                                .width(64.0)
-                                .next_focus(id_h)
-                                .prev_focus(id_r)
-                                .show(h);
-
-                            h.add_space(6.0);
-                            h.label(egui::RichText::new("H:").size(11.0));
-                            MacInputCell::with_id(id_h, &mut card.height)
-                                .theme(theme)
-                                .width(64.0)
-                                .next_focus(id_r)
-                                .prev_focus(id_w)
-                                .show(h);
-                        });
-
-                        sec_ui.add_space(4.0);
-                        sec_ui.horizontal(|h| {
-                            h.label(egui::RichText::new("Radius:").size(11.0));
-                            MacInputCell::with_id(id_r, &mut card.radius)
-                                .theme(theme)
-                                .width(64.0)
-                                .next_focus(id_w)
-                                .prev_focus(id_h)
-                                .show(h);
-                        });
-
-                        sec_ui.add_space(4.0);
-                        sec_ui.horizontal(|h| {
-                            h.label(egui::RichText::new("Constrain Aspect:").size(11.0));
-                            h.add(MacToggle::new(&mut card.constrain_proportions).theme(theme));
-                        });
+                        MacForm::new("exp_dimensions_form")
+                            .theme(theme)
+                            .show(sec_ui, |form| {
+                                form.row_label(egui::RichText::new("Width (W):").size(11.0), |ui| {
+                                    MacInputCell::with_id(id_w, &mut card.width)
+                                        .theme(theme)
+                                        .width(64.0)
+                                        .next_focus(id_h)
+                                        .prev_focus(id_r)
+                                        .show(ui);
+                                });
+                                form.row_label(egui::RichText::new("Height (H):").size(11.0), |ui| {
+                                    MacInputCell::with_id(id_h, &mut card.height)
+                                        .theme(theme)
+                                        .width(64.0)
+                                        .next_focus(id_r)
+                                        .prev_focus(id_w)
+                                        .show(ui);
+                                });
+                                form.row_label(egui::RichText::new("Radius:").size(11.0), |ui| {
+                                    MacInputCell::with_id(id_r, &mut card.radius)
+                                        .theme(theme)
+                                        .width(64.0)
+                                        .next_focus(id_w)
+                                        .prev_focus(id_h)
+                                        .show(ui);
+                                });
+                                form.row_label(egui::RichText::new("Constrain Aspect:").size(11.0), |ui| {
+                                    ui.add(MacToggle::new(&mut card.constrain_proportions).theme(theme));
+                                });
+                            });
                     });
 
                     stack.add_section(Some("Layout & Alignment Mask"), |sec_ui| {
-                        sec_ui.horizontal(|h| {
-                            h.label(egui::RichText::new("Align:").size(11.0));
-                            MacSegmentedControl::new(
-                                &["Left", "Center", "Right", "Fill"],
-                                card.alignment_idx,
-                            )
+                        MacForm::new("exp_align_mask_form")
                             .theme(theme)
-                            .show(h, |idx| {
-                                card.alignment_idx = idx;
+                            .show(sec_ui, |form| {
+                                form.row_label(egui::RichText::new("Align:").size(11.0), |ui| {
+                                    MacSegmentedControl::new(
+                                        &["Left", "Center", "Right", "Fill"],
+                                        card.alignment_idx,
+                                    )
+                                    .theme(theme)
+                                    .show(ui, |idx| {
+                                        card.alignment_idx = idx;
+                                    });
+                                });
                             });
-                        });
                     });
                 }
                 ExpandedProTab::Matrix => {
@@ -2260,62 +2264,58 @@ impl InspectorState {
                     });
 
                     stack.add_section(Some("Continuous Transformation Controls"), |sec_ui| {
-                        // Rotation Slider & Stepper
-                        sec_ui.horizontal(|h| {
-                            h.label(egui::RichText::new("Rotation:").size(11.0));
-                            MacSlider::new(&mut card.rotation_deg, 0.0..=360.0)
-                                .theme(theme)
-                                .ticks(8, true)
-                                .width(120.0)
-                                .show(h);
-                            h.label(
-                                egui::RichText::new(format!("{:.0}°", card.rotation_deg))
-                                    .size(10.5),
-                            );
-                        });
-
-                        sec_ui.add_space(2.0);
                         let mut rot_f64 = card.rotation_deg as f64;
-                        sec_ui.horizontal(|h| {
-                            h.label(egui::RichText::new("Fine Step:").size(11.0));
-                            if h.add(
-                                MacStepper::new(&mut rot_f64, 0.0..=360.0, 5.0)
-                                    .theme(theme)
-                                    .wraps(true),
-                            )
-                            .changed()
-                            {
-                                card.rotation_deg = rot_f64 as f32;
-                            }
-                            h.label(egui::RichText::new("±5.0°").size(10.5));
-                        });
+                        MacForm::new("exp_matrix_controls_form")
+                            .theme(theme)
+                            .show(sec_ui, |form| {
+                                form.row_label(egui::RichText::new("Rotation:").size(11.0), |ui| {
+                                    MacSlider::new(&mut card.rotation_deg, 0.0..=360.0)
+                                        .theme(theme)
+                                        .ticks(8, true)
+                                        .width(120.0)
+                                        .show(ui);
+                                    ui.label(
+                                        egui::RichText::new(format!("{:.0}°", card.rotation_deg))
+                                            .size(10.5),
+                                    );
+                                });
 
-                        sec_ui.add_space(4.0);
-                        // Scale Slider
-                        sec_ui.horizontal(|h| {
-                            h.label(egui::RichText::new("Scale:").size(11.0));
-                            MacSlider::new(&mut card.scale_pct, 50.0..=200.0)
-                                .theme(theme)
-                                .ticks(6, true)
-                                .width(120.0)
-                                .show(h);
-                            h.label(
-                                egui::RichText::new(format!("{:.0}%", card.scale_pct)).size(10.5),
-                            );
-                        });
+                                form.row_label(egui::RichText::new("Fine Step:").size(11.0), |ui| {
+                                    if ui.add(
+                                        MacStepper::new(&mut rot_f64, 0.0..=360.0, 5.0)
+                                            .theme(theme)
+                                            .wraps(true),
+                                    )
+                                    .changed()
+                                    {
+                                        card.rotation_deg = rot_f64 as f32;
+                                    }
+                                    ui.label(egui::RichText::new("±5.0°").size(10.5));
+                                });
 
-                        sec_ui.add_space(4.0);
-                        // Skew / Shear Slider
-                        sec_ui.horizontal(|h| {
-                            h.label(egui::RichText::new("Skew / Shear:").size(11.0));
-                            MacSlider::new(&mut card.skew_deg, -45.0..=45.0)
-                                .theme(theme)
-                                .width(120.0)
-                                .show(h);
-                            h.label(
-                                egui::RichText::new(format!("{:.0}°", card.skew_deg)).size(10.5),
-                            );
-                        });
+                                form.row_label(egui::RichText::new("Scale:").size(11.0), |ui| {
+                                    MacSlider::new(&mut card.scale_pct, 50.0..=200.0)
+                                        .theme(theme)
+                                        .ticks(6, true)
+                                        .width(120.0)
+                                        .show(ui);
+                                    ui.label(
+                                        egui::RichText::new(format!("{:.0}%", card.scale_pct))
+                                            .size(10.5),
+                                    );
+                                });
+
+                                form.row_label(egui::RichText::new("Skew / Shear:").size(11.0), |ui| {
+                                    MacSlider::new(&mut card.skew_deg, -45.0..=45.0)
+                                        .theme(theme)
+                                        .width(120.0)
+                                        .show(ui);
+                                    ui.label(
+                                        egui::RichText::new(format!("{:.0}°", card.skew_deg))
+                                            .size(10.5),
+                                    );
+                                });
+                            });
 
                         sec_ui.add_space(6.0);
                         let reset_btn =
@@ -2344,130 +2344,131 @@ impl InspectorState {
             .show(ui, |stack| {
                 // Section 0: Preview Badge (MacThumbnailCell)
                 stack.add_section(Some("Preview (MacThumbnailCell)"), |sec_ui| {
-                    sec_ui.horizontal(|h| {
-                        h.label(egui::RichText::new("Vector Badge:").size(11.0));
-                        MacThumbnailCell::new()
-                            .theme(theme)
-                            .selected(true)
-                            .custom_draw(|painter, rect| {
-                                painter.circle_filled(rect.center(), 7.0, theme.control_accent());
-                                painter.rect_filled(
-                                    rect.shrink(5.0),
-                                    CornerRadius::same(2),
-                                    theme.window_background(),
-                                );
-                            })
-                            .show(h);
-                    });
+                    MacForm::new("nib_preview_form")
+                        .theme(theme)
+                        .show(sec_ui, |form| {
+                            form.row_label(egui::RichText::new("Vector Badge:").size(11.0), |ui| {
+                                MacThumbnailCell::new()
+                                    .theme(theme)
+                                    .selected(true)
+                                    .custom_draw(|painter, rect| {
+                                        painter.circle_filled(rect.center(), 7.0, theme.control_accent());
+                                        painter.rect_filled(
+                                            rect.shrink(5.0),
+                                            CornerRadius::same(2),
+                                            theme.window_background(),
+                                        );
+                                    })
+                                    .show(ui);
+                            });
+                        });
                 });
 
-                // Section 1: Geometry & Focus Traversal (MacInputCell)
+                // Section 1: Geometry & Tab-Chain (MacInputCell)
                 stack.add_section(Some("Geometry & Tab-Chain (MacInputCell)"), |sec_ui| {
-                    sec_ui.horizontal(|h| {
-                        h.label(egui::RichText::new("Width:").size(11.0));
-                        MacInputCell::with_id(input_id_w, &mut card.width)
-                            .theme(theme)
-                            .width(64.0)
-                            .next_focus(input_id_h)
-                            .prev_focus(input_id_r)
-                            .placeholder("Width")
-                            .show(h);
-
-                        h.add_space(6.0);
-                        h.label(egui::RichText::new("Height:").size(11.0));
-                        MacInputCell::with_id(input_id_h, &mut card.height)
-                            .theme(theme)
-                            .width(64.0)
-                            .next_focus(input_id_r)
-                            .prev_focus(input_id_w)
-                            .placeholder("Height")
-                            .show(h);
-                    });
-
-                    sec_ui.add_space(4.0);
-                    sec_ui.horizontal(|h| {
-                        h.label(egui::RichText::new("Corner Radius:").size(11.0));
-                        MacInputCell::with_id(input_id_r, &mut card.radius)
-                            .theme(theme)
-                            .width(64.0)
-                            .next_focus(input_id_w)
-                            .prev_focus(input_id_h)
-                            .placeholder("Radius")
-                            .show(h);
-                    });
+                    MacForm::new("nib_geometry_form")
+                        .theme(theme)
+                        .show(sec_ui, |form| {
+                            form.row_label(egui::RichText::new("Width:").size(11.0), |ui| {
+                                MacInputCell::with_id(input_id_w, &mut card.width)
+                                    .theme(theme)
+                                    .width(64.0)
+                                    .next_focus(input_id_h)
+                                    .prev_focus(input_id_r)
+                                    .placeholder("Width")
+                                    .show(ui);
+                            });
+                            form.row_label(egui::RichText::new("Height:").size(11.0), |ui| {
+                                MacInputCell::with_id(input_id_h, &mut card.height)
+                                    .theme(theme)
+                                    .width(64.0)
+                                    .next_focus(input_id_r)
+                                    .prev_focus(input_id_w)
+                                    .placeholder("Height")
+                                    .show(ui);
+                            });
+                            form.row_label(egui::RichText::new("Corner Radius:").size(11.0), |ui| {
+                                MacInputCell::with_id(input_id_r, &mut card.radius)
+                                    .theme(theme)
+                                    .width(64.0)
+                                    .next_focus(input_id_w)
+                                    .prev_focus(input_id_h)
+                                    .placeholder("Radius")
+                                    .show(ui);
+                            });
+                        });
                 });
 
                 // Section 2: Continuous Tracking (MacSlider & MacStepper)
                 stack.add_section(Some("Continuous Controls (Slider & Stepper)"), |sec_ui| {
-                    sec_ui.horizontal(|h| {
-                        h.label(egui::RichText::new("Slider:").size(11.0));
-                        MacSlider::new(&mut self.slider_value, 0.0..=100.0)
-                            .theme(theme)
-                            .ticks(5, true)
-                            .width(110.0)
-                            .show(h);
-                        h.label(
-                            egui::RichText::new(format!("{:.0}%", self.slider_value)).size(10.5),
-                        );
-                    });
-
-                    sec_ui.add_space(4.0);
-                    sec_ui.horizontal(|h| {
-                        h.label(egui::RichText::new("Stepper:").size(11.0));
-                        MacStepper::new(&mut self.stepper_value, 0.0..=10.0, 0.5)
-                            .theme(theme)
-                            .wraps(self.stepper_wrap)
-                            .show(h);
-                        h.label(
-                            egui::RichText::new(format!("{:.1} pt", self.stepper_value)).size(10.5),
-                        );
-                    });
+                    MacForm::new("nib_continuous_form")
+                        .theme(theme)
+                        .show(sec_ui, |form| {
+                            form.row_label(egui::RichText::new("Slider:").size(11.0), |ui| {
+                                MacSlider::new(&mut self.slider_value, 0.0..=100.0)
+                                    .theme(theme)
+                                    .ticks(5, true)
+                                    .width(110.0)
+                                    .show(ui);
+                                ui.label(
+                                    egui::RichText::new(format!("{:.0}%", self.slider_value)).size(10.5),
+                                );
+                            });
+                            form.row_label(egui::RichText::new("Stepper:").size(11.0), |ui| {
+                                MacStepper::new(&mut self.stepper_value, 0.0..=10.0, 0.5)
+                                    .theme(theme)
+                                    .wraps(self.stepper_wrap)
+                                    .show(ui);
+                                ui.label(
+                                    egui::RichText::new(format!("{:.1} pt", self.stepper_value)).size(10.5),
+                                );
+                            });
+                        });
                 });
 
                 // Section 3: Selection Primitives (MacPopUpButton & MacSegmentedControl)
                 stack.add_section(Some("Selection (PopUp & Segmented)"), |sec_ui| {
                     let popup_items = ["Default NIB", "Compact HUD", "Expanded Inspector"];
-                    sec_ui.horizontal(|h| {
-                        h.label(egui::RichText::new("Preset:").size(11.0));
-                        MacPopUpButton::new(&mut self.popup_selected, &popup_items)
-                            .theme(theme)
-                            .width(135.0)
-                            .show(h);
-                    });
-
-                    sec_ui.add_space(4.0);
-                    sec_ui.horizontal(|h| {
-                        h.label(egui::RichText::new("Units:").size(11.0));
-                        MacSegmentedControl::new(
-                            &["Points", "Pixels", "Percent"],
-                            self.unit_segmented_idx,
-                        )
+                    MacForm::new("nib_selection_form")
                         .theme(theme)
-                        .show(h, |idx| {
-                            self.unit_segmented_idx = idx;
+                        .show(sec_ui, |form| {
+                            form.row_label(egui::RichText::new("Preset:").size(11.0), |ui| {
+                                MacPopUpButton::new(&mut self.popup_selected, &popup_items)
+                                    .theme(theme)
+                                    .width(135.0)
+                                    .show(ui);
+                            });
+                            form.row_label(egui::RichText::new("Units:").size(11.0), |ui| {
+                                MacSegmentedControl::new(
+                                    &["Points", "Pixels", "Percent"],
+                                    self.unit_segmented_idx,
+                                )
+                                .theme(theme)
+                                .show(ui, |idx| {
+                                    self.unit_segmented_idx = idx;
+                                });
+                            });
                         });
-                    });
                 });
 
                 // Section 4: State & Appearance (MacToggle & MacColorWell)
                 stack.add_section(Some("State & Color (Toggle & ColorWell)"), |sec_ui| {
-                    sec_ui.horizontal(|h| {
-                        h.label(egui::RichText::new("Subpixel Snap:").size(11.0));
-                        h.add(MacToggle::new(&mut self.snapping_enabled).theme(theme));
-                    });
-
-                    sec_ui.add_space(4.0);
-                    sec_ui.horizontal(|h| {
-                        h.label(egui::RichText::new("Accent Swatch:").size(11.0));
-                        MacColorWell::new(&mut card.fill_color).theme(theme).show(h);
-
-                        h.add_space(8.0);
-                        h.label(egui::RichText::new("Alpha Well:").size(11.0));
-                        MacColorWell::new(&mut card.alpha_color)
-                            .theme(theme)
-                            .show_alpha(true)
-                            .show(h);
-                    });
+                    MacForm::new("nib_state_color_form")
+                        .theme(theme)
+                        .show(sec_ui, |form| {
+                            form.row_label(egui::RichText::new("Subpixel Snap:").size(11.0), |ui| {
+                                ui.add(MacToggle::new(&mut self.snapping_enabled).theme(theme));
+                            });
+                            form.row_label(egui::RichText::new("Accent Swatch:").size(11.0), |ui| {
+                                MacColorWell::new(&mut card.fill_color).theme(theme).show(ui);
+                            });
+                            form.row_label(egui::RichText::new("Alpha Well:").size(11.0), |ui| {
+                                MacColorWell::new(&mut card.alpha_color)
+                                    .theme(theme)
+                                    .show_alpha(true)
+                                    .show(ui);
+                            });
+                        });
                 });
             });
     }

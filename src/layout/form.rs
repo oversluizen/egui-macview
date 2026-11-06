@@ -11,6 +11,7 @@ pub struct MacForm<'a> {
     id_salt: IdSalt,
     theme: Option<&'a MacTheme>,
     spacing: Option<Vec2>,
+    min_col_width: Option<f32>,
 }
 
 impl<'a> MacForm<'a> {
@@ -20,6 +21,7 @@ impl<'a> MacForm<'a> {
             id_salt: IdSalt::new(id_salt),
             theme: None,
             spacing: None,
+            min_col_width: None,
         }
     }
 
@@ -35,6 +37,12 @@ impl<'a> MacForm<'a> {
         self
     }
 
+    /// Overrides the minimum column width in points.
+    pub fn min_col_width(mut self, min_col_width: f32) -> Self {
+        self.min_col_width = Some(min_col_width);
+        self
+    }
+
     /// Renders the form contents with trailing labels and leading controls.
     pub fn show<R>(self, ui: &mut Ui, add_contents: impl FnOnce(&mut MacFormUi<'_>) -> R) -> R {
         let spacing = self.spacing.unwrap_or_else(|| {
@@ -46,13 +54,16 @@ impl<'a> MacForm<'a> {
         });
 
         let mut result = None;
-        egui::Grid::new(self.id_salt)
+        let mut grid = egui::Grid::new(self.id_salt)
             .num_columns(2)
-            .spacing(spacing)
-            .show(ui, |grid_ui| {
-                let mut form_ui = MacFormUi { ui: grid_ui };
-                result = Some(add_contents(&mut form_ui));
-            });
+            .spacing(spacing);
+        if let Some(min_w) = self.min_col_width {
+            grid = grid.min_col_width(min_w);
+        }
+        grid.show(ui, |grid_ui| {
+            let mut form_ui = MacFormUi { ui: grid_ui };
+            result = Some(add_contents(&mut form_ui));
+        });
         result.expect("MacForm grid rendered")
     }
 }

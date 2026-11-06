@@ -12,8 +12,8 @@ use egui::{Color32, Context, Event, Key, PointerButton, Pos2, RawInput, Rect, Se
 use egui_macview::{
     theme::{MacAppearance, MacTheme},
     tokens::MacDesignTokens,
-    MacButtonCell, MacColorWell, MacOutlineView, MacPanel, MacPopUpButton, MacPopover,
-    MacPopoverArrowEdge, MacScrollView, MacSearchField, MacSegmentedControl, MacSlider,
+    MacButtonCell, MacColorWell, MacForm, MacInputCell, MacOutlineView, MacPanel, MacPopUpButton,
+    MacPopover, MacPopoverArrowEdge, MacScrollView, MacSearchField, MacSegmentedControl, MacSlider,
     MacSplitOrientation, MacSplitView, MacStackAlignment, MacStackOrientation, MacStackView,
     MacStepper, MacThumbnailCell, MacToggle,
 };
@@ -1304,4 +1304,156 @@ fn test_button_and_segmented_dark_mode_contrast() {
         assert_eq!(panel_resp.rect.width(), 100.0);
     });
     out.textures_delta.clear();
+}
+
+#[test]
+fn test_mac_form_inspector_alignment_and_trailing_labels() {
+    let ctx = Context::default();
+    let theme = MacTheme::new(MacAppearance::Aqua);
+
+    let mut rotation = 45.0f32;
+    let mut fine_step = 5.0f64;
+    let mut scale = 100.0f32;
+    let mut skew = 0.0f32;
+    let mut toggle = true;
+    let mut text = String::from("Layer 1");
+    let mut color = Color32::RED;
+
+    let mut label_rects = Vec::new();
+    let mut control_rects = Vec::new();
+
+    // 2-frame loop for egui::Grid layout pass
+    for frame in 0..2 {
+        let mut out = ctx.run_ui(RawInput::default(), |ui| {
+            MacForm::new("test_inspector_alignment_form")
+                .theme(&theme)
+                .show(ui, |form| {
+                    let (l1, c1) = form.row_label("Rotation:", |ui| {
+                        MacSlider::new(&mut rotation, 0.0..=360.0)
+                            .theme(&theme)
+                            .ticks(8, true)
+                            .width(120.0)
+                            .show(ui)
+                    });
+                    let (l2, c2) = form.row_label("Fine Step:", |ui| {
+                        ui.add(
+                            MacStepper::new(&mut fine_step, 0.0..=360.0, 5.0)
+                                .theme(&theme)
+                                .wraps(true),
+                        )
+                    });
+                    let (l3, c3) = form.row_label("Scale:", |ui| {
+                        MacSlider::new(&mut scale, 50.0..=200.0)
+                            .theme(&theme)
+                            .ticks(6, true)
+                            .width(120.0)
+                            .show(ui)
+                    });
+                    let (l4, c4) = form.row_label("Skew / Shear:", |ui| {
+                        MacSlider::new(&mut skew, -45.0..=45.0)
+                            .theme(&theme)
+                            .width(120.0)
+                            .show(ui)
+                    });
+                    let (l5, c5) = form.row_label("Drop Shadow:", |ui| {
+                        ui.add(MacToggle::new(&mut toggle).theme(&theme))
+                    });
+                    let (l6, c6) = form.row_label("Name:", |ui| {
+                        MacInputCell::new("test_input_name", &mut text)
+                            .theme(&theme)
+                            .width(180.0)
+                            .show(ui)
+                    });
+                    let (l7, c7) = form.row_label("Fill Color:", |ui| {
+                        MacColorWell::new(&mut color).theme(&theme).show(ui)
+                    });
+
+                    if frame == 1 {
+                        label_rects = vec![
+                            l1.rect, l2.rect, l3.rect, l4.rect, l5.rect, l6.rect, l7.rect,
+                        ];
+                        control_rects = vec![
+                            c1.rect, c2.rect, c3.rect, c4.rect, c5.rect, c6.rect, c7.rect,
+                        ];
+                    }
+                });
+        });
+        out.textures_delta.clear();
+    }
+
+    assert_eq!(label_rects.len(), 7, "All 7 labels must be recorded");
+    assert_eq!(control_rects.len(), 7, "All 7 controls must be recorded");
+
+    // 1. Column 0 (trailing-aligned labels): All labels must align at their trailing (right) edge.
+    let right_edge_0 = label_rects[0].max.x;
+    for (i, rect) in label_rects.iter().enumerate() {
+        let diff = (rect.max.x - right_edge_0).abs();
+        assert!(
+            diff <= 1.0,
+            "Label {i} trailing edge {} deviates from expected {right_edge_0} (diff={diff})",
+            rect.max.x
+        );
+    }
+
+    // 2. Column 1 (leading-aligned controls): All interactive controls must start at the exact same X coordinate.
+    let left_edge_1 = control_rects[0].min.x;
+    for (i, rect) in control_rects.iter().enumerate() {
+        let diff = (rect.min.x - left_edge_1).abs();
+        assert!(
+            diff <= 1.0,
+            "Control {i} leading edge {} deviates from expected {left_edge_1} (diff={diff})",
+            rect.min.x
+        );
+    }
+
+    // 3. Gutter invariant: Label max.x must be strictly less than Control min.x for every row.
+    for i in 0..7 {
+        assert!(
+            label_rects[i].max.x < control_rects[i].min.x,
+            "Row {i} label overlaps control: label.max.x={}, control.min.x={}",
+            label_rects[i].max.x,
+            control_rects[i].min.x
+        );
+    }
+}
+
+#[test]
+fn test_segmented_control_horizontal_centering() {
+    let ctx = Context::default();
+    let theme = MacTheme::new(MacAppearance::Aqua);
+
+    let container_size = Vec2::new(380.0, 100.0);
+    let mut selected = 0;
+    let mut control_rect = Rect::NOTHING;
+
+    let mut out = ctx.run_ui(RawInput::default(), |ui| {
+        ui.allocate_ui_with_layout(
+            container_size,
+            egui::Layout::top_down(egui::Align::Min),
+            |p_ui| {
+                p_ui.vertical_centered(|c_ui| {
+                    let resp = MacSegmentedControl::new(
+                        &["Attributes", "Metrics", "Matrix"],
+                        selected,
+                    )
+                    .theme(&theme)
+                    .height(24.0)
+                    .show(c_ui, |idx| {
+                        selected = idx;
+                    });
+                    control_rect = resp.rect;
+                });
+            },
+        );
+    });
+    out.textures_delta.clear();
+
+    assert!(control_rect.width() > 0.0);
+    let left_margin = control_rect.min.x;
+    let right_margin = container_size.x - control_rect.max.x;
+    let diff = (left_margin - right_margin).abs();
+    assert!(
+        diff <= 1.0,
+        "Segmented control not centered horizontally: left={left_margin}, right={right_margin}, diff={diff}"
+    );
 }
