@@ -313,9 +313,6 @@ impl Default for CenterState {
 }
 
 struct InspectorState {
-    slider_value: f32,
-    stepper_value: f64,
-    stepper_wrap: bool,
     popup_selected: usize,
     unit_segmented_idx: usize,
     snapping_enabled: bool,
@@ -325,9 +322,6 @@ struct InspectorState {
 impl Default for InspectorState {
     fn default() -> Self {
         Self {
-            slider_value: 65.0,
-            stepper_value: 3.5,
-            stepper_wrap: true,
             popup_selected: 0,
             unit_segmented_idx: 0,
             snapping_enabled: true,
@@ -524,9 +518,13 @@ impl eframe::App for GalleryApp {
             self.handle_menu_action(&action, ui.ctx());
         }
 
-        // Global Command Palette Shortcut Handling (Cmd+K / Ctrl+K)
-        let cmd = ui.input(|i| i.modifiers.command || i.modifiers.ctrl);
-        if cmd && ui.input(|i| i.key_pressed(egui::Key::K)) {
+        // Global Command Palette Shortcut Handling (Cmd+K on macOS, Ctrl+K / Super+K on Windows/Linux)
+        let toggle_palette = ui.input_mut(|i| {
+            i.consume_key(egui::Modifiers::COMMAND, egui::Key::K)
+                || i.consume_key(egui::Modifiers::CTRL, egui::Key::K)
+                || i.consume_key(egui::Modifiers::MAC_CMD, egui::Key::K)
+        });
+        if toggle_palette {
             self.palette.toggle();
         }
 
@@ -582,13 +580,13 @@ impl eframe::App for GalleryApp {
         let center = &mut self.center;
         let card = &self.card;
         let inspector = &mut self.inspector;
-        let inspector_mode = self.inspector_mode;
+        let inspector_mode_cell = std::cell::Cell::new(self.inspector_mode);
 
         // Sync sidebar node selection with inspector mode
         if sidebar.selected_node == "Compact HUD Preset"
-            && inspector_mode != InspectorMode::CompactHud
+            && inspector_mode_cell.get() != InspectorMode::CompactHud
         {
-            self.inspector_mode = InspectorMode::CompactHud;
+            inspector_mode_cell.set(InspectorMode::CompactHud);
         }
 
         // Primary Split: Left Sidebar vs (Center View + Right Inspector)
@@ -604,7 +602,9 @@ impl eframe::App for GalleryApp {
         .show(
             &mut work_ui,
             |sidebar_ui| {
-                sidebar.render(sidebar_ui, &theme, &mut self.inspector_mode);
+                let mut m = inspector_mode_cell.get();
+                sidebar.render(sidebar_ui, &theme, &mut m);
+                inspector_mode_cell.set(m);
             },
             |body_ui| {
                 // Secondary Split: Center View vs Right Inspector
@@ -619,14 +619,18 @@ impl eframe::App for GalleryApp {
                 .show(
                     body_ui,
                     |center_ui| {
-                        center.render(center_ui, &theme, card, inspector_mode);
+                        center.render(center_ui, &theme, card, inspector_mode_cell.get());
                     },
                     |inspector_ui| {
-                        inspector.render(inspector_ui, &theme, card, inspector_mode);
+                        let mut m = inspector_mode_cell.get();
+                        inspector.render(inspector_ui, &theme, card, &mut m);
+                        inspector_mode_cell.set(m);
                     },
                 );
             },
         );
+
+        self.inspector_mode = inspector_mode_cell.get();
 
         self.left_split_pos = left_split_pos;
         self.inspector_width = (available_body_w - right_split_pos).clamp(min_inspector_w, max_inspector_w);
@@ -1013,8 +1017,12 @@ impl GalleryApp {
                 InspectorMode::CompactHud => 1,
                 InspectorMode::ExpandedPro => 2,
             };
+            let mode_def = format!("{} Default", MacSymbol::Gear.as_str());
+            let mode_hud = format!("{} Compact", MacSymbol::Sliders.as_str());
+            let mode_pro = format!("{} Expanded", MacSymbol::Plus.as_str());
+            let mode_items = [mode_def.as_str(), mode_hud.as_str(), mode_pro.as_str()];
             MacSegmentedControl::new(
-                &["Default NIB", "Compact HUD", "Expanded Pro"],
+                &mode_items,
                 current_mode_idx,
             )
             .theme(theme)
@@ -1029,8 +1037,9 @@ impl GalleryApp {
 
             right_ui.add_space(8.0);
 
-            // 4. Spotlight Command Palette Button [ Search ⌘K ]
-            let search_label = format!("{} ⌘K", MacSymbol::Search.as_str());
+            // 4. Spotlight Command Palette Button [ Search ⌘K on macOS, Ctrl+K on Windows ]
+            let k_str = if cfg!(target_os = "macos") { "⌘K" } else { "Ctrl+K" };
+            let search_label = format!("{} {}", MacSymbol::Search.as_str(), k_str);
             let spot_btn = right_ui.add(
                 MacButtonCell::new(&search_label)
                     .theme(theme)
@@ -1681,8 +1690,9 @@ impl CenterState {
                 // Interactive Bounce Trigger Button
                 content_ui.add_space(8.0);
                 content_ui.horizontal(|h| {
+                    let pulse_label = format!("{} Trigger CASpring Pulse", MacSymbol::ArrowClockwise.as_str());
                     let bounce_btn = h.add(
-                        MacButtonCell::new("Trigger CASpring Pulse (Damped Harmonic Oscillator)")
+                        MacButtonCell::new(&pulse_label)
                             .theme(theme)
                             .selected(self.bounce_start_time.is_some()),
                     );
@@ -2048,7 +2058,7 @@ impl InspectorState {
         ui: &mut Ui,
         theme: &MacTheme,
         card_cell: &RefCell<CardModel>,
-        mode: InspectorMode,
+        mode: &mut InspectorMode,
     ) {
         let mut card = card_cell.borrow_mut();
         let avail_rect = ui.available_rect_before_wrap();
@@ -2067,12 +2077,12 @@ impl InspectorState {
             .show(ui, |scroll_ui| {
                 scroll_ui.with_layout(Layout::top_down(Align::Min), |s_ui| {
                     s_ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
-                    match mode {
+                    match *mode {
                         InspectorMode::ExpandedPro => {
                             self.render_expanded_pro(s_ui, theme, &mut card);
                         }
                         _ => {
-                            self.render_default_nib(s_ui, theme, &mut card);
+                            self.render_default_nib(s_ui, theme, &mut card, mode);
                         }
                     }
                 });
@@ -2090,8 +2100,13 @@ impl InspectorState {
             ExpandedProTab::Matrix => 2,
         };
 
+        let t_attr = format!("{} Attributes", MacSymbol::Sliders.as_str());
+        let t_metr = format!("{} Metrics", MacSymbol::Gear.as_str());
+        let t_matr = format!("{} Matrix", MacSymbol::ArrowClockwise.as_str());
+        let tab_items = [t_attr.as_str(), t_metr.as_str(), t_matr.as_str()];
+
         ui.vertical_centered(|c_ui| {
-            MacSegmentedControl::new(&["Attributes", "Metrics", "Matrix"], tab_idx)
+            MacSegmentedControl::new(&tab_items, tab_idx)
                 .theme(theme)
                 .height(24.0)
                 .show(c_ui, |idx| {
@@ -2343,8 +2358,9 @@ impl InspectorState {
                             });
 
                         sec_ui.add_space(6.0);
+                        let reset_label = format!("{} Reset to Identity Matrix", MacSymbol::ArrowCounterClockwise.as_str());
                         let reset_btn =
-                            sec_ui.add(MacButtonCell::new("Reset to Identity Matrix").theme(theme));
+                            sec_ui.add(MacButtonCell::new(&reset_label).theme(theme));
                         if reset_btn.clicked() {
                             card.rotation_deg = 0.0;
                             card.scale_pct = 100.0;
@@ -2356,7 +2372,13 @@ impl InspectorState {
     }
 
     /// Renders the standard Default NIB Document Inspector (Mode 0).
-    fn render_default_nib(&mut self, ui: &mut Ui, theme: &MacTheme, card: &mut CardModel) {
+    fn render_default_nib(
+        &mut self,
+        ui: &mut Ui,
+        theme: &MacTheme,
+        card: &mut CardModel,
+        mode: &mut InspectorMode,
+    ) {
         let input_id_w = Id::NULL.with("nib_input_w");
         let input_id_h = Id::NULL.with("nib_input_h");
         let input_id_r = Id::NULL.with("nib_input_r");
@@ -2429,23 +2451,33 @@ impl InspectorState {
                     MacForm::new("nib_continuous_form")
                         .theme(theme)
                         .show(sec_ui, |form| {
-                            form.row_label(egui::RichText::new("Slider:").size(11.0), |ui| {
-                                MacSlider::new(&mut self.slider_value, 0.0..=100.0)
+                            form.row_label(egui::RichText::new("Card Scale:").size(11.0), |ui| {
+                                MacSlider::new(&mut card.scale_pct, 25.0..=200.0)
                                     .theme(theme)
-                                    .ticks(5, true)
+                                    .ticks(7, true)
                                     .width(110.0)
                                     .show(ui);
                                 ui.label(
-                                    egui::RichText::new(format!("{:.0}%", self.slider_value)).size(10.5),
+                                    egui::RichText::new(format!("{:.0}%", card.scale_pct)).size(10.5),
                                 );
                             });
-                            form.row_label(egui::RichText::new("Stepper:").size(11.0), |ui| {
-                                MacStepper::new(&mut self.stepper_value, 0.0..=10.0, 0.5)
+                            form.row_label(egui::RichText::new("Corner Radius:").size(11.0), |ui| {
+                                let mut r = card.radius.parse::<f64>().unwrap_or(10.0);
+                                let prev_r = r;
+                                MacStepper::new(&mut r, 0.0..=40.0, 1.0)
                                     .theme(theme)
-                                    .wraps(self.stepper_wrap)
+                                    .wraps(false)
                                     .show(ui);
+                                if (r - prev_r).abs() > 0.01 {
+                                    card.radius = format!("{:.0}", r);
+                                }
+                                let unit_str = match self.unit_segmented_idx {
+                                    1 => "px",
+                                    2 => "%",
+                                    _ => "pt",
+                                };
                                 ui.label(
-                                    egui::RichText::new(format!("{:.1} pt", self.stepper_value)).size(10.5),
+                                    egui::RichText::new(format!("{:.0} {}", r, unit_str)).size(10.5),
                                 );
                             });
                         });
@@ -2454,14 +2486,27 @@ impl InspectorState {
                 // Section 3: Selection Primitives (MacPopUpButton & MacSegmentedControl)
                 stack.add_section(Some("Selection (PopUp & Segmented)"), |sec_ui| {
                     let popup_items = ["Default NIB", "Compact HUD", "Expanded Inspector"];
+                    self.popup_selected = match *mode {
+                        InspectorMode::DefaultNib => 0,
+                        InspectorMode::CompactHud => 1,
+                        InspectorMode::ExpandedPro => 2,
+                    };
                     MacForm::new("nib_selection_form")
                         .theme(theme)
                         .show(sec_ui, |form| {
                             form.row_label(egui::RichText::new("Preset:").size(11.0), |ui| {
+                                let prev_sel = self.popup_selected;
                                 MacPopUpButton::new(&mut self.popup_selected, &popup_items)
                                     .theme(theme)
                                     .width(135.0)
                                     .show(ui);
+                                if self.popup_selected != prev_sel {
+                                    *mode = match self.popup_selected {
+                                        0 => InspectorMode::DefaultNib,
+                                        1 => InspectorMode::CompactHud,
+                                        _ => InspectorMode::ExpandedPro,
+                                    };
+                                }
                             });
                             form.row_label(egui::RichText::new("Units:").size(11.0), |ui| {
                                 MacSegmentedControl::new(
