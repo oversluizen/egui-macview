@@ -1276,7 +1276,7 @@ impl SidebarState {
                             },
                         );
                     });
-                    if resp.is_selected {
+                    if resp.clicked {
                         self.active_screen = GalleryScreen::CanvasPhysics;
                         self.selected_node = "Interactive Canvas & Physics".to_string();
                         *active_screen_out = GalleryScreen::CanvasPhysics;
@@ -1342,7 +1342,7 @@ impl SidebarState {
                             },
                         );
                     });
-                    if resp.is_selected {
+                    if resp.clicked {
                         self.active_screen = GalleryScreen::VectorAssets;
                         self.selected_node = "Vector Assets Gallery".to_string();
                         *active_screen_out = GalleryScreen::VectorAssets;
@@ -1382,7 +1382,7 @@ impl SidebarState {
                             },
                         );
                     });
-                    if resp.is_selected {
+                    if resp.clicked {
                         self.active_screen = GalleryScreen::DesignTokensWcag;
                         self.selected_node = "W3C Design Tokens & WCAG Engine".to_string();
                         *active_screen_out = GalleryScreen::DesignTokensWcag;
@@ -1413,7 +1413,7 @@ impl SidebarState {
                         });
                         row.label("Layout Engines Playground");
                     });
-                    if resp.is_selected {
+                    if resp.clicked {
                         self.active_screen = GalleryScreen::LayoutEngines;
                         self.selected_node = "Layout Engines Playground".to_string();
                         *active_screen_out = GalleryScreen::LayoutEngines;
@@ -1455,7 +1455,7 @@ impl SidebarState {
                         });
                         row.label("Default NIB");
                     });
-                    if resp_nib.is_selected {
+                    if resp_nib.clicked {
                         self.selected_node = "Default NIB".to_string();
                         *inspector_mode_out = InspectorMode::DefaultNib;
                     }
@@ -1478,7 +1478,7 @@ impl SidebarState {
                         });
                         row.label("Compact HUD");
                     });
-                    if resp_hud.is_selected {
+                    if resp_hud.clicked {
                         self.selected_node = "Compact HUD".to_string();
                         *inspector_mode_out = InspectorMode::CompactHud;
                     }
@@ -1501,7 +1501,7 @@ impl SidebarState {
                         });
                         row.label("Expanded Pro");
                     });
-                    if resp_exp.is_selected {
+                    if resp_exp.clicked {
                         self.selected_node = "Expanded Pro".to_string();
                         *inspector_mode_out = InspectorMode::ExpandedPro;
                     }
@@ -1691,9 +1691,21 @@ impl CenterState {
         }
 
         // Calculate Live Card Geometry & Affine Transform
-        let card_w: f32 = card.width.parse::<f32>().unwrap_or(240.0).clamp(60.0, 500.0);
+        let raw_card_w: f32 = card.width.parse::<f32>().unwrap_or(240.0).clamp(60.0, 500.0);
         let card_h: f32 = card.height.parse::<f32>().unwrap_or(140.0).clamp(40.0, 300.0);
         let card_radius: f32 = card.radius.parse::<f32>().unwrap_or(10.0).clamp(0.0, 40.0);
+
+        // Layout & Alignment Mask application: 0: Left, 1: Center, 2: Right, 3: Fill
+        let (effective_card_w, card_center_x) = match card.alignment_idx {
+            0 => (raw_card_w, canvas_rect.min.x + 24.0 + raw_card_w * 0.5),
+            2 => (raw_card_w, canvas_rect.max.x - 24.0 - raw_card_w * 0.5),
+            3 => (
+                (canvas_rect.width() - 48.0).max(60.0),
+                canvas_rect.center().x,
+            ),
+            _ => (raw_card_w, canvas_rect.center().x), // 1: Center
+        };
+        let card_w = effective_card_w;
 
         // CASpring bounce computation
         let cur_time = content_ui.input(|i| i.time);
@@ -1734,9 +1746,9 @@ impl CenterState {
         let c = scale_factor * theta.sin();
         let d = scale_factor * theta.cos();
 
-        let card_center = canvas_rect.center();
+        let card_center = pos2(card_center_x, canvas_rect.center().y);
 
-        let hw = card_w * 0.5;
+        let hw = effective_card_w * 0.5;
         let hh = card_h * 0.5;
         let corners_local = [
             pos2(-hw, -hh),

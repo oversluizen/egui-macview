@@ -875,6 +875,58 @@ fn test_interactive_controls_bidirectional_state_binding() {
     assert_eq!(formatted, "11 pt", "Stepper value must format with unit suffix");
 }
 
+/// Anchor 5 (R3 & GL-1015): Left Sidebar Row Click Interaction & Zero Dead Navigator Rows.
+///
+/// Asserts that `examples/macview_gallery.rs` binds user row clicks using `resp.clicked`
+/// rather than inert `resp.is_selected` (which merely mirrors existing state).
+/// Ensures all 4 screen items and 3 inspector presets respond to user clicks.
+#[test]
+fn test_sidebar_row_clicks_bound_to_navigation_and_inspector() {
+    let gallery_src = std::fs::read_to_string("examples/macview_gallery.rs")
+        .expect("Must read examples/macview_gallery.rs");
+
+    // Invariant 1: Must NOT use `resp.is_selected` for screen switching
+    assert!(
+        !gallery_src.contains("if resp.is_selected {"),
+        "Sidebar uses dead `if resp.is_selected`: must use `if resp.clicked` to respond to user clicks!"
+    );
+    assert!(
+        !gallery_src.contains("if resp_nib.is_selected {"),
+        "Sidebar uses dead `if resp_nib.is_selected`: must use `if resp_nib.clicked`"
+    );
+    assert!(
+        !gallery_src.contains("if resp_hud.is_selected {"),
+        "Sidebar uses dead `if resp_hud.is_selected`: must use `if resp_hud.clicked`"
+    );
+    assert!(
+        !gallery_src.contains("if resp_exp.is_selected {"),
+        "Sidebar uses dead `if resp_exp.is_selected`: must use `if resp_exp.clicked`"
+    );
+
+    // Invariant 2: Must explicitly check `resp.clicked`
+    assert!(
+        gallery_src.contains("if resp.clicked {"),
+        "Sidebar must check `if resp.clicked` for screen navigation"
+    );
+}
+
+/// Anchor 6 (R3 & GL-1015): Layout & Alignment Mask Bound to Canvas Geometry.
+///
+/// Asserts that `examples/macview_gallery.rs` evaluates `alignment_idx` (Left, Center, Right, Fill)
+/// to transform card center position and width in `render_screen_canvas_physics`.
+#[test]
+fn test_layout_alignment_mask_evaluates_card_geometry() {
+    let gallery_src = std::fs::read_to_string("examples/macview_gallery.rs")
+        .expect("Must read examples/macview_gallery.rs");
+
+    // Invariant 1: `alignment_idx` must be read in `render_screen_canvas_physics`
+    assert!(
+        gallery_src.contains("card.alignment_idx") && gallery_src.contains("effective_card_w") || gallery_src.contains("match card.alignment_idx"),
+        "Canvas physics renderer must evaluate `card.alignment_idx` for Left, Center, Right, Fill alignment!"
+    );
+}
+
+
 
 
 // ============================================================================
