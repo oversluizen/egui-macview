@@ -33,23 +33,49 @@ The `egui-macview` specification suite provides the formal normative requirement
 | [**SPEC-004**](SPEC-004-CORE-ANIMATION-PHYSICS.md) | CoreAnimation Spring Physics Runtime (`CASpring`) | `0.2.0` | Accepted | `tests/cots_red_baseline_tests.rs`, `tests/macbook_parity_differential_tests.rs` |
 | [**SPEC-005**](SPEC-005-WINDOW-FRAMING-AND-CONTROLS.md) | Window Framing, Drag Handling & Configurable Caption Controls | `0.2.0` | Accepted | `tests/micro_animations_and_hud_tests.rs` |
 | [**SPEC-006**](SPEC-006-INSPECTOR-ARCHITECTURE.md) | Three-Tier Inspector Architecture & Floating Surfaces | `0.2.0` | Accepted | `tests/cots_red_baseline_tests.rs`, `tests/micro_animations_and_hud_tests.rs` |
-| [**SPEC-007**](SPEC-007-DESKTOP-NAVIGATION-AND-PALETTE.md) | Desktop Navigation, Canvas Footer & Spotlight Command Palette | `0.2.0` | Accepted | `tests/menu_and_palette_tests.rs` |
-| [**SPEC-008**](SPEC-008-STATE-INTEGRITY-AND-FEEDBACK.md) | State Integrity, Context Menus & Micro-Feedback Architecture | `0.2.0` | Accepted | `tests/undo_and_feedback_tests.rs` |
+| [**SPEC-007**](SPEC-007-DESKTOP-NAVIGATION-AND-PALETTE.md) | Desktop Navigation, Canvas Footer & Spotlight Command Palette | `0.3.0-draft` | Draft / Normative | `tests/menu_and_palette_tests.rs` |
+| [**SPEC-008**](SPEC-008-STATE-INTEGRITY-AND-FEEDBACK.md) | State Integrity, Context Menus & Micro-Feedback Architecture | `0.4.0-draft` | Draft / Normative | `tests/undo_and_feedback_tests.rs` |
 
 ---
 
-## 2. Crate & Spec Release Version Matrix
+## 2. Roadmap & Capability Matrix
 
-All specifications in this repository maintain exact 1-to-1 version parity with the public crate version in `Cargo.toml`.
+The roadmap coordinates modular capability additions across designated release milestones, ensuring mathematical verification and red test baselines precede production integrations:
+
+### 2.1 Milestone Roadmap Overview
+
+| Milestone | Target Release | Focus Area | Status | Normative Specifications |
+| :--- | :--- | :--- | :--- | :--- |
+| **Milestone 0.1.0** | `v0.1.0` (2026-11-05) | Core Engine, W3C DTCG Token Catalog & CASpring Physics | Shipped | SPEC-001, SPEC-003, SPEC-004 |
+| **Milestone 0.2.0** | `v0.2.0` (2026-11-06) | Extended AppKit Controls, Layout Engines & 3-Tier Inspector | Shipped | SPEC-001 through SPEC-006 |
+| **Milestone 0.3.0** | `v0.3.0` | Desktop Navigation, 24pt Canvas Footer & Spotlight Command Palette | Draft / Pre-release | SPEC-007 (`0.3.0-draft`) |
+| **Milestone 0.4.0** | `v0.4.0` | State Integrity (`NSUndoManager`), Context Menus & Micro-Feedback | Draft / Pre-release | SPEC-008 (`0.4.0-draft`) |
+
+### 2.2 Functional Capability Matrix
+
+| Capability Primitive | Module | Target Milestone | Spec ID | Verification Suite | Status |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `MacMenuBar` / `NSMenu` / `NSMenuItem` | `src/navigation/` | Milestone 0.3.0 | SPEC-007 | `tests/menu_and_palette_tests.rs` | Implemented (Draft Oracle) |
+| Canvas Footer & Zoom HUD ($24\,\text{pt}$) | `src/navigation/` | Milestone 0.3.0 | SPEC-007 | `tests/menu_and_palette_tests.rs` | Implemented (Draft Oracle) |
+| Spotlight Command Palette (`Cmd+K`) | `src/navigation/` | Milestone 0.3.0 | SPEC-007 | `tests/menu_and_palette_tests.rs` | Implemented (Draft Oracle) |
+| `NSUndoManager` Ringbuffer ($C=50$) | `src/state/` | Milestone 0.4.0 | SPEC-008 | `tests/undo_and_feedback_tests.rs` | Implemented (Draft Oracle) |
+| Viewport-Clamped Context Menus | `src/feedback/` | Milestone 0.4.0 | SPEC-008 | `tests/undo_and_feedback_tests.rs` | Implemented (Draft Oracle) |
+| Animated Floating Toasts (`CASpring`, $2.5\,\text{s}$) | `src/feedback/` | Milestone 0.4.0 | SPEC-008 | `tests/undo_and_feedback_tests.rs` | Implemented (Draft Oracle) |
+
+---
+
+## 3. Crate & Spec Release Version Matrix
+
+All core specifications in this repository maintain exact version parity with the public crate version in `Cargo.toml`. Future milestone specifications (SPEC-007, SPEC-008) advance through draft revisions ahead of formal crate version bumps.
 
 | Crate Release | Spec Suite Version | Release Date | Key Invariants & Milestones |
 | :--- | :--- | :--- | :--- |
 | **v0.1.0** | `0.1.0` | 2026-11-05 | Baseline release: `MacButtonCell`, `MacInputCell`, `MacSegmentedControl`, `MacToggle`, `MacFixedView`, `MacFlexView`, `MacRow`, `CASpring` initial physics, W3C DTCG token catalog parser. |
-| **v0.2.0** | `0.2.0` | 2026-11-06 | Current milestone: Extended AppKit suite (`MacColorWell`, `MacOutlineView`, `MacPopUpButton`, `MacSearchField`, `MacSlider`, `MacStepper`, `MacThumbnailCell`), generic layout suite (`MacScrollView`, `MacStackView`, `MacSplitView`), desktop navigation (`NSMenu`, `NSMenuItem`, `MacMenuBar`, `MacCanvasFooter`, `MacCommandPalette`), state integrity and feedback (`NSUndoManager`, `MacContextMenu`, `MacToast`), `WindowControlsStyle` strategy (`AppleTrafficLights`, `WindowsCaptionButtons`, `NativeHost`), 3-tier inspector architecture (Compact HUD, Default NIB, Expanded Pro), modular specification decomposition under `specs/` (SPEC-001 through SPEC-008), full ISO 29119-4 property-based test harness, architecture guardrails. |
+| **v0.2.0** | `0.2.0` | 2026-11-06 | Current milestone: Extended AppKit suite (`MacColorWell`, `MacOutlineView`, `MacPopUpButton`, `MacSearchField`, `MacSlider`, `MacStepper`, `MacThumbnailCell`), generic layout suite (`MacScrollView`, `MacStackView`, `MacSplitView`), `WindowControlsStyle` strategy (`AppleTrafficLights`, `WindowsCaptionButtons`, `NativeHost`), 3-tier inspector architecture (Compact HUD, Default NIB, Expanded Pro), modular specification decomposition under `specs/` (SPEC-001 through SPEC-006). Previews SPEC-007 and SPEC-008 navigation & feedback extensions. |
 
 ---
 
-## 3. Normative Industry Quality Standards
+## 4. Normative Industry Quality Standards
 
 Every specification and code implementation SHALL adhere strictly to:
 1. **ISO/IEC/IEEE 42010:2011:** Strict separation between Model, View, and Controller viewpoints.

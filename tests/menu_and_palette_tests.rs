@@ -8,7 +8,7 @@ use egui::{Context, Event, Key, Modifiers, Pos2, RawInput};
 use egui_macview::{
     theme::{MacAppearance, MacTheme},
     CommandPaletteItem, MacCanvasFooter, MacCommandPalette, MacKeyboardShortcut, MacMenuBar,
-    NSMenu, CANVAS_FOOTER_HEIGHT, COMMAND_PALETTE_HEIGHT, COMMAND_PALETTE_WIDTH,
+    NSMenu, NSMenuItem, CANVAS_FOOTER_HEIGHT, COMMAND_PALETTE_HEIGHT, COMMAND_PALETTE_WIDTH,
 };
 
 #[test]
@@ -268,4 +268,119 @@ fn test_command_palette_query_filter_and_navigation() {
     out3.textures_delta.clear();
 
     assert!(!palette.is_open(), "Escape must close command palette");
+}
+
+#[test]
+fn test_menu_bar_submenu_popover_and_shortcuts() {
+    let ctx = Context::default();
+    let theme = MacTheme::new(MacAppearance::DarkAqua);
+
+    let export_menu = NSMenu::with_items(
+        "Export",
+        vec![
+            NSMenuItem::action_with_shortcut(
+                "Export as PDF",
+                "export.pdf",
+                MacKeyboardShortcut::cmd_shift(Key::P),
+            ),
+            NSMenuItem::action("Export as PNG", "export.png"),
+        ],
+    );
+
+    let file_menu = NSMenu::with_items(
+        "File",
+        vec![
+            NSMenuItem::action("New", "file.new"),
+            NSMenuItem::submenu("Export As...", export_menu),
+        ],
+    );
+
+    let menus = vec![file_menu];
+    let mut open_menu_idx = Some(0);
+    let mut highlighted_item_idx = Some(1); // On "Export As..." submenu
+
+    // Test recursive global shortcut trigger inside submenu without menu open
+    let mut shortcut_input = RawInput::default();
+    shortcut_input.events.push(Event::Key {
+        key: Key::P,
+        physical_key: None,
+        pressed: true,
+        repeat: false,
+        modifiers: Modifiers {
+            command: true,
+            shift: true,
+            ..Modifiers::default()
+        },
+    });
+
+    let mut shortcut_triggered = None;
+    let mut out_sc = ctx.run_ui(shortcut_input, |ui| {
+        let bar =
+            MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx).theme(&theme);
+        shortcut_triggered = bar.show(ui);
+    });
+    out_sc.textures_delta.clear();
+    assert_eq!(
+        shortcut_triggered,
+        Some("export.pdf".to_string()),
+        "Recursive shortcut matching must resolve inside nested submenus"
+    );
+
+    // Test rendering menu with open submenu item
+    open_menu_idx = Some(0);
+    highlighted_item_idx = Some(1);
+    let mut out_render = ctx.run_ui(RawInput::default(), |ui| {
+        let bar =
+            MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx).theme(&theme);
+        let _ = bar.show(ui);
+    });
+    out_render.textures_delta.clear();
+}
+
+#[test]
+fn test_command_palette_fuzzy_subsequence_scoring() {
+    // 1. Exact vs non-contiguous subsequence matching
+    assert!(MacCommandPalette::fuzzy_match_score("expdf", "Export as PDF").is_some());
+    assert!(MacCommandPalette::fuzzy_match_score("sv", "Save Document").is_some());
+    assert!(MacCommandPalette::fuzzy_match_score("zout", "Zoom Out").is_some());
+    assert!(MacCommandPalette::fuzzy_match_score("xyz", "Export as PDF").is_none());
+
+    // 2. Ranking verification: word boundary / consecutive matches score higher
+    let score_prefix = MacCommandPalette::fuzzy_match_score("exp", "Export as PDF").unwrap();
+    let score_scatter = MacCommandPalette::fuzzy_match_score("eaf", "Export as PDF").unwrap();
+    assert!(
+        score_prefix > score_scatter,
+        "Consecutive prefix matching must score higher than scattered subsequence"
+    );
+
+    // 3. Palette integration with fuzzy queries
+    let items = vec![
+        CommandPaletteItem::new("cmd.save", "Save Document"),
+        CommandPaletteItem::new("cmd.export_pdf", "Export as PDF"),
+        CommandPaletteItem::new("cmd.export_png", "Export as PNG"),
+    ];
+
+    let mut palette = MacCommandPalette::new(items).open(true);
+    palette.set_query("expdf");
+    let filtered = palette.filtered_items();
+    assert_eq!(filtered.len(), 1);
+    assert_eq!(filtered[0].id, "cmd.export_pdf");
+}
+
+#[test]
+fn test_canvas_footer_zoom_preset_selection() {
+    let ctx = Context::default();
+    let theme = MacTheme::new(MacAppearance::DarkAqua);
+
+    let breadcrumbs = ["Workspace", "Canvas"];
+    let cursor_pos = Pos2::new(100.0, 200.0);
+    let container_width = 800.0f32;
+
+    let mut out = ctx.run_ui(RawInput::default(), |ui| {
+        let footer = MacCanvasFooter::new(&breadcrumbs, Some(cursor_pos), 1.0f32).theme(&theme);
+        assert_eq!(footer.get_height(), 24.0);
+        let action = footer.show(ui, container_width);
+        assert_eq!(action, None, "No click input should yield None");
+    });
+    out.textures_delta.clear();
 }

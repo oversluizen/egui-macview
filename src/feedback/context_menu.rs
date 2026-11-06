@@ -12,22 +12,26 @@ use egui::{
 
 /// Clamps menu origin such that the menu rectangle remains strictly inside the viewport bounds.
 pub fn clamp_menu_rect(click_pos: Pos2, menu_size: Vec2, viewport_rect: Rect) -> Rect {
+    let effective_size = Vec2::new(
+        menu_size.x.min(viewport_rect.width()),
+        menu_size.y.min(viewport_rect.height()),
+    );
     let mut x = click_pos.x;
     let mut y = click_pos.y;
 
     // Clamp right edge
-    if x + menu_size.x > viewport_rect.max.x {
-        x = viewport_rect.max.x - menu_size.x;
+    if x + effective_size.x > viewport_rect.max.x {
+        x = viewport_rect.max.x - effective_size.x;
     }
     // Clamp bottom edge
-    if y + menu_size.y > viewport_rect.max.y {
-        y = viewport_rect.max.y - menu_size.y;
+    if y + effective_size.y > viewport_rect.max.y {
+        y = viewport_rect.max.y - effective_size.y;
     }
     // Clamp left and top edges
     x = x.max(viewport_rect.min.x);
     y = y.max(viewport_rect.min.y);
 
-    Rect::from_min_size(Pos2::new(x, y), menu_size)
+    Rect::from_min_size(Pos2::new(x, y), effective_size)
 }
 
 /// Context Menu state and renderer.
@@ -65,6 +69,18 @@ impl<'a> MacContextMenu<'a> {
     pub fn theme(mut self, theme: &'a MacTheme) -> Self {
         self.theme = Some(theme);
         self
+    }
+
+    /// Checks a widget response (such as on a canvas card or outline row)
+    /// and activates the context menu if secondary-clicked (right-clicked).
+    pub fn attach_to(&mut self, response: &egui::Response) {
+        if response.secondary_clicked() {
+            *self.is_open = true;
+            *self.spawn_pos = response
+                .interact_pointer_pos()
+                .unwrap_or_else(|| response.rect.left_top());
+            *self.selected_idx = None;
+        }
     }
 
     /// Closes the context menu.

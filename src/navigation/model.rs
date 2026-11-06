@@ -24,6 +24,14 @@ impl NSMenu {
         }
     }
 
+    /// Creates a menu with a title and a list of items.
+    pub fn with_items(title: impl Into<String>, items: Vec<NSMenuItem>) -> Self {
+        Self {
+            title: title.into(),
+            items,
+        }
+    }
+
     /// Appends an item to the menu.
     pub fn item(mut self, item: NSMenuItem) -> Self {
         self.items.push(item);

@@ -69,6 +69,18 @@ impl<T: Clone> NSUndoManager<T> {
         !self.redo_stack.is_empty()
     }
 
+    /// Non-destructively inspects the most recent undo snapshot.
+    #[inline]
+    pub fn peek_undo(&self) -> Option<&T> {
+        self.undo_stack.back()
+    }
+
+    /// Non-destructively inspects the most recent redo snapshot.
+    #[inline]
+    pub fn peek_redo(&self) -> Option<&T> {
+        self.redo_stack.back()
+    }
+
     /// Records a new state snapshot on the undo stack.
     ///
     /// In accordance with SPEC-008 §2.2:

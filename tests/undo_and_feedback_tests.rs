@@ -296,3 +296,55 @@ fn test_toast_timing_and_spring_settling() {
     manager.update(3.0);
     assert_eq!(manager.active_count(), 0);
 }
+
+#[test]
+fn test_undo_manager_peek_inspection() {
+    let mut manager = NSUndoManager::<String>::new();
+    assert_eq!(manager.peek_undo(), None);
+    assert_eq!(manager.peek_redo(), None);
+
+    let mut state = "State 0".to_string();
+    manager.push_snapshot(state.clone());
+    state = "State 1".to_string();
+
+    assert_eq!(manager.peek_undo(), Some(&"State 0".to_string()));
+    assert_eq!(manager.peek_redo(), None);
+
+    manager.undo(&mut state);
+    assert_eq!(state, "State 0");
+    assert_eq!(manager.peek_undo(), None);
+    assert_eq!(manager.peek_redo(), Some(&"State 1".to_string()));
+}
+
+#[test]
+fn test_context_menu_attach_to_and_oversized_clamping() {
+    let ctx = Context::default();
+
+    // 1. Oversized menu clamping: menu larger than viewport
+    let tiny_viewport = Rect::from_min_size(Pos2::ZERO, Vec2::new(100.0, 100.0));
+    let huge_menu = Vec2::new(200.0, 300.0);
+    let clamped = clamp_menu_rect(Pos2::new(50.0, 50.0), huge_menu, tiny_viewport);
+    assert!(clamped.max.x <= tiny_viewport.max.x);
+    assert!(clamped.max.y <= tiny_viewport.max.y);
+    assert!(clamped.min.x >= tiny_viewport.min.x);
+    assert!(clamped.min.y >= tiny_viewport.min.y);
+
+    // 2. Attach to widget response
+    let items = vec![NSMenuItem::action("Delete", "action.delete")];
+    let mut is_open = false;
+    let mut spawn_pos = Pos2::ZERO;
+    let mut selected_idx = None;
+
+    let mut menu = MacContextMenu::new(&items, &mut is_open, &mut spawn_pos, &mut selected_idx);
+
+    let mut out = ctx.run_ui(RawInput::default(), |ui| {
+        // Allocate interactive element (e.g. card or outline view row)
+        let (rect, resp) = ui.allocate_exact_size(Vec2::new(100.0, 40.0), egui::Sense::click());
+        menu.attach_to(&resp);
+        let _ = rect;
+    });
+    out.textures_delta.clear();
+
+    // Without secondary click, remains closed
+    assert!(!is_open);
+}

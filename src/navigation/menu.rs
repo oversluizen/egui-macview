@@ -45,19 +45,36 @@ impl<'a> MacMenuBar<'a> {
         self
     }
 
-    /// Processes keyboard shortcuts globally across all menus.
+    /// Processes keyboard shortcuts globally across all menus and submenus.
     pub fn handle_shortcuts(&self, input: &egui::InputState) -> Option<String> {
         for menu in self.menus {
-            for item in &menu.items {
-                if let MacMenuItemKind::Action {
+            if let Some(action) = Self::find_shortcut_in_items(&menu.items, input) {
+                return Some(action);
+            }
+        }
+        None
+    }
+
+    fn find_shortcut_in_items(items: &[NSMenuItem], input: &egui::InputState) -> Option<String> {
+        for item in items {
+            if !item.enabled {
+                continue;
+            }
+            match &item.kind {
+                MacMenuItemKind::Action {
                     id,
                     shortcut: Some(sc),
-                } = &item.kind
-                {
-                    if item.enabled && sc.matches(input) {
+                } => {
+                    if sc.matches(input) {
                         return Some(id.clone());
                     }
                 }
+                MacMenuItemKind::Submenu { menu } => {
+                    if let Some(act) = Self::find_shortcut_in_items(&menu.items, input) {
+                        return Some(act);
+                    }
+                }
+                _ => {}
             }
         }
         None
@@ -358,23 +375,58 @@ impl<'a> MacMenuBar<'a> {
                                 item_text_color,
                             );
 
-                            if let MacMenuItemKind::Action {
-                                shortcut: Some(sc), ..
-                            } = &item.kind
-                            {
-                                painter.text(
-                                    Pos2::new(item_rect.right() - padding_h, item_rect.center().y),
-                                    Align2::RIGHT_CENTER,
-                                    sc.format_text(),
-                                    font_id.clone(),
-                                    item_text_color,
-                                );
+                            match &item.kind {
+                                MacMenuItemKind::Action {
+                                    shortcut: Some(sc), ..
+                                } => {
+                                    painter.text(
+                                        Pos2::new(
+                                            item_rect.right() - padding_h,
+                                            item_rect.center().y,
+                                        ),
+                                        Align2::RIGHT_CENTER,
+                                        sc.format_text(),
+                                        font_id.clone(),
+                                        item_text_color,
+                                    );
+                                }
+                                MacMenuItemKind::Submenu { .. } => {
+                                    painter.text(
+                                        Pos2::new(
+                                            item_rect.right() - padding_h,
+                                            item_rect.center().y,
+                                        ),
+                                        Align2::RIGHT_CENTER,
+                                        "›",
+                                        font_id.clone(),
+                                        item_text_color,
+                                    );
+                                }
+                                _ => {}
                             }
 
                             if resp.clicked() && item.enabled {
                                 if let MacMenuItemKind::Action { id, .. } = &item.kind {
                                     triggered_action = Some(id.clone());
                                     self.close();
+                                }
+                            }
+
+                            // Cascading submenu popover
+                            if let MacMenuItemKind::Submenu { menu: child_menu } = &item.kind {
+                                if (is_highlighted || resp.hovered()) && item.enabled {
+                                    let sub_id = area_id.with("submenu").with(i_idx);
+                                    let sub_pos = Pos2::new(popup_pos.x + min_width, item_y);
+                                    if let Some(act) = super::submenu::render_submenu_popover(
+                                        child_menu,
+                                        sub_id,
+                                        sub_pos,
+                                        theme,
+                                        pop_ui.ctx(),
+                                    ) {
+                                        triggered_action = Some(act);
+                                        self.close();
+                                    }
                                 }
                             }
                         }

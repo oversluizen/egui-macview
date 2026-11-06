@@ -178,27 +178,48 @@ impl MacCommandPalette {
         self.selected_index
     }
 
-    /// Returns filtered items matching the active search query.
-    pub fn filtered_items(&self) -> Vec<&CommandPaletteItem> {
-        let q = self.query.trim().to_lowercase();
+    /// Computes a fuzzy match score for pattern against text.
+    /// Returns `Some(score)` if pattern is a subsequence of text (case-insensitive), or `None` otherwise.
+    #[inline]
+    pub fn fuzzy_match_score(pattern: &str, text: &str) -> Option<i32> {
+        super::fuzzy::fuzzy_match_score(pattern, text)
+    }
+
+    /// Filters items matching a search query via fuzzy ranking.
+    pub fn filter_items<'a>(
+        items: &'a [CommandPaletteItem],
+        query: &str,
+    ) -> Vec<&'a CommandPaletteItem> {
+        let q = query.trim();
         if q.is_empty() {
-            return self.items.iter().collect();
+            return items.iter().collect();
         }
-        self.items
+        let mut scored: Vec<(i32, usize, &CommandPaletteItem)> = items
             .iter()
-            .filter(|it| {
-                it.title.to_lowercase().contains(&q)
-                    || it
-                        .subtitle
-                        .as_ref()
-                        .is_some_and(|s| s.to_lowercase().contains(&q))
-                    || it
-                        .category
-                        .as_ref()
-                        .is_some_and(|c| c.to_lowercase().contains(&q))
-                    || it.keywords.iter().any(|k| k.to_lowercase().contains(&q))
+            .enumerate()
+            .filter_map(|(idx, it)| {
+                let mut best_score = None;
+                for target in std::iter::once(&it.title)
+                    .chain(it.subtitle.as_ref())
+                    .chain(it.category.as_ref())
+                    .chain(it.keywords.iter())
+                {
+                    if let Some(s) = Self::fuzzy_match_score(q, target) {
+                        best_score = Some(best_score.map_or(s, |curr: i32| curr.max(s)));
+                    }
+                }
+                best_score.map(|s| (s, idx, it))
             })
-            .collect()
+            .collect();
+
+        // Sort descending by score, tie-break by original index
+        scored.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(&b.1)));
+        scored.into_iter().map(|(_, _, it)| it).collect()
+    }
+
+    /// Returns filtered items matching the active search query via fuzzy ranking.
+    pub fn filtered_items(&self) -> Vec<&CommandPaletteItem> {
+        Self::filter_items(&self.items, &self.query)
     }
 
     /// Moves selection to next filtered item.
@@ -365,33 +386,14 @@ impl MacCommandPalette {
                     palette_rect.max,
                 );
 
-                let q = self.query.trim().to_lowercase();
-                let filtered_count = if q.is_empty() {
-                    self.items.len()
-                } else {
-                    self.items
-                        .iter()
-                        .filter(|it| {
-                            it.title.to_lowercase().contains(&q)
-                                || it
-                                    .subtitle
-                                    .as_ref()
-                                    .is_some_and(|s| s.to_lowercase().contains(&q))
-                                || it
-                                    .category
-                                    .as_ref()
-                                    .is_some_and(|c| c.to_lowercase().contains(&q))
-                                || it.keywords.iter().any(|k| k.to_lowercase().contains(&q))
-                        })
-                        .count()
-                };
+                let filtered_count = Self::filter_items(&self.items, &self.query).len();
 
                 if self.selected_index >= filtered_count && filtered_count > 0 {
                     self.selected_index = filtered_count - 1;
                 }
                 let active_selected_idx = self.selected_index;
 
-                let filtered = self.filtered_items();
+                let filtered = Self::filter_items(&self.items, &self.query);
 
                 let row_height = 28.0f32;
                 let padding_h = 12.0f32;

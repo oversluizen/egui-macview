@@ -4,9 +4,9 @@
 | :--- | :--- |
 | **Document ID** | SPEC-007 |
 | **Document Title** | Desktop Navigation, Canvas Footer & Spotlight Command Palette |
-| **Document Version** | `0.2.0` |
-| **Status** | Accepted / Normative |
-| **Target Milestone** | Milestone 0.2.0 |
+| **Document Version** | `0.3.0-draft` |
+| **Status** | Draft / Normative |
+| **Target Milestone** | Milestone 0.3.0 |
 | **Target Host** | Standalone crate `egui-macview` (Rust, egui 0.37) |
 | **Author** | Jaco Oversluizen / `egui-macview` contributors |
 | **Normative Test Suite** | `tests/menu_and_palette_tests.rs` |
@@ -19,7 +19,8 @@
 | Version | Date | Author | Description / Milestone |
 | :--- | :--- | :--- | :--- |
 | `0.1.0` | 2026-11-05 | Architecture Team | Baseline Initial Release: Baseline Navigation Concepts |
-| `0.2.0` | 2026-11-06 | Architecture Team | Current Milestone: Desktop Navigation (NSMenu/NSMenuItem), 24pt Canvas Footer Layout, and Spotlight Command Palette |
+| `0.2.0` | 2026-11-06 | Architecture Team | Prototyping Milestone: Desktop Navigation (NSMenu/NSMenuItem), 24pt Canvas Footer Layout, and Spotlight Command Palette |
+| `0.3.0-draft` | 2026-11-06 | Architecture Team | Target Milestone 0.3.0: Data-driven menu bar, cascading submenu popovers, 24pt footer, and Spotlight Command Palette with fuzzy search |
 
 ---
 

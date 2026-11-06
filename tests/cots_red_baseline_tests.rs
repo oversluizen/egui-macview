@@ -356,7 +356,10 @@ fn test_version_synchronization_invariants() {
         "CHANGELOG.md must contain header '## [0.1.0] - 2026-11-05'"
     );
 
-    // 5. All specs in specs/ have Document Version 0.2.0, baseline 0.1.0 and milestone 0.2.0
+    // 5. Specs in specs/ have synchronized versions according to release roadmap:
+    // - SPEC-001..SPEC-006 and SPEC-INDEX have Document Version 0.2.0
+    // - SPEC-007 has Document Version 0.3.0-draft (Milestone 0.3.0)
+    // - SPEC-008 has Document Version 0.4.0-draft (Milestone 0.4.0)
     let specs_dir = manifest_dir.join("specs");
     let entries = fs::read_dir(&specs_dir).expect("read specs dir");
     let mut spec_count = 0;
@@ -367,22 +370,39 @@ fn test_version_synchronization_invariants() {
             let content = fs::read_to_string(&path).expect("read spec file");
             let file_name = path.file_name().unwrap_or_default().to_string_lossy();
 
-            assert!(
-                content.contains("**Document Version** | `0.2.0`"),
-                "{file_name} missing Document Version `0.2.0`"
-            );
+            if file_name.starts_with("SPEC-007") {
+                assert!(
+                    content.contains("**Document Version** | `0.3.0-draft`"),
+                    "{file_name} missing Document Version `0.3.0-draft`"
+                );
+                assert!(
+                    content.contains("Milestone 0.3.0"),
+                    "{file_name} missing Target Milestone `Milestone 0.3.0`"
+                );
+            } else if file_name.starts_with("SPEC-008") {
+                assert!(
+                    content.contains("**Document Version** | `0.4.0-draft`"),
+                    "{file_name} missing Document Version `0.4.0-draft`"
+                );
+                assert!(
+                    content.contains("Milestone 0.4.0"),
+                    "{file_name} missing Target Milestone `Milestone 0.4.0`"
+                );
+            } else {
+                assert!(
+                    content.contains("**Document Version** | `0.2.0`"),
+                    "{file_name} missing Document Version `0.2.0`"
+                );
+            }
+
             assert!(
                 content.contains("`0.1.0`") && content.contains("2026-11-05"),
                 "{file_name} missing baseline 0.1.0 in Revision History"
             );
-            assert!(
-                content.contains("`0.2.0`") && content.contains("2026-11-06"),
-                "{file_name} missing milestone 0.2.0 in Revision History"
-            );
         }
     }
     assert!(
-        spec_count >= 7,
-        "Expected at least 7 specs, found {spec_count}"
+        spec_count >= 8,
+        "Expected at least 8 specs, found {spec_count}"
     );
 }
