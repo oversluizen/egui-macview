@@ -1,4 +1,4 @@
-//! `egui-macview` — Deterministic macOS AppKit Layout Engine, Authentic Control Primitive Suite, and CoreAnimation Physics Runtime for egui.
+#![doc = include_str!("../README.md")]
 //!
 //! Grounded in Apple AppKit, macOS Human Interface Guidelines (HIG), and W3C DTCG Design Tokens.
 //!
@@ -66,8 +66,13 @@ pub mod motion;
 pub mod navigation;
 pub mod state;
 pub mod surfaces;
+pub mod symbols;
 pub mod theme;
 pub mod tokens;
+
+pub use symbols::{
+    setup_symbols_font, MacSymbol, CUPERTINO_ICONS_FONT_BYTES, CUPERTINO_ICONS_FONT_NAME,
+};
 
 pub use theme::{
     contrast_ratio, relative_luminance, MacAppearance, MacBackgroundStyle, MacTheme,
@@ -81,9 +86,10 @@ pub use controls::{
 };
 pub use feedback::{clamp_menu_rect, MacContextMenu, MacToast, MacToastManager, ToastLevel};
 pub use layout::{
-    subpixel_snap, subpixel_snap_pos, subpixel_snap_rect, MacFixedView, MacFlexView, MacFrame,
-    MacRow, MacScrollView, MacScrollViewOutput, MacSplitOrientation, MacSplitView,
-    MacStackAlignment, MacStackOrientation, MacStackUi, MacStackView, MacStackViewOutput,
+    subpixel_snap, subpixel_snap_pos, subpixel_snap_rect, MacFixedView, MacFlexView, MacForm,
+    MacFormUi, MacFrame, MacRow, MacScrollView, MacScrollViewOutput, MacSplitOrientation,
+    MacSplitView, MacStackAlignment, MacStackOrientation, MacStackUi, MacStackView,
+    MacStackViewOutput,
 };
 pub use motion::CASpring;
 pub use navigation::{

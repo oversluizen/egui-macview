@@ -5,6 +5,7 @@
 //! - GL-1015: Industry Software Engineering & Testing Standards:
 //!   - Regel 3: Zero Hardcoded Constants (100% Data-Driven from tokens/theme).
 //!   - Regel 4: NASA/Google eSLOC Modularity Limit (< 400 eSLOC, < 599 physical lines).
+//!   - Regel 10 / §3.3: Windows Desktop GUI Subsystem Invariant (#![cfg_attr(not(test), windows_subsystem = "windows")]).
 //!   - Regel 11/12/13: Zero Hardcoded Colors, Dimensions & Domain Agnosticism.
 //!
 //! This suite serves as the Golden Master template across all ecosystem projects.
@@ -636,3 +637,71 @@ fn test_guard_zero_cross_component_token_borrowing() {
         );
     }
 }
+
+// ============================================================================
+// Guardrail 7: Windows Desktop GUI Subsystem Invariant (GL-1015 Regel 10 & §3.3)
+// ============================================================================
+
+#[test]
+fn test_guard_windows_gui_subsystem_attribute() {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let src_bin = manifest_dir.join("src").join("bin");
+    let examples = manifest_dir.join("examples");
+    let src_main = manifest_dir.join("src").join("main.rs");
+
+    let mut entrypoints = Vec::new();
+    if src_main.exists() {
+        entrypoints.push(src_main);
+    }
+    if src_bin.exists() {
+        collect_rs_files(&src_bin, &mut entrypoints);
+    }
+    if examples.exists() {
+        collect_rs_files(&examples, &mut entrypoints);
+    }
+
+    let required_attr = "#![cfg_attr(not(test), windows_subsystem = \"windows\")]";
+    let mut violations = Vec::new();
+
+    for file_path in &entrypoints {
+        let content = fs::read_to_string(file_path)
+            .unwrap_or_else(|e| panic!("Failed to read {}: {e}", file_path.display()));
+        let relative_path = file_path
+            .strip_prefix(manifest_dir)
+            .unwrap_or(file_path)
+            .to_string_lossy();
+
+        // Check if this binary/example is a GUI entrypoint (depends on or uses eframe/winit/gui frameworks)
+        let is_gui = content.contains("eframe")
+            || content.contains("winit")
+            || content.contains("run_native")
+            || content.contains("iced")
+            || content.contains("slint")
+            || content.contains("tauri");
+
+        if is_gui && !content.contains(required_attr) {
+            if content.contains("windows_subsystem") {
+                violations.push(format!(
+                    "  - {relative_path}: Incorrect windows_subsystem declaration. \
+                     MUST be `#![cfg_attr(not(test), windows_subsystem = \"windows\")]` to avoid console popups in debug builds."
+                ));
+            } else {
+                violations.push(format!(
+                    "  - {relative_path}: Missing mandatory Windows GUI Subsystem attribute `{required_attr}`. \
+                     GL-1015 §3.3 mandates all GUI binaries and examples suppress attached console allocation on Windows."
+                ));
+            }
+        }
+    }
+
+    if !violations.is_empty() {
+        panic!(
+            "\n[FATAL ARCHITECTURE GUARD VIOLATION] GL-1015 §3.3 (Windows Desktop GUI Subsystem Wet):\n\
+             Found {} GUI entrypoint(s) missing or violating `#![cfg_attr(not(test), windows_subsystem = \"windows\")]`:\n{}\n\
+             Remediation: Add `#![cfg_attr(not(test), windows_subsystem = \"windows\")]` at the crate root of each GUI binary or example.\n",
+            violations.len(),
+            violations.join("\n")
+        );
+    }
+}
+

@@ -3,7 +3,6 @@
 //! Normative Reference: SPEC-007 §3.
 //! Enforces a deterministic 24.0pt vertical layout budget via `MacRow`.
 
-use crate::layout::MacRow;
 use crate::theme::MacTheme;
 use egui::{
     Align2, Color32, CornerRadius, FontId, Pos2, Rect, Sense, Stroke, StrokeKind, Ui, Vec2,
@@ -73,23 +72,20 @@ impl<'a> MacCanvasFooter<'a> {
         let footer_height = self.height;
         let (rect, _response) =
             ui.allocate_exact_size(Vec2::new(container_width, footer_height), Sense::hover());
-        let painter = ui.painter();
-
         // Footer background and 1px top border hairline
-        painter.rect_filled(rect, CornerRadius::ZERO, theme.window_background());
-        painter.line_segment(
+        ui.painter()
+            .rect_filled(rect, CornerRadius::ZERO, theme.window_background());
+        ui.painter().line_segment(
             [rect.left_top(), rect.right_top()],
             Stroke::new(1.0, theme.separator()),
         );
 
         let item_spacing = theme.stack_view().default_spacing.points();
-        let mut row = MacRow::new(rect.top(), footer_height, container_width, item_spacing);
         let font_id = FontId::proportional(theme.stack_view().section_header_font_size.points());
         let text_color = theme.secondary_label();
-
         let mut action = None;
 
-        // 1. Leading Zone: Breadcrumbs
+        // 1. Leading Zone: Breadcrumbs (truncated so they never spill into center or trailing zones)
         let mut breadcrumb_str = String::new();
         for (idx, crumb) in self.breadcrumbs.iter().enumerate() {
             if idx > 0 {
@@ -99,77 +95,89 @@ impl<'a> MacCanvasFooter<'a> {
         }
 
         if !breadcrumb_str.is_empty() {
-            let galley = painter.layout_no_wrap(breadcrumb_str, font_id.clone(), text_color);
-            let crumb_width = galley.size().x.min(container_width * 0.4);
-            let (rx, ry, rw, rh) = row.allocate_cell(crumb_width + item_spacing);
-            let cell_rect = Rect::from_min_size(
-                Pos2::new(rect.left() + rx + item_spacing, ry),
-                Vec2::new(rw, rh),
+            let crumb_max_w = (container_width * 0.35)
+                .min(rect.center().x - rect.left() - 90.0)
+                .max(10.0);
+            let crumb_rect = Rect::from_min_size(
+                Pos2::new(rect.left() + item_spacing, rect.top()),
+                Vec2::new(crumb_max_w, footer_height),
             );
-
-            painter.text(
-                cell_rect.left_center(),
-                Align2::LEFT_CENTER,
-                galley.text(),
-                font_id.clone(),
-                text_color,
+            let mut crumb_ui = ui.new_child(
+                egui::UiBuilder::new()
+                    .max_rect(crumb_rect)
+                    .layout(egui::Layout::left_to_right(egui::Align::Center)),
+            );
+            crumb_ui.add(
+                egui::Label::new(
+                    egui::RichText::new(&breadcrumb_str)
+                        .font(font_id)
+                        .color(text_color),
+                )
+                .truncate(),
             );
         }
 
-        // 2. Trailing Zone: Zoom Presets (50% | 100% | 200%)
-        let zoom_presets = [0.5f32, 1.0f32, 2.0f32];
-        let preset_btn_width = 36.0f32;
-        let total_zoom_w = (preset_btn_width * (zoom_presets.len() as f32))
-            + (zoom_presets.len() as f32 - 1.0) * 2.0;
-
-        let zoom_start_x = rect.right() - total_zoom_w - item_spacing;
-        for (z_idx, &preset) in zoom_presets.iter().enumerate() {
-            let bx = zoom_start_x + (z_idx as f32) * (preset_btn_width + 2.0);
-            let btn_rect = Rect::from_min_size(
-                Pos2::new(bx, rect.top() + (footer_height - 18.0) * 0.5),
-                Vec2::new(preset_btn_width, 18.0),
+        // 2. Trailing Zone: Zoom Presets (50% | 100% | 200%) via Layout::right_to_left
+        let zoom_area = Rect::from_min_max(
+            Pos2::new(rect.center().x + 90.0, rect.top()),
+            Pos2::new(rect.right() - item_spacing, rect.bottom()),
+        );
+        if zoom_area.width() > 0.0 {
+            let mut zoom_ui = ui.new_child(
+                egui::UiBuilder::new()
+                    .max_rect(zoom_area)
+                    .layout(egui::Layout::right_to_left(egui::Align::Center)),
             );
 
-            let is_selected = (self.zoom_factor - preset).abs() < 0.05;
-            let resp = ui.interact(
-                btn_rect,
-                ui.scope_id().with("footer_zoom").with(z_idx),
-                Sense::click(),
-            );
+            let zoom_presets = [2.0f32, 1.0f32, 0.5f32];
+            let preset_btn_width = 36.0f32;
+            let preset_btn_height = 18.0f32;
 
-            let bg = if is_selected {
-                theme.control_accent()
-            } else if resp.hovered() {
-                theme.control()
-            } else {
-                Color32::TRANSPARENT
-            };
+            for (z_idx, &preset) in zoom_presets.iter().enumerate() {
+                let (btn_rect, resp) = zoom_ui.allocate_exact_size(
+                    Vec2::new(preset_btn_width, preset_btn_height),
+                    Sense::click(),
+                );
 
-            let fg = if is_selected {
-                Color32::WHITE
-            } else {
-                theme.label()
-            };
+                let is_selected = (self.zoom_factor - preset).abs() < 0.05;
+                let bg = if is_selected {
+                    theme.control_accent()
+                } else if resp.hovered() {
+                    theme.control()
+                } else {
+                    Color32::TRANSPARENT
+                };
 
-            painter.rect(
-                btn_rect,
-                CornerRadius::same(3),
-                bg,
-                Stroke::NONE,
-                StrokeKind::Inside,
-            );
+                let fg = if is_selected {
+                    Color32::WHITE
+                } else {
+                    theme.label()
+                };
 
-            let label = format!("{:.0}%", preset * 100.0);
-            painter.text(
-                btn_rect.center(),
-                Align2::CENTER_CENTER,
-                label,
-                FontId::proportional(10.0),
-                fg,
-            );
+                zoom_ui.painter().rect(
+                    btn_rect,
+                    CornerRadius::same(3),
+                    bg,
+                    Stroke::NONE,
+                    StrokeKind::Inside,
+                );
 
-            if resp.clicked() {
-                action = Some(MacCanvasFooterAction::SelectZoom(preset));
+                let label = format!("{:.0}%", preset * 100.0);
+                zoom_ui.painter().text(
+                    btn_rect.center(),
+                    Align2::CENTER_CENTER,
+                    label,
+                    FontId::proportional(10.0),
+                    fg,
+                );
+
+                if resp.clicked() {
+                    action = Some(MacCanvasFooterAction::SelectZoom(preset));
+                }
+
+                if z_idx + 1 < zoom_presets.len() {
+                    zoom_ui.add_space(2.0);
+                }
             }
         }
 
@@ -177,7 +185,7 @@ impl<'a> MacCanvasFooter<'a> {
         if let Some(pos) = self.cursor_pos {
             let coord_text = format!("X: {:.1} pt   Y: {:.1} pt", pos.x, pos.y);
             let coord_rect = Rect::from_center_size(rect.center(), Vec2::new(160.0, footer_height));
-            painter.text(
+            ui.painter().text(
                 coord_rect.center(),
                 Align2::CENTER_CENTER,
                 coord_text,

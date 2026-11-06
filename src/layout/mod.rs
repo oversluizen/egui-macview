@@ -1,11 +1,13 @@
 //! Layout engines: `MacFixedView` (absolute pt), `MacFlexView` (springs/struts), `MacSplitView` (NSSplitView),
 //! `MacScrollView` (NSScrollView), and `MacStackView` (NSStackView).
 
+pub mod form;
 pub mod scroll_view;
 pub mod scrollbar;
 pub mod split_view;
 pub mod stack_view;
 
+pub use form::{MacForm, MacFormUi};
 pub use scroll_view::{MacScrollView, MacScrollViewOutput};
 pub use scrollbar::render_overlay_thumb;
 pub use split_view::{MacSplitOrientation, MacSplitView};
@@ -13,7 +15,7 @@ pub use stack_view::{
     MacStackAlignment, MacStackOrientation, MacStackUi, MacStackView, MacStackViewOutput,
 };
 
-use egui::{Pos2, Rect, Ui, Vec2};
+use egui::{Pos2, Rect, Response, Sense, Ui, Vec2};
 
 /// Snaps a logical coordinate to the nearest physical hardware pixel boundary
 /// according to the Subpixel Snap Criterion (SPEC-001 §2.1 A):
@@ -120,6 +122,23 @@ impl<'a> MacFixedView<'a> {
             ),
             size,
         )
+    }
+
+    /// Executes a closure inside a subview allocated at relative NIB coordinates.
+    pub fn subview<R>(
+        &mut self,
+        rel_origin: Pos2,
+        size: Vec2,
+        add_contents: impl FnOnce(&mut Ui) -> R,
+    ) -> R {
+        let rect = self.subview_rect(rel_origin, size);
+        let mut child = self.ui.new_child(egui::UiBuilder::new().max_rect(rect));
+        add_contents(&mut child)
+    }
+
+    /// Allocates the container rect response after placing all subviews.
+    pub fn finish(self) -> Response {
+        self.ui.allocate_rect(self.container_rect, Sense::hover())
     }
 }
 

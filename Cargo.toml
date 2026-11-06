@@ -1,15 +1,15 @@
 [package]
 name = "egui-macview"
-version = "0.3.0"
+version = "0.3.1"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 authors = ["Jaco Oversluizen", "egui-macview contributors"]
-description = "Deterministic macOS AppKit Layout Engine, Authentic Control Primitive Suite, and CoreAnimation Physics Runtime for egui."
+description = "Cross-platform macOS AppKit Layout Engine, Authentic Control Primitive Suite, and CoreAnimation Physics Runtime for egui on Windows 11, macOS, Linux, and Web."
 repository = "https://github.com/oversluizen/egui-macview"
 documentation = "https://docs.rs/egui-macview"
 readme = "README.md"
-keywords = ["egui", "macos", "appkit", "gui", "layout"]
-categories = ["gui"]
+keywords = ["egui", "appkit", "windows-11", "cross-platform", "macos"]
+categories = ["gui", "rendering"]
 autotests = false
 
 [package.metadata.docs.rs]
@@ -65,4 +65,8 @@ path = "tests/menu_and_palette_tests.rs"
 [[test]]
 name = "undo_and_feedback_tests"
 path = "tests/undo_and_feedback_tests.rs"
+
+[[test]]
+name = "symbol_tests"
+path = "tests/symbol_tests.rs"
 

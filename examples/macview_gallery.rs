@@ -14,17 +14,20 @@
 //!   and pulsed by `CASpring` harmonic oscillator motion physics.
 //! - Window Layout via `MacSplitView`: Left Sidebar, Center Canvas, Right Inspector.
 
+#![cfg_attr(not(test), windows_subsystem = "windows")]
+
 use egui::{
     pos2, vec2, Align, Align2, Color32, CornerRadius, FontId, Id, Layout, Pos2, Rect, Sense,
     Stroke, StrokeKind, Ui, ViewportCommand,
 };
 use egui_macview::{
+    setup_symbols_font,
     theme::{MacAppearance, MacTheme, WindowControlsStyle},
     CASpring, CommandPaletteItem, MacBackgroundStyle, MacButtonCell, MacCanvasFooter,
     MacCanvasFooterAction, MacColorWell, MacCommandPalette, MacFixedView, MacInputCell, MacMenuBar,
     MacOutlineView, MacPopUpButton, MacPopover, MacPopoverArrowEdge, MacRow, MacScrollView,
     MacSearchField, MacSegmentedControl, MacSlider, MacSplitOrientation, MacSplitView,
-    MacStackOrientation, MacStackView, MacStepper, MacThumbnailCell, MacToggle, NSMenu,
+    MacStackOrientation, MacStackView, MacStepper, MacSymbol, MacThumbnailCell, MacToggle, NSMenu,
     CANVAS_FOOTER_HEIGHT,
 };
 use std::cell::RefCell;
@@ -135,6 +138,9 @@ fn setup_system_or_custom_fonts(ctx: &egui::Context) {
                 .insert(0, "consolas".to_owned());
         }
     }
+
+    // Register monochrome vector AppKit symbols font (CupertinoIcons)
+    setup_symbols_font(&mut fonts);
 
     ctx.set_fonts(fonts);
 }
@@ -758,16 +764,14 @@ impl GalleryApp {
         } else {
             pos2(rect.min.x + 18.0, traffic_y)
         };
-        painter.text(
-            title_pos,
-            Align2::LEFT_CENTER,
-            format!(
-                "macview_gallery v{} (AppKit macOS 15 Parity)",
-                egui_macview::VERSION
-            ),
-            title_font,
-            title_color,
+        let title_str = format!(
+            "macview_gallery v{} (AppKit macOS 15 Parity)",
+            egui_macview::VERSION
         );
+        let title_galley =
+            painter.layout_no_wrap(title_str, title_font, title_color);
+        let title_right = title_pos.x + title_galley.size().x;
+        painter.galley(title_pos, title_galley, title_color);
 
         // Strategy 2 Presentation: Windows 11 Caption Buttons (Trailing / Right)
         let btn_w = theme.toolbar_metrics().caption_button_width.points();
@@ -933,123 +937,89 @@ impl GalleryApp {
             16.0
         };
 
-        // Right Toolbar Controls:
-        // 1. Dynamic Theme Toggle [ Aqua | DarkAqua ]
-        let toggle_w = 140.0;
-        let toggle_h = 24.0;
-        let toggle_area = Rect::from_min_max(
-            pos2(rect.max.x - right_offset - toggle_w, rect.min.y),
+        // Right Toolbar Controls via Layout::right_to_left so they never overlap the title on Ctrl + +
+        let right_area = Rect::from_min_max(
+            pos2(title_right + 12.0, rect.min.y),
             pos2(rect.max.x - right_offset, rect.max.y),
         );
 
-        let mut child_ui = ui.new_child(
-            egui::UiBuilder::new()
-                .max_rect(toggle_area)
-                .layout(Layout::centered_and_justified(egui::Direction::LeftToRight)),
-        );
+        if right_area.width() > 0.0 {
+            let mut right_ui = ui.new_child(
+                egui::UiBuilder::new()
+                    .max_rect(right_area)
+                    .layout(Layout::right_to_left(Align::Center)),
+            );
 
-        let current_theme_idx = match self.appearance {
-            MacAppearance::Aqua => 0,
-            MacAppearance::DarkAqua => 1,
-        };
-
-        MacSegmentedControl::new(&["Aqua", "DarkAqua"], current_theme_idx)
-            .theme(theme)
-            .height(toggle_h)
-            .show(&mut child_ui, |idx| {
-                self.appearance = match idx {
-                    0 => MacAppearance::Aqua,
-                    _ => MacAppearance::DarkAqua,
-                };
-            });
-
-        // 2. Strategy 2 Configurable Window Controls Style Switcher [ Apple | Windows | Native ]
-        let style_w = 190.0;
-        let style_gap = 10.0;
-        let style_area = Rect::from_min_max(
-            pos2(
-                rect.max.x - right_offset - toggle_w - style_gap - style_w,
-                rect.min.y,
-            ),
-            pos2(rect.max.x - right_offset - toggle_w - style_gap, rect.max.y),
-        );
-
-        let mut style_ui = ui.new_child(
-            egui::UiBuilder::new()
-                .max_rect(style_area)
-                .layout(Layout::centered_and_justified(egui::Direction::LeftToRight)),
-        );
-
-        let current_style_idx = match self.window_controls_style {
-            WindowControlsStyle::AppleTrafficLights => 0,
-            WindowControlsStyle::WindowsCaptionButtons => 1,
-            WindowControlsStyle::NativeHost => 2,
-        };
-
-        MacSegmentedControl::new(&["Apple", "Windows", "Native"], current_style_idx)
-            .theme(theme)
-            .height(toggle_h)
-            .show(&mut style_ui, |idx| {
-                self.window_controls_style = match idx {
-                    0 => WindowControlsStyle::AppleTrafficLights,
-                    1 => WindowControlsStyle::WindowsCaptionButtons,
-                    _ => WindowControlsStyle::NativeHost,
-                };
-            });
-
-        // Center Toolbar: Inspector Mode Switcher [ Default NIB | Compact HUD | Expanded Pro ]
-        let center_mode_w = 290.0;
-        let right_controls_left = rect.max.x - right_offset - toggle_w - style_gap - style_w;
-        let title_right = title_pos.x + 230.0;
-        let center_x = ((title_right + right_controls_left) * 0.5)
-            .max(title_right + center_mode_w * 0.5 + 8.0);
-        let center_mode_rect =
-            Rect::from_center_size(pos2(center_x, rect.center().y), vec2(center_mode_w, 24.0));
-
-        // Spotlight Command Palette Button [ 🔍 ⌘K ]
-        let spot_w = 72.0;
-        let spot_rect = Rect::from_center_size(
-            pos2(
-                center_mode_rect.left() - spot_w * 0.5 - 12.0,
-                rect.center().y,
-            ),
-            vec2(spot_w, 24.0),
-        );
-        let mut spot_ui = ui.new_child(egui::UiBuilder::new().max_rect(spot_rect));
-        let spot_btn = spot_ui.add(
-            MacButtonCell::new("🔍 ⌘K")
-                .theme(theme)
-                .selected(self.palette.open),
-        );
-        if spot_btn.clicked() {
-            self.palette.toggle();
-        }
-
-        let mut center_ui = ui.new_child(
-            egui::UiBuilder::new()
-                .max_rect(center_mode_rect)
-                .layout(Layout::centered_and_justified(egui::Direction::LeftToRight)),
-        );
-
-        let current_mode_idx = match self.inspector_mode {
-            InspectorMode::DefaultNib => 0,
-            InspectorMode::CompactHud => 1,
-            InspectorMode::ExpandedPro => 2,
-        };
-
-        MacSegmentedControl::new(
-            &["Default NIB", "Compact HUD", "Expanded Pro"],
-            current_mode_idx,
-        )
-        .theme(theme)
-        .height(24.0)
-        .show(&mut center_ui, |idx| {
-            self.inspector_mode = match idx {
-                0 => InspectorMode::DefaultNib,
-                1 => InspectorMode::CompactHud,
-                _ => InspectorMode::ExpandedPro,
+            // 1. Dynamic Theme Toggle [ Aqua | DarkAqua ]
+            let current_theme_idx = match self.appearance {
+                MacAppearance::Aqua => 0,
+                MacAppearance::DarkAqua => 1,
             };
-        });
+            MacSegmentedControl::new(&["Aqua", "DarkAqua"], current_theme_idx)
+                .theme(theme)
+                .height(24.0)
+                .show(&mut right_ui, |idx| {
+                    self.appearance = match idx {
+                        0 => MacAppearance::Aqua,
+                        _ => MacAppearance::DarkAqua,
+                    };
+                });
+
+            right_ui.add_space(8.0);
+
+            // 2. Strategy 2 Configurable Window Controls Style Switcher [ Apple | Windows | Native ]
+            let current_style_idx = match self.window_controls_style {
+                WindowControlsStyle::AppleTrafficLights => 0,
+                WindowControlsStyle::WindowsCaptionButtons => 1,
+                WindowControlsStyle::NativeHost => 2,
+            };
+            MacSegmentedControl::new(&["Apple", "Windows", "Native"], current_style_idx)
+                .theme(theme)
+                .height(24.0)
+                .show(&mut right_ui, |idx| {
+                    self.window_controls_style = match idx {
+                        0 => WindowControlsStyle::AppleTrafficLights,
+                        1 => WindowControlsStyle::WindowsCaptionButtons,
+                        _ => WindowControlsStyle::NativeHost,
+                    };
+                });
+
+            right_ui.add_space(8.0);
+
+            // 3. Center Toolbar: Inspector Mode Switcher [ Default NIB | Compact HUD | Expanded Pro ]
+            let current_mode_idx = match self.inspector_mode {
+                InspectorMode::DefaultNib => 0,
+                InspectorMode::CompactHud => 1,
+                InspectorMode::ExpandedPro => 2,
+            };
+            MacSegmentedControl::new(
+                &["Default NIB", "Compact HUD", "Expanded Pro"],
+                current_mode_idx,
+            )
+            .theme(theme)
+            .height(24.0)
+            .show(&mut right_ui, |idx| {
+                self.inspector_mode = match idx {
+                    0 => InspectorMode::DefaultNib,
+                    1 => InspectorMode::CompactHud,
+                    _ => InspectorMode::ExpandedPro,
+                };
+            });
+
+            right_ui.add_space(8.0);
+
+            // 4. Spotlight Command Palette Button [ Search ⌘K ]
+            let search_label = format!("{} ⌘K", MacSymbol::Search.as_str());
+            let spot_btn = right_ui.add(
+                MacButtonCell::new(&search_label)
+                    .theme(theme)
+                    .height(24.0)
+                    .selected(self.palette.open),
+            );
+            if spot_btn.clicked() {
+                self.palette.toggle();
+            }
+        }
     }
 }
 
@@ -1886,8 +1856,7 @@ impl CenterState {
                 };
                 let pop_btn = content_ui.add(
                     MacButtonCell::new(btn_text)
-                        .theme(theme)
-                        .selected(self.popover_open),
+                        .theme(theme),
                 );
                 if pop_btn.clicked() {
                     self.popover_open = !self.popover_open;

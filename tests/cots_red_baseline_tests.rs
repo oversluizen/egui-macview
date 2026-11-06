@@ -11,8 +11,10 @@
 use std::fs;
 use std::path::Path;
 
-use egui_macview::layout::{subpixel_snap, subpixel_snap_pos, subpixel_snap_rect};
+use egui::{Context, RawInput};
+use egui_macview::layout::{subpixel_snap, subpixel_snap_pos, subpixel_snap_rect, MacForm};
 use egui_macview::motion::CASpring;
+use egui_macview::theme::{MacAppearance, MacTheme};
 use egui_macview::tokens::{sf_pro_tracking, MacDesignTokens};
 
 /// Test 1: Confirms that `design_tokens.json` parses completely into typed structs without error.
@@ -22,8 +24,8 @@ fn test_token_catalog_deserialization() {
 
     // Verify metadata
     assert_eq!(tokens.name, "egui-macview Design Tokens");
-    assert_eq!(tokens.version, "0.3.0");
-    assert_eq!(egui_macview::VERSION, "0.3.0");
+    assert_eq!(tokens.version, "0.3.1");
+    assert_eq!(egui_macview::VERSION, "0.3.1");
     assert!(!tokens.description.is_empty());
 
     // Verify Control Metrics
@@ -333,23 +335,23 @@ fn test_version_synchronization_invariants() {
     // 1. Cargo.toml version
     let cargo_toml = fs::read_to_string(manifest_dir.join("Cargo.toml")).expect("read Cargo.toml");
     assert!(
-        cargo_toml.contains("version = \"0.3.0\""),
-        "Cargo.toml must have version = \"0.3.0\""
+        cargo_toml.contains("version = \"0.3.1\""),
+        "Cargo.toml must have version = \"0.3.1\""
     );
 
     // 2. Exported crate version constant
-    assert_eq!(egui_macview::VERSION, "0.3.0");
+    assert_eq!(egui_macview::VERSION, "0.3.1");
 
     // 3. Design tokens version
     let tokens = MacDesignTokens::load_default();
-    assert_eq!(tokens.version, "0.3.0");
+    assert_eq!(tokens.version, "0.3.1");
 
-    // 4. CHANGELOG.md strictly documents [0.3.0] - 2026-11-06, [0.2.0] - 2026-11-06 and [0.1.0] - 2026-11-05
+    // 4. CHANGELOG.md strictly documents [0.3.1] - 2026-11-06, [0.3.0] - 2026-11-06, [0.2.0] - 2026-11-06 and [0.1.0] - 2026-11-05
     let changelog =
         fs::read_to_string(manifest_dir.join("CHANGELOG.md")).expect("read CHANGELOG.md");
     assert!(
-        changelog.contains("## [0.3.0] - 2026-11-06"),
-        "CHANGELOG.md must contain header '## [0.3.0] - 2026-11-06'"
+        changelog.contains("## [0.3.1] - 2026-11-06"),
+        "CHANGELOG.md must contain header '## [0.3.1] - 2026-11-06'"
     );
     assert!(
         changelog.contains("## [0.2.0] - 2026-11-06"),
@@ -410,3 +412,98 @@ fn test_version_synchronization_invariants() {
         "Expected at least 8 specs, found {spec_count}"
     );
 }
+
+/// Test 7: COTS validation of MacForm layout across multiple DPI zoom levels (100%, 125%, 150%).
+/// Verifies trailing-aligned column 0 labels, leading-aligned column 1 controls, and zero overlap.
+#[test]
+fn test_mac_form_cots_zoom_alignment_and_no_overlap() {
+    let zoom_factors = [1.0f32, 1.25f32, 1.50f32];
+    let theme = MacTheme::new(MacAppearance::Aqua);
+
+    for &zoom in &zoom_factors {
+        let ctx = Context::default();
+        ctx.set_zoom_factor(zoom);
+
+        let mut field1 = "Standard text".to_string();
+        let mut field2 = "42".to_string();
+        let mut field3 = true;
+
+        let mut row_rects = Vec::new();
+
+        // Run 2 frames so egui::Grid computes and caches column widths in frame 1 and aligns in frame 2
+        for frame in 0..2 {
+            let mut out = ctx.run_ui(RawInput::default(), |ui| {
+                MacForm::new("test_cots_form")
+                    .theme(&theme)
+                    .show(ui, |form| {
+                        let (l1, c1) = form.row_label("Short:", |ui| {
+                            ui.text_edit_singleline(&mut field1)
+                        });
+                        let (l2, c2) = form.row_label("A Much Longer Form Label:", |ui| {
+                            ui.text_edit_singleline(&mut field2)
+                        });
+                        let (l3, c3) = form.row_label("Toggle Setting:", |ui| {
+                            ui.checkbox(&mut field3, "Enable feature")
+                        });
+
+                        if frame == 1 {
+                            row_rects = vec![
+                                (l1.rect, c1.rect),
+                                (l2.rect, c2.rect),
+                                (l3.rect, c3.rect),
+                            ];
+                        }
+                    });
+            });
+            out.textures_delta.clear();
+        }
+
+        assert_eq!(row_rects.len(), 3, "All 3 rows must be recorded at zoom {zoom}");
+
+        // 1. Column 0 (trailing labels): All labels should align on their right (trailing) edge
+        let right_edge_0 = row_rects[0].0.max.x;
+        for (idx, (label_rect, _)) in row_rects.iter().enumerate() {
+            let diff = (label_rect.max.x - right_edge_0).abs();
+            assert!(
+                diff <= 1.0,
+                "At zoom {zoom}, row {idx} label trailing edge ({}) does not align with row 0 ({}), diff: {diff}",
+                label_rect.max.x,
+                right_edge_0
+            );
+        }
+
+        // 2. Column 1 (leading controls): All controls should align on their left (leading) edge
+        let left_edge_1 = row_rects[0].1.min.x;
+        for (idx, (_, control_rect)) in row_rects.iter().enumerate() {
+            let diff = (control_rect.min.x - left_edge_1).abs();
+            assert!(
+                diff <= 1.0,
+                "At zoom {zoom}, row {idx} control leading edge ({}) does not align with row 0 ({}), diff: {diff}",
+                control_rect.min.x,
+                left_edge_1
+            );
+        }
+
+        // 3. No overlap: for every row, label.max.x must be strictly less than control.min.x
+        for (idx, (label_rect, control_rect)) in row_rects.iter().enumerate() {
+            assert!(
+                label_rect.max.x < control_rect.min.x,
+                "At zoom {zoom}, row {idx} label overlaps control! label.max.x={}, control.min.x={}",
+                label_rect.max.x,
+                control_rect.min.x
+            );
+        }
+
+        // 4. Vertical ordering: no vertical overlap between consecutive rows
+        for i in 0..row_rects.len() - 1 {
+            let current_bottom = row_rects[i].0.max.y.max(row_rects[i].1.max.y);
+            let next_top = row_rects[i + 1].0.min.y.min(row_rects[i + 1].1.min.y);
+            assert!(
+                current_bottom <= next_top + 0.1,
+                "At zoom {zoom}, row {i} vertically overlaps row {}! bottom={current_bottom}, next_top={next_top}",
+                i + 1
+            );
+        }
+    }
+}
+

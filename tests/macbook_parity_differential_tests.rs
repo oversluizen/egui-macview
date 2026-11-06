@@ -168,6 +168,38 @@ fn test_macbook_golden_master_bitmaps_integrity() {
     }
 }
 
+#[test]
+fn test_macbook_symbol_search_parity_differential() {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let golden_dir = manifest_dir
+        .join("tests")
+        .join("golden_master")
+        .join("macbook_ground_truth");
+
+    let macbook_img_path = golden_dir.join("symbol_search_macbook.png");
+    assert!(
+        macbook_img_path.exists(),
+        "Missing native MacBook search symbol: {}",
+        macbook_img_path.display()
+    );
+
+    let img = image::open(&macbook_img_path).expect("Open MacBook search symbol");
+    assert_eq!(img.width(), 64);
+    assert_eq!(img.height(), 64);
+
+    // Verify non-empty glyph pixels in central area rendered from native AppKit NSImage
+    let mut non_empty_count = 0;
+    for pixel in img.to_rgba8().pixels() {
+        if pixel[3] > 0 {
+            non_empty_count += 1;
+        }
+    }
+    assert!(
+        non_empty_count >= 50,
+        "MacBook symbol has too few pixels: {non_empty_count}"
+    );
+}
+
 /// Tier 2 Live Parity Test: Connects to Jaco's physical MacBook Air via SSH
 /// and validates the remote PyObjC / AppKit ground-truth rendering engine.
 ///
