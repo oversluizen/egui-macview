@@ -314,7 +314,7 @@ impl Default for InspectorState {
             popup_selected: 0,
             unit_segmented_idx: 0,
             snapping_enabled: true,
-            expanded_tab: ExpandedProTab::Matrix,
+            expanded_tab: ExpandedProTab::Attributes,
         }
     }
 }
@@ -2048,15 +2048,17 @@ impl InspectorState {
             .max_height(avail_rect.height())
             .max_width(avail_rect.width())
             .show(ui, |scroll_ui| {
-                scroll_ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
-                match mode {
-                    InspectorMode::ExpandedPro => {
-                        self.render_expanded_pro(scroll_ui, theme, &mut card);
+                scroll_ui.with_layout(Layout::top_down(Align::Min), |s_ui| {
+                    s_ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
+                    match mode {
+                        InspectorMode::ExpandedPro => {
+                            self.render_expanded_pro(s_ui, theme, &mut card);
+                        }
+                        _ => {
+                            self.render_default_nib(s_ui, theme, &mut card);
+                        }
                     }
-                    _ => {
-                        self.render_default_nib(scroll_ui, theme, &mut card);
-                    }
-                }
+                });
             });
     }
 

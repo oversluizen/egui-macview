@@ -4,7 +4,10 @@
 //! Fully data-driven: zero hardcoded colors or dimensions.
 
 use crate::theme::MacTheme;
-use egui::{CornerRadius, CursorIcon, Id, Pos2, Rect, Stroke, StrokeKind, Ui, UiBuilder, Vec2};
+use egui::{
+    Align, CornerRadius, CursorIcon, Id, Layout, Pos2, Rect, Stroke, StrokeKind, Ui, UiBuilder,
+    Vec2,
+};
 
 /// Orientation of the split view divider.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -331,11 +334,19 @@ impl<'a> MacSplitView<'a> {
         let container_rect = ui.available_rect_before_wrap();
         let (first_rect, second_rect) = self.split_panes(ui);
 
-        // Render panes
-        let mut ui1 = ui.new_child(UiBuilder::new().max_rect(first_rect));
+        // Render panes as top-down vertical columns
+        let mut ui1 = ui.new_child(
+            UiBuilder::new()
+                .max_rect(first_rect)
+                .layout(Layout::top_down(Align::Min)),
+        );
         let r1 = first(&mut ui1);
 
-        let mut ui2 = ui.new_child(UiBuilder::new().max_rect(second_rect));
+        let mut ui2 = ui.new_child(
+            UiBuilder::new()
+                .max_rect(second_rect)
+                .layout(Layout::top_down(Align::Min)),
+        );
         let r2 = second(&mut ui2);
 
         ui.advance_cursor_after_rect(container_rect);
