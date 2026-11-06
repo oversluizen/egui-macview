@@ -222,7 +222,7 @@
     "separator": {
       "light": {
         "$type": "color",
-        "$value": "#0000001A",
+        "$value": "#D1D1D1",
         "$description": "The color used for thin 1px lines and dividers between sections of content (Light appearance).",
         "$extensions": {
           "appkit": {
@@ -444,7 +444,7 @@
     "keyboardFocusIndicator": {
       "light": {
         "$type": "color",
-        "$value": "#0067F480",
+        "$value": "#007AFF",
         "$description": "The blue focus glow ring indicator color used for focused controls (Light appearance).",
         "$extensions": {
           "appkit": {

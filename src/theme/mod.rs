@@ -216,9 +216,24 @@ impl MacTheme {
         let label_color = self.label();
         visuals.override_text_color = Some(label_color);
         visuals.widgets.noninteractive.fg_stroke.color = label_color;
+        visuals.widgets.noninteractive.bg_stroke = egui::Stroke::new(1.0, self.separator());
         visuals.widgets.inactive.fg_stroke.color = label_color;
+        visuals.widgets.inactive.bg_stroke = egui::Stroke::new(1.0, self.separator());
         visuals.panel_fill = self.window_background();
         visuals.window_fill = self.window_background();
+        visuals.window_stroke = egui::Stroke::new(1.0, self.separator());
+
+        ctx.all_styles_mut(|style| {
+            use egui::{FontFamily, FontId, TextStyle};
+            style.text_styles = [
+                (TextStyle::Small, FontId::new(11.0, FontFamily::Proportional)),
+                (TextStyle::Body, FontId::new(12.0, FontFamily::Proportional)),
+                (TextStyle::Button, FontId::new(12.0, FontFamily::Proportional)),
+                (TextStyle::Heading, FontId::new(13.0, FontFamily::Proportional)),
+                (TextStyle::Monospace, FontId::new(12.0, FontFamily::Monospace)),
+            ]
+            .into();
+        });
 
         ctx.set_visuals_of(egui_theme, visuals.clone());
         ctx.set_visuals(visuals);

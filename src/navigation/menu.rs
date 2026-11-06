@@ -254,8 +254,51 @@ impl<'a> MacMenuBar<'a> {
                 let metrics = theme.popup_button();
                 let item_height = metrics.menu_item_height.points();
                 let menu_padding = metrics.menu_item_padding.points();
-                let min_width = metrics.menu_min_width.points().max(anchor.width());
+                let base_min_width = metrics.menu_min_width.points().max(anchor.width());
                 let total_height = (menu.items.len() as f32) * item_height + menu_padding * 2.0;
+
+                // Dynamic dropdown menu width auto-widening:
+                // Measures each item's title width and trailing element width (shortcuts / submenu arrows)
+                // guaranteeing clearance >= 24.0pt with zero visual overlap.
+                let min_clearance = 24.0f32;
+                let mut max_item_w = 0.0f32;
+                for item in &menu.items {
+                    if matches!(item.kind, MacMenuItemKind::Separator) {
+                        continue;
+                    }
+                    let title_w = ui
+                        .painter()
+                        .layout_no_wrap(item.title.clone(), font_id.clone(), Color32::WHITE)
+                        .size()
+                        .x;
+                    let trailing_w = match &item.kind {
+                        MacMenuItemKind::Action {
+                            shortcut: Some(sc), ..
+                        } => ui
+                            .painter()
+                            .layout_no_wrap(sc.format_text(), font_id.clone(), Color32::WHITE)
+                            .size()
+                            .x,
+                        MacMenuItemKind::Submenu { .. } => ui
+                            .painter()
+                            .layout_no_wrap("›".to_string(), font_id.clone(), Color32::WHITE)
+                            .size()
+                            .x,
+                        _ => 0.0,
+                    };
+
+                    let item_w = if trailing_w > 0.0 {
+                        padding_h * 2.0 + title_w + min_clearance + trailing_w * 2.0
+                    } else {
+                        padding_h * 2.0 + title_w
+                    };
+
+                    if item_w > max_item_w {
+                        max_item_w = item_w;
+                    }
+                }
+
+                let menu_width = base_min_width.max(max_item_w + menu_padding * 2.0);
 
                 let popup_pos = Pos2::new(anchor.left(), anchor.bottom());
                 let area_id = ui.scope_id().with("menu_dropdown_area").with(m_idx);
@@ -265,7 +308,7 @@ impl<'a> MacMenuBar<'a> {
                     .fixed_pos(popup_pos)
                     .show(ui.ctx(), |pop_ui| {
                         let menu_rect =
-                            Rect::from_min_size(popup_pos, Vec2::new(min_width, total_height));
+                            Rect::from_min_size(popup_pos, Vec2::new(menu_width, total_height));
                         let painter = pop_ui.painter();
                         let corner_r = theme.popover_metrics().corner_radius.points() as u8;
 
@@ -281,7 +324,7 @@ impl<'a> MacMenuBar<'a> {
                             let item_y = popup_pos.y + menu_padding + (i_idx as f32) * item_height;
                             let item_rect = Rect::from_min_size(
                                 Pos2::new(popup_pos.x + menu_padding, item_y),
-                                Vec2::new(min_width - menu_padding * 2.0, item_height),
+                                Vec2::new(menu_width - menu_padding * 2.0, item_height),
                             );
 
                             if matches!(item.kind, MacMenuItemKind::Separator) {
@@ -373,7 +416,7 @@ impl<'a> MacMenuBar<'a> {
                                     && item.enabled
                                 {
                                     let sub_id = area_id.with("submenu").with(i_idx);
-                                    let sub_pos = Pos2::new(popup_pos.x + min_width, item_y);
+                                    let sub_pos = Pos2::new(popup_pos.x + menu_width, item_y);
                                     let child_hl =
                                         if is_highlighted { sub_highlight } else { None };
                                     if let Some(act) = super::submenu::render_submenu_popover(

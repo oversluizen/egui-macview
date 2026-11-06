@@ -55,7 +55,7 @@ pub struct MacAppearanceColors {
 
 fn default_label_color() -> ColorValue {
     ColorValue {
-        value: "#262626".to_string(),
+        value: "rgba(0, 0, 0, 0.85)".to_string(),
         token_type: Some("color".to_string()),
         description: None,
     }
@@ -63,7 +63,7 @@ fn default_label_color() -> ColorValue {
 
 fn default_secondary_label_color() -> ColorValue {
     ColorValue {
-        value: "#8E8E93".to_string(),
+        value: "rgba(0, 0, 0, 0.50)".to_string(),
         token_type: Some("color".to_string()),
         description: None,
     }

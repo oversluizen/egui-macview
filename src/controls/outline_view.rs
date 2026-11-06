@@ -301,7 +301,7 @@ impl<'a> MacOutlineRow<'a> {
         self.cursor_x += size + self.theme.outline_view().content_spacing.points();
     }
 
-    /// Renders the primary text label of the row.
+    /// Renders the primary text label of the row with graceful text layout and elision.
     pub fn label(&mut self, text: &str) {
         let spacing = self.theme.outline_view().content_spacing.points();
         let avail_w = (self.accessory_cursor_right - self.cursor_x - spacing).max(0.0);
@@ -318,13 +318,23 @@ impl<'a> MacOutlineRow<'a> {
         } else {
             self.theme.label()
         };
-        painter.text(
-            Pos2::new(label_rect.left(), label_rect.center().y),
-            Align2::LEFT_CENTER,
-            text,
+
+        let format = egui::TextFormat {
             font_id,
-            text_color,
+            color: text_color,
+            ..Default::default()
+        };
+        let mut job = egui::text::LayoutJob::single_section(text.to_string(), format);
+        job.wrap.max_width = avail_w;
+        job.wrap.max_rows = 1;
+        job.wrap.break_anywhere = false;
+        job.wrap.overflow_character = Some('…');
+        let galley = painter.layout_job(job);
+        let pos = Pos2::new(
+            label_rect.left(),
+            label_rect.center().y - galley.size().y * 0.5,
         );
+        painter.galley(pos, galley, text_color);
     }
 
     /// Renders an AppKit Small Caps section header (uppercase with tracking and secondary label tint).

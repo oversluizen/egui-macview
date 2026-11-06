@@ -122,7 +122,7 @@ pub fn render_submenu_popover(
     let item_height = metrics.menu_item_height.points();
     let menu_padding = metrics.menu_item_padding.points();
     let padding_h = metrics.padding_horizontal.points();
-    let sub_min_w = metrics.menu_min_width.points();
+    let base_sub_min_w = metrics.menu_min_width.points();
     let sub_total_h = (child_menu.items.len() as f32) * item_height + menu_padding * 2.0;
     let corner_r = theme.popover_metrics().corner_radius.points() as u8;
     let font_id = FontId::proportional(metrics.font_size.points());
@@ -133,8 +133,47 @@ pub fn render_submenu_popover(
         .order(Order::Foreground)
         .fixed_pos(sub_pos)
         .show(ctx, |sub_ui| {
-            let sub_rect = Rect::from_min_size(sub_pos, Vec2::new(sub_min_w, sub_total_h));
             let painter = sub_ui.painter();
+
+            // Dynamic cascading submenu width auto-widening:
+            // Pre-measure child item titles and shortcuts to guarantee clearance >= 24.0pt with zero visual overlap.
+            let min_clearance = 24.0f32;
+            let mut max_item_w = 0.0f32;
+            for item in &child_menu.items {
+                if matches!(item.kind, MacMenuItemKind::Separator) {
+                    continue;
+                }
+                let title_w = painter
+                    .layout_no_wrap(item.title.clone(), font_id.clone(), Color32::WHITE)
+                    .size()
+                    .x;
+                let trailing_w = match &item.kind {
+                    MacMenuItemKind::Action {
+                        shortcut: Some(sc), ..
+                    } => painter
+                        .layout_no_wrap(sc.format_text(), font_id.clone(), Color32::WHITE)
+                        .size()
+                        .x,
+                    MacMenuItemKind::Submenu { .. } => painter
+                        .layout_no_wrap("›".to_string(), font_id.clone(), Color32::WHITE)
+                        .size()
+                        .x,
+                    _ => 0.0,
+                };
+
+                let item_w = if trailing_w > 0.0 {
+                    padding_h * 2.0 + title_w + min_clearance + trailing_w * 2.0
+                } else {
+                    padding_h * 2.0 + title_w
+                };
+
+                if item_w > max_item_w {
+                    max_item_w = item_w;
+                }
+            }
+
+            let sub_menu_w = base_sub_min_w.max(max_item_w + menu_padding * 2.0);
+            let sub_rect = Rect::from_min_size(sub_pos, Vec2::new(sub_menu_w, sub_total_h));
             painter.rect(
                 sub_rect,
                 CornerRadius::same(corner_r),
@@ -147,7 +186,7 @@ pub fn render_submenu_popover(
                 let s_y = sub_pos.y + menu_padding + (s_idx as f32) * item_height;
                 let s_rect = Rect::from_min_size(
                     Pos2::new(sub_pos.x + menu_padding, s_y),
-                    Vec2::new(sub_min_w - menu_padding * 2.0, item_height),
+                    Vec2::new(sub_menu_w - menu_padding * 2.0, item_height),
                 );
 
                 if matches!(sub_item.kind, MacMenuItemKind::Separator) {
