@@ -566,9 +566,12 @@ fn test_guard_zero_cross_component_token_borrowing() {
     let all_control_metric_methods = [
         "button",
         "color_well",
+        "level_indicator",
         "outline_view",
+        "path_control",
         "popover_metrics",
         "popup_button",
+        "progress_indicator",
         "scroll_view",
         "search_field",
         "segmented",
@@ -576,30 +579,44 @@ fn test_guard_zero_cross_component_token_borrowing() {
         "split_view",
         "stack_view",
         "stepper",
+        "table_view",
         "thumbnail",
         "toggle",
+        "token_field",
+        "trim_scrubber",
     ];
 
     let mut violations = Vec::new();
 
     for file_path in &files {
         let file_name = file_path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-        if file_name == "mod.rs" {
+        let parent_name = file_path
+            .parent()
+            .and_then(|p| p.file_name())
+            .and_then(|n| n.to_str())
+            .unwrap_or("");
+        if file_name == "mod.rs" && parent_name == "controls" {
             continue;
         }
 
-        let allowed_metric_methods: &[&str] = match file_name {
-            "button_cell.rs" => &["button"],
-            "color_well.rs" => &["color_well"],
-            "input_cell.rs" => &[],
-            "outline_view.rs" => &["outline_view", "thumbnail"],
-            "popup_button.rs" => &["popup_button"],
-            "search_field.rs" => &["search_field"],
-            "segmented.rs" => &["segmented"],
-            "slider.rs" => &["slider"],
-            "stepper.rs" => &["stepper"],
-            "thumbnail_cell.rs" => &["thumbnail"],
-            "toggle.rs" => &["toggle"],
+        let allowed_metric_methods: &[&str] = match (parent_name, file_name) {
+            (_, "button_cell.rs") => &["button"],
+            (_, "color_well.rs") => &["color_well"],
+            (_, "input_cell.rs") => &[],
+            (_, "level_indicator.rs") => &["level_indicator"],
+            (_, "outline_view.rs") => &["outline_view", "thumbnail"],
+            (_, "path_control.rs") => &["path_control"],
+            (_, "popup_button.rs") => &["popup_button"],
+            (_, "progress_indicator.rs") => &["progress_indicator"],
+            (_, "search_field.rs") => &["search_field"],
+            (_, "segmented.rs") => &["segmented"],
+            (_, "slider.rs") => &["slider"],
+            (_, "stepper.rs") => &["stepper"],
+            ("table_view", _) => &["table_view"],
+            (_, "thumbnail_cell.rs") => &["thumbnail"],
+            (_, "toggle.rs") => &["toggle"],
+            (_, "token_field.rs") => &["token_field"],
+            ("trim_scrubber", _) => &["trim_scrubber"],
             _ => &[],
         };
 

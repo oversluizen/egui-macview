@@ -5,11 +5,13 @@
 //! typography bounds, and semantic colors dynamically from [`MacDesignTokens`].
 
 use crate::tokens::{
-    ButtonMetrics, ColorWellMetrics, FocusRingMetrics, LayoutMetrics, MacAppearanceColors,
-    MacControlMetrics, MacDesignTokens, MacMotionTokens, MacTypographyTokens, OutlineViewMetrics,
-    PopUpButtonMetrics, PopoverMetrics, ScrollViewMetrics, SearchFieldMetrics, SegmentedMetrics,
-    SliderMetrics, SplitViewMetrics, StackViewMetrics, StepperMetrics, TextFieldMetrics,
-    ThumbnailCellMetrics, ToggleMetrics, ToolbarMetrics,
+    ButtonMetrics, ColorWellMetrics, FocusRingMetrics, LayoutMetrics, LevelIndicatorMetrics,
+    MacAppearanceColors, MacControlMetrics, MacDesignTokens, MacMotionTokens, MacTypographyTokens,
+    OutlineViewMetrics, PathControlMetrics, PopUpButtonMetrics, PopoverMetrics,
+    ProgressIndicatorMetrics, ScrollViewMetrics, SearchFieldMetrics, SegmentedMetrics,
+    SliderMetrics, SplitViewMetrics, StackViewMetrics, StepperMetrics, TableViewMetrics,
+    TextFieldMetrics, ThumbnailCellMetrics, ToggleMetrics, TokenFieldMetrics, ToolbarMetrics,
+    TrimScrubberMetrics,
 };
 use egui::Color32;
 
@@ -334,6 +336,36 @@ impl MacTheme {
         self.tokens.toggle_metrics()
     }
 
+    /// Resolves progress indicator control geometry metrics.
+    pub fn progress_indicator(&self) -> &ProgressIndicatorMetrics {
+        self.tokens.progress_indicator_metrics()
+    }
+
+    /// Resolves table view and header geometry metrics.
+    pub fn table_view(&self) -> &TableViewMetrics {
+        self.tokens.table_view_metrics()
+    }
+
+    /// Resolves token field pill input geometry metrics.
+    pub fn token_field(&self) -> &TokenFieldMetrics {
+        self.tokens.token_field_metrics()
+    }
+
+    /// Resolves level indicator meter geometry metrics.
+    pub fn level_indicator(&self) -> &LevelIndicatorMetrics {
+        self.tokens.level_indicator_metrics()
+    }
+
+    /// Resolves trim scrubber timeline geometry metrics.
+    pub fn trim_scrubber(&self) -> &TrimScrubberMetrics {
+        self.tokens.trim_scrubber_metrics()
+    }
+
+    /// Resolves path control breadcrumb geometry metrics.
+    pub fn path_control(&self) -> &PathControlMetrics {
+        self.tokens.path_control_metrics()
+    }
+
     /// Resolves CoreAnimation motion preset tokens.
     pub fn motion(&self) -> &MacMotionTokens {
         self.tokens.motion()
@@ -347,6 +379,60 @@ impl MacTheme {
     /// Resolves Apple system green semantic color (`systemGreenColor`).
     pub fn system_green(&self) -> Color32 {
         self.colors().system_green.to_color32()
+    }
+
+    /// Resolves Apple system yellow/amber semantic color (`systemYellowColor`).
+    pub fn system_yellow(&self) -> Color32 {
+        self.colors().system_yellow.to_color32()
+    }
+
+    /// Resolves Apple system orange semantic color (`systemOrangeColor`).
+    pub fn system_orange(&self) -> Color32 {
+        self.colors().system_orange.to_color32()
+    }
+
+    /// Resolves Apple system red semantic color (`systemRedColor`).
+    pub fn system_red(&self) -> Color32 {
+        self.colors().system_red.to_color32()
+    }
+
+    /// Resolves even table row background color (`alternatingContentBackgroundColors[0]`).
+    pub fn alternating_row_even(&self) -> Color32 {
+        self.colors().alternating_row_even.to_color32()
+    }
+
+    /// Resolves odd table row background color (`alternatingContentBackgroundColors[1]`).
+    pub fn alternating_row_odd(&self) -> Color32 {
+        self.colors().alternating_row_odd.to_color32()
+    }
+
+    /// Resolves alternating content background color for the given row index (`row_index % 2`).
+    pub fn alternating_content_background(&self, row_index: usize) -> Color32 {
+        if row_index.is_multiple_of(2) {
+            self.alternating_row_even()
+        } else {
+            self.alternating_row_odd()
+        }
+    }
+
+    /// Resolves QuickTime / AVKit trim selection border and handle color.
+    pub fn scrubber_selection_border(&self) -> Color32 {
+        self.colors().scrubber_selection_border.to_color32()
+    }
+
+    /// Resolves dimming overlay color for timeline regions outside active trim bounds.
+    pub fn scrubber_outside_dim(&self) -> Color32 {
+        self.colors().scrubber_outside_dim.to_color32()
+    }
+
+    /// Resolves waveform amplitude bar color inside trim scrubber track.
+    pub fn scrubber_waveform(&self) -> Color32 {
+        self.colors().scrubber_waveform.to_color32()
+    }
+
+    /// Resolves playhead cursor line and timecode badge accent color.
+    pub fn scrubber_playhead(&self) -> Color32 {
+        self.colors().scrubber_playhead.to_color32()
     }
 
     /// Resolves macOS window close traffic light fill and border colors `(fill, border)`.

@@ -33,6 +33,33 @@ pub struct MacAppearanceColors {
     /// System green highlight color (`systemGreenColor`).
     #[serde(default = "default_system_green")]
     pub system_green: ColorValue,
+    /// System yellow/amber highlight color (`systemYellowColor`).
+    #[serde(default = "default_system_yellow")]
+    pub system_yellow: ColorValue,
+    /// System orange highlight color (`systemOrangeColor`).
+    #[serde(default = "default_system_orange")]
+    pub system_orange: ColorValue,
+    /// System red alert/critical color (`systemRedColor`).
+    #[serde(default = "default_system_red")]
+    pub system_red: ColorValue,
+    /// Even table row background color (`alternatingContentBackgroundColors[0]`).
+    #[serde(default = "default_alternating_row_even")]
+    pub alternating_row_even: ColorValue,
+    /// Odd table row background color (`alternatingContentBackgroundColors[1]`).
+    #[serde(default = "default_alternating_row_odd")]
+    pub alternating_row_odd: ColorValue,
+    /// QuickTime / AVKit trim selection border and handle color.
+    #[serde(default = "default_scrubber_selection_border")]
+    pub scrubber_selection_border: ColorValue,
+    /// Dimming overlay color outside active trim range.
+    #[serde(default = "default_scrubber_outside_dim")]
+    pub scrubber_outside_dim: ColorValue,
+    /// Waveform bar fill color inside trim scrubber track.
+    #[serde(default = "default_scrubber_waveform")]
+    pub scrubber_waveform: ColorValue,
+    /// Playhead line and timecode badge color.
+    #[serde(default = "default_scrubber_playhead")]
+    pub scrubber_playhead: ColorValue,
     /// Window close button fill color.
     #[serde(default = "default_traffic_light_close")]
     pub traffic_light_close: ColorValue,
@@ -72,6 +99,78 @@ fn default_secondary_label_color() -> ColorValue {
 fn default_system_green() -> ColorValue {
     ColorValue {
         value: "#34C759".to_string(),
+        token_type: Some("color".to_string()),
+        description: None,
+    }
+}
+
+fn default_system_yellow() -> ColorValue {
+    ColorValue {
+        value: "#FFCC00".to_string(),
+        token_type: Some("color".to_string()),
+        description: None,
+    }
+}
+
+fn default_system_orange() -> ColorValue {
+    ColorValue {
+        value: "#FF9500".to_string(),
+        token_type: Some("color".to_string()),
+        description: None,
+    }
+}
+
+fn default_system_red() -> ColorValue {
+    ColorValue {
+        value: "#FF3B30".to_string(),
+        token_type: Some("color".to_string()),
+        description: None,
+    }
+}
+
+fn default_alternating_row_even() -> ColorValue {
+    ColorValue {
+        value: "#FFFFFF".to_string(),
+        token_type: Some("color".to_string()),
+        description: None,
+    }
+}
+
+fn default_alternating_row_odd() -> ColorValue {
+    ColorValue {
+        value: "#F4F5F5".to_string(),
+        token_type: Some("color".to_string()),
+        description: None,
+    }
+}
+
+fn default_scrubber_selection_border() -> ColorValue {
+    ColorValue {
+        value: "#FFCC00".to_string(),
+        token_type: Some("color".to_string()),
+        description: None,
+    }
+}
+
+fn default_scrubber_outside_dim() -> ColorValue {
+    ColorValue {
+        value: "rgba(0, 0, 0, 0.45)".to_string(),
+        token_type: Some("color".to_string()),
+        description: None,
+    }
+}
+
+fn default_scrubber_waveform() -> ColorValue {
+    ColorValue {
+        value: "#007AFF".to_string(),
+        token_type: Some("color".to_string()),
+        description: None,
+    }
+}
+
+fn default_scrubber_playhead() -> ColorValue {
+    ColorValue {
+        value: "#FF3B30".to_string(),
         token_type: Some("color".to_string()),
         description: None,
     }

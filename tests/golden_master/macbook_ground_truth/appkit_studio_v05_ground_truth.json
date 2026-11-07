@@ -1,0 +1,141 @@
+{
+  "colors": {
+    "aqua": {
+      "system_yellow": {
+        "r": 255,
+        "g": 204,
+        "b": 0,
+        "a": 1.0,
+        "hex": "#FFCC00"
+      },
+      "system_orange": {
+        "r": 255,
+        "g": 149,
+        "b": 0,
+        "a": 1.0,
+        "hex": "#FF9500"
+      },
+      "system_red": {
+        "r": 255,
+        "g": 59,
+        "b": 48,
+        "a": 1.0,
+        "hex": "#FF3B30"
+      },
+      "system_green": {
+        "r": 40,
+        "g": 205,
+        "b": 65,
+        "a": 1.0,
+        "hex": "#28CD41"
+      },
+      "alternating_row_0": {
+        "r": 255,
+        "g": 255,
+        "b": 255,
+        "a": 1.0,
+        "hex": "#FFFFFF"
+      },
+      "alternating_row_1": {
+        "r": 244,
+        "g": 245,
+        "b": 245,
+        "a": 1.0,
+        "hex": "#F4F5F5"
+      }
+    },
+    "dark_aqua": {
+      "system_yellow": {
+        "r": 255,
+        "g": 214,
+        "b": 10,
+        "a": 1.0,
+        "hex": "#FFD60A"
+      },
+      "system_orange": {
+        "r": 255,
+        "g": 159,
+        "b": 10,
+        "a": 1.0,
+        "hex": "#FF9F0A"
+      },
+      "system_red": {
+        "r": 255,
+        "g": 69,
+        "b": 58,
+        "a": 1.0,
+        "hex": "#FF453A"
+      },
+      "system_green": {
+        "r": 50,
+        "g": 215,
+        "b": 75,
+        "a": 1.0,
+        "hex": "#32D74B"
+      },
+      "alternating_row_0": {
+        "r": 30,
+        "g": 30,
+        "b": 30,
+        "a": 1.0,
+        "hex": "#1E1E1E"
+      },
+      "alternating_row_1": {
+        "r": 255,
+        "g": 255,
+        "b": 255,
+        "a": 0.0471,
+        "hex": "rgba(255, 255, 255, 0.05)"
+      }
+    }
+  },
+  "controls": {
+    "progress_indicator": {
+      "regular": {
+        "bar_frame_h": 20.0,
+        "bar_fitting_h": 20.0,
+        "spin_frame_w": 32.0,
+        "spin_frame_h": 32.0,
+        "spin_fitting_w": 32.0,
+        "spin_fitting_h": 32.0
+      },
+      "small": {
+        "bar_frame_h": 12.0,
+        "bar_fitting_h": 12.0,
+        "spin_frame_w": 16.0,
+        "spin_frame_h": 16.0,
+        "spin_fitting_w": 16.0,
+        "spin_fitting_h": 16.0
+      },
+      "mini": {
+        "bar_frame_h": 12.0,
+        "bar_fitting_h": 12.0,
+        "spin_frame_w": 10.0,
+        "spin_frame_h": 10.0,
+        "spin_fitting_w": 10.0,
+        "spin_fitting_h": 10.0
+      }
+    },
+    "table_view": {
+      "row_height": 24.0,
+      "header_height": 28.0,
+      "intercell_w": 17.0,
+      "intercell_h": 0.0
+    },
+    "token_field": {
+      "frame_h": 22.0,
+      "fitting_w": 0.0,
+      "fitting_h": 21.0
+    },
+    "level_indicator": {
+      "discrete_frame_h": 18.0,
+      "discrete_fitting_h": 18.0,
+      "continuous_fitting_h": 18.0
+    },
+    "path_control": {
+      "frame_h": 22.0,
+      "fitting_w": 404.0,
+      "fitting_h": 22.0
+    }
+  }
+}

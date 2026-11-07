@@ -139,6 +139,21 @@ fn test_theme_dynamic_geometry_metrics() {
     // Scroll view hit zone padding & min visible length
     assert_eq!(theme.scroll_view().hit_zone_padding.points(), 8.0);
     assert_eq!(theme.scroll_view().min_visible_thumb_length.points(), 2.0);
+
+    // v0.5.0 Studio & AVKit control metrics
+    assert_eq!(theme.progress_indicator().regular.bar_height.points(), 6.0);
+    assert_eq!(theme.progress_indicator().small.bar_height.points(), 4.0);
+    assert_eq!(theme.progress_indicator().mini.bar_height.points(), 3.0);
+    assert_eq!(theme.progress_indicator().spoke_count.points(), 12.0);
+    assert_eq!(theme.table_view().header_height.points(), 28.0);
+    assert_eq!(theme.table_view().row_height.points(), 24.0);
+    assert_eq!(theme.token_field().min_height.points(), 26.0);
+    assert_eq!(theme.token_field().pill_height.points(), 18.0);
+    assert_eq!(theme.level_indicator().thickness.points(), 12.0);
+    assert_eq!(theme.level_indicator().default_segment_count.points(), 12.0);
+    assert_eq!(theme.trim_scrubber().height.points(), 44.0);
+    assert_eq!(theme.trim_scrubber().handle_width.points(), 10.0);
+    assert_eq!(theme.path_control().height.points(), 22.0);
 }
 
 /// Test 3: Verifies MacRow layout allocation and zero drift.
@@ -173,7 +188,7 @@ fn test_dtcg_color_parser() {
     assert_eq!(parse_color32("#007AFF"), Color32::from_rgb(0, 122, 255));
     assert_eq!(
         parse_color32("#12345678"),
-        Color32::from_rgba_premultiplied(0x12, 0x34, 0x56, 0x78)
+        Color32::from_rgba_unmultiplied(0x12, 0x34, 0x56, 0x78)
     );
 
     // CSS rgba string
@@ -184,8 +199,5 @@ fn test_dtcg_color_parser() {
     assert!((parsed_alpha.a() as i32 - 25).abs() <= 1);
 
     let parsed_focus = parse_color32("rgba(0, 103, 244, 0.50)");
-    assert_eq!(parsed_focus.r(), 0);
-    assert_eq!(parsed_focus.g(), 103);
-    assert_eq!(parsed_focus.b(), 244);
-    assert!((parsed_focus.a() as i32 - 128).abs() <= 1);
+    assert_eq!(parsed_focus, Color32::from_rgba_unmultiplied(0, 103, 244, 128));
 }

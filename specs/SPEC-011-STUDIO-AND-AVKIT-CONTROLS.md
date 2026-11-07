@@ -42,12 +42,12 @@ All six controls SHALL be 100% domain-agnostic and 100% data-driven from `tokens
 To ensure translucent DTCG tokens (`#RRGGBBAA` and `rgba(r, g, b, a)`) preserve exact sRGB chromaticity when composited by `egui::Painter` or evaluated by WCAG contrast algorithms, `parse_color32` SHALL construct `egui::Color32` via `Color32::from_rgba_unmultiplied(r, g, b, a)`.
 
 ### 2.2 Semantic Appearance Colors (`MacAppearanceColors`)
-Each appearance (`aqua` and `dark_aqua`) in `tokens/design_tokens.json` SHALL define:
-- `system_yellow`: `#FFCC00` (Aqua) / `#FFD60A` (DarkAqua) — `NSColor.systemYellowColor`
-- `system_orange`: `#FF9500` (Aqua) / `#FF9F0A` (DarkAqua) — `NSColor.systemOrangeColor`
-- `system_red`: `#FF3B30` (Aqua) / `#FF453A` (DarkAqua) — `NSColor.systemRedColor`
-- `alternating_row_even`: `rgba(0, 0, 0, 0.00)` (Aqua) / `rgba(255, 255, 255, 0.00)` (DarkAqua)
-- `alternating_row_odd`: `rgba(0, 0, 0, 0.04)` (Aqua) / `rgba(255, 255, 255, 0.05)` (DarkAqua) — `NSColor.alternatingContentBackgroundColors[1]`
+Each appearance (`aqua` and `dark_aqua`) in `tokens/design_tokens.json` SHALL define (calibrated against native `NSColor` sRGB extraction on macOS Sonoma 14.8.9 via PyObjC):
+- `system_yellow`: `#FFCC00` (`rgb(255, 204, 0)`, Aqua) / `#FFD60A` (`rgb(255, 214, 10)`, DarkAqua) — `NSColor.systemYellowColor`
+- `system_orange`: `#FF9500` (`rgb(255, 149, 0)`, Aqua) / `#FF9F0A` (`rgb(255, 159, 10)`, DarkAqua) — `NSColor.systemOrangeColor`
+- `system_red`: `#FF3B30` (`rgb(255, 59, 48)`, Aqua) / `#FF453A` (`rgb(255, 69, 58)`, DarkAqua) — `NSColor.systemRedColor`
+- `alternating_row_even`: `#FFFFFF` (`rgb(255, 255, 255)`, Aqua) / `#1E1E1E` (`rgb(30, 30, 30)`, DarkAqua) — `NSColor.alternatingContentBackgroundColors[0]`
+- `alternating_row_odd`: `#F4F5F5` (`rgb(244, 245, 245)`, Aqua) / `rgba(255, 255, 255, 0.05)` ($\alpha \approx 0.0471$, DarkAqua) — `NSColor.alternatingContentBackgroundColors[1]`
 - `scrubber_selection_border`: `#FFCC00` (Aqua) / `#FFD60A` (DarkAqua) — QuickTime / AVKit yellow trim frame
 - `scrubber_outside_dim`: `rgba(0, 0, 0, 0.45)` (Aqua) / `rgba(0, 0, 0, 0.55)` (DarkAqua) — trimmed-out region overlay
 - `scrubber_waveform`: `#007AFF` (Aqua) / `#0A84FF` (DarkAqua) — normalized waveform amplitude fill
@@ -58,10 +58,10 @@ Each appearance (`aqua` and `dark_aqua`) in `tokens/design_tokens.json` SHALL de
 ## 3. Control Specifications & Mathematical Models
 
 ### 3.1 `MacProgressIndicator` (`NSProgressIndicator`) — `REQ-011-01`
-- **Control Sizes (`MacProgressControlSize`):**
-  - `Regular`: bar height $6.0\,\text{pt}$, spinner diameter $32.0\,\text{pt}$, font size $12.0\,\text{pt}$.
-  - `Small`: bar height $4.0\,\text{pt}$, spinner diameter $16.0\,\text{pt}$, font size $11.0\,\text{pt}$.
-  - `Mini`: bar height $3.0\,\text{pt}$, spinner diameter $12.0\,\text{pt}$, font size $9.0\,\text{pt}$.
+- **Control Sizes (`MacProgressControlSize`) — Calibrated to AppKit `NSProgressIndicator` & WebKit `RenderThemeMac.mm`:**
+  - `Regular` (`NSControlSizeRegular`): bar track height $6.0\,\text{pt}$ (within $20.0\,\text{pt}$ AppKit fitting frame), spinner diameter $32.0\,\text{pt}$, font size $12.0\,\text{pt}$.
+  - `Small` (`NSControlSizeSmall`): bar track height $4.0\,\text{pt}$ (within $12.0\,\text{pt}$ AppKit fitting frame), spinner diameter $16.0\,\text{pt}$, font size $11.0\,\text{pt}$.
+  - `Mini` (`NSControlSizeMini`): bar track height $3.0\,\text{pt}$ (within $12.0\,\text{pt}$ AppKit fitting frame), spinner diameter $12.0\,\text{pt}$ (native $10.0\text{--}12.0\,\text{pt}$), font size $9.0\,\text{pt}$.
 - **Determinate Bar Style (`MacProgressStyle::Bar`):**
   - Given input progress $p \in (-\infty, \infty)$, the clamped fraction is $\hat{p} = \text{clamp}(p, 0.0, 1.0)$.
   - Active fill width is $W_{\text{fill}} = W_{\text{track}} \cdot \hat{p}$, smoothed across frames via `CASpring` interpolation when animated.
@@ -74,9 +74,9 @@ Each appearance (`aqua` and `dark_aqua`) in `tokens/design_tokens.json` SHALL de
 ### 3.2 `MacTableView` (`NSTableView` + `NSTableHeaderView`) — `REQ-011-02`
 - **Column Layout (`MacTableColumn`):**
   - Columns specify `title`, `width: f32`, `alignment: egui::Align`, and `sort_direction: Option<MacSortDirection>` (`Ascending` or `Descending`).
-  - Header bar has fixed height $H_{\text{hdr}} = \text{header\_height}$ ($24.0\,\text{pt}$), bottom separator hairline, vertical column dividers, and clickable sort chevrons (`MacSymbol::ChevronUp` / `MacSymbol::ChevronDown`). Clicking a header returns `clicked_header: Option<usize>` in `MacTableViewResponse`.
+  - Header bar has default height $H_{\text{hdr}} = \text{header\_height}$ ($28.0\,\text{pt}$, matching macOS Sonoma `NSTableHeaderView` ground truth; compact $24.0\,\text{pt}$ configurable), bottom separator hairline, vertical column dividers, and clickable sort chevrons (`MacSymbol::ChevronUp` / `MacSymbol::ChevronDown`). Clicking a header returns `clicked_header: Option<usize>` in `MacTableViewResponse`.
 - **Alternating Row Backgrounds & Selection:**
-  - Row $i \in \{0, \dots, N_{\text{rows}}-1\}$ occupies vertical interval $[y_0 + i \cdot H_{\text{row}}, y_0 + (i+1) \cdot H_{\text{row}}]$ where $H_{\text{row}} = \text{row\_height}$ ($22.0\,\text{pt}$).
+  - Row $i \in \{0, \dots, N_{\text{rows}}-1\}$ occupies vertical interval $[y_0 + i \cdot H_{\text{row}}, y_0 + (i+1) \cdot H_{\text{row}}]$ where $H_{\text{row}} = \text{row\_height}$ ($24.0\,\text{pt}$, matching macOS Sonoma `NSTableView.rowHeight()` ground truth).
   - When `uses_alternating_row_backgrounds` is true, unselected odd rows ($i \bmod 2 == 1$) fill with `theme.alternating_row_odd()`, and even rows with `theme.alternating_row_even()`.
   - Selection (`BTreeSet<usize>`):
     - Plain click on row $i$: sets selection to $\{i\}$ and anchor to $i$.

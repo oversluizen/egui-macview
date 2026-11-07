@@ -82,7 +82,7 @@ pub fn parse_color32(s: &str) -> Color32 {
                     let g = ((v >> 16) & 0xFF) as u8;
                     let b = ((v >> 8) & 0xFF) as u8;
                     let a = (v & 0xFF) as u8;
-                    return Color32::from_rgba_premultiplied(r, g, b, a);
+                    return Color32::from_rgba_unmultiplied(r, g, b, a);
                 }
             }
             _ => {}
@@ -96,7 +96,7 @@ pub fn parse_color32(s: &str) -> Color32 {
             let b = parts[2].parse::<u8>().unwrap_or(0);
             let a_f = parts[3].parse::<f32>().unwrap_or(1.0);
             let a = (a_f.clamp(0.0, 1.0) * 255.0).round() as u8;
-            return Color32::from_rgba_premultiplied(r, g, b, a);
+            return Color32::from_rgba_unmultiplied(r, g, b, a);
         }
     }
     Color32::BLACK

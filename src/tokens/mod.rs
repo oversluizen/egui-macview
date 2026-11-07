@@ -13,10 +13,12 @@ pub use color::{MacAppearanceColors, MacColorTokens};
 pub use dtcg::{ColorValue, DimensionValue};
 pub use metrics::{
     ButtonMetrics, ButtonSizeMetrics, ColorWellMetrics, FocusRingMetrics, LayoutMetrics,
-    MacControlMetrics, MacMetricsTokens, OutlineViewMetrics, PopUpButtonMetrics, PopoverMetrics,
-    ScrollViewMetrics, SearchFieldMetrics, SegmentedMetrics, SegmentedSizeMetrics, SliderMetrics,
-    SplitViewMetrics, StackViewMetrics, StepperMetrics, TextFieldMetrics, TextFieldSizeMetrics,
-    ThumbnailCellMetrics, ToggleMetrics, ToolbarMetrics,
+    LevelIndicatorMetrics, MacControlMetrics, MacMetricsTokens, OutlineViewMetrics,
+    PathControlMetrics, PopUpButtonMetrics, PopoverMetrics, ProgressIndicatorMetrics,
+    ProgressSizeMetrics, ScrollViewMetrics, SearchFieldMetrics, SegmentedMetrics,
+    SegmentedSizeMetrics, SliderMetrics, SplitViewMetrics, StackViewMetrics, StepperMetrics,
+    TableViewMetrics, TextFieldMetrics, TextFieldSizeMetrics, ThumbnailCellMetrics, ToggleMetrics,
+    TokenFieldMetrics, ToolbarMetrics, TrimScrubberMetrics,
 };
 pub use motion::{MacMotionTokens, MotionPresetToken};
 pub use typography::{
@@ -166,6 +168,42 @@ impl MacDesignTokens {
     #[inline]
     pub fn toggle_metrics(&self) -> &ToggleMetrics {
         &self.macview.metrics.control.toggle
+    }
+
+    /// Accesses progress indicator metrics tokens.
+    #[inline]
+    pub fn progress_indicator_metrics(&self) -> &ProgressIndicatorMetrics {
+        &self.macview.metrics.control.progress_indicator
+    }
+
+    /// Accesses table view metrics tokens.
+    #[inline]
+    pub fn table_view_metrics(&self) -> &TableViewMetrics {
+        &self.macview.metrics.control.table_view
+    }
+
+    /// Accesses token field metrics tokens.
+    #[inline]
+    pub fn token_field_metrics(&self) -> &TokenFieldMetrics {
+        &self.macview.metrics.control.token_field
+    }
+
+    /// Accesses level indicator metrics tokens.
+    #[inline]
+    pub fn level_indicator_metrics(&self) -> &LevelIndicatorMetrics {
+        &self.macview.metrics.control.level_indicator
+    }
+
+    /// Accesses trim scrubber metrics tokens.
+    #[inline]
+    pub fn trim_scrubber_metrics(&self) -> &TrimScrubberMetrics {
+        &self.macview.metrics.control.trim_scrubber
+    }
+
+    /// Accesses path control metrics tokens.
+    #[inline]
+    pub fn path_control_metrics(&self) -> &PathControlMetrics {
+        &self.macview.metrics.control.path_control
     }
 
     /// Accesses semantic color tokens.
