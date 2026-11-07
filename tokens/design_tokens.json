@@ -847,13 +847,13 @@
           "mini": {
             "bar_height": {
               "$type": "dimension",
-              "$value": "3.0pt",
-              "$description": "Miniature track height for NSProgressIndicator bar in mini size.",
+              "$value": "4.0pt",
+              "$description": "Miniature track height for NSProgressIndicator bar in mini size (Sonoma/Sequoia 4.0pt).",
               "$extensions": { "apple_citation": "Apple AppKit NSProgressIndicator mini bar height" }
             },
             "bar_corner_radius": {
               "$type": "dimension",
-              "$value": "1.5pt",
+              "$value": "2.0pt",
               "$description": "Capsule corner radius for mini progress bar.",
               "$extensions": { "apple_citation": "macOS HIG Progress Indicators (Mini)" }
             },
@@ -982,14 +982,14 @@
           },
           "sort_chevron_size": {
             "$type": "dimension",
-            "$value": "9.0pt",
-            "$description": "Font/icon size of ascending/descending sort indicator chevron.",
+            "$value": "8.0pt",
+            "$description": "Font/icon size of ascending/descending sort indicator chevron (8.0pt).",
             "$extensions": { "apple_citation": "AppKit NSTableHeaderCell sort indicator size" }
           },
           "sort_chevron_spacing": {
             "$type": "dimension",
-            "$value": "4.0pt",
-            "$description": "Horizontal gap between column title and sort indicator.",
+            "$value": "6.0pt",
+            "$description": "Horizontal gap between column title and sort indicator (6.0pt).",
             "$extensions": { "apple_citation": "AppKit NSTableHeaderCell sort indicator margin" }
           },
           "separator_width": {
@@ -1020,9 +1020,9 @@
         "token_field": {
           "min_height": {
             "$type": "dimension",
-            "$value": "26.0pt",
-            "$description": "Minimum single-row height of NSTokenField bezel container.",
-            "$extensions": { "apple_citation": "Apple AppKit NSTokenField intrinsic height" }
+            "$value": "22.0pt",
+            "$description": "Minimum single-row height of NSTokenField bezel container (regular 22.0pt).",
+            "$extensions": { "apple_citation": "Apple AppKit NSTokenField intrinsic height (22.0pt)" }
           },
           "corner_radius": {
             "$type": "dimension",
@@ -1044,26 +1044,26 @@
           },
           "padding_vertical": {
             "$type": "dimension",
-            "$value": "4.0pt",
-            "$description": "Vertical inner padding from bezel to token pills.",
+            "$value": "3.0pt",
+            "$description": "Vertical inner padding from bezel to token pills (3.0pt top/bottom around 16.0pt pill = 22.0pt).",
             "$extensions": { "apple_citation": "AppKit NSTokenFieldCell vertical inset" }
           },
           "pill_height": {
             "$type": "dimension",
-            "$value": "18.0pt",
-            "$description": "Height of each rounded token pill capsule.",
-            "$extensions": { "apple_citation": "AppKit NSTokenFieldCell pill height" }
+            "$value": "16.0pt",
+            "$description": "Height of each rounded token pill capsule (16.0pt).",
+            "$extensions": { "apple_citation": "AppKit NSTokenFieldCell .rounded pill height" }
           },
           "pill_corner_radius": {
             "$type": "dimension",
-            "$value": "9.0pt",
-            "$description": "Fully rounded capsule corner radius for token pills.",
-            "$extensions": { "apple_citation": "macOS HIG Token Fields capsule radius" }
+            "$value": "8.0pt",
+            "$description": "Fully rounded capsule corner radius for token pills (8.0pt = half of 16.0pt).",
+            "$extensions": { "apple_citation": "macOS HIG Token Fields .rounded capsule radius" }
           },
           "pill_padding_horizontal": {
             "$type": "dimension",
-            "$value": "7.0pt",
-            "$description": "Horizontal text padding inside a token pill.",
+            "$value": "6.0pt",
+            "$description": "Horizontal text padding inside a token pill (6.0pt).",
             "$extensions": { "apple_citation": "AppKit NSTokenFieldCell token text margin" }
           },
           "pill_spacing": {
@@ -1136,9 +1136,9 @@
           },
           "thickness": {
             "$type": "dimension",
-            "$value": "12.0pt",
-            "$description": "Standard cross-axis thickness for NSLevelIndicator.",
-            "$extensions": { "apple_citation": "Apple AppKit NSLevelIndicator standard thickness" }
+            "$value": "16.0pt",
+            "$description": "Standard cross-axis thickness for NSLevelIndicator (regular 16.0pt).",
+            "$extensions": { "apple_citation": "Apple AppKit NSLevelIndicator regular thickness" }
           },
           "corner_radius": {
             "$type": "dimension",
@@ -1210,14 +1210,14 @@
           },
           "handle_width": {
             "$type": "dimension",
-            "$value": "10.0pt",
-            "$description": "Horizontal width of left (In) and right (Out) yellow trim grab handles.",
-            "$extensions": { "apple_citation": "Apple AVKit trim handle width" }
+            "$value": "12.0pt",
+            "$description": "Horizontal width of left (In) and right (Out) yellow trim grab handles (12.0pt).",
+            "$extensions": { "apple_citation": "Apple AVKit AVPlayerView trim handle width (12-14pt)" }
           },
           "handle_slot_width": {
             "$type": "dimension",
-            "$value": "1.5pt",
-            "$description": "Stroke width of vertical grip line inside each trim handle.",
+            "$value": "1.0pt",
+            "$description": "Stroke width of vertical grip slit inside each trim handle (1.0pt).",
             "$extensions": { "apple_citation": "Apple AVKit trim handle grip slot" }
           },
           "handle_slot_height": {
@@ -1252,21 +1252,21 @@
           },
           "badge_padding_horizontal": {
             "$type": "dimension",
-            "$value": "5.0pt",
+            "$value": "6.0pt",
             "$description": "Horizontal text padding inside timecode badge.",
             "$extensions": { "apple_citation": "QuickTime Player timecode badge padding" }
           },
           "badge_corner_radius": {
             "$type": "dimension",
-            "$value": "4.0pt",
-            "$description": "Corner radius of timecode readout pill badge.",
-            "$extensions": { "apple_citation": "QuickTime Player timecode badge radius" }
+            "$value": "7.0pt",
+            "$description": "Capsule corner radius of timecode readout pill badge (7.0pt).",
+            "$extensions": { "apple_citation": "QuickTime Player timecode badge capsule radius" }
           },
           "badge_font_size": {
             "$type": "dimension",
-            "$value": "9.0pt",
-            "$description": "Monospace/tabular font size for MM:SS.d timecode readout.",
-            "$extensions": { "apple_citation": "NSFont.monospacedDigitSystemFont(ofSize: 9.0)" }
+            "$value": "11.0pt",
+            "$description": "Monospace/tabular font size for MM:SS.d timecode readout (11.0pt).",
+            "$extensions": { "apple_citation": "NSFont.monospacedDigitSystemFont(ofSize: 11.0)" }
           },
           "zone_font_size": {
             "$type": "dimension",
@@ -1344,9 +1344,9 @@
           },
           "icon_size": {
             "$type": "dimension",
-            "$value": "12.0pt",
-            "$description": "Bounding size of leading folder or file vector icon in each segment.",
-            "$extensions": { "apple_citation": "AppKit NSPathComponentCell image size (12x12pt)" }
+            "$value": "16.0pt",
+            "$description": "Bounding size of leading folder or file vector icon in each segment (16x16pt).",
+            "$extensions": { "apple_citation": "AppKit NSPathComponentCell image size (16x16pt)" }
           },
           "icon_spacing": {
             "$type": "dimension",
@@ -1356,8 +1356,8 @@
           },
           "chevron_size": {
             "$type": "dimension",
-            "$value": "9.0pt",
-            "$description": "Font size of ChevronRight separator glyph between segments.",
+            "$value": "8.0pt",
+            "$description": "Font size of ChevronRight separator symbol between segments (8.0pt).",
             "$extensions": { "apple_citation": "AppKit NSPathControl divider arrow size" }
           },
           "font_size": {
@@ -1823,9 +1823,9 @@
         },
         "scrubber_outside_dim": {
           "$type": "color",
-          "$value": "rgba(0, 0, 0, 0.45)",
-          "$description": "Dimming overlay color for timeline regions outside In/Out trim bounds in Light mode.",
-          "$extensions": { "apple_citation": "AVKit trim scrubber excluded region dim overlay" }
+          "$value": "rgba(0, 0, 0, 0.58)",
+          "$description": "Dimming overlay color for timeline regions outside In/Out trim bounds in Light mode (58% black scrim).",
+          "$extensions": { "apple_citation": "AVKit trim scrubber excluded region dim overlay (rgba(0,0,0,0.58))" }
         },
         "scrubber_waveform": {
           "$type": "color",
@@ -1835,9 +1835,9 @@
         },
         "scrubber_playhead": {
           "$type": "color",
-          "$value": "#FF3B30",
-          "$description": "Playhead cursor line and timecode badge accent color in Light mode.",
-          "$extensions": { "apple_citation": "QuickTime / Final Cut playhead indicator color" }
+          "$value": "#FFFFFF",
+          "$description": "Playhead cursor needle color in Light mode.",
+          "$extensions": { "apple_citation": "QuickTime / AVKit white playhead needle" }
         },
         "traffic_light_close": {
           "$type": "color",
@@ -1987,9 +1987,9 @@
         },
         "scrubber_outside_dim": {
           "$type": "color",
-          "$value": "rgba(0, 0, 0, 0.55)",
-          "$description": "Dimming overlay color for timeline regions outside In/Out trim bounds in DarkAqua.",
-          "$extensions": { "apple_citation": "AVKit trim scrubber excluded region dim overlay" }
+          "$value": "rgba(0, 0, 0, 0.58)",
+          "$description": "Dimming overlay color for timeline regions outside In/Out trim bounds in DarkAqua (58% black scrim).",
+          "$extensions": { "apple_citation": "AVKit trim scrubber excluded region dim overlay (rgba(0,0,0,0.58))" }
         },
         "scrubber_waveform": {
           "$type": "color",
@@ -1999,9 +1999,9 @@
         },
         "scrubber_playhead": {
           "$type": "color",
-          "$value": "#FF453A",
-          "$description": "Playhead cursor line and timecode badge accent color in DarkAqua.",
-          "$extensions": { "apple_citation": "QuickTime / Final Cut playhead indicator color" }
+          "$value": "#FFFFFF",
+          "$description": "Playhead cursor needle color in DarkAqua.",
+          "$extensions": { "apple_citation": "QuickTime / AVKit white playhead needle" }
         },
         "traffic_light_close": {
           "$type": "color",

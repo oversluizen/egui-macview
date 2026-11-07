@@ -154,7 +154,7 @@ fn default_scrubber_selection_border() -> ColorValue {
 
 fn default_scrubber_outside_dim() -> ColorValue {
     ColorValue {
-        value: "rgba(0, 0, 0, 0.45)".to_string(),
+        value: "rgba(0, 0, 0, 0.58)".to_string(),
         token_type: Some("color".to_string()),
         description: None,
     }
@@ -170,7 +170,7 @@ fn default_scrubber_waveform() -> ColorValue {
 
 fn default_scrubber_playhead() -> ColorValue {
     ColorValue {
-        value: "#FF3B30".to_string(),
+        value: "#FFFFFF".to_string(),
         token_type: Some("color".to_string()),
         description: None,
     }
