@@ -24,8 +24,8 @@ fn test_token_catalog_deserialization() {
 
     // Verify metadata
     assert_eq!(tokens.name, "egui-macview Design Tokens");
-    assert_eq!(tokens.version, "0.3.1");
-    assert_eq!(egui_macview::VERSION, "0.3.1");
+    assert_eq!(tokens.version, "0.4.0");
+    assert_eq!(egui_macview::VERSION, "0.4.0");
     assert!(!tokens.description.is_empty());
 
     // Verify Control Metrics
@@ -335,20 +335,24 @@ fn test_version_synchronization_invariants() {
     // 1. Cargo.toml version
     let cargo_toml = fs::read_to_string(manifest_dir.join("Cargo.toml")).expect("read Cargo.toml");
     assert!(
-        cargo_toml.contains("version = \"0.3.1\""),
-        "Cargo.toml must have version = \"0.3.1\""
+        cargo_toml.contains("version = \"0.4.0\""),
+        "Cargo.toml must have version = \"0.4.0\""
     );
 
     // 2. Exported crate version constant
-    assert_eq!(egui_macview::VERSION, "0.3.1");
+    assert_eq!(egui_macview::VERSION, "0.4.0");
 
     // 3. Design tokens version
     let tokens = MacDesignTokens::load_default();
-    assert_eq!(tokens.version, "0.3.1");
+    assert_eq!(tokens.version, "0.4.0");
 
-    // 4. CHANGELOG.md strictly documents [0.3.1] - 2026-11-06, [0.3.0] - 2026-11-06, [0.2.0] - 2026-11-06 and [0.1.0] - 2026-11-05
+    // 4. CHANGELOG.md strictly documents [0.4.0] - 2026-11-07, [0.3.1] - 2026-11-06, [0.3.0] - 2026-11-06, [0.2.0] - 2026-11-06 and [0.1.0] - 2026-11-05
     let changelog =
         fs::read_to_string(manifest_dir.join("CHANGELOG.md")).expect("read CHANGELOG.md");
+    assert!(
+        changelog.contains("## [0.4.0] - 2026-11-07"),
+        "CHANGELOG.md must contain header '## [0.4.0] - 2026-11-07'"
+    );
     assert!(
         changelog.contains("## [0.3.1] - 2026-11-06"),
         "CHANGELOG.md must contain header '## [0.3.1] - 2026-11-06'"
@@ -363,9 +367,9 @@ fn test_version_synchronization_invariants() {
     );
 
     // 5. Specs in specs/ have synchronized versions according to release roadmap:
-    // - SPEC-001..SPEC-006 and SPEC-INDEX have Document Version 0.2.0
+    // - SPEC-001..SPEC-006 have Document Version 0.2.0
     // - SPEC-007 has Document Version 0.3.0 (Milestone 0.3.0 Released)
-    // - SPEC-008 has Document Version 0.4.0-draft (Milestone 0.4.0)
+    // - SPEC-008 and SPEC-INDEX have Document Version 0.4.0 (Milestone 0.4.0 Released)
     let specs_dir = manifest_dir.join("specs");
     let entries = fs::read_dir(&specs_dir).expect("read specs dir");
     let mut spec_count = 0;
@@ -394,10 +398,10 @@ fn test_version_synchronization_invariants() {
                     content.contains("Milestone 0.3.1"),
                     "{file_name} missing Target Milestone `Milestone 0.3.1`"
                 );
-            } else if file_name.starts_with("SPEC-008") {
+            } else if file_name.starts_with("SPEC-008") || file_name.starts_with("SPEC-INDEX") {
                 assert!(
-                    content.contains("**Document Version** | `0.4.0-draft`"),
-                    "{file_name} missing Document Version `0.4.0-draft`"
+                    content.contains("**Document Version** | `0.4.0`"),
+                    "{file_name} missing Document Version `0.4.0`"
                 );
                 assert!(
                     content.contains("Milestone 0.4.0"),

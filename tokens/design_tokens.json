@@ -1,6 +1,6 @@
 {
   "$name": "egui-macview Design Tokens",
-  "$version": "0.3.1",
+  "$version": "0.4.0",
   "$description": "W3C DTCG-compliant design token catalog for egui-macview. Fully grounded in Apple AppKit, macOS Human Interface Guidelines, Apple Typography specifications, and CoreAnimation spring physics.",
   "macview": {
     "metrics": {

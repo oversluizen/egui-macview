@@ -4,7 +4,7 @@
 | :--- | :--- |
 | **Document ID** | SPEC-INDEX |
 | **Document Title** | Specification Suite Index & Version Matrix |
-| **Document Version** | `0.2.0` |
+| **Document Version** | `0.4.0` |
 | **Status** | Accepted / Normative |
 | **Target Host** | Standalone crate `egui-macview` (Rust, egui 0.37) |
 | **Author** | Jaco Oversluizen / `egui-macview` contributors |
@@ -18,12 +18,13 @@
 | :--- | :--- | :--- | :--- |
 | `0.1.0` | 2026-11-05 | Architecture Team | Baseline Initial Release: Monolithic Architecture Specification |
 | `0.2.0` | 2026-11-06 | Architecture Team | Current Milestone: Decomposed Modular Specification Suite Synchronized with Crate v0.2.0 |
+| `0.4.0` | 2026-11-07 | Architecture Team | Milestone 0.4.0 Release: State Integrity (NSUndoManager), Context Menus, Micro-Feedback & Gallery Integration |
 
 ---
 
 ## 1. Specification Suite Structure
 
-The `egui-macview` specification suite provides the formal normative requirements, mathematical foundations, MVC abstractions, and test oracles for the entire crate. Every specification in this directory runs strictly in lockstep with the crate release version (`0.2.0`).
+The `egui-macview` specification suite provides the formal normative requirements, mathematical foundations, MVC abstractions, and test oracles for the entire crate. Every specification in this directory runs strictly in lockstep with the crate release version (`0.4.0`).
 
 | Spec ID | Document Title | Version | Status | Primary Test Suite |
 | :--- | :--- | :--- | :--- | :--- |
@@ -35,8 +36,8 @@ The `egui-macview` specification suite provides the formal normative requirement
 | [**SPEC-005**](SPEC-005-WINDOW-FRAMING-AND-CONTROLS.md) | Window Framing, Drag Handling & Configurable Caption Controls | `0.2.0` | Accepted | `tests/micro_animations_and_hud_tests.rs` |
 | [**SPEC-006**](SPEC-006-INSPECTOR-ARCHITECTURE.md) | Three-Tier Inspector Architecture & Floating Surfaces | `0.2.0` | Accepted | `tests/cots_red_baseline_tests.rs`, `tests/micro_animations_and_hud_tests.rs` |
 | [**SPEC-007**](SPEC-007-DESKTOP-NAVIGATION-AND-PALETTE.md) | Desktop Navigation, Canvas Footer & Spotlight Command Palette | `0.3.0` | Accepted | `tests/menu_and_palette_tests.rs` |
-| [**SPEC-008 (Symbols)**](SPEC-008-APPKIT-SYMBOLS-AND-ICONS.md) | AppKit Vector Symbols, Iconography & CupertinoIcons Engine | `0.4.0-draft` | Draft / Normative | `tests/symbol_tests.rs` |
-| [**SPEC-008 (Feedback)**](SPEC-008-STATE-INTEGRITY-AND-FEEDBACK.md) | State Integrity, Context Menus & Micro-Feedback Architecture | `0.4.0-draft` | Draft / Normative | `tests/undo_and_feedback_tests.rs` |
+| [**SPEC-008 (Symbols)**](SPEC-008-APPKIT-SYMBOLS-AND-ICONS.md) | AppKit Vector Symbols, Iconography & CupertinoIcons Engine | `0.4.0` | Accepted / Normative | `tests/symbol_tests.rs` |
+| [**SPEC-008 (Feedback)**](SPEC-008-STATE-INTEGRITY-AND-FEEDBACK.md) | State Integrity, Context Menus & Micro-Feedback Architecture | `0.4.0` | Accepted / Normative | `tests/undo_and_feedback_tests.rs` |
 | [**SPEC-009**](SPEC-009-CROSS-PLATFORM-DIFFERENTIAL-HARNESS.md) | Cross-Platform Parity and Remote Differential Testing Harness | `0.3.0` | Accepted / Normative | `tests/macbook_parity_differential_tests.rs` |
 | [**SPEC-010**](SPEC-010-INTERACTIVE-GALLERY-CONTROLS-AND-ICONOGRAPHY.md) | Interactive Gallery Controls, Bidirectional State Binding & Iconography Parity | `0.3.1` | Accepted / Normative | `tests/micro_animations_and_hud_tests.rs`, `tests/symbol_tests.rs` |
 
@@ -53,7 +54,7 @@ The roadmap coordinates modular capability additions across designated release m
 | **Milestone 0.1.0** | `v0.1.0` (2026-11-05) | Core Engine, W3C DTCG Token Catalog & CASpring Physics | Shipped | SPEC-001, SPEC-003, SPEC-004 |
 | **Milestone 0.2.0** | `v0.2.0` (2026-11-06) | Extended AppKit Controls, Layout Engines & 3-Tier Inspector | Shipped | SPEC-001 through SPEC-006 |
 | **Milestone 0.3.0** | `v0.3.0` (2026-11-06) | Desktop Navigation, 24pt Canvas Footer & Spotlight Command Palette | Released | SPEC-007 (`0.3.0`) |
-| **Milestone 0.4.0** | `v0.4.0` | State Integrity (`NSUndoManager`), Context Menus & Micro-Feedback | Draft / Pre-release | SPEC-008 (`0.4.0-draft`) |
+| **Milestone 0.4.0** | `v0.4.0` (2026-11-07) | State Integrity (`NSUndoManager`), Context Menus & Micro-Feedback | Released | SPEC-008 (`0.4.0`) |
 
 ### 2.2 Functional Capability Matrix
 
@@ -65,9 +66,9 @@ The roadmap coordinates modular capability additions across designated release m
 | Spotlight Command Palette (`Cmd+K`) | `src/navigation/` | Milestone 0.3.0 | SPEC-007 | `tests/menu_and_palette_tests.rs` | Released |
 | Remote Differential Testing Harness | `tests/` & scripts | Milestone 0.3.0 | SPEC-009 | `tests/macbook_parity_differential_tests.rs` | Accepted / Normative |
 | Interactive Gallery Controls & SF Symbols | `examples/` & `src/symbols` | Milestone 0.3.1 | SPEC-010 | `tests/micro_animations_and_hud_tests.rs`, `tests/symbol_tests.rs` | Released / Normative |
-| `NSUndoManager` Ringbuffer ($C=50$) | `src/state/` | Milestone 0.4.0 | SPEC-008 | `tests/undo_and_feedback_tests.rs` | Implemented (Draft Oracle) |
-| Viewport-Clamped Context Menus | `src/feedback/` | Milestone 0.4.0 | SPEC-008 | `tests/undo_and_feedback_tests.rs` | Implemented (Draft Oracle) |
-| Animated Floating Toasts (`CASpring`, $2.5\,\text{s}$) | `src/feedback/` | Milestone 0.4.0 | SPEC-008 | `tests/undo_and_feedback_tests.rs` | Implemented (Draft Oracle) |
+| `NSUndoManager` Ringbuffer ($C=50$) | `src/state/` | Milestone 0.4.0 | SPEC-008 | `tests/undo_and_feedback_tests.rs` | Released / Normative |
+| Viewport-Clamped Context Menus | `src/feedback/` | Milestone 0.4.0 | SPEC-008 | `tests/undo_and_feedback_tests.rs` | Released / Normative |
+| Animated Floating Toasts (`CASpring`, $2.5\,\text{s}$) | `src/feedback/` | Milestone 0.4.0 | SPEC-008 | `tests/undo_and_feedback_tests.rs` | Released / Normative |
 
 ---
 
@@ -81,6 +82,7 @@ All core specifications in this repository maintain exact version parity with th
 | **v0.2.0** | `0.2.0` | 2026-11-06 | Previous milestone: Extended AppKit suite (`MacColorWell`, `MacOutlineView`, `MacPopUpButton`, `MacSearchField`, `MacSlider`, `MacStepper`, `MacThumbnailCell`), generic layout suite (`MacScrollView`, `MacStackView`, `MacSplitView`), `WindowControlsStyle` strategy (`AppleTrafficLights`, `WindowsCaptionButtons`, `NativeHost`), 3-tier inspector architecture (Compact HUD, Default NIB, Expanded Pro), modular specification decomposition under `specs/` (SPEC-001 through SPEC-006). Previews SPEC-007 and SPEC-008 navigation & feedback extensions. |
 | **v0.3.0** | `0.3.0` | 2026-11-06 | Milestone 0.3.0 release: Promoted SPEC-007 to official release status. Full desktop navigation suite (`MacMenuBar`, `NSMenu`, `NSMenuItem` with cascading submenus and keyboard accelerators), deterministic 24pt canvas footer (`MacCanvasFooter` with breadcrumbs and zoom presets), Spotlight command palette modal HUD (`MacCommandPalette` with fuzzy subsequence scoring and Escape clearing mechanics), and formal `MacBackgroundStyle` dynamic contrast engine ($L \le 0.179 \implies$ Dark / On-Accent White text, $L > 0.179 \implies$ Light / Dark text) ensuring WCAG 2.1 AA $\ge 4.5:1$ contrast. |
 | **v0.3.1** | `0.3.1` | 2026-11-06 | Milestone 0.3.1 release: Cross-platform parity (SPEC-010), Intel HD 5000 OpenGL fallback (`glow`), OS-adaptive window decorations (`decorations = true` on Windows, `false` on macOS), full bidirectional state binding (Zero Dead Controls: Preset popup, live scale slider, corner stepper, units formatter, CASpring touch pulse), rich vector iconography via `MacSymbol` (Cupertino SF Symbols), and cross-platform Spotlight Command Palette shortcut handling (`⌘K` / `Ctrl+K`). |
+| **v0.4.0** | `0.4.0` | 2026-11-07 | Milestone 0.4.0 release: Promoted SPEC-008 (State Integrity & Feedback) to official release status. Bounded ringbuffer transaction stack (`NSUndoManager<T>`, capacity 50) with cyclic state preservation and full rollback; viewport-boundary clamped context menus (`MacContextMenu`, `clamp_menu_rect`) with click-outside dismissal; animated micro-feedback toast notifications (`MacToast`, `MacToastManager`) powered by `CASpring` entry/exit physics with 2.5s auto-dismiss timer; wired into `macview_gallery` interactive canvas card with global shortcuts (`⌘Z` / `Ctrl+Z`, `⌘⇧Z` / `Ctrl+Shift+Z`) and context actions (Reset Transform, Center Card, Fill Width, Toggle Proportions, Copy Style). |
 
 ---
 

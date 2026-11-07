@@ -4,8 +4,8 @@
 | :--- | :--- |
 | **Document ID** | SPEC-008 (Symbols) |
 | **Document Title** | AppKit Vector Symbols, Iconography & CupertinoIcons Engine |
-| **Document Version** | `0.4.0-draft` |
-| **Status** | Draft / Normative |
+| **Document Version** | `0.4.0` |
+| **Status** | Accepted / Normative |
 | **Target Milestone** | Milestone 0.4.0 |
 | **Target Host** | Standalone crate `egui-macview` (Rust, egui 0.37) |
 | **Author** | Jaco Oversluizen / `egui-macview` contributors |
@@ -21,6 +21,7 @@
 | `0.1.0` | 2026-11-05 | Architecture Team | Initial Icon Exploration: Unicode Character Mappings |
 | `0.2.0` | 2026-11-06 | Architecture Team | Problem Identification: Windows Segoe UI Emoji Multi-Color Divergence in `macview_gallery` |
 | `0.3.0` | 2026-11-06 | Architecture Team | Normative Release: CupertinoIcons Vector Font Engine (`MacSymbol`, `setup_symbols_font`, Anti-Emoji Guard) |
+| `0.4.0` | 2026-11-07 | Architecture Team | Milestone 0.4.0 Release: Full AppKit Vector Symbol suite synchronized with Crate v0.4.0 |
 
 ---
 

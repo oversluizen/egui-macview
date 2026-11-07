@@ -447,3 +447,72 @@ fn test_context_menu_secondary_click_trigger() {
         "Context menu spawn position must match pointer position"
     );
 }
+
+#[test]
+fn test_context_menu_click_outside_dismissal() {
+    let ctx = Context::default();
+    let theme = MacTheme::new(MacAppearance::Aqua);
+
+    let items = vec![
+        NSMenuItem::action("Action 1", "act.1"),
+        NSMenuItem::action("Action 2", "act.2"),
+    ];
+
+    let click_outside_pos = Pos2::new(10.0, 10.0);
+
+    // 1. Primary click outside menu bounds dismisses menu
+    let mut is_open = true;
+    let mut spawn_pos = Pos2::new(100.0, 100.0);
+    let mut selected_idx = None;
+
+    let mut raw_primary = RawInput::default();
+    raw_primary.events.push(Event::PointerButton {
+        pos: click_outside_pos,
+        button: egui::PointerButton::Primary,
+        pressed: true,
+        modifiers: Modifiers::default(),
+    });
+
+    let mut triggered = None;
+    let mut out1 = ctx.run_ui(raw_primary, |ui| {
+        let menu = MacContextMenu::new(&items, &mut is_open, &mut spawn_pos, &mut selected_idx)
+            .theme(&theme);
+        triggered = menu.show(ui);
+    });
+    out1.textures_delta.clear();
+
+    assert!(!is_open, "Primary click outside context menu bounds must dismiss the menu");
+    assert_eq!(triggered, None, "Dismissal must not trigger any action");
+
+    // 2. Secondary (right) click outside menu bounds also dismisses menu without action
+    let mut is_open_sec = true;
+    let mut spawn_pos_sec = Pos2::new(100.0, 100.0);
+    let mut selected_idx_sec = None;
+
+    let mut raw_sec = RawInput::default();
+    raw_sec.events.push(Event::PointerButton {
+        pos: click_outside_pos,
+        button: egui::PointerButton::Secondary,
+        pressed: true,
+        modifiers: Modifiers::default(),
+    });
+
+    let mut triggered_sec = None;
+    let mut out2 = ctx.run_ui(raw_sec, |ui| {
+        let menu = MacContextMenu::new(
+            &items,
+            &mut is_open_sec,
+            &mut spawn_pos_sec,
+            &mut selected_idx_sec,
+        )
+        .theme(&theme);
+        triggered_sec = menu.show(ui);
+    });
+    out2.textures_delta.clear();
+
+    assert!(
+        !is_open_sec,
+        "Secondary click outside context menu bounds must dismiss the menu"
+    );
+    assert_eq!(triggered_sec, None);
+}

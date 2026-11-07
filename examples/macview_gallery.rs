@@ -53,13 +53,14 @@ use egui_macview::{
     contrast_ratio, relative_luminance, setup_symbols_font,
     theme::{MacAppearance, MacTheme, WindowControlsStyle},
     CASpring, CommandPaletteItem, MacBackgroundStyle, MacButtonCell, MacCanvasFooter,
-    MacCanvasFooterAction, MacColorWell, MacCommandPalette, MacFixedView, MacForm, MacInputCell,
-    MacMenuBar, MacOutlineView, MacPopUpButton, MacPopover, MacPopoverArrowEdge, MacRow,
-    MacScrollView, MacSearchField, MacSegmentedControl, MacSlider, MacSplitOrientation,
-    MacSplitView, MacStackOrientation, MacStackView, MacStepper, MacSymbol, MacThumbnailCell,
-    MacToggle, NSMenu, CANVAS_FOOTER_HEIGHT,
+    MacCanvasFooterAction, MacColorWell, MacCommandPalette, MacContextMenu, MacFixedView,
+    MacForm, MacInputCell, MacMenuBar, MacOutlineView, MacPopUpButton, MacPopover,
+    MacPopoverArrowEdge, MacRow, MacScrollView, MacSearchField, MacSegmentedControl,
+    MacSlider, MacSplitOrientation, MacSplitView, MacStackOrientation, MacStackView,
+    MacStepper, MacSymbol, MacThumbnailCell, MacToastManager, MacToggle, NSMenu,
+    NSMenuItem, NSUndoManager, CANVAS_FOOTER_HEIGHT,
 };
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 
 #[allow(dead_code)]
 /// Formats uppercase section headers with optical tracking (thin-spaces between letters and wider word separation).
@@ -280,7 +281,7 @@ pub enum ExpandedProTab {
 
 /// Dynamic properties of the interactive Canvas Vector Card,
 /// edited live via either Default NIB, Compact HUD, or Expanded Pro Inspector.
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct CardModel {
     pub width: String,
     pub height: String,
@@ -366,6 +367,9 @@ struct CenterState {
     wcag_bg: Color32,
     row_container_width: f32,
     cascade_start_time: Option<f64>,
+    card_menu_open: bool,
+    card_menu_pos: Pos2,
+    card_menu_selected: Option<usize>,
 }
 
 impl Default for CenterState {
@@ -389,6 +393,9 @@ impl Default for CenterState {
             wcag_bg: Color32::from_rgb(0, 122, 255),
             row_container_width: 420.0,
             cascade_start_time: None,
+            card_menu_open: false,
+            card_menu_pos: Pos2::ZERO,
+            card_menu_selected: None,
         }
     }
 }
@@ -421,6 +428,13 @@ struct GalleryApp {
     left_split_pos: f32,
     inspector_width: f32,
     card: RefCell<CardModel>,
+    undo_manager: RefCell<NSUndoManager<CardModel>>,
+    last_stable_card: RefCell<CardModel>,
+    is_dragging_card: Cell<bool>,
+    drag_start_card: RefCell<Option<CardModel>>,
+    active_text_focus: Cell<Option<egui::Id>>,
+    text_focus_start_card: RefCell<Option<CardModel>>,
+    toasts: RefCell<MacToastManager>,
     sidebar: SidebarState,
     center: CenterState,
     inspector: InspectorState,
@@ -433,6 +447,14 @@ struct GalleryApp {
 impl GalleryApp {
     fn new() -> Self {
         let palette_items = vec![
+            CommandPaletteItem::new("edit.undo", "Edit: Undo")
+                .category("Edit")
+                .shortcut("⌘Z / Ctrl+Z")
+                .keywords(&["undo", "revert"]),
+            CommandPaletteItem::new("edit.redo", "Edit: Redo")
+                .category("Edit")
+                .shortcut("⌘⇧Z / Ctrl+Shift+Z")
+                .keywords(&["redo", "repeat"]),
             CommandPaletteItem::new("screen.canvas", "Screen 1: Interactive Canvas & Physics")
                 .category("Screens")
                 .keywords(&["canvas", "physics", "affine", "screen 1"]),
@@ -480,6 +502,7 @@ impl GalleryApp {
                 .shortcut("⌘K / Ctrl+K"),
         ];
 
+        let default_card = CardModel::default();
         Self {
             appearance: MacAppearance::Aqua,
             window_controls_style: WindowControlsStyle::AppleTrafficLights,
@@ -489,7 +512,14 @@ impl GalleryApp {
             is_maximized: false,
             left_split_pos: 240.0,
             inspector_width: 360.0,
-            card: RefCell::new(CardModel::default()),
+            card: RefCell::new(default_card.clone()),
+            undo_manager: RefCell::new(NSUndoManager::new()),
+            last_stable_card: RefCell::new(default_card),
+            is_dragging_card: Cell::new(false),
+            drag_start_card: RefCell::new(None),
+            active_text_focus: Cell::new(None),
+            text_focus_start_card: RefCell::new(None),
+            toasts: RefCell::new(MacToastManager::new()),
             sidebar: SidebarState::default(),
             center: CenterState::default(),
             inspector: InspectorState::default(),
@@ -502,6 +532,36 @@ impl GalleryApp {
 
     fn handle_menu_action(&mut self, action: &str, ctx: &egui::Context) {
         match action {
+            "edit.undo" => {
+                let mut c = self.card.borrow_mut();
+                let mut undone = false;
+                if let Some(start_card) = self.text_focus_start_card.borrow_mut().take() {
+                    if *c != start_card {
+                        *c = start_card.clone();
+                        *self.last_stable_card.borrow_mut() = start_card;
+                        undone = true;
+                    }
+                }
+                if !undone && self.undo_manager.borrow_mut().undo(&mut *c) {
+                    *self.last_stable_card.borrow_mut() = c.clone();
+                    undone = true;
+                }
+                if undone {
+                    *self.drag_start_card.borrow_mut() = None;
+                    self.is_dragging_card.set(false);
+                    self.toasts.borrow_mut().info("Undone");
+                }
+            }
+            "edit.redo" => {
+                let mut c = self.card.borrow_mut();
+                if self.undo_manager.borrow_mut().redo(&mut *c) {
+                    *self.last_stable_card.borrow_mut() = c.clone();
+                    *self.drag_start_card.borrow_mut() = None;
+                    *self.text_focus_start_card.borrow_mut() = None;
+                    self.is_dragging_card.set(false);
+                    self.toasts.borrow_mut().info("Redone");
+                }
+            }
             "screen.canvas" => self.active_screen = GalleryScreen::CanvasPhysics,
             "screen.vector" => self.active_screen = GalleryScreen::VectorAssets,
             "screen.tokens" => self.active_screen = GalleryScreen::DesignTokensWcag,
@@ -519,10 +579,20 @@ impl GalleryApp {
                 c.rotation_deg = 0.0;
                 c.scale_pct = 100.0;
                 c.skew_deg = 0.0;
+                self.toasts.borrow_mut().info("Transform reset");
             }
-            "zoom.50" => self.card.borrow_mut().scale_pct = 50.0,
-            "zoom.100" => self.card.borrow_mut().scale_pct = 100.0,
-            "zoom.200" => self.card.borrow_mut().scale_pct = 200.0,
+            "zoom.50" => {
+                self.card.borrow_mut().scale_pct = 50.0;
+                self.toasts.borrow_mut().info("Preset applied");
+            }
+            "zoom.100" => {
+                self.card.borrow_mut().scale_pct = 100.0;
+                self.toasts.borrow_mut().info("Preset applied");
+            }
+            "zoom.200" => {
+                self.card.borrow_mut().scale_pct = 200.0;
+                self.toasts.borrow_mut().info("Preset applied");
+            }
             "view.zoom_in" => {
                 let mut c = self.card.borrow_mut();
                 c.scale_pct = (c.scale_pct + 25.0).min(400.0);
@@ -531,7 +601,10 @@ impl GalleryApp {
                 let mut c = self.card.borrow_mut();
                 c.scale_pct = (c.scale_pct - 25.0).max(25.0);
             }
-            "view.zoom_reset" => self.card.borrow_mut().scale_pct = 100.0,
+            "view.zoom_reset" => {
+                self.card.borrow_mut().scale_pct = 100.0;
+                self.toasts.borrow_mut().info("Transform reset");
+            }
             "view.toggle_inspector" => {
                 self.inspector_mode = match self.inspector_mode {
                     InspectorMode::ExpandedPro => InspectorMode::DefaultNib,
@@ -558,6 +631,43 @@ impl GalleryApp {
 
 impl eframe::App for GalleryApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        // Track text field focus transitions for grouping text input changes
+        let focused_id = ui.memory(|m| m.focused());
+        let prev_focused = self.active_text_focus.get();
+        if prev_focused.is_some() && prev_focused != focused_id {
+            // Focus lost: commit snapshot if card changed during editing
+            if let Some(start_card) = self.text_focus_start_card.borrow_mut().take() {
+                let current = self.card.borrow().clone();
+                if current != start_card {
+                    self.undo_manager.borrow_mut().push_snapshot(start_card);
+                    *self.last_stable_card.borrow_mut() = current;
+                }
+            }
+        }
+        if focused_id.is_some() && prev_focused != focused_id {
+            // Focus gained: store starting card state before text edits
+            *self.text_focus_start_card.borrow_mut() = Some(self.last_stable_card.borrow().clone());
+        }
+        self.active_text_focus.set(focused_id);
+
+        // Track pointer drag transitions for bounded transactional undo snapshot recording
+        let any_pointer_down = ui.input(|i| i.pointer.any_down());
+        if any_pointer_down {
+            if !self.is_dragging_card.get() {
+                self.is_dragging_card.set(true);
+                *self.drag_start_card.borrow_mut() = Some(self.last_stable_card.borrow().clone());
+            }
+        } else if self.is_dragging_card.get() {
+            self.is_dragging_card.set(false);
+            if let Some(start_card) = self.drag_start_card.borrow_mut().take() {
+                let current = self.card.borrow().clone();
+                if current != start_card {
+                    self.undo_manager.borrow_mut().push_snapshot(start_card);
+                    *self.last_stable_card.borrow_mut() = current;
+                }
+            }
+        }
+
         let card_fill = self.card.borrow().fill_color;
         let theme = MacTheme::new(self.appearance)
             .with_accent(card_fill)
@@ -625,6 +735,45 @@ impl eframe::App for GalleryApp {
         });
         if toggle_palette {
             self.palette.toggle();
+        }
+
+        // Global Undo / Redo Shortcuts (Cmd+Z / Ctrl+Z, Cmd+Shift+Z / Ctrl+Shift+Z / Ctrl+Y)
+        let trigger_undo = ui.input_mut(|i| {
+            if !i.modifiers.shift {
+                i.consume_key(egui::Modifiers::COMMAND, egui::Key::Z)
+                    || i.consume_key(egui::Modifiers::CTRL, egui::Key::Z)
+                    || i.consume_key(egui::Modifiers::MAC_CMD, egui::Key::Z)
+            } else {
+                false
+            }
+        });
+
+        let trigger_redo = ui.input_mut(|i| {
+            let cmd_shift = egui::Modifiers {
+                command: true,
+                shift: true,
+                ..Default::default()
+            };
+            let ctrl_shift = egui::Modifiers {
+                ctrl: true,
+                shift: true,
+                ..Default::default()
+            };
+            let mac_cmd_shift = egui::Modifiers {
+                mac_cmd: true,
+                shift: true,
+                ..Default::default()
+            };
+            i.consume_key(cmd_shift, egui::Key::Z)
+                || i.consume_key(ctrl_shift, egui::Key::Z)
+                || i.consume_key(mac_cmd_shift, egui::Key::Z)
+                || i.consume_key(egui::Modifiers::CTRL, egui::Key::Y)
+        });
+
+        if trigger_undo {
+            self.handle_menu_action("edit.undo", ui.ctx());
+        } else if trigger_redo {
+            self.handle_menu_action("edit.redo", ui.ctx());
         }
 
         // Modal Command Palette HUD (Spotlight)
@@ -698,7 +847,7 @@ impl eframe::App for GalleryApp {
             |sidebar_ui| {
                 let mut m = inspector_mode_cell.get();
                 let mut s = active_screen_cell.get();
-                sidebar.render(sidebar_ui, &theme, &mut m, &mut s);
+                sidebar.render(sidebar_ui, &theme, &mut m, &mut s, &self.toasts);
                 inspector_mode_cell.set(m);
                 active_screen_cell.set(s);
             },
@@ -722,11 +871,12 @@ impl eframe::App for GalleryApp {
                             inspector_mode_cell.get(),
                             active_screen_cell.get(),
                             snapping_enabled,
+                            &self.toasts,
                         );
                     },
                     |inspector_ui| {
                         let mut m = inspector_mode_cell.get();
-                        inspector.render(inspector_ui, &theme, card, &mut m);
+                        inspector.render(inspector_ui, &theme, card, &mut m, &self.toasts);
                         inspector_mode_cell.set(m);
                     },
                 );
@@ -738,6 +888,20 @@ impl eframe::App for GalleryApp {
 
         self.left_split_pos = left_split_pos;
         self.inspector_width = (available_body_w - right_split_pos).clamp(min_inspector_w, max_inspector_w);
+
+        // Discrete state change tracking (button clicks, popup selections, toggles, steppers)
+        let any_pointer_down_end = ui.input(|i| i.pointer.any_down());
+        if !any_pointer_down_end && !self.is_dragging_card.get() && focused_id.is_none() {
+            let current = self.card.borrow().clone();
+            let last_stable = self.last_stable_card.borrow().clone();
+            if current != last_stable {
+                self.undo_manager.borrow_mut().push_snapshot(last_stable);
+                *self.last_stable_card.borrow_mut() = current;
+            }
+        }
+
+        // Render animated floating pill micro-feedback toasts (SPEC-008 §4)
+        self.toasts.borrow_mut().show(ui.ctx(), &theme);
     }
 }
 
@@ -1214,6 +1378,7 @@ impl SidebarState {
         theme: &MacTheme,
         inspector_mode_out: &mut InspectorMode,
         active_screen_out: &mut GalleryScreen,
+        toasts: &RefCell<MacToastManager>,
     ) {
         let avail_rect = ui.available_rect_before_wrap();
         ui.painter_at(avail_rect).rect_filled(
@@ -1487,6 +1652,7 @@ impl SidebarState {
                     if resp_nib.clicked {
                         self.selected_node = "Default NIB".to_string();
                         *inspector_mode_out = InspectorMode::DefaultNib;
+                        toasts.borrow_mut().info("Preset applied");
                     }
 
                     // Mode 1: Compact HUD
@@ -1510,6 +1676,7 @@ impl SidebarState {
                     if resp_hud.clicked {
                         self.selected_node = "Compact HUD".to_string();
                         *inspector_mode_out = InspectorMode::CompactHud;
+                        toasts.borrow_mut().info("Preset applied");
                     }
 
                     // Mode 2: Expanded Pro
@@ -1533,6 +1700,7 @@ impl SidebarState {
                     if resp_exp.clicked {
                         self.selected_node = "Expanded Pro".to_string();
                         *inspector_mode_out = InspectorMode::ExpandedPro;
+                        toasts.borrow_mut().info("Preset applied");
                     }
                 }
             });
@@ -1550,6 +1718,7 @@ impl CenterState {
         inspector_mode: InspectorMode,
         active_screen: GalleryScreen,
         snapping_enabled: bool,
+        toasts: &RefCell<MacToastManager>,
     ) {
         let mut card = card_cell.borrow_mut();
         let avail_rect = ui.available_rect_before_wrap();
@@ -1612,6 +1781,7 @@ impl CenterState {
 
         if let Some(MacCanvasFooterAction::SelectZoom(z)) = footer_action {
             card.scale_pct = z * 100.0;
+            toasts.borrow_mut().info("Preset applied");
         }
 
         // Scrollable Canvas Area via MacScrollView (above footer)
@@ -1642,6 +1812,7 @@ impl CenterState {
                             &mut card,
                             inspector_mode,
                             snapping_enabled,
+                            toasts,
                         );
                     }
                     GalleryScreen::VectorAssets => {
@@ -1666,6 +1837,7 @@ impl CenterState {
         card: &mut CardModel,
         inspector_mode: InspectorMode,
         snapping_enabled: bool,
+        toasts: &RefCell<MacToastManager>,
     ) {
         let label_font = FontId::proportional(12.0);
         content_ui.label(
@@ -1881,6 +2053,81 @@ impl CenterState {
             );
         }
 
+        // Right-Click Context Menu on Interactive Canvas Card (SPEC-008 §3)
+        let card_bounds = if (theta.abs() < 1e-4) && (skew_val.abs() < 1e-4) {
+            let rect_w = card_w * scale_factor;
+            let rect_h = card_h * scale_factor;
+            Rect::from_center_size(card_center, vec2(rect_w, rect_h))
+        } else {
+            Rect::from_points(&corners_world)
+        };
+        let card_resp = content_ui.interact(
+            card_bounds,
+            content_ui.scope_id().with("interactive_canvas_card_hit"),
+            Sense::click(),
+        );
+
+        let context_items = [
+            NSMenuItem::action("Reset Transform", "card.reset_transform"),
+            NSMenuItem::action("Center Card", "card.center"),
+            NSMenuItem::action("Fill Width", "card.fill_width"),
+            NSMenuItem::separator(),
+            NSMenuItem::action("Toggle Proportions", "card.toggle_proportions"),
+            NSMenuItem::action("Copy Style", "card.copy_style"),
+        ];
+
+        let mut context_menu = MacContextMenu::new(
+            &context_items,
+            &mut self.card_menu_open,
+            &mut self.card_menu_pos,
+            &mut self.card_menu_selected,
+        )
+        .theme(theme);
+
+        context_menu.attach_to(&card_resp);
+        if !card_resp.secondary_clicked() {
+            context_menu.attach_to(&canvas_resp);
+        }
+
+        if let Some(action) = context_menu.show(content_ui) {
+            match action.as_str() {
+                "card.reset_transform" => {
+                    card.rotation_deg = 0.0;
+                    card.scale_pct = 100.0;
+                    card.skew_deg = 0.0;
+                    toasts.borrow_mut().info("Transform reset");
+                }
+                "card.center" => {
+                    card.alignment_idx = 1;
+                    toasts.borrow_mut().info("Preset applied");
+                }
+                "card.fill_width" => {
+                    card.alignment_idx = 3;
+                    toasts.borrow_mut().info("Preset applied");
+                }
+                "card.toggle_proportions" => {
+                    card.constrain_proportions = !card.constrain_proportions;
+                    let msg = if card.constrain_proportions {
+                        "Proportions locked"
+                    } else {
+                        "Proportions unlocked"
+                    };
+                    toasts.borrow_mut().info(msg);
+                }
+                "card.copy_style" => {
+                    let style_str = format!(
+                        "/* MacView Card Style */\nwidth: {}pt;\nheight: {}pt;\ncorner-radius: {}pt;\nbackground: #{:02X}{:02X}{:02X};\nopacity: {:.0}%;",
+                        card.width, card.height, card.radius,
+                        card.fill_color.r(), card.fill_color.g(), card.fill_color.b(),
+                        card.opacity
+                    );
+                    content_ui.ctx().copy_text(style_str);
+                    toasts.borrow_mut().success("Style copied");
+                }
+                _ => {}
+            }
+        }
+
         // Interactive Controls Bar below canvas
         content_ui.add_space(8.0);
         content_ui.horizontal(|h| {
@@ -1900,6 +2147,7 @@ impl CenterState {
                 card.rotation_deg = 0.0;
                 card.scale_pct = 100.0;
                 card.skew_deg = 0.0;
+                toasts.borrow_mut().info("Transform reset");
             }
 
             let snap_status = if snapping_enabled {
@@ -2880,6 +3128,7 @@ impl InspectorState {
         theme: &MacTheme,
         card_cell: &RefCell<CardModel>,
         mode: &mut InspectorMode,
+        toasts: &RefCell<MacToastManager>,
     ) {
         let mut card = card_cell.borrow_mut();
         let avail_rect = ui.available_rect_before_wrap();
@@ -2900,10 +3149,10 @@ impl InspectorState {
                     s_ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
                     match *mode {
                         InspectorMode::ExpandedPro => {
-                            self.render_expanded_pro(s_ui, theme, &mut card);
+                            self.render_expanded_pro(s_ui, theme, &mut card, toasts);
                         }
                         _ => {
-                            self.render_default_nib(s_ui, theme, &mut card, mode);
+                            self.render_default_nib(s_ui, theme, &mut card, mode, toasts);
                         }
                     }
                 });
@@ -2912,7 +3161,13 @@ impl InspectorState {
 
     /// Renders the Expanded Pro Inspector (Mode 2) with 3 top segmented tabs:
     /// `[ Attributes | Metrics | Matrix ]`.
-    fn render_expanded_pro(&mut self, ui: &mut Ui, theme: &MacTheme, card: &mut CardModel) {
+    fn render_expanded_pro(
+        &mut self,
+        ui: &mut Ui,
+        theme: &MacTheme,
+        card: &mut CardModel,
+        toasts: &RefCell<MacToastManager>,
+    ) {
         // Top Multi-Deck Tab Selector - Centered across inspector width according to Apple HIG
         ui.add_space(8.0);
         let tab_idx = match self.expanded_tab {
@@ -3186,6 +3441,7 @@ impl InspectorState {
                             card.rotation_deg = 0.0;
                             card.scale_pct = 100.0;
                             card.skew_deg = 0.0;
+                            toasts.borrow_mut().info("Transform reset");
                         }
                     });
                 }
@@ -3199,6 +3455,7 @@ impl InspectorState {
         theme: &MacTheme,
         card: &mut CardModel,
         mode: &mut InspectorMode,
+        toasts: &RefCell<MacToastManager>,
     ) {
         let input_id_w = Id::NULL.with("nib_input_w");
         let input_id_h = Id::NULL.with("nib_input_h");
@@ -3327,6 +3584,7 @@ impl InspectorState {
                                         1 => InspectorMode::CompactHud,
                                         _ => InspectorMode::ExpandedPro,
                                     };
+                                    toasts.borrow_mut().info("Preset applied");
                                 }
                             });
                             form.row_label(egui::RichText::new("Units:").size(11.0), |ui| {

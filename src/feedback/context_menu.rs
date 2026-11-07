@@ -200,6 +200,22 @@ impl<'a> MacContextMenu<'a> {
             viewport_rect,
         );
 
+        // Clicking outside context menu bounds dismisses menu without action (SPEC-008 §3.2)
+        let clicked_outside = ui.input(|i| {
+            for ev in &i.events {
+                if let egui::Event::PointerButton { pos, pressed: true, .. } = ev {
+                    if !menu_rect.contains(*pos) {
+                        return true;
+                    }
+                }
+            }
+            false
+        });
+        if clicked_outside {
+            self.close();
+            return None;
+        }
+
         let mut triggered = None;
         let area_id = ui.scope_id().with("mac_context_menu_area");
 

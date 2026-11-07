@@ -5,6 +5,23 @@ All notable changes to the `egui-macview` crate will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-11-07
+
+### Added
+- **State Integrity (`NSUndoManager<T>`)**: Bounded ringbuffer transaction stack ($C = 50$) with cyclic state preservation, capacity limits, non-destructive peek inspection, and full rollback exactness verified with `proptest`.
+- **Context Menus (`MacContextMenu`)**: Viewport-boundary clamped (`clamp_menu_rect`) secondary-click context popover guaranteeing zero offscreen clipping, full keyboard navigation (Arrow Up/Down, Enter/Space, Escape), and automatic dismissal on click outside bounds.
+- **Animated Micro-Feedback (`MacToast` & `MacToastManager`)**: Floating pill toast notification banners driven by `CASpring` entry/exit physics (`response = 0.35s`, `damping_ratio = 0.85`) with 2.5s auto-dismiss timer and semantic levels (`Info`, `Success`, `Warning`, `Error`).
+- **Interactive Gallery Integration (`macview_gallery`)**:
+  - Live transactional state undo/redo tracking of card model changes (rotations, scales, skews, dimensions, colors) with global shortcuts (`⌘Z` / `Ctrl+Z`, `⌘⇧Z` / `Ctrl+Shift+Z` / `Ctrl+Y`) and command palette integration.
+  - Interactive secondary-click context menu on the canvas vector card with actions: `Reset Transform`, `Center Card`, `Fill Width`, `Toggle Proportions`, and `Copy Style`.
+  - Micro-feedback toast notifications for user interactions (`"Undone"`, `"Redone"`, `"Preset applied"`, `"Transform reset"`, `"Style copied"`).
+- **Normative Anchoring**: Promoted `SPEC-008` (State Integrity & Feedback) and `SPEC-008` (Symbols) to Accepted / Normative release status.
+
+### Changed
+- Bumped crate version to `0.4.0` in `Cargo.toml`.
+- Bumped W3C DTCG `tokens/design_tokens.json` `$version` to `0.4.0`.
+- Synchronized specification suite index and capability matrix in `specs/SPEC-INDEX.md`.
+
 ## [0.3.1] - 2026-11-06
 
 ### Added

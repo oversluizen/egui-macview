@@ -4,8 +4,8 @@
 | :--- | :--- |
 | **Document ID** | SPEC-008 |
 | **Document Title** | State Integrity, Context Menus & Micro-Feedback Architecture |
-| **Document Version** | `0.4.0-draft` |
-| **Status** | Draft / Normative |
+| **Document Version** | `0.4.0` |
+| **Status** | Accepted / Normative |
 | **Target Milestone** | Milestone 0.4.0 |
 | **Target Host** | Standalone crate `egui-macview` (Rust, egui 0.37) |
 | **Author** | Jaco Oversluizen / `egui-macview` contributors |
@@ -20,7 +20,7 @@
 | :--- | :--- | :--- | :--- |
 | `0.1.0` | 2026-11-05 | Architecture Team | Baseline Initial Release: State Management Foundation |
 | `0.2.0` | 2026-11-06 | Architecture Team | Prototyping Milestone: NSUndoManager Bounded Ringbuffer, Clamped Context Menus, and Animated Toast Notifications |
-| `0.4.0-draft` | 2026-11-06 | Architecture Team | Target Milestone 0.4.0: Transactional state integrity, boundary-clamped context menus, and CASpring micro-feedback |
+| `0.4.0` | 2026-11-07 | Architecture Team | Milestone 0.4.0 Release: Transactional state integrity, boundary-clamped context menus, and CASpring micro-feedback |
 
 ---
 
