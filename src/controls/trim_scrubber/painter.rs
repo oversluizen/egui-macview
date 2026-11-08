@@ -84,7 +84,10 @@ pub(crate) fn paint_trim_scrubber(
             let tint = zone.tint.unwrap_or_else(|| theme.control());
             painter.rect_filled(z_rect, 0, tint);
             painter.line_segment(
-                [Pos2::new(zx1, track_rect.top()), Pos2::new(zx1, track_rect.bottom())],
+                [
+                    Pos2::new(zx1, track_rect.top()),
+                    Pos2::new(zx1, track_rect.bottom()),
+                ],
                 Stroke::new(border_w * 0.5, theme.separator()),
             );
             if !zone.label.is_empty() {
@@ -126,17 +129,11 @@ pub(crate) fn paint_trim_scrubber(
     // 4. Dimmed outside regions
     let dim_color = theme.scrubber_outside_dim();
     if in_x > track_rect.left() {
-        let left_dim = Rect::from_min_max(
-            track_rect.min,
-            Pos2::new(in_x, track_rect.bottom()),
-        );
+        let left_dim = Rect::from_min_max(track_rect.min, Pos2::new(in_x, track_rect.bottom()));
         painter.rect_filled(left_dim, corner_r, dim_color);
     }
     if out_x < track_rect.right() {
-        let right_dim = Rect::from_min_max(
-            Pos2::new(out_x, track_rect.top()),
-            track_rect.max,
-        );
+        let right_dim = Rect::from_min_max(Pos2::new(out_x, track_rect.top()), track_rect.max);
         painter.rect_filled(right_dim, corner_r, dim_color);
     }
 
@@ -168,7 +165,10 @@ pub(crate) fn paint_trim_scrubber(
     let slot_stroke = Stroke::new(sm.handle_slot_width.points(), theme.control_background());
     for hc in [left_handle.center(), right_handle.center()] {
         painter.line_segment(
-            [Pos2::new(hc.x, hc.y - slot_half), Pos2::new(hc.x, hc.y + slot_half)],
+            [
+                Pos2::new(hc.x, hc.y - slot_half),
+                Pos2::new(hc.x, hc.y + slot_half),
+            ],
             slot_stroke,
         );
     }

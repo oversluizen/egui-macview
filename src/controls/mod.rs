@@ -28,16 +28,12 @@ pub use level_indicator::{MacLevelIndicator, MacLevelIndicatorStyle, MacLevelOri
 pub use outline_view::{MacOutlineRow, MacOutlineRowResponse, MacOutlineTree, MacOutlineView};
 pub use path_control::{MacPathComponent, MacPathControl, MacPathControlResponse};
 pub use popup_button::MacPopUpButton;
-pub use progress_indicator::{
-    MacProgressControlSize, MacProgressIndicator, MacProgressStyle,
-};
+pub use progress_indicator::{MacProgressControlSize, MacProgressIndicator, MacProgressStyle};
 pub use search_field::MacSearchField;
 pub use segmented::MacSegmentedControl;
 pub use slider::MacSlider;
 pub use stepper::MacStepper;
-pub use table_view::{
-    MacSortDirection, MacTableColumn, MacTableView, MacTableViewResponse,
-};
+pub use table_view::{MacSortDirection, MacTableColumn, MacTableView, MacTableViewResponse};
 pub use thumbnail_cell::MacThumbnailCell;
 pub use toggle::MacToggle;
 pub use token_field::MacTokenField;

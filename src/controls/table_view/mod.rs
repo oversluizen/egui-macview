@@ -171,7 +171,9 @@ impl<'a> MacTableView<'a> {
         let mut selection_changed = false;
 
         // Keyboard ArrowUp / ArrowDown navigation when enabled and a row is selected or focused
-        if self.enabled && self.row_count > 0 && (!self.selection.is_empty() || response.has_focus())
+        if self.enabled
+            && self.row_count > 0
+            && (!self.selection.is_empty() || response.has_focus())
         {
             if ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::ArrowDown)) {
                 let cur = self.selection.iter().next_back().copied().unwrap_or(0);
@@ -194,8 +196,10 @@ impl<'a> MacTableView<'a> {
 
         for row_idx in 0..self.row_count {
             let row_y = body_top + (row_idx as f32) * row_h;
-            let row_rect =
-                Rect::from_min_size(Pos2::new(rect.left(), row_y), Vec2::new(rect.width(), row_h));
+            let row_rect = Rect::from_min_size(
+                Pos2::new(rect.left(), row_y),
+                Vec2::new(rect.width(), row_h),
+            );
             let row_id = self.id.with(("row", row_idx));
             let row_sense = if self.enabled {
                 Sense::click()
@@ -261,7 +265,8 @@ impl<'a> MacTableView<'a> {
                         row_rect.bottom() - pad_v,
                     ),
                 );
-                let layout = Layout::left_to_right(egui::Align::Center).with_main_align(col.alignment);
+                let layout =
+                    Layout::left_to_right(egui::Align::Center).with_main_align(col.alignment);
                 let mut child_ui = ui.new_child(
                     UiBuilder::new()
                         .max_rect(cell_rect)

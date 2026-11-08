@@ -211,7 +211,10 @@ impl<'a> Widget for MacTokenField<'a> {
         }
 
         let input_rect = Rect::from_min_size(
-            Pos2::new(rect.left() + pad_h + input_rel_x, rect.top() + pad_v + input_rel_y),
+            Pos2::new(
+                rect.left() + pad_h + input_rel_x,
+                rect.top() + pad_v + input_rel_y,
+            ),
             Vec2::new(input_w, pill_h),
         );
 
@@ -325,11 +328,17 @@ impl<'a> Widget for MacTokenField<'a> {
             let span = tfm.remove_cross_span.points();
             let x_stroke = Stroke::new(tfm.remove_icon_stroke.points(), theme.secondary_label());
             painter.line_segment(
-                [Pos2::new(c.x - span, c.y - span), Pos2::new(c.x + span, c.y + span)],
+                [
+                    Pos2::new(c.x - span, c.y - span),
+                    Pos2::new(c.x + span, c.y + span),
+                ],
                 x_stroke,
             );
             painter.line_segment(
-                [Pos2::new(c.x - span, c.y + span), Pos2::new(c.x + span, c.y - span)],
+                [
+                    Pos2::new(c.x - span, c.y + span),
+                    Pos2::new(c.x + span, c.y - span),
+                ],
                 x_stroke,
             );
         }

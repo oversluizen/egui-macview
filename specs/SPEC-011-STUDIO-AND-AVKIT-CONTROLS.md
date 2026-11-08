@@ -155,3 +155,12 @@ Each appearance (`aqua` and `dark_aqua`) in `tokens/design_tokens.json` SHALL de
 | `REQ-011-04` | `MacLevelIndicator` | `TC-011-04` | Headless `egui` + `proptest` | Continuous & discrete modes in horizontal & vertical orientations map $[v_{\min}, v_{\max}]$ and switch green/yellow/red at warning/critical thresholds. |
 | `REQ-011-05` | `MacTrimScrubber` | `TC-011-05` | Headless `egui` + `proptest` | Dragging In, Out, and Playhead handles strictly preserves $0 \le t_{\text{in}} \le t_{\text{playhead}} \le t_{\text{out}} \le D$ across all pointer coordinates. |
 | `REQ-011-06` | `MacPathControl` | `TC-011-06` | Headless `egui` | Clicking breadcrumb segment $i$ reports `clicked_segment == Some(i)` and clicking `Choose...` reports `choose_clicked == true`. |
+
+---
+
+## 5. Revision History
+
+| Version | Date | Author | Description |
+| :--- | :--- | :--- | :--- |
+| `0.1.0` | 2026-11-05 | AI Architecture Team | Initial `egui-macview` specification suite baseline. |
+| `0.5.0` | 2026-11-08 | AI Architecture Team | Normative specification for v0.5.0 Studio & AVKit controls (`MacProgressIndicator`, `MacTableView`, `MacTokenField`, `MacLevelIndicator`, `MacTrimScrubber`, `MacPathControl`). |

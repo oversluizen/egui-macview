@@ -190,7 +190,10 @@ impl<'a> MacTrimScrubber<'a> {
         let badge_h = sm.badge_height.points();
         let track_rect = Rect::from_min_max(
             Pos2::new(rect.left(), rect.top() + badge_h),
-            Pos2::new(rect.right(), (rect.bottom() - v_inset * 0.5).max(rect.top() + badge_h)),
+            Pos2::new(
+                rect.right(),
+                (rect.bottom() - v_inset * 0.5).max(rect.top() + badge_h),
+            ),
         );
 
         let handle_w = sm.handle_width.points();

@@ -213,7 +213,9 @@ impl<'a> MacPathControl<'a> {
                 theme.window_background()
             };
             let btn_fg = if btn_resp.is_pointer_button_down_on() {
-                theme.selected_control_background_style().primary_text_color(theme)
+                theme
+                    .selected_control_background_style()
+                    .primary_text_color(theme)
             } else if self.enabled {
                 theme.label()
             } else {
@@ -271,11 +273,7 @@ impl<'a> MacPathControl<'a> {
                 clicked_segment = Some(idx);
             }
             if seg_resp.hovered() && self.enabled {
-                painter.rect_filled(
-                    seg_rect,
-                    CornerRadius::same(seg_r as u8),
-                    theme.control(),
-                );
+                painter.rect_filled(seg_rect, CornerRadius::same(seg_r as u8), theme.control());
             }
 
             let half_icon = icon_sz * 0.5;
@@ -342,16 +340,30 @@ fn paint_component_icon(
         let tab_w = pcm.folder_tab_width.points();
         let tab_h = pcm.folder_tab_height.points();
         let body_rect = Rect::from_min_max(
-            Pos2::new(icon_rect.left() + border_w, icon_rect.top() + tab_h + border_w),
-            Pos2::new(icon_rect.right() - border_w, icon_rect.bottom() - border_w * 2.0),
+            Pos2::new(
+                icon_rect.left() + border_w,
+                icon_rect.top() + tab_h + border_w,
+            ),
+            Pos2::new(
+                icon_rect.right() - border_w,
+                icon_rect.bottom() - border_w * 2.0,
+            ),
         );
         let tab_rect = Rect::from_min_size(
             Pos2::new(body_rect.left(), body_rect.top() - tab_h),
             Vec2::new(tab_w, tab_h + border_w),
         );
         let r = border_w * 2.0;
-        painter.rect_filled(tab_rect, CornerRadius::same(border_w as u8), theme.control_accent());
-        painter.rect_filled(body_rect, CornerRadius::same(r as u8), theme.control_accent());
+        painter.rect_filled(
+            tab_rect,
+            CornerRadius::same(border_w as u8),
+            theme.control_accent(),
+        );
+        painter.rect_filled(
+            body_rect,
+            CornerRadius::same(r as u8),
+            theme.control_accent(),
+        );
     } else {
         let inset_x = border_w * 2.0 + border_w;
         let inset_y = border_w * 2.0;

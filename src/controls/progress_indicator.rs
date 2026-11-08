@@ -242,14 +242,9 @@ impl<'a> Widget for MacProgressIndicator<'a> {
 
                 if let Some(target_p) = self.clamped_progress() {
                     let spring_preset = &theme.motion().swiftui_smooth;
-                    let spring = CASpring::new(
-                        spring_preset.response as f32,
-                        spring_preset.damping_ratio as f32,
-                    );
+                    let spring = CASpring::new(spring_preset.response, spring_preset.damping_ratio);
                     let prev_id = response.id.with("prev_progress");
-                    let prev_p = ui
-                        .data(|d| d.get_temp::<f32>(prev_id))
-                        .unwrap_or(target_p);
+                    let prev_p = ui.data(|d| d.get_temp::<f32>(prev_id)).unwrap_or(target_p);
                     let eval = spring.evaluate(1.0).clamp(0.0, 1.0);
                     let smooth_p = (prev_p + (target_p - prev_p) * eval).clamp(0.0, 1.0);
                     ui.data_mut(|d| d.insert_temp(prev_id, target_p));
@@ -319,10 +314,8 @@ impl<'a> Widget for MacProgressIndicator<'a> {
                     let factor = min_alpha + (1.0 - min_alpha) * decay;
                     let spoke_color = base_color.gamma_multiply(factor.clamp(0.0, 1.0));
 
-                    painter.line_segment(
-                        [p0, p1],
-                        Stroke::new(sm.spoke_width.points(), spoke_color),
-                    );
+                    painter
+                        .line_segment([p0, p1], Stroke::new(sm.spoke_width.points(), spoke_color));
                 }
 
                 ui.ctx().request_repaint();

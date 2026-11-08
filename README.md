@@ -4,8 +4,8 @@
 
 [![Crates.io](https://img.shields.io/crates/v/egui-macview.svg)](https://crates.io/crates/egui-macview)
 [![Documentation](https://docs.rs/egui-macview/badge.svg)](https://docs.rs/egui-macview)
-[![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-135%20passed%20(100%25%20green)-brightgreen.svg)](tests/)
+[![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](https://opensource.org/licenses/MIT)
+[![Tests](https://img.shields.io/badge/tests-142%20passed%20(100%25%20green)-brightgreen.svg)](https://github.com/oversluizen/egui-macview)
 
 ---
 
@@ -32,7 +32,7 @@ cargo run --example macview_gallery
 
 Clicking the **Screens** group in the left sidebar switches the central work area across 4 specialized AppKit capability screens:
 
-```
+```text
 ┌─────────────────┬──────────────────────────────────────────┬──────────────────┐
 │ Left Sidebar    │ Center Work Area (Master-Detail)         │ Right Inspector  │
 │                 │                                          │                  │
@@ -92,6 +92,12 @@ Clicking the **Screens** group in the left sidebar switches the central work are
 | [`MacPopUpButton`](file:///D:/Programmeren/egui-macview/src/controls/popup_button.rs) | `NSPopUpButton` | Trailing double chevrons with dropdown selection overlay and auto-clamping viewport positioning. |
 | [`MacSearchField`](file:///D:/Programmeren/egui-macview/src/controls/search_field.rs) | `NSSearchField` | Magnifying glass glyph, instant clear (`×`) button, and keyboard escape handling. |
 | [`MacColorWell`](file:///D:/Programmeren/egui-macview/src/controls/color_well.rs) | `NSColorWell` | Color swatch preview with translucent alpha checkerboard underlay and popover picker. |
+| [`MacProgressIndicator`](file:///D:/Programmeren/egui-macview/src/controls/progress_indicator.rs) | `NSProgressIndicator` | Determinate/indeterminate horizontal progress bar (`6.0 pt` / `4.0 pt`) and 12-spoke stepped circular activity spinner (`Regular`, `Small`, `Mini`). |
+| [`MacTableView`](file:///D:/Programmeren/egui-macview/src/controls/table_view/mod.rs) | `NSTableView` + `NSTableHeaderView` | Multi-column data table with `24.0 pt` sortable column headers, alternating row backgrounds, single/Shift/Cmd row selection, and keyboard navigation. |
+| [`MacTokenField`](file:///D:/Programmeren/egui-macview/src/controls/token_field.rs) | `NSTokenField` | Interactive capsule tag/pill input with comma/Enter commit, per-pill `×` removal, Backspace pop, flow wrapping, and optional character counter. |
+| [`MacLevelIndicator`](file:///D:/Programmeren/egui-macview/src/controls/level_indicator.rs) | `NSLevelIndicator` | Continuous and discrete segmented capacity/audio level meter (horizontal or vertical) with green/yellow/red thresholds and peak-hold marker. |
+| [`MacTrimScrubber`](file:///D:/Programmeren/egui-macview/src/controls/trim_scrubber/mod.rs) | `AVPlayerView` Trim Bar | QuickTime / AVKit media timeline trim bar with waveform bars, named zones, yellow selection handles, dimmed outside regions, and draggable playhead with `MM:SS.d` badge. |
+| [`MacPathControl`](file:///D:/Programmeren/egui-macview/src/controls/path_control.rs) | `NSPathControl` | Interactive file/folder breadcrumb bar with vector icons, chevron separators, clickable segments, and optional trailing `Choose...` button. |
 | [`MacMenuBar`](file:///D:/Programmeren/egui-macview/src/navigation/menu.rs) | `NSMenu` / App Menu | Authentic menu bar with cascading submenus, global keyboard shortcuts, and dynamic width auto-calculation guaranteeing $\ge 24\,\text{pt}$ clearance between titles and accelerators. |
 | [`MacCommandPalette`](file:///D:/Programmeren/egui-macview/src/navigation/command_palette.rs) | Spotlight / Quick Open | Floating modal command runner with fuzzy subsequence scoring, category badges, and keyboard navigation. |
 
@@ -116,22 +122,14 @@ Add `egui-macview` to your `Cargo.toml`:
 ```toml
 [dependencies]
 egui = "0.37.0"
-egui-macview = "0.3.1"
+egui-macview = "0.5.0"
 ```
 
 ### Complete Code Example
 
 ```rust
-use egui::{pos2, vec2, Rect};
 use egui_macview::{
-    theme::{MacAppearance, MacTheme},
-    controls::{
-        segmented::MacSegmentedControl,
-        text_field::MacInputCell,
-        toggle::MacToggle,
-        stepper::MacStepper,
-    },
-    layout::{fixed_view::MacFixedView, row::MacRow},
+    MacAppearance, MacInputCell, MacSegmentedControl, MacStepper, MacTheme, MacToggle,
 };
 
 pub struct MySettingsView {
@@ -182,7 +180,7 @@ impl MySettingsView {
         // 4. Stepper with Unit Formatting
         ui.horizontal(|h_ui| {
             h_ui.label("Display Scale:");
-            MacStepper::new(&mut self.zoom_level, 25.0, 200.0, 5.0)
+            MacStepper::new(&mut self.zoom_level, 25.0..=200.0, 5.0)
                 .theme(&self.theme)
                 .show(h_ui);
             h_ui.label(format!("{:.0} %", self.zoom_level));
@@ -200,14 +198,15 @@ All code adheres strictly to **GL-1015 (De Verankeringswet & Software Engineerin
 - **100% Red-Green Test Anchoring**: Every requirement, glitch fix, and layout invariant is anchored by failing red COTS tests prior to implementation.
 - **Zero Host OS Emoji Bleed**: Guaranteed 100% monochrome vector rendering via `MacSymbol` TrueType glyphs.
 - **Zero Dead Controls**: Every UI control bidirectionally mutates state and updates visual geometry in real time.
-- **Test Suite Pass Rate**: **135 passed, 0 failed, 1 ignored** (physical Mac SSH differential test runner).
+- **Test Suite Pass Rate**: **142 passed, 0 failed, 1 ignored** (physical Mac SSH differential test runner).
   - `appkit_primitives_tests` (35 tests)
   - `architecture_guard_tests` (7 tests)
   - `cots_red_baseline_tests` (7 tests)
   - `high_assurance_invariants_tests` (4 tests)
-  - `macbook_parity_differential_tests` (5 tests)
+  - `macbook_parity_differential_tests` (6 tests + 1 live SSH test)
   - `menu_and_palette_tests` (20 tests)
   - `micro_animations_and_hud_tests` (7 tests)
+  - `studio_controls_v05_tests` (6 tests)
   - `symbol_tests` (6 tests)
   - `undo_and_feedback_tests` (10 tests)
   - `wcag_contrast_and_visuals_tests` (8 tests)

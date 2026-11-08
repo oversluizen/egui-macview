@@ -7,7 +7,9 @@
 
 use crate::layout::subpixel_snap_rect;
 use crate::theme::MacTheme;
-use egui::{Color32, CornerRadius, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2, Widget};
+use egui::{
+    Color32, CornerRadius, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2, Widget,
+};
 use std::ops::RangeInclusive;
 
 /// Visual meter style for [`MacLevelIndicator`].
@@ -251,8 +253,10 @@ impl<'a> Widget for MacLevelIndicator<'a> {
                     let seg_frac_end = (idx + 1) as f32 / (seg_count as f32);
                     let seg_mid_frac = (idx as f32 + 0.5) / (seg_count as f32);
                     let seg_val = min_v + seg_mid_frac * span;
-                    let is_lit = frac >= (idx as f32 / (seg_count as f32)) && frac > 0.0
-                        && (frac >= seg_frac_end || idx == ((frac * seg_count as f32).floor() as usize));
+                    let is_lit = frac >= (idx as f32 / (seg_count as f32))
+                        && frac > 0.0
+                        && (frac >= seg_frac_end
+                            || idx == ((frac * seg_count as f32).floor() as usize));
 
                     let seg_rect = match self.orientation {
                         MacLevelOrientation::Horizontal => {

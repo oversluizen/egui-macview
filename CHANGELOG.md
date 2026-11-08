@@ -5,6 +5,22 @@ All notable changes to the `egui-macview` crate will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-11-08
+
+### Added
+- **AppKit Progress Indicator (`MacProgressIndicator`, `MacProgressStyle`, `MacProgressControlSize`)**: Determinate/indeterminate horizontal progress bar (`6.0 pt` Regular, `4.0 pt` Small/Mini track) and 12-spoke stepped circular activity spinner (`32.0 pt` Regular, `16.0 pt` Small, `12.0 pt` Mini at 12 FPS) with optional status caption and percentage readout (`SPEC-011`, `REQ-011-01`).
+- **AppKit Multi-Column Data Table (`MacTableView`, `MacTableColumn`, `MacSortDirection`, `MacTableViewResponse`)**: Multi-column table view with `24.0 pt` `NSTableHeaderView`, clickable column sort direction toggles (`ChevronUp` / `ChevronDown`), alternating row backgrounds (`alternatingContentBackgroundColors`), single/Shift-range/Cmd-toggle multi-row selection (`BTreeSet<usize>`), and consumed `ArrowUp`/`ArrowDown` keyboard navigation (`REQ-011-02`).
+- **AppKit Pill Tag Input (`MacTokenField`)**: Interactive capsule token input field (`16.0 pt` inner capsules with `8.0 pt` corner radius inside a `22.0 pt` min-height container) with automatic comma/Enter tokenization, per-pill `Xmark` removal, `Backspace` pop on empty buffer, multi-line flow wrapping, and optional live `N / M` character counter (`REQ-011-03`).
+- **AppKit Capacity & Audio Meter (`MacLevelIndicator`, `MacLevelIndicatorStyle`, `MacLevelOrientation`)**: Continuous and discrete segmented capacity/audio level meter in horizontal or vertical orientation with semantic threshold coloring (`systemGreen`, `systemYellow`, `systemRed`) and optional peak-hold tick marker (`REQ-011-04`).
+- **AVKit / QuickTime Trim Scrubber (`MacTrimScrubber`, `MacTimelineZone`, `MacTrimScrubberResponse`)**: Media timeline trim bar with waveform envelope bars, named timeline zone overlays, outside-trim dimming scrims (`rgba(0, 0, 0, 0.58)`), yellow selection frame (`systemYellow`, `2.0 pt` stroke) with left/right slotted grab handles (`12.0 pt` wide), and draggable playhead cursor with floating `MM:SS.d` timecode badge (`REQ-011-05`).
+- **AppKit Breadcrumb Path Bar (`MacPathControl`, `MacPathComponent`, `MacPathControlResponse`)**: Interactive file/folder breadcrumb bar (`22.0 pt` height) with vector folder/document icons, `ChevronRight` separators, per-segment click selection, and optional trailing `Choose...` button (`REQ-011-06`).
+- **Live MacBook Air Ground-Truth & Differential Parity Suite (`SPEC-011`)**: Extracted PyObjC metrics and offscreen bitmap renders (`appkit_studio_v05_ground_truth.json` + 12 Aqua/DarkAqua PNG golden masters) from physical macOS hardware (`ssh macbook`) and added `studio_controls_v05_tests.rs`.
+
+### Changed
+- Fixed `src/tokens/dtcg.rs` `parse_color32` to use `Color32::from_rgba_unmultiplied` instead of `from_rgba_premultiplied` so translucent W3C DTCG `#RRGGBBAA` tokens preserve exact sRGB channels.
+- Bumped crate version to `0.5.0` in `Cargo.toml` and `tokens/design_tokens.json`.
+- Added `specs/SPEC-011-STUDIO-AND-AVKIT-CONTROLS.md` and synchronized `specs/SPEC-INDEX.md` to `0.5.0`.
+
 ## [0.4.0] - 2026-11-07
 
 ### Added

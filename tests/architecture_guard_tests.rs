@@ -721,4 +721,3 @@ fn test_guard_windows_gui_subsystem_attribute() {
         );
     }
 }
-

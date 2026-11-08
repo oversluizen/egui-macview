@@ -199,5 +199,8 @@ fn test_dtcg_color_parser() {
     assert!((parsed_alpha.a() as i32 - 25).abs() <= 1);
 
     let parsed_focus = parse_color32("rgba(0, 103, 244, 0.50)");
-    assert_eq!(parsed_focus, Color32::from_rgba_unmultiplied(0, 103, 244, 128));
+    assert_eq!(
+        parsed_focus,
+        Color32::from_rgba_unmultiplied(0, 103, 244, 128)
+    );
 }
