@@ -117,46 +117,59 @@ pub fn handle_submenu_input(
     }
 }
 
-/// Computes the maximum required item width across `items` for a menu or submenu dropdown.
-pub(crate) fn measure_menu_items_max_width(
+/// Pre-laid-out text galleys for a single non-separator menu item (`Color32::PLACEHOLDER`).
+pub(crate) type MenuItemGalleys = (
+    std::sync::Arc<egui::Galley>,
+    Option<std::sync::Arc<egui::Galley>>,
+);
+
+/// Lays out each menu item once with `Color32::PLACEHOLDER` and returns `(max_item_width, galleys)`.
+pub(crate) fn layout_menu_items(
     painter: &egui::Painter,
     items: &[crate::navigation::item::NSMenuItem],
     font_id: &FontId,
-    on_accent: egui::Color32,
     lead_offset: f32,
     padding_h: f32,
     min_clearance: f32,
-) -> f32 {
+) -> (f32, Vec<Option<MenuItemGalleys>>) {
     let mut max_item_w = 0.0f32;
+    let mut laid_out = Vec::with_capacity(items.len());
     for item in items {
         if matches!(item.kind, MacMenuItemKind::Separator) {
+            laid_out.push(None);
             continue;
         }
-        let title_w = painter
-            .layout_no_wrap(item.title.clone(), font_id.clone(), on_accent)
-            .size()
-            .x;
-        let trailing_str = match &item.kind {
+        let title_galley = painter.layout_no_wrap(
+            item.title.clone(),
+            font_id.clone(),
+            egui::Color32::PLACEHOLDER,
+        );
+        let title_w = title_galley.size().x;
+        let trailing_galley = match &item.kind {
             MacMenuItemKind::Action {
                 shortcut: Some(sc), ..
-            } => Some(sc.format_text()),
-            MacMenuItemKind::Submenu { .. } => Some("›".to_string()),
+            } => Some(painter.layout_no_wrap(
+                sc.format_text(),
+                font_id.clone(),
+                egui::Color32::PLACEHOLDER,
+            )),
+            MacMenuItemKind::Submenu { .. } => Some(painter.layout_no_wrap(
+                "›".to_owned(),
+                font_id.clone(),
+                egui::Color32::PLACEHOLDER,
+            )),
             _ => None,
         };
-        let trailing_w = trailing_str.map_or(0.0, |s| {
-            painter
-                .layout_no_wrap(s, font_id.clone(), on_accent)
-                .size()
-                .x
-        });
+        let trailing_w = trailing_galley.as_ref().map_or(0.0, |g| g.size().x);
         let item_w = if trailing_w > 0.0 {
             lead_offset + padding_h + title_w + min_clearance + trailing_w * 2.0
         } else {
             lead_offset + padding_h + title_w
         };
         max_item_w = max_item_w.max(item_w);
+        laid_out.push(Some((title_galley, trailing_galley)));
     }
-    max_item_w
+    (max_item_w, laid_out)
 }
 
 /// Renders a cascading submenu popover adjacent to its parent menu item.
@@ -187,12 +200,10 @@ pub fn render_submenu_popover(
         .order(Order::Foreground)
         .fixed_pos(sub_pos)
         .show(ctx, |sub_ui| {
-            let painter = sub_ui.painter();
-            let max_item_w = measure_menu_items_max_width(
-                painter,
+            let (max_item_w, item_galleys) = layout_menu_items(
+                sub_ui.painter(),
                 &child_menu.items,
                 &font_id,
-                on_accent,
                 padding_h,
                 padding_h,
                 min_clearance,
@@ -210,14 +221,16 @@ pub fn render_submenu_popover(
                 StrokeKind::Inside,
             );
 
-            for (s_idx, sub_item) in child_menu.items.iter().enumerate() {
+            for ((s_idx, sub_item), galleys) in
+                child_menu.items.iter().enumerate().zip(item_galleys)
+            {
                 let s_y = sub_pos.y + menu_padding + (s_idx as f32) * item_height;
                 let s_rect = Rect::from_min_size(
                     Pos2::new(sub_pos.x + menu_padding, s_y),
                     Vec2::new(sub_menu_w - menu_padding * 2.0, item_height),
                 );
 
-                if matches!(sub_item.kind, MacMenuItemKind::Separator) {
+                let Some((title_galley, trailing_galley)) = galleys else {
                     painter.line_segment(
                         [
                             Pos2::new(s_rect.left(), s_rect.center().y),
@@ -226,7 +239,7 @@ pub fn render_submenu_popover(
                         Stroke::new(border_w, theme.separator()),
                     );
                     continue;
-                }
+                };
 
                 let s_resp = sub_ui.interact(s_rect, sub_id.with(s_idx), Sense::click());
                 let is_highlighted = highlighted_idx == Some(s_idx);
@@ -250,25 +263,22 @@ pub fn render_submenu_popover(
                     theme.label()
                 };
 
-                painter.text(
-                    Pos2::new(s_rect.left() + padding_h, s_rect.center().y),
-                    Align2::LEFT_CENTER,
-                    &sub_item.title,
-                    font_id.clone(),
-                    s_color,
-                );
+                let title_pos = Align2::LEFT_CENTER
+                    .anchor_size(
+                        Pos2::new(s_rect.left() + padding_h, s_rect.center().y),
+                        title_galley.size(),
+                    )
+                    .min;
+                painter.galley(title_pos, title_galley, s_color);
 
-                if let MacMenuItemKind::Action {
-                    shortcut: Some(sc), ..
-                } = &sub_item.kind
-                {
-                    painter.text(
-                        Pos2::new(s_rect.right() - padding_h, s_rect.center().y),
-                        Align2::RIGHT_CENTER,
-                        sc.format_text(),
-                        font_id.clone(),
-                        s_color,
-                    );
+                if let Some(tg) = trailing_galley {
+                    let tr_pos = Align2::RIGHT_CENTER
+                        .anchor_size(
+                            Pos2::new(s_rect.right() - padding_h, s_rect.center().y),
+                            tg.size(),
+                        )
+                        .min;
+                    painter.galley(tr_pos, tg, s_color);
                 }
 
                 if s_resp.clicked() && sub_item.enabled {

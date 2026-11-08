@@ -5,6 +5,19 @@ All notable changes to the `egui-macview` crate will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2026-11-08
+
+### Added
+- **GL-1015 Golden Master Architecture Guards (`tests/architecture_guard_tests.rs`)**: Added Windows Desktop GUI Subsystem & Safe `eframe` Startup Guard (`#![cfg_attr(not(test), windows_subsystem = "windows")]`, `Renderer::Glow`, `InstanceFlags::empty()`, `system_font_fallback: false`, `persist_window: false`), Anti-Spookcode Guard (`allow(dead_code)` forbidden in `src/`), Zero Unused Dependencies Guard, and Central State-Invariant Guard (`NSUndoManager::validate_invariants`).
+- **Cold-Start, Zero-Idle-Repaint & State-Invariant Smoke Suite (`tests/runtime_hygiene_and_invariants_tests.rs`)**: Headless cold-start + first-frame latency verification (`< 500ms`), zero idle repaint leak verification (`repaint_delay > Duration::ZERO` after 2 rest frames) across all 5 `GalleryScreen` states (`Aqua` & `DarkAqua`) and `StudioApp`, `MacTrimScrubber` bounds invariants, `MacTableView` filtered selection invariants, and bit-exact `Action -> Undo -> Redo` roundtrips on `NSUndoManager`.
+
+### Changed
+- **Single-Pass `Arc<Galley>` Reuse & Consolidated `egui::Memory` State**: Consolidated `MacScrollView` (`ScrollViewTempState`) and `MacInputCell` (`InputCellTransactionState`) into single `IdTypeMap` lookups per frame, and reused laid-out `Arc<Galley>`s (`Color32::PLACEHOLDER`) across `MacButtonCell`, `MacSegmentedControl`, `MacPopUpButton`, `MacToolbar`, `MacPathControl`, `MacTokenField`, `MacMenuBar`, `submenu.rs`, and `MacContextMenu`.
+- **Safe Windows Hybrid-GPU `eframe` Startup (`examples/*.rs`)**: Configured `eframe::Renderer::Glow`, `wgpu::InstanceFlags::empty()`, `system_font_fallback: false`, and `persist_window: false` across all GUI examples to prevent DX12/Vulkan validation TDR (`LiveKernelEvent 141`) and font-indexing main-thread freezes.
+
+### Fixed
+- **`MacTableView` Selection Pruning on Row Count Reduction**: Pruned out-of-bounds `selected_rows` indices (`self.selection.retain(|&idx| idx < self.row_count)`) when table filtering reduces `row_count`.
+
 ## [0.5.0] - 2026-11-08
 
 ### Added

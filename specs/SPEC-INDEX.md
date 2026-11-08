@@ -4,9 +4,9 @@
 | :--- | :--- |
 | **Document ID** | SPEC-INDEX |
 | **Document Title** | Specification Suite Index & Version Matrix |
-| **Document Version** | `0.5.0` |
+| **Document Version** | `0.5.1` |
 | **Status** | Accepted / Normative |
-| **Target Milestone** | Milestone 0.5.0 |
+| **Target Milestone** | Milestone 0.5.1 |
 | **Target Host** | Standalone crate `egui-macview` (Rust, egui 0.37) |
 | **Author** | Jaco Oversluizen / `egui-macview` contributors |
 | **Normative Standards** | ISO/IEC/IEEE 42010:2011, ISO/IEC/IEEE 29119-3:2021, RFC 2119/8174, Apple macOS HIG, W3C DTCG, SemVer 2.0.0 |
@@ -22,6 +22,7 @@
 | `0.4.0` | 2026-11-07 | Architecture Team | Milestone 0.4.0 Release: State Integrity (NSUndoManager), Context Menus, Micro-Feedback & Gallery Integration |
 | `0.4.1` | 2026-11-08 | Architecture Team | Milestone 0.4.1 Consolidation & Hardening Release: Zero Hardcoding, Transactional VC State Machines, First-Class `MacToolbar` & `MacFloatingInfoBox`, and Spec ID Disambiguation |
 | `0.5.0` | 2026-11-08 | Architecture Team | Milestone 0.5.0 Release: Studio & AVKit Media, Timeline and Publishing Controls (`SPEC-011`) |
+| `0.5.1` | 2026-11-08 | Architecture Team | Milestone 0.5.1 Hardening Release: GL-1015 Golden Master Guards, Hybrid-GPU Safe `eframe` Startup, Single-Pass Galley Reuse & Runtime Invariants |
 
 ---
 

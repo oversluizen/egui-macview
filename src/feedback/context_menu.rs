@@ -190,11 +190,10 @@ impl<'a> MacContextMenu<'a> {
             padding_h
         };
 
-        let max_item_w = crate::navigation::submenu::measure_menu_items_max_width(
+        let (max_item_w, item_galleys) = crate::navigation::submenu::layout_menu_items(
             ui.painter(),
             self.items,
             &font_id,
-            on_accent,
             lead_offset,
             padding_h,
             min_clearance,
@@ -248,14 +247,14 @@ impl<'a> MacContextMenu<'a> {
                     StrokeKind::Inside,
                 );
 
-                for (idx, item) in self.items.iter().enumerate() {
+                for ((idx, item), galleys) in self.items.iter().enumerate().zip(item_galleys) {
                     let item_y = menu_rect.top() + padding + (idx as f32) * item_height;
                     let item_rect = Rect::from_min_size(
                         Pos2::new(menu_rect.left() + padding, item_y),
                         Vec2::new(menu_rect.width() - padding * 2.0, item_height),
                     );
 
-                    if matches!(item.kind, MacMenuItemKind::Separator) {
+                    let Some((title_galley, trailing_galley)) = galleys else {
                         painter.line_segment(
                             [
                                 Pos2::new(item_rect.left(), item_rect.center().y),
@@ -264,7 +263,7 @@ impl<'a> MacContextMenu<'a> {
                             Stroke::new(border_w, theme.separator()),
                         );
                         continue;
-                    }
+                    };
 
                     let is_highlighted = *self.selected_idx == Some(idx);
                     let resp = menu_ui.interact(item_rect, area_id.with(idx), Sense::click());
@@ -301,25 +300,22 @@ impl<'a> MacContextMenu<'a> {
                         );
                     }
 
-                    painter.text(
-                        Pos2::new(item_rect.left() + lead_offset, item_rect.center().y),
-                        Align2::LEFT_CENTER,
-                        &item.title,
-                        font_id.clone(),
-                        fg,
-                    );
+                    let title_pos = Align2::LEFT_CENTER
+                        .anchor_size(
+                            Pos2::new(item_rect.left() + lead_offset, item_rect.center().y),
+                            title_galley.size(),
+                        )
+                        .min;
+                    painter.galley(title_pos, title_galley, fg);
 
-                    if let MacMenuItemKind::Action {
-                        shortcut: Some(sc), ..
-                    } = &item.kind
-                    {
-                        painter.text(
-                            Pos2::new(item_rect.right() - padding_h, item_rect.center().y),
-                            Align2::RIGHT_CENTER,
-                            sc.format_text(),
-                            font_id.clone(),
-                            fg,
-                        );
+                    if let Some(tg) = trailing_galley {
+                        let tr_pos = Align2::RIGHT_CENTER
+                            .anchor_size(
+                                Pos2::new(item_rect.right() - padding_h, item_rect.center().y),
+                                tg.size(),
+                            )
+                            .min;
+                        painter.galley(tr_pos, tg, fg);
                     }
 
                     if resp.clicked() && item.enabled {

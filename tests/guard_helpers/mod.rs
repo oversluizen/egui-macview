@@ -290,7 +290,12 @@ pub fn check_gui_entrypoint_safety(file_label: &str, source: &str) -> Vec<String
             "{file_label} -> missing `#![cfg_attr(not(test), windows_subsystem = \"windows\")]`"
         ));
     }
-    if stripped.contains("eframe::run_native") {
+    if stripped.contains("eframe::run_native") || stripped.contains("NativeOptions") {
+        if stripped.contains("NativeOptions::default()") {
+            violations.push(format!(
+                "{file_label} -> bare `NativeOptions::default()` is forbidden by GL-1015 §3.3"
+            ));
+        }
         for required in [
             "Renderer::Glow",
             "InstanceFlags::empty()",

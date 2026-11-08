@@ -249,11 +249,10 @@ impl<'a> MacMenuBar<'a> {
                     padding_h
                 };
 
-                let max_item_w = super::submenu::measure_menu_items_max_width(
+                let (max_item_w, item_galleys) = super::submenu::layout_menu_items(
                     ui.painter(),
                     &menu.items,
                     &font_id,
-                    on_accent,
                     lead_offset,
                     padding_h,
                     min_clearance,
@@ -281,14 +280,16 @@ impl<'a> MacMenuBar<'a> {
                             StrokeKind::Inside,
                         );
 
-                        for (i_idx, item) in menu.items.iter().enumerate() {
+                        for ((i_idx, item), galleys) in
+                            menu.items.iter().enumerate().zip(item_galleys)
+                        {
                             let item_y = popup_pos.y + menu_padding + (i_idx as f32) * item_height;
                             let item_rect = Rect::from_min_size(
                                 Pos2::new(popup_pos.x + menu_padding, item_y),
                                 Vec2::new(menu_width - menu_padding * 2.0, item_height),
                             );
 
-                            if matches!(item.kind, MacMenuItemKind::Separator) {
+                            let Some((title_galley, trailing_galley)) = galleys else {
                                 painter.line_segment(
                                     [
                                         Pos2::new(item_rect.left(), item_rect.center().y),
@@ -297,7 +298,7 @@ impl<'a> MacMenuBar<'a> {
                                     Stroke::new(border_w, theme.separator()),
                                 );
                                 continue;
-                            }
+                            };
 
                             let is_highlighted = *self.highlighted_item_idx == Some(i_idx);
                             let resp =
@@ -338,34 +339,25 @@ impl<'a> MacMenuBar<'a> {
                                 );
                             }
 
-                            painter.text(
-                                Pos2::new(item_rect.left() + lead_offset, item_rect.center().y),
-                                Align2::LEFT_CENTER,
-                                &item.title,
-                                font_id.clone(),
-                                item_text_color,
-                            );
+                            let title_pos = Align2::LEFT_CENTER
+                                .anchor_size(
+                                    Pos2::new(item_rect.left() + lead_offset, item_rect.center().y),
+                                    title_galley.size(),
+                                )
+                                .min;
+                            painter.galley(title_pos, title_galley, item_text_color);
 
-                            let right_str: Option<std::borrow::Cow<'static, str>> = match &item.kind
-                            {
-                                MacMenuItemKind::Action {
-                                    shortcut: Some(sc), ..
-                                } => Some(std::borrow::Cow::Owned(sc.format_text())),
-                                MacMenuItemKind::Submenu { .. } => {
-                                    Some(std::borrow::Cow::Borrowed("›"))
-                                }
-                                _ => None,
-                            };
-                            if let Some(txt) = right_str {
-                                let pos =
-                                    Pos2::new(item_rect.right() - padding_h, item_rect.center().y);
-                                painter.text(
-                                    pos,
-                                    Align2::RIGHT_CENTER,
-                                    txt.as_ref(),
-                                    font_id.clone(),
-                                    item_text_color,
-                                );
+                            if let Some(tg) = trailing_galley {
+                                let tr_pos = Align2::RIGHT_CENTER
+                                    .anchor_size(
+                                        Pos2::new(
+                                            item_rect.right() - padding_h,
+                                            item_rect.center().y,
+                                        ),
+                                        tg.size(),
+                                    )
+                                    .min;
+                                painter.galley(tr_pos, tg, item_text_color);
                             }
 
                             if resp.clicked() && item.enabled {

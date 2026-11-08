@@ -124,24 +124,36 @@ impl<'a> Widget for MacPopUpButton<'a> {
             font_id.clone(),
             Color32::PLACEHOLDER,
         );
-        let current_galley_w = current_galley.size().x;
-
-        let measure_all_items_width = |ui: &Ui| -> f32 {
-            let mut max_item_text_w = current_galley_w;
-            for &item in self.items {
-                if std::ptr::eq(item, current_text) {
-                    continue;
+        let mut cached_items: Option<(f32, Vec<std::sync::Arc<egui::Galley>>)> = None;
+        let layout_items =
+            |ui: &Ui,
+             cur: &std::sync::Arc<egui::Galley>,
+             cache: &mut Option<(f32, Vec<std::sync::Arc<egui::Galley>>)>| {
+                if let Some(existing) = cache.clone() {
+                    return existing;
                 }
-                let w = ui
-                    .painter()
-                    .layout_no_wrap(item.to_owned(), font_id.clone(), Color32::PLACEHOLDER)
-                    .size()
-                    .x;
-                max_item_text_w = max_item_text_w.max(w);
-            }
-            max_item_text_w + padding_h * 2.0 + chevron_size + chevron_spacing
-        };
-        let desired_width = self.width.unwrap_or_else(|| measure_all_items_width(ui));
+                let mut max_w = cur.size().x;
+                let mut galleys = Vec::with_capacity(self.items.len());
+                for &item in self.items {
+                    let g = if std::ptr::eq(item, current_text) {
+                        cur.clone()
+                    } else {
+                        ui.painter().layout_no_wrap(
+                            item.to_owned(),
+                            font_id.clone(),
+                            Color32::PLACEHOLDER,
+                        )
+                    };
+                    max_w = max_w.max(g.size().x);
+                    galleys.push(g);
+                }
+                let w = max_w + padding_h * 2.0 + chevron_size + chevron_spacing;
+                *cache = Some((w, galleys.clone()));
+                (w, galleys)
+            };
+        let desired_width = self
+            .width
+            .unwrap_or_else(|| layout_items(ui, &current_galley, &mut cached_items).0);
 
         let sense = if self.enabled {
             Sense::click()
@@ -218,7 +230,7 @@ impl<'a> Widget for MacPopUpButton<'a> {
                 current_galley.size(),
             )
             .min;
-        painter.galley(label_pos, current_galley, text_color);
+        painter.galley(label_pos, current_galley.clone(), text_color);
 
         // Draw trailing double chevrons (up/down pair)
         let chevron_color = if !self.enabled {
@@ -266,7 +278,7 @@ impl<'a> Widget for MacPopUpButton<'a> {
         }
 
         if self.enabled && is_popup_open {
-            let auto_width = measure_all_items_width(ui);
+            let (auto_width, item_galleys) = layout_items(ui, &current_galley, &mut cached_items);
             let menu_width = desired_width
                 .max(auto_width)
                 .max(metrics.menu_min_width.points());
@@ -320,7 +332,7 @@ impl<'a> Widget for MacPopUpButton<'a> {
                     );
 
                     let item_margin = metrics.menu_item_padding.points();
-                    for (idx, item) in self.items.iter().enumerate() {
+                    for (idx, item_galley) in item_galleys.into_iter().enumerate() {
                         let item_rect = Rect::from_min_size(
                             Pos2::new(
                                 menu_rect.left() + item_margin,
@@ -352,13 +364,13 @@ impl<'a> Widget for MacPopUpButton<'a> {
                             theme.label()
                         };
 
-                        menu_painter.text(
-                            Pos2::new(item_rect.left() + menu_padding, item_rect.center().y),
-                            Align2::LEFT_CENTER,
-                            item,
-                            font_id.clone(),
-                            item_text_color,
-                        );
+                        let item_text_pos = Align2::LEFT_CENTER
+                            .anchor_size(
+                                Pos2::new(item_rect.left() + menu_padding, item_rect.center().y),
+                                item_galley.size(),
+                            )
+                            .min;
+                        menu_painter.galley(item_text_pos, item_galley, item_text_color);
 
                         if item_resp.clicked() {
                             *self.selected_index = idx;

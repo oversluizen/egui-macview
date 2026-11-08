@@ -119,6 +119,21 @@ fn test_guard_documentation_and_file_size_ceilings() {
                     "{rel} exceeds ceiling: physical={physical} (<{MAX_PHYSICAL_LINES}), eSLOC={esloc} (<{MAX_ESLOC})"
                 ));
             }
+            for (line_idx, line) in content.lines().enumerate() {
+                let code_part = line.split("//").next().unwrap_or("").trim();
+                if !code_part.contains('"') && !code_part.ends_with('\\') {
+                    let without_arrays = code_part
+                        .replace("; 2]", "]")
+                        .replace("; 3]", "]")
+                        .replace("; 4]", "]");
+                    if without_arrays.matches(';').count() >= 3 {
+                        violations.push(format!(
+                            "{rel}:{} -> single-line statement cramming (>=3 semicolons)",
+                            line_idx + 1
+                        ));
+                    }
+                }
+            }
         }
     }
     assert!(violations.is_empty(), "Ceiling Guard:\n{violations:#?}");
@@ -295,11 +310,22 @@ fn test_guard_anti_spookcode_and_zero_unused_dependencies() {
         "Zero Unused Dependencies Guard: crates in [dependencies] unused in `src/`:\n{unused_deps:#?}"
     );
 
-    // State-Invariant & Undo/Redo Roundtrip Guard (GL-1015 §3.5)
+    // State-Invariant & Undo/Redo Roundtrip + Cold-Start Smoke Guard (GL-1015 §3.3, §3.4 & §3.5)
     let undo_src =
         fs::read_to_string(manifest_dir.join("src/state/undo.rs")).expect("read undo.rs");
     assert!(
         undo_src.contains("pub fn validate_invariants("),
         "NSUndoManager in `src/state/undo.rs` must expose `pub fn validate_invariants(&self)` (GL-1015 §3.5)"
+    );
+    let hygiene_test =
+        fs::read_to_string(manifest_dir.join("tests/runtime_hygiene_and_invariants_tests.rs"))
+            .expect("read runtime_hygiene_and_invariants_tests.rs");
+    assert!(
+        hygiene_test.contains("validate_invariants()")
+            && hygiene_test.contains(".undo(")
+            && hygiene_test.contains(".redo(")
+            && hygiene_test.contains("cold_start")
+            && hygiene_test.contains("repaint_delay"),
+        "Integration suite must verify Cold-Start (<500ms), Zero Idle Repaint Leak, and Action->Undo->Redo invariants"
     );
 }
