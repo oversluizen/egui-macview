@@ -148,31 +148,9 @@ impl<'a> MacSegmentedControl<'a> {
 
         // CASpring sliding pill animation stored in egui temp memory
         let spring = theme.motion().swiftui_snappy.to_spring();
-        let now = ui.input(|i| i.time);
         let spring_key = response.id.with("seg_caspring");
         let target_idx = active_idx as f32;
-        let (prev_target, start_val, start_time) = ui.data(|d| {
-            d.get_temp::<(f32, f32, f64)>(spring_key)
-                .unwrap_or((target_idx, target_idx, now))
-        });
-
-        let anim_idx = if (prev_target - target_idx).abs() > f32::EPSILON {
-            let elapsed = (now - start_time).max(0.0) as f32;
-            let cur = start_val + (prev_target - start_val) * spring.position_at(elapsed);
-            ui.data_mut(|d| d.insert_temp(spring_key, (target_idx, cur, now)));
-            ui.ctx().request_repaint();
-            cur
-        } else {
-            let elapsed = (now - start_time).max(0.0) as f32;
-            if (target_idx - start_val).abs() > f32::EPSILON
-                && elapsed < spring.settling_duration()
-            {
-                ui.ctx().request_repaint();
-                start_val + (target_idx - start_val) * spring.position_at(elapsed)
-            } else {
-                target_idx
-            }
-        };
+        let anim_idx = spring.animate_f32(ui.ctx(), spring_key, target_idx);
 
         let pill_x = rect.min.x + anim_idx * segment_width;
         let animated_seg_rect = Rect::from_min_size(

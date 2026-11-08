@@ -11,6 +11,7 @@ pub mod state4_finder_browser;
 pub mod state5_avkit_media;
 
 pub use chrome::detect_frameless_resize_dir;
+pub use inspector::{convert_card_units, unit_scale_and_suffix};
 pub use sidebar::SidebarState;
 
 use crate::{GalleryScreen, InspectorMode};

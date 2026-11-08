@@ -197,32 +197,9 @@ impl<'t> MacOutlineTree<'t> {
 
             // CASpring rotation interpolation between 0 rad (right) and pi/2 rad (down)
             let spring = self.theme.motion().swiftui_snappy.to_spring();
-            let now = self.ui.input(|i| i.time);
             let state_key = row_id.with("disc_spring_state");
             let target_frac = if *expanded { 1.0f32 } else { 0.0f32 };
-            let (prev_target, start_val, start_time) = self.ui.data(|d| {
-                d.get_temp::<(f32, f32, f64)>(state_key)
-                    .unwrap_or((target_frac, target_frac, now))
-            });
-
-            let current_frac = if (prev_target - target_frac).abs() > f32::EPSILON {
-                let elapsed = (now - start_time).max(0.0) as f32;
-                let cur = start_val + (prev_target - start_val) * spring.position_at(elapsed);
-                self.ui
-                    .data_mut(|d| d.insert_temp(state_key, (target_frac, cur, now)));
-                self.ui.ctx().request_repaint();
-                cur
-            } else {
-                let elapsed = (now - start_time).max(0.0) as f32;
-                if (target_frac - start_val).abs() > f32::EPSILON
-                    && elapsed < spring.settling_duration()
-                {
-                    self.ui.ctx().request_repaint();
-                    start_val + (target_frac - start_val) * spring.position_at(elapsed)
-                } else {
-                    target_frac
-                }
-            };
+            let current_frac = spring.animate_f32(self.ui.ctx(), state_key, target_frac);
 
             let angle = current_frac * std::f32::consts::FRAC_PI_2;
             let (sin_a, cos_a) = angle.sin_cos();

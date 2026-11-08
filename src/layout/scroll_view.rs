@@ -171,6 +171,7 @@ impl<'a> MacScrollView<'a> {
         let mut area = ScrollArea::new([self.horizontal, self.vertical])
             .id_salt(self.id.with("scroll_area"))
             .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
+            .scroll_source(egui::containers::scroll_area::ScrollSource::MOUSE_WHEEL)
             .auto_shrink([false, false])
             .min_scrolled_width(min_w)
             .min_scrolled_height(min_h);

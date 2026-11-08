@@ -115,6 +115,41 @@ impl CASpring {
         }
     }
 
+    /// Evaluates a stateful `CASpring` transition toward `target` using `egui` temporary memory,
+    /// requesting a repaint only while `(target - start_val).abs() > f32::EPSILON` and
+    /// `elapsed < self.settling_duration()`.
+    pub fn animate_f32(&self, ctx: &egui::Context, id: egui::Id, target: f32) -> f32 {
+        let now = ctx.input(|i| i.time);
+        let (prev_target, start_val, start_time) = ctx.data_mut(|d| {
+            *d.get_temp_mut_or_insert_with::<(f32, f32, f64)>(id, || (target, target, now))
+        });
+
+        if (prev_target - target).abs() > f32::EPSILON {
+            let elapsed = (now - start_time).max(0.0) as f32;
+            let cur = if (prev_target - start_val).abs() > f32::EPSILON
+                && elapsed < self.settling_duration()
+            {
+                start_val + (prev_target - start_val) * self.position_at(elapsed)
+            } else {
+                prev_target
+            };
+            ctx.data_mut(|d| d.insert_temp(id, (target, cur, now)));
+            ctx.request_repaint();
+            cur
+        } else {
+            let elapsed = (now - start_time).max(0.0) as f32;
+            if (target - start_val).abs() > f32::EPSILON && elapsed < self.settling_duration() {
+                ctx.request_repaint();
+                start_val + (target - start_val) * self.position_at(elapsed)
+            } else {
+                if (target - start_val).abs() > f32::EPSILON {
+                    ctx.data_mut(|d| d.insert_temp(id, (target, target, now)));
+                }
+                target
+            }
+        }
+    }
+
     /// Evaluates displacement $x(t) \in [0.0, 1.0]$ at time $t$ in seconds.
     #[inline]
     pub fn position_at(&self, t: f32) -> f32 {

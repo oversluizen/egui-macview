@@ -302,6 +302,7 @@ impl GalleryApp {
             let native_decorations = self.window_controls_style == WindowControlsStyle::NativeHost;
             ui.ctx()
                 .send_viewport_cmd(ViewportCommand::Decorations(native_decorations));
+            ui.ctx().send_viewport_cmd(ViewportCommand::Focus);
         }
         if toggle_palette {
             self.palette.toggle();

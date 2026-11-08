@@ -264,7 +264,7 @@ impl<'a> Widget for MacProgressIndicator<'a> {
                         ui.ctx().request_repaint();
                         from_p
                     } else {
-                        if elapsed < spring.response * 2.0 {
+                        if (to_p - from_p).abs() > f32::EPSILON && elapsed < spring.response * 2.0 {
                             ui.ctx().request_repaint();
                         }
                         cur_p

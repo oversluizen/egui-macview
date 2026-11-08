@@ -83,31 +83,11 @@ impl<'a> Widget for MacToggle<'a> {
 
         // CASpring thumb interpolation stored in egui temp memory
         let spring = theme.motion().swiftui_bouncy.to_spring();
-        let now = ui.input(|i| i.time);
         let spring_key = response.id.with("toggle_caspring");
         let target_val = if *self.value { 1.0f32 } else { 0.0f32 };
-        let (prev_target, start_val, start_time) = ui.data(|d| {
-            d.get_temp::<(f32, f32, f64)>(spring_key)
-                .unwrap_or((target_val, target_val, now))
-        });
-
-        let anim_progress = if (prev_target - target_val).abs() > f32::EPSILON {
-            let elapsed = (now - start_time).max(0.0) as f32;
-            let cur = start_val + (prev_target - start_val) * spring.position_at(elapsed);
-            ui.data_mut(|d| d.insert_temp(spring_key, (target_val, cur, now)));
-            ui.ctx().request_repaint();
-            cur.clamp(0.0, 1.0)
-        } else {
-            let elapsed = (now - start_time).max(0.0) as f32;
-            if (target_val - start_val).abs() > f32::EPSILON
-                && elapsed < spring.settling_duration()
-            {
-                ui.ctx().request_repaint();
-                (start_val + (target_val - start_val) * spring.position_at(elapsed)).clamp(0.0, 1.0)
-            } else {
-                target_val
-            }
-        };
+        let anim_progress = spring
+            .animate_f32(ui.ctx(), spring_key, target_val)
+            .clamp(0.0, 1.0);
 
         let alpha_factor = if self.enabled {
             1.0

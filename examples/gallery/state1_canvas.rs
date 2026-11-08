@@ -108,9 +108,14 @@ impl CenterState {
             return;
         }
 
-        let raw_card_w = card.width.parse::<f32>().unwrap_or(240.0).clamp(60.0, 500.0);
-        let card_h = card.height.parse::<f32>().unwrap_or(140.0).clamp(40.0, 300.0);
-        let card_radius = card.radius.parse::<f32>().unwrap_or(10.0).clamp(0.0, 40.0);
+        let (w_scale, h_scale, r_scale, _) =
+            super::inspector::unit_scale_and_suffix(unit_segmented_idx);
+        let raw_card_w = (card.width.parse::<f32>().unwrap_or(240.0 * w_scale) / w_scale)
+            .clamp(60.0, 500.0);
+        let card_h = (card.height.parse::<f32>().unwrap_or(140.0 * h_scale) / h_scale)
+            .clamp(40.0, 300.0);
+        let card_radius = (card.radius.parse::<f32>().unwrap_or(10.0 * r_scale) / r_scale)
+            .clamp(0.0, 40.0);
 
         let (card_w, base_center_x) = match card.alignment_idx {
             0 => (raw_card_w, canvas_rect.min.x + 24.0 + raw_card_w * 0.5),
@@ -186,7 +191,12 @@ impl CenterState {
             cp.text(
                 pos2(card_rect.center().x, card_rect.center().y + 12.0),
                 Align2::CENTER_CENTER,
-                format!("{card_w:.0}×{card_h:.0} {unit_str} | {blend_label} | Blur {:.0}pt", card.shadow_blur),
+                format!(
+                    "{:.0}×{:.0} {unit_str} | {blend_label} | Blur {:.0}pt",
+                    card_w * w_scale,
+                    card_h * h_scale,
+                    card.shadow_blur
+                ),
                 FontId::proportional(10.5),
                 text_secondary,
             );
@@ -225,8 +235,8 @@ impl CenterState {
             } else {
                 (card_h + delta.y * 2.0).clamp(40.0, 300.0)
             };
-            card.width = format!("{next_w:.1}");
-            card.height = format!("{next_h:.1}");
+            card.width = format!("{:.1}", next_w * w_scale);
+            card.height = format!("{:.1}", next_h * h_scale);
         }
 
         let card_bounds = Rect::from_points(&corners_world);
@@ -313,6 +323,11 @@ impl CenterState {
             let cell_w = theme.text_field().compact_infobox.default_width.points();
             let (hud_w_id, hud_h_id, hud_r_id) = (Id::NULL.with("hud_w"), Id::NULL.with("hud_h"), Id::NULL.with("hud_r"));
 
+            let (w_range, h_range, r_range) = (
+                ((60.0 * w_scale) as f64)..=((500.0 * w_scale) as f64),
+                ((40.0 * h_scale) as f64)..=((300.0 * h_scale) as f64),
+                0.0..=((40.0 * r_scale) as f64),
+            );
             MacFloatingInfoBox::new("gallery_compact_hud", &mut hud_abs_pos)
                 .theme(theme)
                 .title("HUD Palette")
@@ -321,14 +336,14 @@ impl CenterState {
                     content_ui.ctx(),
                     |row1_ui| {
                         row1_ui.label(egui::RichText::new("W:").size(font_pt).color(label_col));
-                        MacInputCell::with_id(hud_w_id, &mut card.width).theme(theme).control_size(MacControlSize::CompactInfobox).numeric(60.0..=500.0, 1.0).width(cell_w).prev_focus(hud_r_id).next_focus(hud_h_id).show(row1_ui);
+                        MacInputCell::with_id(hud_w_id, &mut card.width).theme(theme).control_size(MacControlSize::CompactInfobox).numeric(w_range, 1.0).width(cell_w).prev_focus(hud_r_id).next_focus(hud_h_id).show(row1_ui);
                         row1_ui.add_space(4.0);
                         row1_ui.label(egui::RichText::new("H:").size(font_pt).color(label_col));
-                        MacInputCell::with_id(hud_h_id, &mut card.height).theme(theme).control_size(MacControlSize::CompactInfobox).numeric(40.0..=300.0, 1.0).width(cell_w).prev_focus(hud_w_id).next_focus(hud_r_id).show(row1_ui);
+                        MacInputCell::with_id(hud_h_id, &mut card.height).theme(theme).control_size(MacControlSize::CompactInfobox).numeric(h_range, 1.0).width(cell_w).prev_focus(hud_w_id).next_focus(hud_r_id).show(row1_ui);
                     },
                     |row2_ui| {
                         row2_ui.label(egui::RichText::new("R:").size(font_pt).color(label_col));
-                        MacInputCell::with_id(hud_r_id, &mut card.radius).theme(theme).control_size(MacControlSize::CompactInfobox).numeric(0.0..=40.0, 1.0).width(cell_w).prev_focus(hud_h_id).next_focus(hud_w_id).show(row2_ui);
+                        MacInputCell::with_id(hud_r_id, &mut card.radius).theme(theme).control_size(MacControlSize::CompactInfobox).numeric(r_range, 1.0).width(cell_w).prev_focus(hud_h_id).next_focus(hud_w_id).show(row2_ui);
                         row2_ui.add_space(4.0);
                         row2_ui.label(egui::RichText::new("θ:").size(font_pt).color(label_col));
                         MacSlider::new(&mut card.rotation_deg, 0.0..=360.0).theme(theme).width(55.0).show(row2_ui);

@@ -11,6 +11,13 @@ use egui_macview::{
     MacKeyboardShortcut, CANVAS_FOOTER_HEIGHT, COMMAND_PALETTE_HEIGHT, COMMAND_PALETTE_WIDTH,
 };
 
+#[allow(dead_code)]
+#[path = "../examples/macview_gallery.rs"]
+mod gallery_app;
+pub(crate) use gallery_app::{
+    format_tracked_small_caps, CardModel, ExpandedProTab, GalleryApp, GalleryScreen, InspectorMode,
+};
+
 #[test]
 fn test_canvas_footer_24pt_layout_budget_and_interactive_breadcrumbs() {
     let ctx = Context::default();
@@ -239,4 +246,162 @@ fn test_gallery_v05_five_state_studio_and_frameless_decorations() {
         );
     }
 }
+
+#[test]
+fn test_split_view_sibling_panes_have_distinct_auto_ids() {
+    let ctx = Context::default();
+    let theme = MacTheme::new(MacAppearance::Aqua);
+    let mut split_pos = 180.0;
+    let mut first_id = egui::Id::NULL;
+    let mut second_id = egui::Id::NULL;
+
+    let mut out = ctx.run_ui(RawInput::default(), |ui| {
+        egui_macview::MacSplitView::with_pos(
+            "split_id_test",
+            egui_macview::MacSplitOrientation::Vertical,
+            &mut split_pos,
+        )
+        .theme(&theme)
+        .show(
+            ui,
+            |first_ui| {
+                first_id = first_ui.next_auto_id();
+            },
+            |second_ui| {
+                second_id = second_ui.next_auto_id();
+            },
+        );
+    });
+    out.textures_delta.clear();
+
+    assert_ne!(
+        first_id, second_id,
+        "MacSplitView first and second child UIs must have distinct id_salt scopes so widgets never collide or flicker"
+    );
+}
+
+#[test]
+fn test_caspring_controls_do_not_request_repaint_at_rest() {
+    let ctx = Context::default();
+    let theme = MacTheme::new(MacAppearance::Aqua);
+    let mut toggle_val = true;
+    let mut slider_val = 50.0;
+    let mut expanded = true;
+
+    let run_frame = |time: f64,
+                     toggle_val: &mut bool,
+                     slider_val: &mut f32,
+                     expanded: &mut bool|
+     -> std::time::Duration {
+        let raw = RawInput {
+            time: Some(time),
+            ..Default::default()
+        };
+        let mut out = ctx.run_ui(raw, |ui| {
+            ui.add(egui_macview::MacToggle::new(toggle_val).theme(&theme));
+            egui_macview::MacSegmentedControl::new(&["Points", "Pixels", "Percent"], 0)
+                .theme(&theme)
+                .show(ui, |_| {});
+            egui_macview::MacSlider::new(slider_val, 0.0..=100.0)
+                .theme(&theme)
+                .show(ui);
+            egui_macview::MacOutlineView::new("idle_outline")
+                .theme(&theme)
+                .show(ui, |tree| {
+                    tree.row("row_a", 0, true, expanded, false, |row| {
+                        row.label("Idle Row");
+                    });
+                });
+        });
+        out.textures_delta.clear();
+        out.viewport_output[&egui::ViewportId::ROOT].repaint_delay
+    };
+
+    // Frame 1 & 2: initial layout/font warmup
+    let _ = run_frame(1.0, &mut toggle_val, &mut slider_val, &mut expanded);
+    let _ = run_frame(1.016, &mut toggle_val, &mut slider_val, &mut expanded);
+    // Frame 3: steady state with zero state transitions must NOT request immediate repaint
+    let delay = run_frame(1.032, &mut toggle_val, &mut slider_val, &mut expanded);
+    assert!(
+        !delay.is_zero(),
+        "Steady-state CASpring controls must not request continuous repaints when target has not changed (got delay={delay:?})"
+    );
+
+    // Frame 4: state transition (toggle_val: true -> false) MUST request immediate repaint and interpolate
+    toggle_val = false;
+    let delay_on_change = run_frame(2.0, &mut toggle_val, &mut slider_val, &mut expanded);
+    assert!(
+        delay_on_change.is_zero(),
+        "Changing MacToggle state must trigger an immediate CASpring animation repaint"
+    );
+
+    // Direct CASpring::animate_f32 mid-flight interpolation, reversal, and settling verification
+    let spring_ctx = Context::default();
+    let spring = theme.motion().swiftui_bouncy.to_spring();
+    let anim_id = egui::Id::NULL.with("direct_spring_test");
+    let eval_at = |time: f64, target: f32| -> (f32, std::time::Duration) {
+        let mut val = 0.0;
+        let mut out = spring_ctx.run_ui(
+            RawInput {
+                time: Some(time),
+                ..Default::default()
+            },
+            |ui| {
+                val = spring.animate_f32(ui.ctx(), anim_id, target);
+            },
+        );
+        out.textures_delta.clear();
+        (val, out.viewport_output[&egui::ViewportId::ROOT].repaint_delay)
+    };
+    let _ = eval_at(1.0, 0.0);
+    let _ = eval_at(1.016, 0.0);
+    let (v0, d0) = eval_at(1.032, 0.0);
+    assert_eq!(v0, 0.0);
+    assert!(!d0.is_zero());
+    let (v_start, d_start) = eval_at(2.0, 1.0);
+    assert!((v_start - 0.0).abs() < 1e-4 && d_start.is_zero());
+    let (v_mid, d_mid) = eval_at(2.1, 1.0);
+    assert!(
+        v_mid > 0.1 && v_mid < 0.99 && d_mid.is_zero(),
+        "Mid-flight spring must interpolate strictly between start and target (got v_mid={v_mid})"
+    );
+    // Mid-flight reversal back to 0.0 must start smoothly from v_mid
+    let (v_rev, d_rev) = eval_at(2.15, 0.0);
+    assert!(
+        v_rev > 0.1 && v_rev < 1.0 && d_rev.is_zero(),
+        "Mid-flight reversal must preserve current displacement (got v_rev={v_rev})"
+    );
+    // After settling_duration(), spring must settle at 0.0 and stop requesting repaints
+    let _ = eval_at(2.15 + spring.settling_duration() as f64 + 0.1, 0.0);
+    let (v_settled, d_settled) = eval_at(2.15 + spring.settling_duration() as f64 + 0.2, 0.0);
+    assert_eq!(v_settled, 0.0);
+    assert!(!d_settled.is_zero());
+}
+
+#[test]
+fn test_inspector_convert_card_units_and_scale() {
+    let mut card = gallery_app::CardModel::default();
+    assert_eq!(card.width, "260.0");
+    assert_eq!(card.height, "150.0");
+    assert_eq!(card.radius, "10.0");
+
+    // Points (0) -> Pixels (1) (2x Retina scale)
+    gallery_app::convert_card_units(&mut card, 0, 1);
+    assert_eq!(card.width, "520.0");
+    assert_eq!(card.height, "300.0");
+    assert_eq!(card.radius, "20.0");
+
+    // Pixels (1) -> Percent (2) (260pt = 100%, 150pt = 100%, 10pt / 40pt = 25%)
+    gallery_app::convert_card_units(&mut card, 1, 2);
+    assert_eq!(card.width, "100.0");
+    assert_eq!(card.height, "100.0");
+    assert_eq!(card.radius, "25.0");
+
+    // Percent (2) -> Points (0) round-trip
+    gallery_app::convert_card_units(&mut card, 2, 0);
+    assert_eq!(card.width, "260.0");
+    assert_eq!(card.height, "150.0");
+    assert_eq!(card.radius, "10.0");
+}
+
 

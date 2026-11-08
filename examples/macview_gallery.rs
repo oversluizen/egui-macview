@@ -19,7 +19,10 @@ use egui_macview::{
     CommandPaletteItem, MacCommandPalette, MacMenuBar, MacSplitOrientation, MacSplitView,
     MacToastManager, NSMenu, NSUndoManager,
 };
-pub use gallery::{detect_frameless_resize_dir, CardModel};
+#[allow(unused_imports)]
+pub use gallery::{
+    convert_card_units, detect_frameless_resize_dir, unit_scale_and_suffix, CardModel,
+};
 use gallery::{inspector::InspectorState, CenterState, SidebarState};
 use std::cell::{Cell, RefCell};
 
@@ -63,6 +66,8 @@ fn main() -> eframe::Result<()> {
             .with_inner_size([1160.0, 740.0])
             .with_min_inner_size([900.0, 540.0])
             .with_decorations(false)
+            .with_active(true)
+            .with_visible(true)
             .with_title(format!("macview_gallery v{} (AppKit & AVKit Studio Showcase)", egui_macview::VERSION)),
         renderer,
         ..Default::default()
@@ -193,7 +198,7 @@ impl GalleryApp {
         Self {
             appearance: MacAppearance::Aqua,
             window_controls_style: WindowControlsStyle::AppleTrafficLights,
-            last_window_controls_style: None,
+            last_window_controls_style: Some(WindowControlsStyle::AppleTrafficLights),
             inspector_mode: InspectorMode::ExpandedPro,
             last_inspector_mode: InspectorMode::ExpandedPro,
             active_screen: GalleryScreen::CanvasPhysics,

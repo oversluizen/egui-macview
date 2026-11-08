@@ -1,6 +1,9 @@
 //! Default NIB / Compact HUD Inspector panel implementation.
 
-use super::inspector::{sync_aspect_height_changed, sync_aspect_width_changed, InspectorState};
+use super::inspector::{
+    convert_card_units, sync_aspect_height_changed, sync_aspect_width_changed,
+    unit_scale_and_suffix, InspectorState,
+};
 use crate::{CardModel, InspectorMode};
 use egui::{CornerRadius, Id, Ui};
 use egui_macview::{
@@ -54,44 +57,69 @@ impl InspectorState {
                         });
                 });
 
+                let (w_scale, h_scale, r_scale, unit_str) =
+                    unit_scale_and_suffix(self.unit_segmented_idx);
                 stack.add_section(Some("Geometry & Tab-Chain (↑/↓ Numeric)"), |sec_ui| {
                     MacForm::new("nib_geometry_form")
                         .theme(theme)
                         .show(sec_ui, |form| {
-                            form.row_label(egui::RichText::new("Width:").size(11.0), |ui| {
-                                let prev_w = card.width.clone();
-                                MacInputCell::with_id(input_id_w, &mut card.width)
-                                    .theme(theme)
-                                    .numeric(60.0..=500.0, 1.0)
-                                    .width(68.0)
-                                    .next_focus(input_id_h)
-                                    .prev_focus(input_id_r)
-                                    .placeholder("Width")
-                                    .show(ui);
-                                sync_aspect_width_changed(card, &prev_w);
-                            });
-                            form.row_label(egui::RichText::new("Height:").size(11.0), |ui| {
-                                let prev_h = card.height.clone();
-                                MacInputCell::with_id(input_id_h, &mut card.height)
-                                    .theme(theme)
-                                    .numeric(40.0..=300.0, 1.0)
-                                    .width(68.0)
-                                    .next_focus(input_id_r)
-                                    .prev_focus(input_id_w)
-                                    .placeholder("Height")
-                                    .show(ui);
-                                sync_aspect_height_changed(card, &prev_h);
-                            });
-                            form.row_label(egui::RichText::new("Corner Radius:").size(11.0), |ui| {
-                                MacInputCell::with_id(input_id_r, &mut card.radius)
-                                    .theme(theme)
-                                    .numeric(0.0..=40.0, 1.0)
-                                    .width(68.0)
-                                    .next_focus(input_id_w)
-                                    .prev_focus(input_id_h)
-                                    .placeholder("Radius")
-                                    .show(ui);
-                            });
+                            form.row_label(
+                                egui::RichText::new(format!("Width ({unit_str}):")).size(11.0),
+                                |ui| {
+                                    let prev_w = card.width.clone();
+                                    MacInputCell::with_id(input_id_w, &mut card.width)
+                                        .theme(theme)
+                                        .numeric(
+                                            ((60.0 * w_scale) as f64)..=((500.0 * w_scale) as f64),
+                                            1.0,
+                                        )
+                                        .width(68.0)
+                                        .next_focus(input_id_h)
+                                        .prev_focus(input_id_r)
+                                        .placeholder("Width")
+                                        .show(ui);
+                                    sync_aspect_width_changed(
+                                        card,
+                                        &prev_w,
+                                        self.unit_segmented_idx,
+                                    );
+                                },
+                            );
+                            form.row_label(
+                                egui::RichText::new(format!("Height ({unit_str}):")).size(11.0),
+                                |ui| {
+                                    let prev_h = card.height.clone();
+                                    MacInputCell::with_id(input_id_h, &mut card.height)
+                                        .theme(theme)
+                                        .numeric(
+                                            ((40.0 * h_scale) as f64)..=((300.0 * h_scale) as f64),
+                                            1.0,
+                                        )
+                                        .width(68.0)
+                                        .next_focus(input_id_r)
+                                        .prev_focus(input_id_w)
+                                        .placeholder("Height")
+                                        .show(ui);
+                                    sync_aspect_height_changed(
+                                        card,
+                                        &prev_h,
+                                        self.unit_segmented_idx,
+                                    );
+                                },
+                            );
+                            form.row_label(
+                                egui::RichText::new(format!("Radius ({unit_str}):")).size(11.0),
+                                |ui| {
+                                    MacInputCell::with_id(input_id_r, &mut card.radius)
+                                        .theme(theme)
+                                        .numeric(0.0..=((40.0 * r_scale) as f64), 1.0)
+                                        .width(68.0)
+                                        .next_focus(input_id_w)
+                                        .prev_focus(input_id_h)
+                                        .placeholder("Radius")
+                                        .show(ui);
+                                },
+                            );
                         });
                 });
 
@@ -111,22 +139,18 @@ impl InspectorState {
                                 );
                             });
                             form.row_label(egui::RichText::new("Corner Radius:").size(11.0), |ui| {
-                                let mut r = card.radius.parse::<f64>().unwrap_or(10.0);
+                                let max_r = (40.0 * r_scale) as f64;
+                                let mut r = card.radius.parse::<f64>().unwrap_or(10.0 * r_scale as f64);
                                 let prev_r = r;
-                                MacStepper::new(&mut r, 0.0..=40.0, 1.0)
+                                MacStepper::new(&mut r, 0.0..=max_r, 1.0)
                                     .theme(theme)
                                     .wraps(false)
                                     .show(ui);
                                 if (r - prev_r).abs() > 0.01 {
-                                    card.radius = format!("{:.0}", r);
+                                    card.radius = format!("{:.1}", r);
                                 }
-                                let unit_str = match self.unit_segmented_idx {
-                                    1 => "px",
-                                    2 => "%",
-                                    _ => "pt",
-                                };
                                 ui.label(
-                                    egui::RichText::new(format!("{:.0} {}", r, unit_str))
+                                    egui::RichText::new(format!("{:.1} {}", r, unit_str))
                                         .size(10.5),
                                 );
                             });
@@ -165,7 +189,9 @@ impl InspectorState {
                                 )
                                 .theme(theme)
                                 .show(ui, |idx| {
+                                    let prev_u = self.unit_segmented_idx;
                                     self.unit_segmented_idx = idx;
+                                    convert_card_units(card, prev_u, idx);
                                 });
                             });
                         });

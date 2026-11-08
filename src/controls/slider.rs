@@ -282,32 +282,8 @@ impl<'a> Widget for MacSlider<'a> {
             1.0
         };
         let spring = theme.motion().swiftui_snappy.to_spring();
-        let now = ui.input(|i| i.time);
         let spring_key = response.id.with("press_scale");
-        let (prev_target, start_val, start_time) = ui.data(|d| {
-            d.get_temp::<(f32, f32, f64)>(spring_key).unwrap_or((
-                press_scale_target,
-                press_scale_target,
-                now,
-            ))
-        });
-        let anim_scale = if (prev_target - press_scale_target).abs() > f32::EPSILON {
-            let elapsed = (now - start_time).max(0.0) as f32;
-            let cur = start_val + (prev_target - start_val) * spring.position_at(elapsed);
-            ui.data_mut(|d| d.insert_temp(spring_key, (press_scale_target, cur, now)));
-            ui.ctx().request_repaint();
-            cur
-        } else {
-            let elapsed = (now - start_time).max(0.0) as f32;
-            if (press_scale_target - start_val).abs() > f32::EPSILON
-                && elapsed < spring.settling_duration()
-            {
-                ui.ctx().request_repaint();
-                start_val + (press_scale_target - start_val) * spring.position_at(elapsed)
-            } else {
-                press_scale_target
-            }
-        };
+        let anim_scale = spring.animate_f32(ui.ctx(), spring_key, press_scale_target);
         let scaled_thumb_radius = thumb_radius * anim_scale;
 
         let thumb_pos = Pos2::new(thumb_center_x, center_y);
