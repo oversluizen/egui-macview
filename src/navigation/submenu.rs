@@ -4,8 +4,7 @@
 //! Grounded in Single Responsibility Principle to maintain GL-1015 modularity ceilings.
 
 use egui::{
-    Align2, Area, Color32, CornerRadius, FontId, Id, Order, Pos2, Rect, Sense, Stroke, StrokeKind,
-    Vec2,
+    Align2, Area, CornerRadius, FontId, Id, Order, Pos2, Rect, Sense, Stroke, StrokeKind, Vec2,
 };
 
 use super::item::MacMenuItemKind;
@@ -118,14 +117,18 @@ pub fn render_submenu_popover(
     ctx: &egui::Context,
     highlighted_idx: Option<usize>,
 ) -> Option<String> {
-    let metrics = theme.popup_button();
-    let item_height = metrics.menu_item_height.points();
-    let menu_padding = metrics.menu_item_padding.points();
-    let padding_h = metrics.padding_horizontal.points();
-    let base_sub_min_w = metrics.menu_min_width.points();
+    let mb_metrics = theme.menu_bar_metrics();
+    let item_height = mb_metrics.dropdown_item_height.points();
+    let menu_padding = mb_metrics.dropdown_padding_y.points();
+    let padding_h = mb_metrics.item_padding_x.points();
+    let base_sub_min_w = mb_metrics.dropdown_min_width.points();
     let sub_total_h = (child_menu.items.len() as f32) * item_height + menu_padding * 2.0;
-    let corner_r = theme.popover_metrics().corner_radius.points() as u8;
-    let font_id = FontId::proportional(metrics.font_size.points());
+    let drop_corner_r = mb_metrics.dropdown_corner_radius.points() as u8;
+    let item_corner_r = mb_metrics.bar_corner_radius.points() as u8;
+    let border_w = theme.popover_metrics().border_width.points();
+    let min_clearance = mb_metrics.shortcut_clearance.points();
+    let font_id = FontId::proportional(mb_metrics.font_size.points());
+    let on_accent = theme.on_accent_text();
 
     let mut triggered = None;
 
@@ -135,27 +138,24 @@ pub fn render_submenu_popover(
         .show(ctx, |sub_ui| {
             let painter = sub_ui.painter();
 
-            // Dynamic cascading submenu width auto-widening:
-            // Pre-measure child item titles and shortcuts to guarantee clearance >= 24.0pt with zero visual overlap.
-            let min_clearance = 24.0f32;
             let mut max_item_w = 0.0f32;
             for item in &child_menu.items {
                 if matches!(item.kind, MacMenuItemKind::Separator) {
                     continue;
                 }
                 let title_w = painter
-                    .layout_no_wrap(item.title.clone(), font_id.clone(), Color32::WHITE)
+                    .layout_no_wrap(item.title.clone(), font_id.clone(), on_accent)
                     .size()
                     .x;
                 let trailing_w = match &item.kind {
                     MacMenuItemKind::Action {
                         shortcut: Some(sc), ..
                     } => painter
-                        .layout_no_wrap(sc.format_text(), font_id.clone(), Color32::WHITE)
+                        .layout_no_wrap(sc.format_text(), font_id.clone(), on_accent)
                         .size()
                         .x,
                     MacMenuItemKind::Submenu { .. } => painter
-                        .layout_no_wrap("›".to_string(), font_id.clone(), Color32::WHITE)
+                        .layout_no_wrap("›".to_string(), font_id.clone(), on_accent)
                         .size()
                         .x,
                     _ => 0.0,
@@ -174,11 +174,13 @@ pub fn render_submenu_popover(
 
             let sub_menu_w = base_sub_min_w.max(max_item_w + menu_padding * 2.0);
             let sub_rect = Rect::from_min_size(sub_pos, Vec2::new(sub_menu_w, sub_total_h));
+            let _ = sub_ui.allocate_rect(sub_rect, Sense::click());
+            let painter = sub_ui.painter();
             painter.rect(
                 sub_rect,
-                CornerRadius::same(corner_r),
+                CornerRadius::same(drop_corner_r),
                 theme.window_background(),
-                Stroke::new(1.0, theme.separator()),
+                Stroke::new(border_w, theme.separator()),
                 StrokeKind::Inside,
             );
 
@@ -195,7 +197,7 @@ pub fn render_submenu_popover(
                             Pos2::new(s_rect.left(), s_rect.center().y),
                             Pos2::new(s_rect.right(), s_rect.center().y),
                         ],
-                        Stroke::new(1.0, theme.separator()),
+                        Stroke::new(border_w, theme.separator()),
                     );
                     continue;
                 }
@@ -207,7 +209,7 @@ pub fn render_submenu_popover(
                 if s_active {
                     painter.rect(
                         s_rect,
-                        CornerRadius::same(corner_r),
+                        CornerRadius::same(item_corner_r),
                         theme.control_accent(),
                         Stroke::NONE,
                         StrokeKind::Inside,
@@ -217,7 +219,7 @@ pub fn render_submenu_popover(
                 let s_color = if !sub_item.enabled {
                     theme.placeholder_text()
                 } else if s_active {
-                    Color32::WHITE
+                    on_accent
                 } else {
                     theme.label()
                 };

@@ -2,6 +2,7 @@
 
 pub mod basic;
 pub mod extended;
+pub mod selection_and_value;
 
 pub use basic::{
     default_border_width, ButtonMetrics, ButtonSizeMetrics, FocusRingMetrics, SegmentedMetrics,
@@ -12,7 +13,12 @@ pub use extended::{
     StepperMetrics, ThumbnailCellMetrics, ToggleMetrics,
 };
 
+use crate::tokens::dtcg::DimensionValue;
 use serde::{Deserialize, Serialize};
+
+fn default_disabled_opacity() -> DimensionValue {
+    DimensionValue::from_pt(0.45)
+}
 
 /// Control metrics collection.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -49,4 +55,7 @@ pub struct MacControlMetrics {
     /// Toggle switch metrics.
     #[serde(default)]
     pub toggle: ToggleMetrics,
+    /// Opacity multiplier for disabled controls.
+    #[serde(default = "default_disabled_opacity")]
+    pub disabled_opacity: DimensionValue,
 }

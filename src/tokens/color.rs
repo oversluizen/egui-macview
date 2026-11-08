@@ -51,6 +51,51 @@ pub struct MacAppearanceColors {
     /// Window zoom/fullscreen button border stroke color.
     #[serde(default = "default_traffic_light_zoom_border")]
     pub traffic_light_zoom_border: ColorValue,
+    /// High-contrast white label color on system accent and active controls.
+    #[serde(default = "default_on_accent_text")]
+    pub on_accent_text: ColorValue,
+    /// Pure white surface fill for switch and slider thumb knobs.
+    #[serde(default = "default_knob_fill")]
+    pub knob_fill: ColorValue,
+    /// Subtle ambient drop shadow color for controls and floating surfaces.
+    #[serde(default = "default_drop_shadow")]
+    pub drop_shadow: ColorValue,
+    /// Modal backdrop dimming overlay color.
+    #[serde(default = "default_backdrop_dim")]
+    pub backdrop_dim: ColorValue,
+    /// Translucent dark NSPanelStyleMaskHUDWindow background fill.
+    #[serde(default = "default_hud_background")]
+    pub hud_background: ColorValue,
+    /// Hairline border stroke for dark floating HUD panels.
+    #[serde(default = "default_hud_border")]
+    pub hud_border: ColorValue,
+    /// Primary label color inside dark floating HUD panels.
+    #[serde(default = "default_hud_text")]
+    pub hud_text: ColorValue,
+    /// Secondary coordinate label color inside dark floating HUD panels.
+    #[serde(default = "default_hud_secondary_text")]
+    pub hud_secondary_text: ColorValue,
+    /// Windows 11 caption close button hover fill.
+    #[serde(default = "default_caption_close_hover")]
+    pub caption_close_hover: ColorValue,
+    /// Windows 11 caption close button pressed fill.
+    #[serde(default = "default_caption_close_pressed")]
+    pub caption_close_pressed: ColorValue,
+    /// Windows 11 caption button hover fill.
+    #[serde(default = "default_caption_hover")]
+    pub caption_hover: ColorValue,
+    /// Windows 11 caption button pressed fill.
+    #[serde(default = "default_caption_pressed")]
+    pub caption_pressed: ColorValue,
+    /// Interior glyph stroke color for hovered macOS traffic light buttons.
+    #[serde(default = "default_traffic_light_glyph")]
+    pub traffic_light_glyph: ColorValue,
+    /// Overlay scrollbar thumb base color.
+    #[serde(default = "default_scrollbar_thumb")]
+    pub scrollbar_thumb: ColorValue,
+    /// Overlay scrollbar thumb hovered/dragged color.
+    #[serde(default = "default_scrollbar_thumb_active")]
+    pub scrollbar_thumb_active: ColorValue,
 }
 
 fn default_label_color() -> ColorValue {
@@ -123,6 +168,60 @@ fn default_traffic_light_zoom_border() -> ColorValue {
         token_type: Some("color".to_string()),
         description: None,
     }
+}
+
+fn color_val(val: &str) -> ColorValue {
+    ColorValue {
+        value: val.to_string(),
+        token_type: Some("color".to_string()),
+        description: None,
+    }
+}
+
+fn default_on_accent_text() -> ColorValue {
+    color_val("#FFFFFF")
+}
+fn default_knob_fill() -> ColorValue {
+    color_val("#FFFFFF")
+}
+fn default_drop_shadow() -> ColorValue {
+    color_val("rgba(0, 0, 0, 0.12)")
+}
+fn default_backdrop_dim() -> ColorValue {
+    color_val("rgba(0, 0, 0, 0.40)")
+}
+fn default_hud_background() -> ColorValue {
+    color_val("rgba(30, 30, 32, 0.90)")
+}
+fn default_hud_border() -> ColorValue {
+    color_val("#3C3C3E")
+}
+fn default_hud_text() -> ColorValue {
+    color_val("#F2F2F7")
+}
+fn default_hud_secondary_text() -> ColorValue {
+    color_val("#B4B4B8")
+}
+fn default_caption_close_hover() -> ColorValue {
+    color_val("#E81123")
+}
+fn default_caption_close_pressed() -> ColorValue {
+    color_val("#C42B1C")
+}
+fn default_caption_hover() -> ColorValue {
+    color_val("rgba(0, 0, 0, 0.06)")
+}
+fn default_caption_pressed() -> ColorValue {
+    color_val("rgba(0, 0, 0, 0.11)")
+}
+fn default_traffic_light_glyph() -> ColorValue {
+    color_val("rgba(0, 0, 0, 0.63)")
+}
+fn default_scrollbar_thumb() -> ColorValue {
+    color_val("rgba(0, 0, 0, 0.45)")
+}
+fn default_scrollbar_thumb_active() -> ColorValue {
+    color_val("rgba(0, 0, 0, 0.70)")
 }
 
 /// Semantic system color tokens for Aqua and DarkAqua.

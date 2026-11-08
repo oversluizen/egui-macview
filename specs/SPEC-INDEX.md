@@ -4,8 +4,9 @@
 | :--- | :--- |
 | **Document ID** | SPEC-INDEX |
 | **Document Title** | Specification Suite Index & Version Matrix |
-| **Document Version** | `0.4.0` |
+| **Document Version** | `0.4.1` |
 | **Status** | Accepted / Normative |
+| **Target Milestone** | Milestone 0.4.1 |
 | **Target Host** | Standalone crate `egui-macview` (Rust, egui 0.37) |
 | **Author** | Jaco Oversluizen / `egui-macview` contributors |
 | **Normative Standards** | ISO/IEC/IEEE 42010:2011, ISO/IEC/IEEE 29119-3:2021, RFC 2119/8174, Apple macOS HIG, W3C DTCG, SemVer 2.0.0 |
@@ -19,25 +20,26 @@
 | `0.1.0` | 2026-11-05 | Architecture Team | Baseline Initial Release: Monolithic Architecture Specification |
 | `0.2.0` | 2026-11-06 | Architecture Team | Current Milestone: Decomposed Modular Specification Suite Synchronized with Crate v0.2.0 |
 | `0.4.0` | 2026-11-07 | Architecture Team | Milestone 0.4.0 Release: State Integrity (NSUndoManager), Context Menus, Micro-Feedback & Gallery Integration |
+| `0.4.1` | 2026-11-08 | Architecture Team | Milestone 0.4.1 Consolidation & Hardening Release: Zero Hardcoding, Transactional VC State Machines, First-Class `MacToolbar` & `MacFloatingInfoBox`, and Spec ID Disambiguation |
 
 ---
 
 ## 1. Specification Suite Structure
 
-The `egui-macview` specification suite provides the formal normative requirements, mathematical foundations, MVC abstractions, and test oracles for the entire crate. Every specification in this directory runs strictly in lockstep with the crate release version (`0.4.0`).
+The `egui-macview` specification suite provides the formal normative requirements, mathematical foundations, MVC abstractions, and test oracles for the entire crate. Every specification in this directory runs strictly in lockstep with the crate release version (`0.4.1`).
 
 | Spec ID | Document Title | Version | Status | Primary Test Suite |
 | :--- | :--- | :--- | :--- | :--- |
 | [**SPEC-001**](SPEC-001-DESIGN-TOKENS-AND-WCAG.md) | Design Tokens, Optical Tracking & WCAG AA Contrast | `0.2.0` | Accepted | `tests/wcag_contrast_and_visuals_tests.rs`, `tests/zero_hardcoding_and_primitive_tests.rs` |
-| [**SPEC-002 (Color)**](SPEC-002-DYNAMIC-COLOR-AND-TOKENS.md) | Dynamic Color, Tokens & MacBackgroundStyle Contrast Engine | `0.2.0` | Accepted | `tests/wcag_contrast_and_visuals_tests.rs`, `tests/zero_hardcoding_and_primitive_tests.rs` |
-| [**SPEC-002 (Controls)**](SPEC-002-CONTROLS-AND-MICRO-ANIMATIONS.md) | Authentic AppKit Controls & Micro-Animation Oracles | `0.2.0` | Accepted | `tests/appkit_primitives_tests.rs`, `tests/micro_animations_and_hud_tests.rs` |
+| [**SPEC-002A**](SPEC-002-DYNAMIC-COLOR-AND-TOKENS.md) | Dynamic Color, Tokens & MacBackgroundStyle Contrast Engine | `0.2.0` | Accepted | `tests/wcag_contrast_and_visuals_tests.rs`, `tests/zero_hardcoding_and_primitive_tests.rs` |
+| [**SPEC-002B**](SPEC-002-CONTROLS-AND-MICRO-ANIMATIONS.md) | Authentic AppKit Controls & Micro-Animation Oracles | `0.2.0` | Accepted | `tests/appkit_primitives_tests.rs`, `tests/micro_animations_and_hud_tests.rs` |
 | [**SPEC-003**](SPEC-003-LAYOUT-ENGINES.md) | Deterministic Layout Engines & Subpixel Snap Rasterization | `0.2.0` | Accepted | `tests/cots_red_baseline_tests.rs`, `tests/appkit_primitives_tests.rs` |
 | [**SPEC-004**](SPEC-004-CORE-ANIMATION-PHYSICS.md) | CoreAnimation Spring Physics Runtime (`CASpring`) | `0.2.0` | Accepted | `tests/cots_red_baseline_tests.rs`, `tests/macbook_parity_differential_tests.rs` |
 | [**SPEC-005**](SPEC-005-WINDOW-FRAMING-AND-CONTROLS.md) | Window Framing, Drag Handling & Configurable Caption Controls | `0.2.0` | Accepted | `tests/micro_animations_and_hud_tests.rs` |
 | [**SPEC-006**](SPEC-006-INSPECTOR-ARCHITECTURE.md) | Three-Tier Inspector Architecture & Floating Surfaces | `0.2.0` | Accepted | `tests/cots_red_baseline_tests.rs`, `tests/micro_animations_and_hud_tests.rs` |
 | [**SPEC-007**](SPEC-007-DESKTOP-NAVIGATION-AND-PALETTE.md) | Desktop Navigation, Canvas Footer & Spotlight Command Palette | `0.3.0` | Accepted | `tests/menu_and_palette_tests.rs` |
-| [**SPEC-008 (Symbols)**](SPEC-008-APPKIT-SYMBOLS-AND-ICONS.md) | AppKit Vector Symbols, Iconography & CupertinoIcons Engine | `0.4.0` | Accepted / Normative | `tests/symbol_tests.rs` |
-| [**SPEC-008 (Feedback)**](SPEC-008-STATE-INTEGRITY-AND-FEEDBACK.md) | State Integrity, Context Menus & Micro-Feedback Architecture | `0.4.0` | Accepted / Normative | `tests/undo_and_feedback_tests.rs` |
+| [**SPEC-008A**](SPEC-008-APPKIT-SYMBOLS-AND-ICONS.md) | AppKit Vector Symbols, Iconography & CupertinoIcons Engine | `0.4.0` | Accepted / Normative | `tests/symbol_tests.rs` |
+| [**SPEC-008B**](SPEC-008-STATE-INTEGRITY-AND-FEEDBACK.md) | State Integrity, Context Menus & Micro-Feedback Architecture | `0.4.0` | Accepted / Normative | `tests/undo_and_feedback_tests.rs` |
 | [**SPEC-009**](SPEC-009-CROSS-PLATFORM-DIFFERENTIAL-HARNESS.md) | Cross-Platform Parity and Remote Differential Testing Harness | `0.3.0` | Accepted / Normative | `tests/macbook_parity_differential_tests.rs` |
 | [**SPEC-010**](SPEC-010-INTERACTIVE-GALLERY-CONTROLS-AND-ICONOGRAPHY.md) | Interactive Gallery Controls, Bidirectional State Binding & Iconography Parity | `0.3.1` | Accepted / Normative | `tests/micro_animations_and_hud_tests.rs`, `tests/symbol_tests.rs` |
 
@@ -83,6 +85,7 @@ All core specifications in this repository maintain exact version parity with th
 | **v0.3.0** | `0.3.0` | 2026-11-06 | Milestone 0.3.0 release: Promoted SPEC-007 to official release status. Full desktop navigation suite (`MacMenuBar`, `NSMenu`, `NSMenuItem` with cascading submenus and keyboard accelerators), deterministic 24pt canvas footer (`MacCanvasFooter` with breadcrumbs and zoom presets), Spotlight command palette modal HUD (`MacCommandPalette` with fuzzy subsequence scoring and Escape clearing mechanics), and formal `MacBackgroundStyle` dynamic contrast engine ($L \le 0.179 \implies$ Dark / On-Accent White text, $L > 0.179 \implies$ Light / Dark text) ensuring WCAG 2.1 AA $\ge 4.5:1$ contrast. |
 | **v0.3.1** | `0.3.1` | 2026-11-06 | Milestone 0.3.1 release: Cross-platform parity (SPEC-010), Intel HD 5000 OpenGL fallback (`glow`), OS-adaptive window decorations (`decorations = true` on Windows, `false` on macOS), full bidirectional state binding (Zero Dead Controls: Preset popup, live scale slider, corner stepper, units formatter, CASpring touch pulse), rich vector iconography via `MacSymbol` (Cupertino SF Symbols), and cross-platform Spotlight Command Palette shortcut handling (`⌘K` / `Ctrl+K`). |
 | **v0.4.0** | `0.4.0` | 2026-11-07 | Milestone 0.4.0 release: Promoted SPEC-008 (State Integrity & Feedback) to official release status. Bounded ringbuffer transaction stack (`NSUndoManager<T>`, capacity 50) with cyclic state preservation and full rollback; viewport-boundary clamped context menus (`MacContextMenu`, `clamp_menu_rect`) with click-outside dismissal; animated micro-feedback toast notifications (`MacToast`, `MacToastManager`) powered by `CASpring` entry/exit physics with 2.5s auto-dismiss timer; wired into `macview_gallery` interactive canvas card with global shortcuts (`⌘Z` / `Ctrl+Z`, `⌘⇧Z` / `Ctrl+Shift+Z`) and context actions (Reset Transform, Center Card, Fill Width, Toggle Proportions, Copy Style). |
+| **v0.4.1** | `0.4.1` | 2026-11-08 | Milestone 0.4.1 consolidation & hardening release: Zero hardcoding across all UI modules via expanded W3C DTCG tokens; unmultiplied RGBA DTCG parsing; transactional `MacInputCell` edit buffer with `Escape` rollback and domino-free `Tab` chain; first-class `MacToolbar` (`SPEC-005`) and `MacFloatingInfoBox` (`SPEC-006 §2.2`); foreground click/scroll isolation across popovers, panels, and dropdowns; removed empty `MacFlexView` stub. |
 
 ---
 

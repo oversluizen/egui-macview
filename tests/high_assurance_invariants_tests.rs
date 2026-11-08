@@ -83,117 +83,168 @@ proptest! {
     }
 
     /// Invariant 3 (FSM Verification / ISO 29119-4 State Transition Testing):
-    /// In an N-element input container, the Tab-focus chain forms a closed cyclic group (Z_N).
-    /// Advancing N steps forward returns to the exact starting element.
-    /// Shift+Tab produces the exact inverse permutation.
+    /// In an N-element `MacInputCell` container, the Tab-focus chain forms a closed cyclic group (Z_N).
+    /// Pressing `Key::Tab` advances focus by exactly 1 field per frame (zero domino cascade),
+    /// and `Shift+Tab` produces the exact inverse permutation.
     #[test]
     fn prop_tab_chain_fsm_cyclic_preservation(
-        field_count in 2usize..30usize,
-        start_index in 0usize..29usize,
-        steps in 1usize..60usize,
+        field_count in 2usize..7usize,
+        start_index in 0usize..6usize,
+        steps in 1usize..10usize,
     ) {
         let start = start_index % field_count;
+        let ctx = egui::Context::default();
+        let theme = egui_macview::MacTheme::default();
+        let ids: Vec<egui::Id> = (0..field_count)
+            .map(|i| egui::Id::NULL.with(("tab_cycle_cell", i)))
+            .collect();
+        let mut values: Vec<String> = (0..field_count).map(|i| format!("v{i}")).collect();
 
-        // FSM forward transition function
-        let step_forward = |current: usize| -> usize {
-            (current + 1) % field_count
+        let render_chain = |ctx: &egui::Context, input: egui::RawInput, values: &mut [String]| {
+            let mut out = ctx.run_ui(input, |ui| {
+                for i in 0..field_count {
+                    let next_id = ids[(i + 1) % field_count];
+                    let prev_id = ids[(i + field_count - 1) % field_count];
+                    egui_macview::MacInputCell::with_id(ids[i], &mut values[i])
+                        .theme(&theme)
+                        .next_focus(next_id)
+                        .prev_focus(prev_id)
+                        .show(ui);
+                }
+            });
+            out.textures_delta.clear();
         };
 
-        // FSM reverse transition function
-        let step_backward = |current: usize| -> usize {
-            (current + field_count - 1) % field_count
-        };
+        // Frame 0: initialize widgets and focus `ids[start]`
+        render_chain(&ctx, egui::RawInput::default(), &mut values);
+        ctx.memory_mut(|m| m.request_focus(ids[start]));
+        render_chain(&ctx, egui::RawInput::default(), &mut values);
+        prop_assert_eq!(ctx.memory(|m| m.focused()), Some(ids[start]));
 
-        // Identity invariant: forward followed by backward is an identity
-        prop_assert_eq!(step_backward(step_forward(start)), start);
-
-        // Cyclic closure invariant: N forward steps returns to start
-        let mut curr = start;
-        for _ in 0..field_count {
-            curr = step_forward(curr);
+        // Advance `field_count` steps forward via Key::Tab; each frame must advance by EXACTLY 1 field
+        for step in 1..=field_count {
+            let mut raw = egui::RawInput::default();
+            raw.events.push(egui::Event::Key {
+                key: egui::Key::Tab,
+                physical_key: None,
+                pressed: true,
+                repeat: false,
+                modifiers: egui::Modifiers::NONE,
+            });
+            render_chain(&ctx, raw, &mut values);
+            let expected = ids[(start + step) % field_count];
+            prop_assert_eq!(
+                ctx.memory(|m| m.focused()),
+                Some(expected),
+                "Single Tab press in frame {} must advance focus by exactly 1 field without domino cascade",
+                step
+            );
         }
-        prop_assert_eq!(curr, start, "N forward steps did not cycle back to start in Z_{}", field_count);
 
-        // Arbitrary step consistency: moving S steps forward then S steps backward returns to start
-        let mut sim = start;
+        // Move `steps` forward then `steps` backward via Shift+Tab
         for _ in 0..steps {
-            sim = step_forward(sim);
+            let mut raw = egui::RawInput::default();
+            raw.events.push(egui::Event::Key {
+                key: egui::Key::Tab,
+                physical_key: None,
+                pressed: true,
+                repeat: false,
+                modifiers: egui::Modifiers::NONE,
+            });
+            render_chain(&ctx, raw, &mut values);
         }
         for _ in 0..steps {
-            sim = step_backward(sim);
+            let mut raw = egui::RawInput::default();
+            raw.events.push(egui::Event::Key {
+                key: egui::Key::Tab,
+                physical_key: None,
+                pressed: true,
+                repeat: false,
+                modifiers: egui::Modifiers::SHIFT,
+            });
+            render_chain(&ctx, raw, &mut values);
         }
-        prop_assert_eq!(sim, start, "S forward followed by S backward did not restore initial focus");
+        prop_assert_eq!(
+            ctx.memory(|m| m.focused()),
+            Some(ids[start]),
+            "S forward Tab presses followed by S backward Shift+Tab presses must restore initial focus"
+        );
     }
 
-    /// Invariant 4 (Transactional Memory / Undo Buffer Isolation):
-    /// An in-flight edit session in a text field buffer MUST preserve transactional integrity:
-    /// - An uncommitted buffer keeps the canonical SSOT value untouched.
-    /// - Cancellation (Escape) deterministically rolls back the buffer to pre-edit state.
-    /// - Commitment (Enter/Blur) deterministically updates canonical state to edited text.
+    /// Invariant 4 (Transactional Memory / Undo Buffer Isolation on Real `MacInputCell`):
+    /// - Focusing `MacInputCell` snapshots the initial string, types edits, and pressing `Key::Escape`
+    ///   rolls back the caller's `&mut String` to the exact pre-edit value and surrenders focus.
+    /// - Typing edits and pressing `Key::Enter` commits the edited text to the caller's `&mut String`.
     #[test]
     fn prop_transactional_buffer_rollback_integrity(
-        canonical_initial in "[a-zA-Z0-9_]{1,32}",
-        intermediate_edits in "[a-zA-Z0-9_\\s]{0,32}",
+        canonical_initial in "[a-zA-Z0-9_]{1,12}",
+        appended_edit in "[a-zA-Z0-9_]{1,8}",
     ) {
-        struct TransactionalCellBuffer {
-            canonical: String,
-            local_edit_buffer: Option<String>,
-        }
+        let ctx = egui::Context::default();
+        let theme = egui_macview::MacTheme::default();
+        let cell_id = egui::Id::NULL.with("transactional_prop_cell");
+        let mut value = canonical_initial.clone();
 
-        impl TransactionalCellBuffer {
-            fn new(initial: String) -> Self {
-                Self {
-                    canonical: initial,
-                    local_edit_buffer: None,
-                }
-            }
+        let run_frame = |ctx: &egui::Context, input: egui::RawInput, val: &mut String| {
+            let mut out = ctx.run_ui(input, |ui| {
+                egui_macview::MacInputCell::with_id(cell_id, val)
+                    .theme(&theme)
+                    .show(ui);
+            });
+            out.textures_delta.clear();
+        };
 
-            fn begin_edit(&mut self) {
-                if self.local_edit_buffer.is_none() {
-                    self.local_edit_buffer = Some(self.canonical.clone());
-                }
-            }
+        // 1. Focus cell and type `appended_edit`, then press Escape -> must roll back to `canonical_initial`
+        run_frame(&ctx, egui::RawInput::default(), &mut value);
+        ctx.memory_mut(|m| m.request_focus(cell_id));
+        run_frame(&ctx, egui::RawInput::default(), &mut value);
 
-            fn modify_text(&mut self, text: String) {
-                self.begin_edit();
-                self.local_edit_buffer = Some(text);
-            }
+        let mut type_raw = egui::RawInput::default();
+        type_raw.events.push(egui::Event::Text(appended_edit.clone()));
+        run_frame(&ctx, type_raw, &mut value);
 
-            fn cancel_escape(&mut self) {
-                // Discard local edit buffer
-                self.local_edit_buffer = None;
-            }
+        let mut esc_raw = egui::RawInput::default();
+        esc_raw.events.push(egui::Event::Key {
+            key: egui::Key::Escape,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: egui::Modifiers::NONE,
+        });
+        run_frame(&ctx, esc_raw, &mut value);
 
-            fn commit_enter(&mut self) {
-                if let Some(buf) = self.local_edit_buffer.take() {
-                    self.canonical = buf;
-                }
-            }
+        prop_assert_eq!(
+            &value,
+            &canonical_initial,
+            "Escape must roll back MacInputCell value to the initial pre-edit snapshot"
+        );
+        prop_assert!(
+            !ctx.memory(|m| m.has_focus(cell_id)),
+            "Escape must surrender focus from MacInputCell"
+        );
 
-            fn current_displayed_text(&self) -> &str {
-                self.local_edit_buffer.as_deref().unwrap_or(&self.canonical)
-            }
-        }
+        // 2. Focus cell again, type `appended_edit`, then press Enter -> must commit edit
+        ctx.memory_mut(|m| m.request_focus(cell_id));
+        run_frame(&ctx, egui::RawInput::default(), &mut value);
 
-        let mut cell = TransactionalCellBuffer::new(canonical_initial.clone());
+        let mut type_raw2 = egui::RawInput::default();
+        type_raw2.events.push(egui::Event::Text(appended_edit.clone()));
+        run_frame(&ctx, type_raw2, &mut value);
 
-        // Invariant 4a: Prior to edits, displayed text is canonical
-        prop_assert_eq!(cell.current_displayed_text(), canonical_initial.as_str());
+        let mut enter_raw = egui::RawInput::default();
+        enter_raw.events.push(egui::Event::Key {
+            key: egui::Key::Enter,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: egui::Modifiers::NONE,
+        });
+        run_frame(&ctx, enter_raw, &mut value);
 
-        // Invariant 4b: Mid-flight modification does NOT alter canonical value
-        cell.modify_text(intermediate_edits.clone());
-        prop_assert_eq!(&cell.canonical, &canonical_initial);
-        prop_assert_eq!(cell.current_displayed_text(), intermediate_edits.as_str());
-
-        // Invariant 4c: Cancel rollback restores displayed text to canonical
-        cell.cancel_escape();
-        prop_assert_eq!(&cell.canonical, &canonical_initial);
-        prop_assert_eq!(cell.current_displayed_text(), canonical_initial.as_str());
-
-        // Invariant 4d: Commit updates canonical value to edited text
-        cell.modify_text(intermediate_edits.clone());
-        cell.commit_enter();
-        prop_assert_eq!(&cell.canonical, &intermediate_edits);
-        prop_assert_eq!(cell.current_displayed_text(), intermediate_edits.as_str());
+        prop_assert!(
+            value.contains(&appended_edit) && value != canonical_initial,
+            "Enter must commit the edited text into caller's String (got {:?})",
+            value
+        );
     }
 }

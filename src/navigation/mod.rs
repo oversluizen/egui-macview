@@ -7,6 +7,7 @@ pub mod menu;
 pub mod model;
 pub mod palette;
 pub mod submenu;
+pub mod toolbar;
 
 pub use footer::{MacCanvasFooter, MacCanvasFooterAction, CANVAS_FOOTER_HEIGHT};
 pub use fuzzy::fuzzy_match_score;
@@ -16,3 +17,4 @@ pub use model::NSMenu;
 pub use palette::{
     CommandPaletteItem, MacCommandPalette, COMMAND_PALETTE_HEIGHT, COMMAND_PALETTE_WIDTH,
 };
+pub use toolbar::{MacToolbar, MacToolbarResponse};

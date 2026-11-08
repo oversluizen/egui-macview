@@ -3,10 +3,10 @@
 //! Normative Reference: SPEC-007 §2.
 //! Grounded in macOS HIG keyboard-first accessibility and data-driven menus.
 
+use crate::symbols::MacSymbol;
 use crate::theme::MacTheme;
 use egui::{
-    Align2, Area, Color32, CornerRadius, FontId, Order, Pos2, Rect, Sense, Stroke, StrokeKind, Ui,
-    Vec2,
+    Align2, Area, CornerRadius, FontId, Id, Order, Pos2, Rect, Sense, Stroke, StrokeKind, Ui, Vec2,
 };
 
 pub use super::item::{MacKeyboardShortcut, MacMenuItemKind, NSMenuItem};
@@ -31,12 +31,7 @@ impl<'a> MacMenuBar<'a> {
         open_menu_idx: &'a mut Option<usize>,
         highlighted_item_idx: &'a mut Option<usize>,
     ) -> Self {
-        Self {
-            menus,
-            theme: None,
-            open_menu_idx,
-            highlighted_item_idx,
-        }
+        Self { menus, theme: None, open_menu_idx, highlighted_item_idx }
     }
 
     /// Sets the dynamic theme.
@@ -51,26 +46,19 @@ impl<'a> MacMenuBar<'a> {
     }
 
     fn step_highlighted(&mut self, forward: bool) {
-        if let Some(m_idx) = *self.open_menu_idx {
-            if let Some(menu) = self.menus.get(m_idx) {
-                let len = menu.items.len();
-                if len == 0 {
-                    return;
-                }
-                let curr = self.highlighted_item_idx.unwrap_or(0);
-                for step in 1..=len {
-                    let next = if forward {
-                        (curr + step) % len
-                    } else {
-                        (curr + len - (step % len)) % len
-                    };
-                    if let Some(item) = menu.items.get(next) {
-                        if item.enabled && !matches!(item.kind, MacMenuItemKind::Separator) {
-                            *self.highlighted_item_idx = Some(next);
-                            break;
-                        }
-                    }
-                }
+        let Some(menu) = (*self.open_menu_idx).and_then(|idx| self.menus.get(idx)) else {
+            return;
+        };
+        let len = menu.items.len();
+        if len == 0 {
+            return;
+        }
+        let curr = self.highlighted_item_idx.unwrap_or(0);
+        for step in 1..=len {
+            let next = if forward { (curr + step) % len } else { (curr + len - (step % len)) % len };
+            if menu.items.get(next).is_some_and(|it| it.enabled && !matches!(it.kind, MacMenuItemKind::Separator)) {
+                *self.highlighted_item_idx = Some(next);
+                break;
             }
         }
     }
@@ -93,17 +81,13 @@ impl<'a> MacMenuBar<'a> {
 
     /// Executes the currently highlighted menu item, returning its action ID.
     pub fn activate_highlighted(&mut self) -> Option<String> {
-        if let (Some(m_idx), Some(i_idx)) = (*self.open_menu_idx, *self.highlighted_item_idx) {
-            if let Some(menu) = self.menus.get(m_idx) {
-                if let Some(item) = menu.items.get(i_idx) {
-                    if item.enabled {
-                        if let MacMenuItemKind::Action { id, .. } = &item.kind {
-                            let action = id.clone();
-                            self.close();
-                            return Some(action);
-                        }
-                    }
-                }
+        let (m_idx, i_idx) = ((*self.open_menu_idx)?, (*self.highlighted_item_idx)?);
+        let item = self.menus.get(m_idx)?.items.get(i_idx)?;
+        if item.enabled {
+            if let MacMenuItemKind::Action { id, .. } = &item.kind {
+                let action = id.clone();
+                self.close();
+                return Some(action);
             }
         }
         None
@@ -113,18 +97,13 @@ impl<'a> MacMenuBar<'a> {
     pub fn handle_navigation_input(&mut self, input: &egui::InputState) -> Option<String> {
         let mut sub = None;
         super::submenu::handle_menu_bar_navigation(
-            self.menus,
-            self.open_menu_idx,
-            self.highlighted_item_idx,
-            &mut sub,
-            input,
+            self.menus, self.open_menu_idx, self.highlighted_item_idx, &mut sub, input,
         )
     }
 
     /// Returns the currently active submenu highlight index, if any.
     pub fn submenu_highlight(ctx: &egui::Context) -> Option<usize> {
-        #[allow(deprecated)]
-        let id = egui::Id::new("mac_menu_bar_submenu_highlight");
+        let id = Id::NULL.with("mac_menu_bar_submenu_highlight");
         ctx.data(|d| d.get_temp(id))
     }
 
@@ -134,32 +113,51 @@ impl<'a> MacMenuBar<'a> {
         let theme = match self.theme {
             Some(t) => t,
             None => {
-                fallback_theme = MacTheme::default();
+                fallback_theme = MacTheme::from_ctx(ui.ctx());
                 &fallback_theme
             }
         };
 
-        #[allow(deprecated)]
-        let sub_temp_id = egui::Id::new("mac_menu_bar_submenu_highlight");
+        let sub_temp_id = Id::NULL.with("mac_menu_bar_submenu_highlight");
         let mut sub_highlight: Option<usize> = ui.ctx().data(|d| d.get_temp(sub_temp_id));
 
-        // First check shortcuts
-        if let Some(action) = ui.input(|i| self.handle_shortcuts(i)) {
-            self.close();
-            ui.ctx().data_mut(|d| d.remove_temp::<usize>(sub_temp_id));
-            return Some(action);
+        // Guard global shortcut interception when a text editor has keyboard focus
+        if !ui.ctx().egui_wants_keyboard_input() && ui.memory(|m| m.focused().is_none()) {
+            if let Some(action) =
+                ui.input_mut(|i| self.menus.iter().find_map(|m| m.consume_shortcut(i)))
+            {
+                self.close();
+                ui.ctx().data_mut(|d| d.remove_temp::<usize>(sub_temp_id));
+                return Some(action);
+            }
         }
 
-        // Process menu and submenu keyboard navigation
-        if let Some(action) = ui.input(|i| {
-            super::submenu::handle_menu_bar_navigation(
+        // Process menu and submenu keyboard navigation (consuming handled navigation keys)
+        let was_open = self.open_menu_idx.is_some();
+        let nav_action = ui.input_mut(|i| {
+            let act = super::submenu::handle_menu_bar_navigation(
                 self.menus,
                 self.open_menu_idx,
                 self.highlighted_item_idx,
                 &mut sub_highlight,
                 i,
-            )
-        }) {
+            );
+            if was_open {
+                for nav_key in [
+                    egui::Key::Escape,
+                    egui::Key::ArrowDown,
+                    egui::Key::ArrowUp,
+                    egui::Key::ArrowLeft,
+                    egui::Key::ArrowRight,
+                    egui::Key::Enter,
+                    egui::Key::Space,
+                ] {
+                    let _ = i.consume_key(egui::Modifiers::NONE, nav_key);
+                }
+            }
+            act
+        });
+        if let Some(action) = nav_action {
             ui.ctx().data_mut(|d| d.remove_temp::<usize>(sub_temp_id));
             return Some(action);
         }
@@ -170,23 +168,24 @@ impl<'a> MacMenuBar<'a> {
             ui.ctx().data_mut(|d| d.remove_temp::<usize>(sub_temp_id));
         }
 
-        let bar_height = theme.popup_button().height.points();
-        let font_id = FontId::proportional(theme.popup_button().font_size.points());
-        let padding_h = theme.popup_button().padding_horizontal.points();
+        let mb_metrics = theme.menu_bar_metrics();
+        let bar_height = mb_metrics.bar_height.points();
+        let font_id = FontId::proportional(mb_metrics.font_size.points());
+        let padding_h = mb_metrics.item_padding_x.points();
+        let item_corner_r = mb_metrics.bar_corner_radius.points() as u8;
+        let border_w = theme.popover_metrics().border_width.points();
+        let on_accent = theme.on_accent_text();
 
         let mut triggered_action = None;
         let mut open_rect = None;
+        let mut bar_union_rect = Rect::NOTHING;
 
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 0.0;
             for (idx, menu) in self.menus.iter().enumerate() {
                 let is_open = *self.open_menu_idx == Some(idx);
                 let text = &menu.title;
-                let text_color = if is_open {
-                    Color32::WHITE
-                } else {
-                    theme.label()
-                };
+                let text_color = if is_open { on_accent } else { theme.label() };
 
                 let galley = ui
                     .painter()
@@ -194,45 +193,17 @@ impl<'a> MacMenuBar<'a> {
                 let item_width = galley.size().x + padding_h * 2.0;
                 let (rect, resp) =
                     ui.allocate_exact_size(Vec2::new(item_width, bar_height), Sense::click());
+                bar_union_rect = bar_union_rect.union(rect);
 
                 if is_open {
-                    ui.painter().rect(
-                        rect,
-                        CornerRadius::same(
-                            theme
-                                .control_metrics()
-                                .button
-                                .regular
-                                .corner_radius
-                                .points() as u8,
-                        ),
-                        theme.control_accent(),
-                        Stroke::NONE,
-                        StrokeKind::Inside,
-                    );
+                    ui.painter().rect_filled(rect, CornerRadius::same(item_corner_r), theme.control_accent());
                     open_rect = Some(rect);
                 } else if resp.hovered() {
-                    ui.painter().rect(
-                        rect,
-                        CornerRadius::same(
-                            theme
-                                .control_metrics()
-                                .button
-                                .regular
-                                .corner_radius
-                                .points() as u8,
-                        ),
-                        theme.control(),
-                        Stroke::NONE,
-                        StrokeKind::Inside,
-                    );
+                    ui.painter().rect_filled(rect, CornerRadius::same(item_corner_r), theme.control());
                 }
 
                 ui.painter().galley(
-                    Pos2::new(
-                        rect.min.x + padding_h,
-                        rect.center().y - galley.size().y * 0.5,
-                    ),
+                    Pos2::new(rect.min.x + padding_h, rect.center().y - galley.size().y * 0.5),
                     galley,
                     text_color,
                 );
@@ -251,16 +222,19 @@ impl<'a> MacMenuBar<'a> {
         // If a menu is open, render its dropdown items in Foreground order
         if let (Some(m_idx), Some(anchor)) = (*self.open_menu_idx, open_rect) {
             if let Some(menu) = self.menus.get(m_idx) {
-                let metrics = theme.popup_button();
-                let item_height = metrics.menu_item_height.points();
-                let menu_padding = metrics.menu_item_padding.points();
-                let base_min_width = metrics.menu_min_width.points().max(anchor.width());
+                let item_height = mb_metrics.dropdown_item_height.points();
+                let menu_padding = mb_metrics.dropdown_padding_y.points();
+                let base_min_width = mb_metrics.dropdown_min_width.points().max(anchor.width());
                 let total_height = (menu.items.len() as f32) * item_height + menu_padding * 2.0;
+                let min_clearance = mb_metrics.shortcut_clearance.points();
+                let check_col_w = mb_metrics.dropdown_padding_x.points() * 2.0;
+                let has_any_checked = menu.items.iter().any(|it| it.checked);
+                let lead_offset = if has_any_checked {
+                    check_col_w
+                } else {
+                    padding_h
+                };
 
-                // Dynamic dropdown menu width auto-widening:
-                // Measures each item's title width and trailing element width (shortcuts / submenu arrows)
-                // guaranteeing clearance >= 24.0pt with zero visual overlap.
-                let min_clearance = 24.0f32;
                 let mut max_item_w = 0.0f32;
                 for item in &menu.items {
                     if matches!(item.kind, MacMenuItemKind::Separator) {
@@ -268,7 +242,7 @@ impl<'a> MacMenuBar<'a> {
                     }
                     let title_w = ui
                         .painter()
-                        .layout_no_wrap(item.title.clone(), font_id.clone(), Color32::WHITE)
+                        .layout_no_wrap(item.title.clone(), font_id.clone(), on_accent)
                         .size()
                         .x;
                     let trailing_w = match &item.kind {
@@ -276,47 +250,45 @@ impl<'a> MacMenuBar<'a> {
                             shortcut: Some(sc), ..
                         } => ui
                             .painter()
-                            .layout_no_wrap(sc.format_text(), font_id.clone(), Color32::WHITE)
+                            .layout_no_wrap(sc.format_text(), font_id.clone(), on_accent)
                             .size()
                             .x,
                         MacMenuItemKind::Submenu { .. } => ui
                             .painter()
-                            .layout_no_wrap("›".to_string(), font_id.clone(), Color32::WHITE)
+                            .layout_no_wrap("›".to_string(), font_id.clone(), on_accent)
                             .size()
                             .x,
                         _ => 0.0,
                     };
 
                     let item_w = if trailing_w > 0.0 {
-                        padding_h * 2.0 + title_w + min_clearance + trailing_w * 2.0
+                        lead_offset + padding_h + title_w + min_clearance + trailing_w * 2.0
                     } else {
-                        padding_h * 2.0 + title_w
+                        lead_offset + padding_h + title_w
                     };
-
-                    if item_w > max_item_w {
-                        max_item_w = item_w;
-                    }
+                    max_item_w = max_item_w.max(item_w);
                 }
 
                 let menu_width = base_min_width.max(max_item_w + menu_padding * 2.0);
-
                 let popup_pos = Pos2::new(anchor.left(), anchor.bottom());
+                let menu_rect =
+                    Rect::from_min_size(popup_pos, Vec2::new(menu_width, total_height));
                 let area_id = ui.scope_id().with("menu_dropdown_area").with(m_idx);
+                let mut active_sub_rect: Option<Rect> = None;
 
                 Area::new(area_id)
                     .order(Order::Foreground)
                     .fixed_pos(popup_pos)
                     .show(ui.ctx(), |pop_ui| {
-                        let menu_rect =
-                            Rect::from_min_size(popup_pos, Vec2::new(menu_width, total_height));
+                        let _ = pop_ui.allocate_rect(menu_rect, Sense::click());
                         let painter = pop_ui.painter();
-                        let corner_r = theme.popover_metrics().corner_radius.points() as u8;
+                        let drop_corner_r = mb_metrics.dropdown_corner_radius.points() as u8;
 
                         painter.rect(
                             menu_rect,
-                            CornerRadius::same(corner_r),
+                            CornerRadius::same(drop_corner_r),
                             theme.window_background(),
-                            Stroke::new(1.0, theme.separator()),
+                            Stroke::new(border_w, theme.separator()),
                             StrokeKind::Inside,
                         );
 
@@ -333,7 +305,7 @@ impl<'a> MacMenuBar<'a> {
                                         Pos2::new(item_rect.left(), item_rect.center().y),
                                         Pos2::new(item_rect.right(), item_rect.center().y),
                                     ],
-                                    Stroke::new(1.0, theme.separator()),
+                                    Stroke::new(border_w, theme.separator()),
                                 );
                                 continue;
                             }
@@ -349,7 +321,7 @@ impl<'a> MacMenuBar<'a> {
                             if is_highlighted && item.enabled {
                                 painter.rect(
                                     item_rect,
-                                    CornerRadius::same(corner_r),
+                                    CornerRadius::same(item_corner_r),
                                     theme.control_accent(),
                                     Stroke::NONE,
                                     StrokeKind::Inside,
@@ -359,13 +331,26 @@ impl<'a> MacMenuBar<'a> {
                             let item_text_color = if !item.enabled {
                                 theme.placeholder_text()
                             } else if is_highlighted {
-                                Color32::WHITE
+                                on_accent
                             } else {
                                 theme.label()
                             };
 
+                            if item.checked {
+                                painter.text(
+                                    Pos2::new(
+                                        item_rect.left() + lead_offset * 0.5,
+                                        item_rect.center().y,
+                                    ),
+                                    Align2::CENTER_CENTER,
+                                    MacSymbol::Checkmark.as_str(),
+                                    font_id.clone(),
+                                    item_text_color,
+                                );
+                            }
+
                             painter.text(
-                                Pos2::new(item_rect.left() + padding_h, item_rect.center().y),
+                                Pos2::new(item_rect.left() + lead_offset, item_rect.center().y),
                                 Align2::LEFT_CENTER,
                                 &item.title,
                                 font_id.clone(),
@@ -409,7 +394,6 @@ impl<'a> MacMenuBar<'a> {
                                 }
                             }
 
-                            // Cascading submenu popover
                             if let MacMenuItemKind::Submenu { menu: child_menu } = &item.kind {
                                 let sub_is_active = is_highlighted && sub_highlight.is_some();
                                 if (is_highlighted || resp.hovered() || sub_is_active)
@@ -419,6 +403,14 @@ impl<'a> MacMenuBar<'a> {
                                     let sub_pos = Pos2::new(popup_pos.x + menu_width, item_y);
                                     let child_hl =
                                         if is_highlighted { sub_highlight } else { None };
+                                    active_sub_rect = Some(Rect::from_min_size(
+                                        sub_pos,
+                                        Vec2::new(
+                                            base_min_width,
+                                            (child_menu.items.len() as f32) * item_height
+                                                + menu_padding * 2.0,
+                                        ),
+                                    ));
                                     if let Some(act) = super::submenu::render_submenu_popover(
                                         child_menu,
                                         sub_id,
@@ -434,6 +426,22 @@ impl<'a> MacMenuBar<'a> {
                             }
                         }
                     });
+
+                // Dismiss open dropdown if primary pointer clicked outside bar, dropdown, and submenu
+                let clicked_outside = ui.input(|i| {
+                    if i.pointer.primary_clicked() || i.pointer.primary_pressed() {
+                        if let Some(pos) = i.pointer.interact_pos() {
+                            let in_bar = bar_union_rect.contains(pos);
+                            let in_menu = menu_rect.contains(pos);
+                            let in_sub = active_sub_rect.is_some_and(|r| r.contains(pos));
+                            return !in_bar && !in_menu && !in_sub;
+                        }
+                    }
+                    false
+                });
+                if clicked_outside {
+                    self.close();
+                }
             }
         }
 

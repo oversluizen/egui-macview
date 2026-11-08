@@ -111,22 +111,26 @@ proptest! {
         let cap = 50;
         let mut manager = NSUndoManager::<i64>::with_capacity(cap);
         let mut current_state = initial;
+        let mut expected_snapshots = Vec::new();
 
         for &m in &mutations {
+            if expected_snapshots.last() != Some(&current_state) {
+                expected_snapshots.push(current_state);
+            }
             manager.push_snapshot(current_state);
             current_state = m;
         }
 
-        prop_assert_eq!(manager.undo_count(), mutations.len());
+        prop_assert_eq!(manager.undo_count(), expected_snapshots.len());
 
-        for _ in 0..mutations.len() {
+        for _ in 0..expected_snapshots.len() {
             prop_assert!(manager.can_undo());
             manager.undo(&mut current_state);
         }
 
         prop_assert_eq!(current_state, initial, "Full rollback must restore exact initial state");
         prop_assert!(!manager.can_undo());
-        prop_assert_eq!(manager.redo_count(), mutations.len());
+        prop_assert_eq!(manager.redo_count(), expected_snapshots.len());
     }
 }
 

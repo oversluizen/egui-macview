@@ -102,7 +102,7 @@ impl<'a> MacThumbnailCell<'a> {
         let theme = match self.theme {
             Some(t) => t,
             None => {
-                fallback_theme = MacTheme::default();
+                fallback_theme = MacTheme::from_ctx(painter.ctx());
                 &fallback_theme
             }
         };
@@ -152,7 +152,7 @@ impl<'a> Widget for MacThumbnailCell<'a> {
         let theme = match self.theme {
             Some(t) => t,
             None => {
-                fallback_theme = MacTheme::default();
+                fallback_theme = MacTheme::from_ctx(ui.ctx());
                 &fallback_theme
             }
         };

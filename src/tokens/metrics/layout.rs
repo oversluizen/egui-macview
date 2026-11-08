@@ -2,6 +2,7 @@
 
 use crate::tokens::dtcg::DimensionValue;
 use crate::tokens::metrics::controls::MacControlMetrics;
+use crate::tokens::metrics::navigation::NavigationMetrics;
 use serde::{Deserialize, Serialize};
 
 /// macOS Unified and Compact Toolbar metrics.
@@ -42,6 +43,41 @@ pub struct ToolbarMetrics {
     /// Spacing between centers of adjacent traffic light buttons.
     #[serde(default = "default_traffic_light_spacing")]
     pub traffic_light_spacing: DimensionValue,
+    /// Window top corner radius in points.
+    #[serde(default = "default_window_corner_radius")]
+    pub window_corner_radius: DimensionValue,
+    /// Interactive hit box size for each traffic light circle.
+    #[serde(default = "default_traffic_light_hit_size")]
+    pub traffic_light_hit_size: DimensionValue,
+    /// Leading inset from left toolbar edge to first traffic light center.
+    #[serde(default = "default_traffic_light_leading_inset")]
+    pub traffic_light_leading_inset: DimensionValue,
+    /// Half-span of interior close/zoom glyph inside traffic light circle.
+    #[serde(default = "default_traffic_light_glyph_half")]
+    pub traffic_light_glyph_half: DimensionValue,
+    /// Minimum available width to render window title in toolbar center zone.
+    #[serde(default = "default_toolbar_min_title_width")]
+    pub min_title_width: DimensionValue,
+}
+
+fn default_window_corner_radius() -> DimensionValue {
+    DimensionValue::from_pt(10.0)
+}
+
+fn default_traffic_light_hit_size() -> DimensionValue {
+    DimensionValue::from_pt(14.0)
+}
+
+fn default_traffic_light_leading_inset() -> DimensionValue {
+    DimensionValue::from_pt(18.0)
+}
+
+fn default_traffic_light_glyph_half() -> DimensionValue {
+    DimensionValue::from_pt(2.5)
+}
+
+fn default_toolbar_min_title_width() -> DimensionValue {
+    DimensionValue::from_pt(40.0)
 }
 
 fn default_caption_button_width() -> DimensionValue {
@@ -104,6 +140,55 @@ pub struct PopoverMetrics {
     /// Inner padding around popover body content.
     #[serde(default = "default_popover_inner_padding")]
     pub inner_padding: DimensionValue,
+    /// Corner radius for compact floating HUD palette (`6.0pt`).
+    #[serde(default = "default_hud_corner_radius")]
+    pub hud_corner_radius: DimensionValue,
+    /// Row height inside compact floating HUD palette (`18.0pt`).
+    #[serde(default = "default_hud_row_height")]
+    pub hud_row_height: DimensionValue,
+    /// Vertical gap between rows inside compact floating HUD palette (`1.0pt`).
+    #[serde(default = "default_hud_row_gap")]
+    pub hud_row_gap: DimensionValue,
+    /// Horizontal padding inside compact floating HUD palette (`6.0pt`).
+    #[serde(default = "default_hud_padding_x")]
+    pub hud_padding_x: DimensionValue,
+    /// Top padding below header inside compact floating HUD palette (`2.0pt`).
+    #[serde(default = "default_hud_padding_top")]
+    pub hud_padding_top: DimensionValue,
+    /// Status indicator dot radius in HUD header (`3.0pt`).
+    #[serde(default = "default_hud_dot_radius")]
+    pub hud_dot_radius: DimensionValue,
+    /// Leading X offset of HUD header dot (`10.0pt`).
+    #[serde(default = "default_hud_dot_offset_x")]
+    pub hud_dot_offset_x: DimensionValue,
+    /// Leading X offset of HUD header title (`20.0pt`).
+    #[serde(default = "default_hud_title_offset_x")]
+    pub hud_title_offset_x: DimensionValue,
+}
+
+fn default_hud_corner_radius() -> DimensionValue {
+    DimensionValue::from_pt(6.0)
+}
+fn default_hud_row_height() -> DimensionValue {
+    DimensionValue::from_pt(18.0)
+}
+fn default_hud_row_gap() -> DimensionValue {
+    DimensionValue::from_pt(1.0)
+}
+fn default_hud_padding_x() -> DimensionValue {
+    DimensionValue::from_pt(6.0)
+}
+fn default_hud_padding_top() -> DimensionValue {
+    DimensionValue::from_pt(2.0)
+}
+fn default_hud_dot_radius() -> DimensionValue {
+    DimensionValue::from_pt(3.0)
+}
+fn default_hud_dot_offset_x() -> DimensionValue {
+    DimensionValue::from_pt(10.0)
+}
+fn default_hud_title_offset_x() -> DimensionValue {
+    DimensionValue::from_pt(20.0)
 }
 
 fn default_popover_header_height() -> DimensionValue {
@@ -172,6 +257,13 @@ pub struct ScrollViewMetrics {
     /// Minimum visible thumb length when content is excessively large.
     #[serde(default = "default_scroll_view_min_visible_thumb_length")]
     pub min_visible_thumb_length: DimensionValue,
+    /// Expanded overlay scrollbar thickness when hovered or dragged (`10.0pt`).
+    #[serde(default = "default_scroll_view_scrollbar_hover_thickness")]
+    pub scrollbar_hover_thickness: DimensionValue,
+}
+
+fn default_scroll_view_scrollbar_hover_thickness() -> DimensionValue {
+    DimensionValue::from_pt(10.0)
 }
 
 fn default_scroll_view_hit_zone_padding() -> DimensionValue {
@@ -192,6 +284,7 @@ impl Default for ScrollViewMetrics {
             edge_inset: DimensionValue::from_pt(3.0),
             hit_zone_padding: default_scroll_view_hit_zone_padding(),
             min_visible_thumb_length: default_scroll_view_min_visible_thumb_length(),
+            scrollbar_hover_thickness: default_scroll_view_scrollbar_hover_thickness(),
         }
     }
 }
@@ -259,4 +352,7 @@ pub struct MacMetricsTokens {
     /// Layout container metrics.
     #[serde(default)]
     pub layout: LayoutMetrics,
+    /// Navigation and feedback metrics.
+    #[serde(default)]
+    pub navigation: NavigationMetrics,
 }

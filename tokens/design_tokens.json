@@ -1,6 +1,6 @@
 {
   "$name": "egui-macview Design Tokens",
-  "$version": "0.4.0",
+  "$version": "0.4.1",
   "$description": "W3C DTCG-compliant design token catalog for egui-macview. Fully grounded in Apple AppKit, macOS Human Interface Guidelines, Apple Typography specifications, and CoreAnimation spring physics.",
   "macview": {
     "metrics": {
@@ -361,6 +361,12 @@
             "$value": "0.05pt",
             "$description": "Keyboard arrow navigation step increment fraction (5% of span).",
             "$extensions": { "apple_citation": "AppKit NSSlider keyboard step fraction" }
+          },
+          "thumb_press_scale": {
+            "$type": "dimension",
+            "$value": "1.15pt",
+            "$description": "Scale multiplier for circular NSSlider thumb knob when pressed or dragged (SPEC-002 §2.5).",
+            "$extensions": { "apple_citation": "SPEC-002 §2.5 / AppKit NSSlider active knob scale" }
           }
         },
         "thumbnail": {
@@ -677,6 +683,30 @@
             "$value": "1.0pt",
             "$description": "Outer bezel border thickness for stepper control.",
             "$extensions": { "apple_citation": "AppKit NSStepper border" }
+          },
+          "auto_repeat_delay": {
+            "$type": "dimension",
+            "$value": "0.4pt",
+            "$description": "Initial hold delay in seconds before NSStepper continuous auto-repeat starts.",
+            "$extensions": { "apple_citation": "AppKit NSButtonCell periodic delay default (0.4s)" }
+          },
+          "auto_repeat_interval": {
+            "$type": "dimension",
+            "$value": "0.075pt",
+            "$description": "Periodic repeat interval in seconds while NSStepper button is held down.",
+            "$extensions": { "apple_citation": "AppKit NSButtonCell periodic interval default (0.075s)" }
+          },
+          "shift_multiplier": {
+            "$type": "dimension",
+            "$value": "10.0pt",
+            "$description": "Step multiplier when Shift modifier key is held.",
+            "$extensions": { "apple_citation": "macOS Pro Inspector numeric stepping convention (10x)" }
+          },
+          "cmd_multiplier": {
+            "$type": "dimension",
+            "$value": "100.0pt",
+            "$description": "Step multiplier when Command or Control modifier key is held.",
+            "$extensions": { "apple_citation": "macOS Pro Inspector numeric stepping convention (100x)" }
           }
         },
         "color_well": {
@@ -1057,6 +1087,12 @@
             "$value": "2.0pt",
             "$description": "Minimum rendering length threshold below which thumb is omitted.",
             "$extensions": { "apple_citation": "macOS NSScrollView overlay minimum visibility threshold" }
+          },
+          "scrollbar_hover_thickness": {
+            "$type": "dimension",
+            "$value": "10.0pt",
+            "$description": "Expanded overlay scrollbar thumb and track thickness when hovered or dragged.",
+            "$extensions": { "apple_citation": "macOS NSScrollView overlay scrollbar expanded hover thickness (7pt -> 10pt)" }
           }
         },
         "stack_view": {
@@ -1090,6 +1126,75 @@
             "$description": "Standard fallback cross-axis height for horizontal stack views.",
             "$extensions": { "apple_citation": "AppKit NSStackView default item height" }
           }
+        }
+      },
+      "navigation": {
+        "menu_bar": {
+          "bar_height": { "$type": "dimension", "$value": "24.0pt", "$description": "Standard macOS NSMenu bar height." },
+          "item_padding_x": { "$type": "dimension", "$value": "8.0pt", "$description": "Horizontal padding per top-level menu item." },
+          "item_spacing": { "$type": "dimension", "$value": "2.0pt", "$description": "Horizontal spacing between top-level menu titles." },
+          "dropdown_min_width": { "$type": "dimension", "$value": "180.0pt", "$description": "Minimum dropdown menu width." },
+          "dropdown_max_width": { "$type": "dimension", "$value": "360.0pt", "$description": "Maximum dropdown menu width." },
+          "dropdown_item_height": { "$type": "dimension", "$value": "22.0pt", "$description": "Standard height for dropdown menu item row." },
+          "dropdown_separator_height": { "$type": "dimension", "$value": "9.0pt", "$description": "Vertical span of menu separator row." },
+          "dropdown_corner_radius": { "$type": "dimension", "$value": "6.0pt", "$description": "Corner radius for dropdown menu container." },
+          "dropdown_padding_y": { "$type": "dimension", "$value": "4.0pt", "$description": "Top and bottom padding inside dropdown menu." },
+          "dropdown_padding_x": { "$type": "dimension", "$value": "10.0pt", "$description": "Horizontal padding inside dropdown menu item." },
+          "shortcut_clearance": { "$type": "dimension", "$value": "24.0pt", "$description": "Minimum horizontal clearance between item title and shortcut text." },
+          "submenu_gap": { "$type": "dimension", "$value": "2.0pt", "$description": "Horizontal gap between parent menu and cascading submenu." },
+          "bar_corner_radius": { "$type": "dimension", "$value": "4.0pt", "$description": "Corner radius for active top-level menu bar pill." },
+          "font_size": { "$type": "dimension", "$value": "13.0pt", "$description": "Menu item title font size." },
+          "shortcut_font_size": { "$type": "dimension", "$value": "12.0pt", "$description": "Menu item shortcut accelerator font size." }
+        },
+        "footer": {
+          "height": { "$type": "dimension", "$value": "24.0pt", "$description": "Deterministic SPEC-007 canvas footer height." },
+          "edge_padding_x": { "$type": "dimension", "$value": "10.0pt", "$description": "Horizontal edge inset for footer bar." },
+          "preset_width": { "$type": "dimension", "$value": "36.0pt", "$description": "Width of zoom preset pill button." },
+          "preset_height": { "$type": "dimension", "$value": "18.0pt", "$description": "Height of zoom preset pill button." },
+          "preset_spacing": { "$type": "dimension", "$value": "2.0pt", "$description": "Horizontal gap between zoom preset buttons." },
+          "preset_corner_radius": { "$type": "dimension", "$value": "3.0pt", "$description": "Corner radius of zoom preset pill button." },
+          "font_size": { "$type": "dimension", "$value": "10.5pt", "$description": "Breadcrumb and coordinate status font size." },
+          "preset_font_size": { "$type": "dimension", "$value": "10.0pt", "$description": "Zoom preset button font size." },
+          "separator_gap": { "$type": "dimension", "$value": "10.0pt", "$description": "Horizontal gap around vertical footer dividers." },
+          "coords_width": { "$type": "dimension", "$value": "75.0pt", "$description": "Reserved width for cursor coordinate readout." },
+          "presets_zone_offset": { "$type": "dimension", "$value": "150.0pt", "$description": "Trailing offset for zoom presets cluster." },
+          "divider_trailing_offset": { "$type": "dimension", "$value": "155.0pt", "$description": "Trailing offset for divider before zoom presets." },
+          "divider_vertical_inset": { "$type": "dimension", "$value": "5.0pt", "$description": "Top/bottom inset for vertical footer divider line." }
+        },
+        "palette": {
+          "width": { "$type": "dimension", "$value": "480.0pt", "$description": "Spotlight command palette modal width." },
+          "max_height": { "$type": "dimension", "$value": "280.0pt", "$description": "Maximum command palette modal height." },
+          "corner_radius": { "$type": "dimension", "$value": "10.0pt", "$description": "Command palette outer squircle corner radius." },
+          "search_bar_height": { "$type": "dimension", "$value": "36.0pt", "$description": "Top query input bar height." },
+          "search_padding_x": { "$type": "dimension", "$value": "12.0pt", "$description": "Horizontal padding inside query input bar." },
+          "search_icon_size": { "$type": "dimension", "$value": "14.0pt", "$description": "Leading magnifying glass icon size in palette." },
+          "row_height": { "$type": "dimension", "$value": "28.0pt", "$description": "Height of each command result row." },
+          "row_padding_x": { "$type": "dimension", "$value": "12.0pt", "$description": "Horizontal padding inside each result row." },
+          "row_corner_radius": { "$type": "dimension", "$value": "5.0pt", "$description": "Corner radius of highlighted result row." },
+          "row_inset": { "$type": "dimension", "$value": "4.0pt", "$description": "Horizontal inset of result rows from palette edge." },
+          "query_font_size": { "$type": "dimension", "$value": "14.0pt", "$description": "Font size of query input text." },
+          "item_font_size": { "$type": "dimension", "$value": "12.5pt", "$description": "Font size of result item title." },
+          "category_font_size": { "$type": "dimension", "$value": "10.5pt", "$description": "Font size of category badge." },
+          "shortcut_font_size": { "$type": "dimension", "$value": "10.5pt", "$description": "Font size of keyboard shortcut badge." }
+        },
+        "context_menu": {
+          "item_height": { "$type": "dimension", "$value": "22.0pt", "$description": "Context menu item row height." },
+          "min_width": { "$type": "dimension", "$value": "140.0pt", "$description": "Minimum context menu width." },
+          "padding": { "$type": "dimension", "$value": "4.0pt", "$description": "Inner padding of context menu container." },
+          "item_padding_x": { "$type": "dimension", "$value": "8.0pt", "$description": "Horizontal text inset inside context menu row." },
+          "corner_radius": { "$type": "dimension", "$value": "6.0pt", "$description": "Context menu outer corner radius." },
+          "row_corner_radius": { "$type": "dimension", "$value": "4.0pt", "$description": "Highlighted context menu item corner radius." },
+          "shortcut_clearance": { "$type": "dimension", "$value": "24.0pt", "$description": "Minimum clearance between context menu label and shortcut." },
+          "font_size": { "$type": "dimension", "$value": "12.0pt", "$description": "Context menu item font size." }
+        },
+        "toast": {
+          "height": { "$type": "dimension", "$value": "32.0pt", "$description": "Floating toast pill height." },
+          "min_width": { "$type": "dimension", "$value": "120.0pt", "$description": "Minimum floating toast pill width." },
+          "top_margin": { "$type": "dimension", "$value": "20.0pt", "$description": "Top viewport margin for floating toast stack." },
+          "spacing": { "$type": "dimension", "$value": "8.0pt", "$description": "Vertical spacing between stacked toast pills." },
+          "padding_x": { "$type": "dimension", "$value": "32.0pt", "$description": "Total horizontal text padding inside toast pill." },
+          "duration_secs": { "$type": "dimension", "$value": "2.5pt", "$description": "Default toast display duration in seconds." },
+          "font_size": { "$type": "dimension", "$value": "12.0pt", "$description": "Toast message typography font size." }
         }
       }
     },
@@ -1202,6 +1307,81 @@
           "$value": "#1BA931",
           "$description": "Window zoom/maximize traffic light border stroke color.",
           "$extensions": { "apple_citation": "macOS window traffic light zoom border" }
+        },
+        "on_accent_text": {
+          "$type": "color",
+          "$value": "#FFFFFF",
+          "$description": "High-contrast white label color on system accent and active controls."
+        },
+        "knob_fill": {
+          "$type": "color",
+          "$value": "#FFFFFF",
+          "$description": "Pure white surface fill for switch and slider thumb knobs."
+        },
+        "drop_shadow": {
+          "$type": "color",
+          "$value": "rgba(0, 0, 0, 0.12)",
+          "$description": "Subtle ambient drop shadow color for controls and floating surfaces in Aqua."
+        },
+        "backdrop_dim": {
+          "$type": "color",
+          "$value": "rgba(0, 0, 0, 0.40)",
+          "$description": "Modal backdrop dimming overlay color in Aqua."
+        },
+        "hud_background": {
+          "$type": "color",
+          "$value": "rgba(30, 30, 32, 0.90)",
+          "$description": "Translucent dark NSPanelStyleMaskHUDWindow background fill (SPEC-006 §2.2)."
+        },
+        "hud_border": {
+          "$type": "color",
+          "$value": "#3C3C3E",
+          "$description": "Hairline border stroke for dark floating HUD panels."
+        },
+        "hud_text": {
+          "$type": "color",
+          "$value": "#F2F2F7",
+          "$description": "Primary label color inside dark floating HUD panels."
+        },
+        "hud_secondary_text": {
+          "$type": "color",
+          "$value": "#B4B4B8",
+          "$description": "Secondary coordinate label color inside dark floating HUD panels."
+        },
+        "caption_close_hover": {
+          "$type": "color",
+          "$value": "#E81123",
+          "$description": "Windows 11 caption close button hover fill."
+        },
+        "caption_close_pressed": {
+          "$type": "color",
+          "$value": "#C42B1C",
+          "$description": "Windows 11 caption close button pressed fill."
+        },
+        "caption_hover": {
+          "$type": "color",
+          "$value": "rgba(0, 0, 0, 0.06)",
+          "$description": "Windows 11 caption button hover fill in Light mode."
+        },
+        "caption_pressed": {
+          "$type": "color",
+          "$value": "rgba(0, 0, 0, 0.11)",
+          "$description": "Windows 11 caption button pressed fill in Light mode."
+        },
+        "traffic_light_glyph": {
+          "$type": "color",
+          "$value": "rgba(0, 0, 0, 0.63)",
+          "$description": "Interior glyph stroke color for hovered macOS traffic light buttons."
+        },
+        "scrollbar_thumb": {
+          "$type": "color",
+          "$value": "rgba(0, 0, 0, 0.45)",
+          "$description": "Overlay scrollbar thumb base color in Aqua."
+        },
+        "scrollbar_thumb_active": {
+          "$type": "color",
+          "$value": "rgba(0, 0, 0, 0.70)",
+          "$description": "Overlay scrollbar thumb hovered/dragged color in Aqua."
         }
       },
       "dark_aqua": {
@@ -1312,6 +1492,81 @@
           "$value": "#1BA931",
           "$description": "Window zoom/maximize traffic light border stroke color.",
           "$extensions": { "apple_citation": "macOS window traffic light zoom border" }
+        },
+        "on_accent_text": {
+          "$type": "color",
+          "$value": "#FFFFFF",
+          "$description": "High-contrast white label color on system accent and active controls."
+        },
+        "knob_fill": {
+          "$type": "color",
+          "$value": "#FFFFFF",
+          "$description": "Pure white surface fill for switch and slider thumb knobs."
+        },
+        "drop_shadow": {
+          "$type": "color",
+          "$value": "rgba(0, 0, 0, 0.35)",
+          "$description": "Subtle ambient drop shadow color for controls and floating surfaces in DarkAqua."
+        },
+        "backdrop_dim": {
+          "$type": "color",
+          "$value": "rgba(0, 0, 0, 0.55)",
+          "$description": "Modal backdrop dimming overlay color in DarkAqua."
+        },
+        "hud_background": {
+          "$type": "color",
+          "$value": "rgba(30, 30, 32, 0.90)",
+          "$description": "Translucent dark NSPanelStyleMaskHUDWindow background fill (SPEC-006 §2.2)."
+        },
+        "hud_border": {
+          "$type": "color",
+          "$value": "#3C3C3E",
+          "$description": "Hairline border stroke for dark floating HUD panels."
+        },
+        "hud_text": {
+          "$type": "color",
+          "$value": "#F2F2F7",
+          "$description": "Primary label color inside dark floating HUD panels."
+        },
+        "hud_secondary_text": {
+          "$type": "color",
+          "$value": "#B4B4B8",
+          "$description": "Secondary coordinate label color inside dark floating HUD panels."
+        },
+        "caption_close_hover": {
+          "$type": "color",
+          "$value": "#E81123",
+          "$description": "Windows 11 caption close button hover fill."
+        },
+        "caption_close_pressed": {
+          "$type": "color",
+          "$value": "#C42B1C",
+          "$description": "Windows 11 caption close button pressed fill."
+        },
+        "caption_hover": {
+          "$type": "color",
+          "$value": "rgba(255, 255, 255, 0.08)",
+          "$description": "Windows 11 caption button hover fill in Dark mode."
+        },
+        "caption_pressed": {
+          "$type": "color",
+          "$value": "rgba(255, 255, 255, 0.12)",
+          "$description": "Windows 11 caption button pressed fill in Dark mode."
+        },
+        "traffic_light_glyph": {
+          "$type": "color",
+          "$value": "rgba(0, 0, 0, 0.63)",
+          "$description": "Interior glyph stroke color for hovered macOS traffic light buttons."
+        },
+        "scrollbar_thumb": {
+          "$type": "color",
+          "$value": "rgba(255, 255, 255, 0.45)",
+          "$description": "Overlay scrollbar thumb base color in DarkAqua."
+        },
+        "scrollbar_thumb_active": {
+          "$type": "color",
+          "$value": "rgba(255, 255, 255, 0.70)",
+          "$description": "Overlay scrollbar thumb hovered/dragged color in DarkAqua."
         }
       }
     },

@@ -1,8 +1,8 @@
-# SPEC-002: Dynamic Color, Tokens & MacBackgroundStyle Contrast Engine
+# SPEC-002A: Dynamic Color, Tokens & MacBackgroundStyle Contrast Engine
 
 | Attribute | Specification Value |
 | :--- | :--- |
-| **Document ID** | SPEC-002 |
+| **Document ID** | SPEC-002A |
 | **Document Title** | Dynamic Color, Tokens & MacBackgroundStyle Contrast Engine |
 | **Document Version** | `0.2.0` |
 | **Status** | Accepted / Normative |
@@ -19,6 +19,7 @@
 | :--- | :--- | :--- | :--- |
 | `0.1.0` | 2026-11-05 | Architecture Team | Baseline Initial Release: W3C DTCG Token Catalog & Color Parsers |
 | `0.2.0` | 2026-11-06 | Architecture Team | Current Milestone: MacBackgroundStyle Dynamic Contrast Engine & WCAG 2.1 AA Luminance Formulations |
+| `0.4.1` | 2026-11-08 | Architecture Team | Consolidation Hardening: Disambiguated Document ID (`SPEC-002A`), unmultiplied RGBA DTCG parsing, and context-stored `MacTheme::from_ctx` |
 
 ---
 

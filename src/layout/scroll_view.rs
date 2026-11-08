@@ -7,7 +7,7 @@
 //! and interactive floating overlay scrollbars that smoothly fade out when inactive.
 
 use crate::layout::scrollbar::render_overlay_thumb;
-use crate::theme::{MacAppearance, MacTheme};
+use crate::theme::MacTheme;
 use egui::scroll_area::ScrollBarVisibility;
 use egui::{Color32, Id, Pos2, Rect, ScrollArea, Ui, Vec2};
 use std::hash::Hash;
@@ -67,8 +67,7 @@ pub struct MacScrollView<'a> {
 impl<'a> MacScrollView<'a> {
     /// Creates a scroll view with state identified by `id_source`.
     pub fn new(id_source: impl Hash + std::fmt::Debug) -> Self {
-        #[allow(deprecated)]
-        let id = Id::new(id_source);
+        let id = Id::NULL.with(id_source);
         Self {
             id,
             theme: None,
@@ -152,13 +151,14 @@ impl<'a> MacScrollView<'a> {
         let theme = match self.theme {
             Some(t) => t,
             None => {
-                fallback_theme = MacTheme::default();
+                fallback_theme = MacTheme::from_ctx(ui.ctx());
                 &fallback_theme
             }
         };
 
         let metrics = theme.scroll_view();
         let scrollbar_thickness = metrics.scrollbar_thickness.points();
+        let scrollbar_hover_thickness = metrics.scrollbar_hover_thickness.points();
         let thumb_min_length = metrics.thumb_min_length.points();
         let corner_radius = metrics.corner_radius.points();
         let fade_timeout = metrics.fade_timeout.points();
@@ -271,21 +271,11 @@ impl<'a> MacScrollView<'a> {
 
         let painter = ui.painter_at(viewport_rect);
 
-        // Helper for thumb styling derived from MacAppearance
+        // Helper for thumb styling derived from MacTheme semantic tokens
         let get_thumb_color = |hovered: bool, dragged: bool| -> Color32 {
-            let base_alpha: u8 = if dragged {
-                150
-            } else if hovered {
-                120
-            } else {
-                80
-            };
-            let effective_alpha = ((base_alpha as f32) * alpha) as u8;
-            match theme.appearance {
-                MacAppearance::Aqua => Color32::from_black_alpha(effective_alpha),
-                MacAppearance::DarkAqua => Color32::from_white_alpha(effective_alpha),
-            }
+            theme.scrollbar_thumb_color(hovered || dragged, alpha)
         };
+        let track_bg_color = theme.control().gamma_multiply(alpha * 0.5);
 
         let has_v = self.vertical && max_scroll_y > 0.0;
         let has_h = self.horizontal && max_scroll_x > 0.0;
@@ -308,6 +298,7 @@ impl<'a> MacScrollView<'a> {
                 trail,
                 edge_inset,
                 scrollbar_thickness,
+                scrollbar_hover_thickness,
                 corner_radius,
                 thumb_min_length,
                 min_visible_thumb_len,
@@ -315,6 +306,7 @@ impl<'a> MacScrollView<'a> {
                 max_scroll_y,
                 true,
                 alpha,
+                track_bg_color,
                 &get_thumb_color,
                 last_active_id,
                 now,
@@ -342,6 +334,7 @@ impl<'a> MacScrollView<'a> {
                 trail,
                 edge_inset,
                 scrollbar_thickness,
+                scrollbar_hover_thickness,
                 corner_radius,
                 thumb_min_length,
                 min_visible_thumb_len,
@@ -349,6 +342,7 @@ impl<'a> MacScrollView<'a> {
                 max_scroll_x,
                 false,
                 alpha,
+                track_bg_color,
                 &get_thumb_color,
                 last_active_id,
                 now,

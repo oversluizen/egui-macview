@@ -4,7 +4,7 @@
 
 [![Crates.io](https://img.shields.io/crates/v/egui-macview.svg)](https://crates.io/crates/egui-macview)
 [![Documentation](https://docs.rs/egui-macview/badge.svg)](https://docs.rs/egui-macview)
-[![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](https://opensource.org/licenses/MIT)
 [![Tests](https://img.shields.io/badge/tests-135%20passed%20(100%25%20green)-brightgreen.svg)](tests/)
 
 ---
@@ -32,7 +32,7 @@ cargo run --example macview_gallery
 
 Clicking the **Screens** group in the left sidebar switches the central work area across 4 specialized AppKit capability screens:
 
-```
+```text
 ┌─────────────────┬──────────────────────────────────────────┬──────────────────┐
 │ Left Sidebar    │ Center Work Area (Master-Detail)         │ Right Inspector  │
 │                 │                                          │                  │
@@ -116,22 +116,15 @@ Add `egui-macview` to your `Cargo.toml`:
 ```toml
 [dependencies]
 egui = "0.37.0"
-egui-macview = "0.3.1"
+egui-macview = "0.4.1"
 ```
 
 ### Complete Code Example
 
 ```rust
-use egui::{pos2, vec2, Rect};
 use egui_macview::{
     theme::{MacAppearance, MacTheme},
-    controls::{
-        segmented::MacSegmentedControl,
-        text_field::MacInputCell,
-        toggle::MacToggle,
-        stepper::MacStepper,
-    },
-    layout::{fixed_view::MacFixedView, row::MacRow},
+    MacInputCell, MacSegmentedControl, MacStepper, MacToggle,
 };
 
 pub struct MySettingsView {
@@ -182,7 +175,7 @@ impl MySettingsView {
         // 4. Stepper with Unit Formatting
         ui.horizontal(|h_ui| {
             h_ui.label("Display Scale:");
-            MacStepper::new(&mut self.zoom_level, 25.0, 200.0, 5.0)
+            MacStepper::new(&mut self.zoom_level, 25.0..=200.0, 5.0)
                 .theme(&self.theme)
                 .show(h_ui);
             h_ui.label(format!("{:.0} %", self.zoom_level));

@@ -15,7 +15,7 @@ use std::hash::Hash;
 /// Interaction response from an outline row.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MacOutlineRowResponse {
-    /// True if the row body was clicked (excluding disclosure chevron click).
+    /// True if the row body was clicked (excluding disclosure chevron and trailing accessory clicks).
     pub clicked: bool,
     /// True if the row was double clicked.
     pub double_clicked: bool,
@@ -62,10 +62,8 @@ pub struct MacOutlineView<'a> {
 impl<'a> MacOutlineView<'a> {
     /// Creates a new `MacOutlineView` identified by `id_source`.
     pub fn new(id_source: impl Hash + Debug) -> Self {
-        #[allow(deprecated)]
-        let id = Id::new(id_source);
         Self {
-            id,
+            id: Id::NULL.with(id_source),
             theme: None,
             row_height: None,
             indent_step: None,
@@ -101,7 +99,7 @@ impl<'a> MacOutlineView<'a> {
         let theme = match self.theme {
             Some(t) => t,
             None => {
-                fallback_theme = MacTheme::default();
+                fallback_theme = MacTheme::from_ctx(ui.ctx());
                 &fallback_theme
             }
         };
@@ -148,8 +146,7 @@ impl<'t> MacOutlineTree<'t> {
         selected: bool,
         content: impl FnOnce(&mut MacOutlineRow<'_>),
     ) -> MacOutlineRowResponse {
-        #[allow(deprecated)]
-        let row_id = Id::new(id_source);
+        let row_id = self.id.with(id_source);
         let avail_w = self.ui.available_width();
         let (row_rect, row_resp) = self
             .ui
@@ -178,7 +175,7 @@ impl<'t> MacOutlineTree<'t> {
             );
         }
 
-        // 2. Hierarchical indentation and disclosure chevron
+        // 2. Hierarchical indentation and animated disclosure chevron
         let indent_offset = depth as f32 * self.indent_step;
         let disc_size = metrics.disclosure_size.points();
         let disc_margin = metrics.disclosure_margin.points();
@@ -198,10 +195,45 @@ impl<'t> MacOutlineTree<'t> {
                 disclosure_clicked = true;
             }
 
-            // Draw disclosure chevron
+            // CASpring rotation interpolation between 0 rad (right) and pi/2 rad (down)
+            let spring = self.theme.motion().swiftui_snappy.to_spring();
+            let now = self.ui.input(|i| i.time);
+            let state_key = row_id.with("disc_spring_state");
+            let target_frac = if *expanded { 1.0f32 } else { 0.0f32 };
+            let (prev_target, start_val, start_time) = self.ui.data(|d| {
+                d.get_temp::<(f32, f32, f64)>(state_key)
+                    .unwrap_or((target_frac, target_frac, now))
+            });
+
+            let current_frac = if (prev_target - target_frac).abs() > f32::EPSILON {
+                let elapsed = (now - start_time).max(0.0) as f32;
+                let cur = start_val + (prev_target - start_val) * spring.position_at(elapsed);
+                self.ui
+                    .data_mut(|d| d.insert_temp(state_key, (target_frac, cur, now)));
+                self.ui.ctx().request_repaint();
+                cur
+            } else {
+                let elapsed = (now - start_time).max(0.0) as f32;
+                if elapsed < spring.settling_duration() {
+                    self.ui.ctx().request_repaint();
+                    start_val + (target_frac - start_val) * spring.position_at(elapsed)
+                } else {
+                    target_frac
+                }
+            };
+
+            let angle = current_frac * std::f32::consts::FRAC_PI_2;
+            let (sin_a, cos_a) = angle.sin_cos();
+            let rotate = |dx: f32, dy: f32, center: Pos2| -> Pos2 {
+                Pos2::new(
+                    center.x + dx * cos_a - dy * sin_a,
+                    center.y + dx * sin_a + dy * cos_a,
+                )
+            };
+
             let center = disc_rect.center();
             let half = metrics.chevron_size.points() * 0.5;
-            let depth = metrics.chevron_depth.points();
+            let chev_depth = metrics.chevron_depth.points();
             let chevron_stroke = Stroke::new(
                 metrics.chevron_stroke_width.points(),
                 if selected {
@@ -211,39 +243,12 @@ impl<'t> MacOutlineTree<'t> {
                     self.theme.placeholder_text()
                 },
             );
-            if *expanded {
-                // Chevron pointing down
-                painter.line_segment(
-                    [
-                        Pos2::new(center.x - half, center.y - depth),
-                        Pos2::new(center.x, center.y + depth),
-                    ],
-                    chevron_stroke,
-                );
-                painter.line_segment(
-                    [
-                        Pos2::new(center.x, center.y + depth),
-                        Pos2::new(center.x + half, center.y - depth),
-                    ],
-                    chevron_stroke,
-                );
-            } else {
-                // Chevron pointing right
-                painter.line_segment(
-                    [
-                        Pos2::new(center.x - depth, center.y - half),
-                        Pos2::new(center.x + depth, center.y),
-                    ],
-                    chevron_stroke,
-                );
-                painter.line_segment(
-                    [
-                        Pos2::new(center.x + depth, center.y),
-                        Pos2::new(center.x - depth, center.y + half),
-                    ],
-                    chevron_stroke,
-                );
-            }
+
+            let p_top = rotate(-chev_depth, -half, center);
+            let p_tip = rotate(chev_depth, 0.0, center);
+            let p_bot = rotate(-chev_depth, half, center);
+            painter.line_segment([p_top, p_tip], chevron_stroke);
+            painter.line_segment([p_tip, p_bot], chevron_stroke);
         }
 
         // 3. Row content & accessories
@@ -258,12 +263,13 @@ impl<'t> MacOutlineTree<'t> {
             cursor_x: content_left,
             accessory_cursor_right: row_rect.right() - accessory_spacing,
             selected,
+            accessory_clicked: false,
         };
 
         content(&mut row_builder);
 
         MacOutlineRowResponse {
-            clicked: row_resp.clicked() && !disclosure_clicked,
+            clicked: row_resp.clicked() && !disclosure_clicked && !row_builder.accessory_clicked,
             double_clicked: row_resp.double_clicked(),
             disclosure_clicked,
             is_expanded: *expanded,
@@ -283,6 +289,7 @@ pub struct MacOutlineRow<'a> {
     cursor_x: f32,
     accessory_cursor_right: f32,
     selected: bool,
+    accessory_clicked: bool,
 }
 
 impl<'a> MacOutlineRow<'a> {
@@ -386,6 +393,9 @@ impl<'a> MacOutlineRow<'a> {
             .interact(rect, self.row_id.with(id_source), Sense::click());
         if resp.clicked() {
             *active = !*active;
+            self.accessory_clicked = true;
+        } else if resp.is_pointer_button_down_on() {
+            self.accessory_clicked = true;
         }
 
         let painter = self.ui.painter_at(rect);

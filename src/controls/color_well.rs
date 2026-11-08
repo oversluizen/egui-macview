@@ -7,8 +7,8 @@ use crate::layout::subpixel_snap_rect;
 use crate::theme::MacTheme;
 use egui::{
     color_picker::{color_picker_color32, Alpha},
-    Area, Color32, CornerRadius, Key, Order, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui,
-    Vec2, Widget,
+    Area, Color32, CornerRadius, Key, Modifiers, Order, Pos2, Rect, Response, Sense, Stroke,
+    StrokeKind, Ui, Vec2, Widget,
 };
 
 /// Authentic macOS AppKit Color Well (`NSColorWell` equivalent).
@@ -113,7 +113,7 @@ impl<'a> Widget for MacColorWell<'a> {
         let theme = match self.theme {
             Some(t) => t,
             None => {
-                fallback_theme = MacTheme::default();
+                fallback_theme = MacTheme::from_ctx(ui.ctx());
                 &fallback_theme
             }
         };
@@ -138,6 +138,11 @@ impl<'a> Widget for MacColorWell<'a> {
         let (raw_rect, mut response) = ui.allocate_exact_size(Vec2::new(width, height), sense);
         let rect = subpixel_snap_rect(raw_rect, ui.ctx().pixels_per_point());
 
+        let alpha_factor = if self.enabled {
+            1.0
+        } else {
+            theme.disabled_opacity()
+        };
         let painter = ui.painter_at(rect);
 
         // Outer focus ring
@@ -154,7 +159,9 @@ impl<'a> Widget for MacColorWell<'a> {
         }
 
         // Outer bezel
-        let bg_color = if response.is_pointer_button_down_on() {
+        let bg_color = if !self.enabled {
+            theme.control_background().gamma_multiply(alpha_factor)
+        } else if response.is_pointer_button_down_on() {
             theme.selected_control_inactive()
         } else if response.hovered() {
             theme.control()
@@ -162,10 +169,10 @@ impl<'a> Widget for MacColorWell<'a> {
             theme.control_background()
         };
 
-        let border_stroke = if response.has_focus() {
+        let border_stroke = if self.enabled && response.has_focus() {
             Stroke::new(border_width, theme.control_accent())
         } else {
-            Stroke::new(border_width, theme.separator())
+            Stroke::new(border_width, theme.separator().gamma_multiply(alpha_factor))
         };
 
         painter.rect(
@@ -179,8 +186,7 @@ impl<'a> Widget for MacColorWell<'a> {
         // Inner color swatch compartment
         let swatch_rect = rect.shrink(swatch_inset);
         if swatch_rect.width() > 0.0 && swatch_rect.height() > 0.0 {
-            // Draw checkerboard underlay if color is translucent and alpha is enabled
-            if self.show_alpha && self.color.a() < 255 {
+            if self.show_alpha && self.color.a() < u8::MAX {
                 let cell_size = metrics.checker_grid_size.points();
                 let cols = (swatch_rect.width() / cell_size).ceil() as usize;
                 let rows = (swatch_rect.height() / cell_size).ceil() as usize;
@@ -203,18 +209,17 @@ impl<'a> Widget for MacColorWell<'a> {
                         painter.rect_filled(
                             Rect::from_min_max(tile_min, tile_max),
                             CornerRadius::ZERO,
-                            tile_color,
+                            tile_color.gamma_multiply(alpha_factor),
                         );
                     }
                 }
             }
 
-            // Fill color swatch
             painter.rect(
                 swatch_rect,
                 CornerRadius::same(swatch_radius as u8),
-                *self.color,
-                Stroke::new(border_width, theme.separator()),
+                self.color.gamma_multiply(alpha_factor),
+                Stroke::new(border_width, theme.separator().gamma_multiply(alpha_factor)),
                 StrokeKind::Inside,
             );
         }
@@ -229,7 +234,8 @@ impl<'a> Widget for MacColorWell<'a> {
                 is_popup_open = !is_popup_open;
                 ui.data_mut(|d| d.insert_temp(is_open_id, is_popup_open));
             } else if response.has_focus()
-                && ui.input(|i| i.key_pressed(Key::Space) || i.key_pressed(Key::Enter))
+                && (ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Space))
+                    || ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Enter)))
             {
                 is_popup_open = !is_popup_open;
                 ui.data_mut(|d| d.insert_temp(is_open_id, is_popup_open));
@@ -258,7 +264,7 @@ impl<'a> Widget for MacColorWell<'a> {
             };
             let popup_pos = Pos2::new(popup_x, popup_y);
             let area_id = response.id.with("mac_color_picker_area");
-            Area::new(area_id)
+            let area_resp = Area::new(area_id)
                 .order(Order::Foreground)
                 .fixed_pos(popup_pos)
                 .show(ui.ctx(), |picker_ui| {
@@ -284,13 +290,15 @@ impl<'a> Widget for MacColorWell<'a> {
                     });
                 });
 
-            // Dismiss when pressing Escape or clicking outside
-            if ui.input(|i| i.key_pressed(Key::Escape)) {
+            if ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Escape)) {
                 ui.data_mut(|d| d.insert_temp(is_open_id, false));
             } else if ui.input(|i| i.pointer.button_clicked(egui::PointerButton::Primary))
                 && !response.clicked()
             {
-                let popup_rect = Rect::from_min_size(popup_pos, picker_size);
+                let popup_rect = area_resp
+                    .response
+                    .rect
+                    .union(Rect::from_min_size(popup_pos, picker_size));
                 if !ui.rect_contains_pointer(popup_rect) {
                     ui.data_mut(|d| d.insert_temp(is_open_id, false));
                 }

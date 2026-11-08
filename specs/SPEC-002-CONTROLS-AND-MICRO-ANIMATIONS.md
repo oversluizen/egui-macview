@@ -1,8 +1,8 @@
-# SPEC-002: Authentic AppKit Controls & Micro-Animation Oracles
+# SPEC-002B: Authentic AppKit Controls & Micro-Animation Oracles
 
 | Attribute | Specification Value |
 | :--- | :--- |
-| **Document ID** | SPEC-002 |
+| **Document ID** | SPEC-002B |
 | **Document Title** | Authentic AppKit Controls & Micro-Animation Oracles |
 | **Document Version** | `0.2.0` |
 | **Status** | Accepted / Normative |
@@ -19,6 +19,7 @@
 | :--- | :--- | :--- | :--- |
 | `0.1.0` | 2026-11-05 | Architecture Team | Baseline Initial Release: MacButtonCell, MacInputCell, MacSegmentedControl, MacToggle |
 | `0.2.0` | 2026-11-06 | Architecture Team | Current Milestone: Full Control Suite (MacColorWell, MacOutlineView, MacPopUpButton, MacSearchField, MacSlider, MacStepper, MacThumbnailCell) & Micro-Animation Oracles |
+| `0.4.1` | 2026-11-08 | Architecture Team | Consolidation Hardening: Disambiguated Document ID (`SPEC-002B`), transactional `MacInputCell` buffer, `CASpring` micro-animations, and foreground click isolation |
 
 ---
 

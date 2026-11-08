@@ -1,13 +1,14 @@
 //! Authentic macOS Right-Click Context Menu with Viewport Boundary Clamping.
 //!
-//! Normative Reference: SPEC-008 §3.
+//! Normative Reference: SPEC-008B §3.
 //! Enforces mathematical boundary clamping to guarantee zero clipping across screen/window edges.
 
-use crate::navigation::menu::NSMenuItem;
+use crate::navigation::menu::{MacMenuItemKind, NSMenuItem};
+use crate::symbols::MacSymbol;
 use crate::theme::MacTheme;
 use egui::{
-    Align2, Area, Color32, CornerRadius, FontId, Key, Order, Pos2, Rect, Sense, Stroke, StrokeKind,
-    Ui, Vec2,
+    Align2, Area, CornerRadius, FontId, Key, Modifiers, Order, Pos2, Rect, Sense, Stroke,
+    StrokeKind, Ui, Vec2,
 };
 
 /// Clamps menu origin such that the menu rectangle remains strictly inside the viewport bounds.
@@ -19,15 +20,12 @@ pub fn clamp_menu_rect(click_pos: Pos2, menu_size: Vec2, viewport_rect: Rect) ->
     let mut x = click_pos.x;
     let mut y = click_pos.y;
 
-    // Clamp right edge
     if x + effective_size.x > viewport_rect.max.x {
         x = viewport_rect.max.x - effective_size.x;
     }
-    // Clamp bottom edge
     if y + effective_size.y > viewport_rect.max.y {
         y = viewport_rect.max.y - effective_size.y;
     }
-    // Clamp left and top edges
     x = x.max(viewport_rect.min.x);
     y = y.max(viewport_rect.min.y);
 
@@ -89,80 +87,69 @@ impl<'a> MacContextMenu<'a> {
         *self.selected_idx = None;
     }
 
+    fn step_selection(&mut self, forward: bool) {
+        let items_len = self.items.len();
+        if items_len == 0 {
+            return;
+        }
+        let start = if forward {
+            self.selected_idx.map_or(0, |idx| (idx + 1) % items_len)
+        } else {
+            self.selected_idx
+                .map_or(items_len.saturating_sub(1), |idx| {
+                    (idx + items_len - 1) % items_len
+                })
+        };
+        for step in 0..items_len {
+            let candidate = if forward {
+                (start + step) % items_len
+            } else {
+                (start + items_len - (step % items_len)) % items_len
+            };
+            if let Some(item) = self.items.get(candidate) {
+                if item.enabled && !matches!(item.kind, MacMenuItemKind::Separator) {
+                    *self.selected_idx = Some(candidate);
+                    break;
+                }
+            }
+        }
+    }
+
+    fn activate_selected(&mut self) -> Option<String> {
+        if let Some(idx) = *self.selected_idx {
+            if let Some(item) = self.items.get(idx) {
+                if item.enabled {
+                    if let MacMenuItemKind::Action { id, .. } = &item.kind {
+                        let action = id.clone();
+                        self.close();
+                        return Some(action);
+                    }
+                }
+            }
+        }
+        None
+    }
+
     /// Handles keyboard events (Arrow Down, Arrow Up, Enter, Escape).
     pub fn handle_input(&mut self, input: &egui::InputState) -> Option<String> {
         if !*self.is_open {
             return None;
         }
-
         if input.key_pressed(Key::Escape) {
             self.close();
             return None;
         }
-
-        let items_len = self.items.len();
-        if items_len == 0 {
-            return None;
-        }
-
         if input.key_pressed(Key::ArrowDown) {
-            let start = self.selected_idx.map_or(0, |idx| (idx + 1) % items_len);
-            for step in 0..items_len {
-                let candidate = (start + step) % items_len;
-                if let Some(item) = self.items.get(candidate) {
-                    if item.enabled
-                        && !matches!(
-                            item.kind,
-                            crate::navigation::menu::MacMenuItemKind::Separator
-                        )
-                    {
-                        *self.selected_idx = Some(candidate);
-                        break;
-                    }
-                }
-            }
+            self.step_selection(true);
             return None;
         }
-
         if input.key_pressed(Key::ArrowUp) {
-            let start = self
-                .selected_idx
-                .map_or(items_len.saturating_sub(1), |idx| {
-                    (idx + items_len - 1) % items_len
-                });
-            for step in 0..items_len {
-                let candidate = (start + items_len - (step % items_len)) % items_len;
-                if let Some(item) = self.items.get(candidate) {
-                    if item.enabled
-                        && !matches!(
-                            item.kind,
-                            crate::navigation::menu::MacMenuItemKind::Separator
-                        )
-                    {
-                        *self.selected_idx = Some(candidate);
-                        break;
-                    }
-                }
-            }
+            self.step_selection(false);
             return None;
         }
-
         if input.key_pressed(Key::Enter) || input.key_pressed(Key::Space) {
-            if let Some(idx) = *self.selected_idx {
-                if let Some(item) = self.items.get(idx) {
-                    if item.enabled {
-                        if let crate::navigation::menu::MacMenuItemKind::Action { id, .. } =
-                            &item.kind
-                        {
-                            let action = id.clone();
-                            self.close();
-                            return Some(action);
-                        }
-                    }
-                }
-            }
+            return self.activate_selected();
         }
-
         None
     }
 
@@ -176,18 +163,85 @@ impl<'a> MacContextMenu<'a> {
         let theme = match self.theme {
             Some(t) => t,
             None => {
-                fallback_theme = MacTheme::default();
+                fallback_theme = MacTheme::from_ctx(ui.ctx());
                 &fallback_theme
             }
         };
 
-        if let Some(action) = ui.input(|i| self.handle_input(i)) {
+        let key_action = ui.input_mut(|i| {
+            if i.consume_key(Modifiers::NONE, Key::Escape) {
+                self.close();
+                return None;
+            }
+            if i.consume_key(Modifiers::NONE, Key::ArrowDown) {
+                self.step_selection(true);
+                return None;
+            }
+            if i.consume_key(Modifiers::NONE, Key::ArrowUp) {
+                self.step_selection(false);
+                return None;
+            }
+            if i.consume_key(Modifiers::NONE, Key::Enter)
+                || i.consume_key(Modifiers::NONE, Key::Space)
+            {
+                return self.activate_selected();
+            }
+            None
+        });
+        if let Some(action) = key_action {
             return Some(action);
         }
+        if !*self.is_open {
+            return None;
+        }
 
-        let item_height = 22.0f32;
-        let padding = 4.0f32;
-        let min_width = 140.0f32;
+        let cm = theme.context_menu_metrics();
+        let item_height = cm.item_height.points();
+        let padding = cm.padding.points();
+        let padding_h = cm.item_padding_x.points();
+        let min_width = cm.min_width.points();
+        let corner_r = cm.corner_radius.points() as u8;
+        let item_corner_r = cm.row_corner_radius.points() as u8;
+        let border_w = theme.popover_metrics().border_width.points();
+        let min_clearance = cm.shortcut_clearance.points();
+        let font_id = FontId::proportional(cm.font_size.points());
+        let on_accent = theme.on_accent_text();
+        let has_any_checked = self.items.iter().any(|it| it.checked);
+        let check_col_w = padding_h * 2.0;
+        let lead_offset = if has_any_checked {
+            check_col_w
+        } else {
+            padding_h
+        };
+
+        let mut max_item_w = 0.0f32;
+        for item in self.items {
+            if matches!(item.kind, MacMenuItemKind::Separator) {
+                continue;
+            }
+            let title_w = ui
+                .painter()
+                .layout_no_wrap(item.title.clone(), font_id.clone(), on_accent)
+                .size()
+                .x;
+            let sc_w = match &item.kind {
+                MacMenuItemKind::Action {
+                    shortcut: Some(sc), ..
+                } => ui
+                    .painter()
+                    .layout_no_wrap(sc.format_text(), font_id.clone(), on_accent)
+                    .size()
+                    .x,
+                _ => 0.0,
+            };
+            let item_w = if sc_w > 0.0 {
+                lead_offset + padding_h + title_w + min_clearance + sc_w
+            } else {
+                lead_offset + padding_h + title_w
+            };
+            max_item_w = max_item_w.max(item_w);
+        }
+        let menu_width = min_width.max(max_item_w + padding * 2.0);
         let total_h = (self.items.len() as f32) * item_height + padding * 2.0;
 
         let viewport_rect = ui
@@ -196,14 +250,16 @@ impl<'a> MacContextMenu<'a> {
             .unwrap_or_else(|| ui.clip_rect());
         let menu_rect = clamp_menu_rect(
             *self.spawn_pos,
-            Vec2::new(min_width, total_h),
+            Vec2::new(menu_width, total_h),
             viewport_rect,
         );
 
-        // Clicking outside context menu bounds dismisses menu without action (SPEC-008 §3.2)
         let clicked_outside = ui.input(|i| {
             for ev in &i.events {
-                if let egui::Event::PointerButton { pos, pressed: true, .. } = ev {
+                if let egui::Event::PointerButton {
+                    pos, pressed: true, ..
+                } = ev
+                {
                     if !menu_rect.contains(*pos) {
                         return true;
                     }
@@ -223,18 +279,16 @@ impl<'a> MacContextMenu<'a> {
             .order(Order::Foreground)
             .fixed_pos(menu_rect.min)
             .show(ui.ctx(), |menu_ui| {
+                let _ = menu_ui.allocate_rect(menu_rect, Sense::click());
                 let painter = menu_ui.painter();
-                let corner_r = 6u8;
 
                 painter.rect(
                     menu_rect,
                     CornerRadius::same(corner_r),
                     theme.window_background(),
-                    Stroke::new(1.0, theme.separator()),
+                    Stroke::new(border_w, theme.separator()),
                     StrokeKind::Inside,
                 );
-
-                let font_id = FontId::proportional(12.0);
 
                 for (idx, item) in self.items.iter().enumerate() {
                     let item_y = menu_rect.top() + padding + (idx as f32) * item_height;
@@ -243,16 +297,13 @@ impl<'a> MacContextMenu<'a> {
                         Vec2::new(menu_rect.width() - padding * 2.0, item_height),
                     );
 
-                    if matches!(
-                        item.kind,
-                        crate::navigation::menu::MacMenuItemKind::Separator
-                    ) {
+                    if matches!(item.kind, MacMenuItemKind::Separator) {
                         painter.line_segment(
                             [
                                 Pos2::new(item_rect.left(), item_rect.center().y),
                                 Pos2::new(item_rect.right(), item_rect.center().y),
                             ],
-                            Stroke::new(1.0, theme.separator()),
+                            Stroke::new(border_w, theme.separator()),
                         );
                         continue;
                     }
@@ -267,7 +318,7 @@ impl<'a> MacContextMenu<'a> {
                     if is_highlighted && item.enabled {
                         painter.rect(
                             item_rect,
-                            CornerRadius::same(4),
+                            CornerRadius::same(item_corner_r),
                             theme.control_accent(),
                             Stroke::NONE,
                             StrokeKind::Inside,
@@ -277,26 +328,36 @@ impl<'a> MacContextMenu<'a> {
                     let fg = if !item.enabled {
                         theme.placeholder_text()
                     } else if is_highlighted {
-                        Color32::WHITE
+                        on_accent
                     } else {
                         theme.label()
                     };
 
+                    if item.checked {
+                        painter.text(
+                            Pos2::new(item_rect.left() + lead_offset * 0.5, item_rect.center().y),
+                            Align2::CENTER_CENTER,
+                            MacSymbol::Checkmark.as_str(),
+                            font_id.clone(),
+                            fg,
+                        );
+                    }
+
                     painter.text(
-                        Pos2::new(item_rect.left() + 8.0, item_rect.center().y),
+                        Pos2::new(item_rect.left() + lead_offset, item_rect.center().y),
                         Align2::LEFT_CENTER,
                         &item.title,
                         font_id.clone(),
                         fg,
                     );
 
-                    if let crate::navigation::menu::MacMenuItemKind::Action {
+                    if let MacMenuItemKind::Action {
                         shortcut: Some(sc),
                         ..
                     } = &item.kind
                     {
                         painter.text(
-                            Pos2::new(item_rect.right() - 8.0, item_rect.center().y),
+                            Pos2::new(item_rect.right() - padding_h, item_rect.center().y),
                             Align2::RIGHT_CENTER,
                             sc.format_text(),
                             font_id.clone(),
@@ -305,9 +366,7 @@ impl<'a> MacContextMenu<'a> {
                     }
 
                     if resp.clicked() && item.enabled {
-                        if let crate::navigation::menu::MacMenuItemKind::Action { id, .. } =
-                            &item.kind
-                        {
+                        if let MacMenuItemKind::Action { id, .. } = &item.kind {
                             triggered = Some(id.clone());
                             self.close();
                         }

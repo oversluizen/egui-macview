@@ -4,7 +4,10 @@
 //! Fully data-driven: zero hardcoded colors or dimensions.
 
 use crate::theme::MacTheme;
-use egui::{Color32, CornerRadius, Pos2, Rect, Response, Stroke, StrokeKind, Ui, Vec2, Widget};
+use egui::{
+    Color32, CornerRadius, Key, Modifiers, Pos2, Rect, Response, Stroke, StrokeKind, Ui, Vec2,
+    Widget,
+};
 use std::ops::RangeInclusive;
 
 /// Authentic macOS AppKit continuous slider (`NSSlider` equivalent).
@@ -90,7 +93,7 @@ impl<'a> Widget for MacSlider<'a> {
         let theme = match self.theme {
             Some(t) => t,
             None => {
-                fallback_theme = MacTheme::default();
+                fallback_theme = MacTheme::from_ctx(ui.ctx());
                 &fallback_theme
             }
         };
@@ -123,13 +126,22 @@ impl<'a> Widget for MacSlider<'a> {
         let max_val = *self.range.end();
         let span = (max_val - min_val).max(f32::EPSILON);
 
+        // Enforce range invariant unconditionally
+        if *self.value < min_val {
+            *self.value = min_val;
+        } else if *self.value > max_val {
+            *self.value = max_val;
+        } else if self.value.is_nan() {
+            *self.value = min_val;
+        }
+
         let track_left = rect.left() + thumb_radius;
         let track_right = rect.right() - thumb_radius;
         let min_track_w = metrics.thumb_stroke_width.points().max(f32::EPSILON);
         let track_width = (track_right - track_left).max(min_track_w);
         let center_y = rect.top() + thumb_radius;
 
-        if response.clicked() {
+        if self.enabled && response.clicked() {
             ui.memory_mut(|m| m.request_focus(response.id));
         }
 
@@ -156,7 +168,7 @@ impl<'a> Widget for MacSlider<'a> {
             }
         }
 
-        // Accessible keyboard navigation
+        // Accessible keyboard navigation (consuming arrow keys)
         if self.enabled && response.has_focus() {
             let key_step_frac = metrics.key_step_fraction.points();
             let step = if let Some(ticks) = self.num_ticks {
@@ -170,13 +182,15 @@ impl<'a> Widget for MacSlider<'a> {
             };
 
             let mut delta = 0.0f32;
-            if ui.input(|i| {
-                i.key_pressed(egui::Key::ArrowLeft) || i.key_pressed(egui::Key::ArrowDown)
+            if ui.input_mut(|i| {
+                i.consume_key(Modifiers::NONE, Key::ArrowLeft)
+                    || i.consume_key(Modifiers::NONE, Key::ArrowDown)
             }) {
                 delta -= step;
             }
-            if ui.input(|i| {
-                i.key_pressed(egui::Key::ArrowRight) || i.key_pressed(egui::Key::ArrowUp)
+            if ui.input_mut(|i| {
+                i.consume_key(Modifiers::NONE, Key::ArrowRight)
+                    || i.consume_key(Modifiers::NONE, Key::ArrowUp)
             }) {
                 delta += step;
             }
@@ -192,6 +206,11 @@ impl<'a> Widget for MacSlider<'a> {
 
         let current_fraction = ((*self.value - min_val) / span).clamp(0.0, 1.0);
         let thumb_center_x = track_left + current_fraction * track_width;
+        let alpha_factor = if self.enabled {
+            1.0
+        } else {
+            theme.disabled_opacity()
+        };
 
         let painter = ui.painter_at(rect);
 
@@ -204,7 +223,7 @@ impl<'a> Widget for MacSlider<'a> {
         painter.rect(
             track_rect,
             CornerRadius::same(track_radius as u8),
-            theme.control(),
+            theme.control().gamma_multiply(alpha_factor),
             Stroke::NONE,
             StrokeKind::Inside,
         );
@@ -221,7 +240,9 @@ impl<'a> Widget for MacSlider<'a> {
                 if self.enabled {
                     theme.control_accent()
                 } else {
-                    theme.selected_control_inactive()
+                    theme
+                        .selected_control_inactive()
+                        .gamma_multiply(alpha_factor)
                 },
                 Stroke::NONE,
                 StrokeKind::Inside,
@@ -233,7 +254,10 @@ impl<'a> Widget for MacSlider<'a> {
             if ticks >= 2 {
                 let tick_y_start = center_y + thumb_radius + tick_offset;
                 let tick_y_end = tick_y_start + tick_height;
-                let tick_stroke = Stroke::new(metrics.tick_width.points(), theme.separator());
+                let tick_stroke = Stroke::new(
+                    metrics.tick_width.points(),
+                    theme.separator().gamma_multiply(alpha_factor),
+                );
 
                 for i in 0..ticks {
                     let tick_frac = i as f32 / (ticks - 1) as f32;
@@ -249,33 +273,66 @@ impl<'a> Widget for MacSlider<'a> {
             }
         }
 
-        // 4. Thumb knob
-        let thumb_pos = Pos2::new(thumb_center_x, center_y);
-        let thumb_bg = if !self.enabled || response.is_pointer_button_down_on() {
-            theme.control()
+        // 4. Thumb knob (with 1.15x CASpring press-scale interpolation)
+        let is_pressed_or_dragged =
+            self.enabled && (response.is_pointer_button_down_on() || response.dragged());
+        let press_scale_target = if is_pressed_or_dragged {
+            metrics.thumb_press_scale.points()
         } else {
-            theme.control_background()
+            1.0
+        };
+        let spring = theme.motion().swiftui_snappy.to_spring();
+        let now = ui.input(|i| i.time);
+        let spring_key = response.id.with("press_scale");
+        let (prev_target, start_val, start_time) = ui.data(|d| {
+            d.get_temp::<(f32, f32, f64)>(spring_key)
+                .unwrap_or((press_scale_target, press_scale_target, now))
+        });
+        let anim_scale = if (prev_target - press_scale_target).abs() > f32::EPSILON {
+            let elapsed = (now - start_time).max(0.0) as f32;
+            let cur = start_val + (prev_target - start_val) * spring.position_at(elapsed);
+            ui.data_mut(|d| d.insert_temp(spring_key, (press_scale_target, cur, now)));
+            ui.ctx().request_repaint();
+            cur
+        } else {
+            let elapsed = (now - start_time).max(0.0) as f32;
+            if elapsed < spring.settling_duration() {
+                ui.ctx().request_repaint();
+                start_val + (press_scale_target - start_val) * spring.position_at(elapsed)
+            } else {
+                press_scale_target
+            }
+        };
+        let scaled_thumb_radius = thumb_radius * anim_scale;
+
+        let thumb_pos = Pos2::new(thumb_center_x, center_y);
+        let thumb_bg = if !self.enabled || is_pressed_or_dragged {
+            theme.control().gamma_multiply(alpha_factor)
+        } else {
+            theme.control_background().gamma_multiply(alpha_factor)
         };
 
-        let thumb_stroke = Stroke::new(metrics.thumb_stroke_width.points(), theme.separator());
+        let thumb_stroke = Stroke::new(
+            metrics.thumb_stroke_width.points(),
+            theme.separator().gamma_multiply(alpha_factor),
+        );
 
-        // Outer focus ring if focused
-        if response.has_focus() {
+        if self.enabled && response.has_focus() {
             let ring = theme.focus_ring();
-            let halo_r = thumb_radius + ring.offset.points();
+            let halo_r = scaled_thumb_radius + ring.offset.points();
             let halo_stroke =
                 Stroke::new(ring.stroke_width.points(), theme.keyboard_focus_indicator());
             painter.circle(thumb_pos, halo_r, Color32::TRANSPARENT, halo_stroke);
         }
 
-        // Ambient drop shadow for authentic AppKit thumb depth
+        // Ambient drop shadow sourced from design tokens
         painter.circle_filled(
             thumb_pos + Vec2::new(0.0, metrics.shadow_offset_y.points()),
-            thumb_radius,
-            Color32::from_black_alpha(25),
+            scaled_thumb_radius,
+            theme.drop_shadow().gamma_multiply(alpha_factor),
         );
 
-        painter.circle(thumb_pos, thumb_radius, thumb_bg, thumb_stroke);
+        painter.circle(thumb_pos, scaled_thumb_radius, thumb_bg, thumb_stroke);
 
         response
     }

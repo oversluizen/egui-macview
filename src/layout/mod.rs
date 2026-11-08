@@ -1,5 +1,5 @@
-//! Layout engines: `MacFixedView` (absolute pt), `MacFlexView` (springs/struts), `MacSplitView` (NSSplitView),
-//! `MacScrollView` (NSScrollView), and `MacStackView` (NSStackView).
+//! Layout engines: `MacFixedView` (absolute pt), `MacSplitView` (NSSplitView),
+//! `MacScrollView` (NSScrollView), `MacStackView` (NSStackView), and `MacForm` (NSForm).
 
 pub mod form;
 pub mod scroll_view;
@@ -133,27 +133,13 @@ impl<'a> MacFixedView<'a> {
     ) -> R {
         let rect = self.subview_rect(rel_origin, size);
         let mut child = self.ui.new_child(egui::UiBuilder::new().max_rect(rect));
+        child.set_clip_rect(rect.intersect(self.ui.clip_rect()));
         add_contents(&mut child)
     }
 
     /// Allocates the container rect response after placing all subviews.
     pub fn finish(self) -> Response {
         self.ui.allocate_rect(self.container_rect, Sense::hover())
-    }
-}
-
-/// Flexible container supporting auto-resizing masks and fill splits.
-pub struct MacFlexView<'a> {
-    /// Underlying egui `Ui` context.
-    pub ui: &'a mut Ui,
-    /// Available bounding rectangle for flexible layout.
-    pub available_rect: Rect,
-}
-
-impl<'a> MacFlexView<'a> {
-    /// Creates a new `MacFlexView` wrapping `ui` within `available_rect`.
-    pub fn new(ui: &'a mut Ui, available_rect: Rect) -> Self {
-        Self { ui, available_rect }
     }
 }
 

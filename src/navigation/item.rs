@@ -94,6 +94,35 @@ impl MacKeyboardShortcut {
         })
     }
 
+    /// Checks if the input state matches this keyboard shortcut and consumes the key event if so.
+    pub fn consume(&self, input: &mut egui::InputState) -> bool {
+        if !self.matches(input) {
+            return false;
+        }
+        input.keys_down.remove(&self.key);
+        input.events.retain(|ev| {
+            if let egui::Event::Key {
+                key,
+                pressed: true,
+                modifiers,
+                ..
+            } = ev
+            {
+                if *key == self.key {
+                    let ev_cmd = modifiers.command || modifiers.ctrl || modifiers.mac_cmd;
+                    if ev_cmd == self.command
+                        && modifiers.shift == self.shift
+                        && modifiers.alt == self.alt
+                    {
+                        return false;
+                    }
+                }
+            }
+            true
+        });
+        true
+    }
+
     /// Formats shortcut as a human-readable display string (e.g. `"Ctrl+Z"`).
     pub fn format_text(&self) -> String {
         let mut s = String::new();

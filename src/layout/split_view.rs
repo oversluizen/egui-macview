@@ -63,8 +63,7 @@ impl<'a> MacSplitView<'a> {
         id_source: impl std::hash::Hash + std::fmt::Debug,
         orientation: MacSplitOrientation,
     ) -> Self {
-        #[allow(deprecated)]
-        let id = Id::new(id_source);
+        let id = Id::NULL.with(id_source);
         Self {
             id,
             orientation,
@@ -146,7 +145,7 @@ impl<'a> MacSplitView<'a> {
         let theme = match self.theme {
             Some(t) => t,
             None => {
-                fallback_theme = MacTheme::default();
+                fallback_theme = MacTheme::from_ctx(ui.ctx());
                 &fallback_theme
             }
         };

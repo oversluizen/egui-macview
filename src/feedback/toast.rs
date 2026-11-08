@@ -1,20 +1,17 @@
 //! Authentic macOS Animated Toast Notifications.
 //!
-//! Normative Reference: SPEC-008 §4.
+//! Normative Reference: SPEC-008B §4.
 //! Floating pill banner with `CASpring` entry/exit physics and 2.5s auto-dismiss timer.
 
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::motion::CASpring;
 use crate::theme::MacTheme;
-use egui::{
-    Area, Color32, CornerRadius, FontId, Order, Pos2, Rect, Sense, Stroke, StrokeKind, Vec2,
-};
+use egui::{Area, CornerRadius, FontId, Id, Order, Pos2, Rect, Sense, Stroke, StrokeKind, Vec2};
 
 static TOAST_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
 
-/// Default display duration before auto-dismissal (2.5 seconds).
-pub const DEFAULT_TOAST_DURATION: f32 = 2.5;
+pub use crate::tokens::DEFAULT_TOAST_DURATION;
 
 /// Semantic styling variant of the toast pill.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -52,13 +49,14 @@ pub struct MacToast {
 impl MacToast {
     /// Creates a new toast notification with the standard 2.5s auto-dismiss duration.
     pub fn new(message: impl Into<String>) -> Self {
+        let default_theme = MacTheme::default();
         Self {
             id: TOAST_ID_COUNTER.fetch_add(1, Ordering::Relaxed).to_string(),
             message: message.into(),
             level: ToastLevel::Info,
             duration: DEFAULT_TOAST_DURATION,
             elapsed: 0.0,
-            spring: CASpring::new(0.35, 0.85),
+            spring: default_theme.motion().caspring_default.to_spring(),
             is_dismissed: false,
         }
     }
@@ -162,39 +160,46 @@ impl MacToastManager {
 
     /// Renders active toasts as floating pill banners in the given UI context.
     pub fn show(&mut self, ctx: &egui::Context, theme: &MacTheme) {
-        let dt = ctx.input(|i| i.stable_dt).min(0.1);
+        let dt = ctx.input(|i| i.stable_dt).clamp(0.0, 0.5);
         self.update(dt);
 
         if self.toasts.is_empty() {
             return;
         }
 
+        let tm = theme.toast_metrics();
+        let start_y = tm.top_margin.points();
+        let toast_h = tm.height.points();
+        let spacing = tm.spacing.points();
+        let padding_h = tm.padding_x.points() * 0.5;
+        let min_w = tm.min_width.points();
+        let border_w = theme.popover_metrics().border_width.points();
+        let font_id = FontId::proportional(tm.font_size.points());
+        let on_accent = theme.on_accent_text();
+
+        let fallback_w = theme.palette_metrics().width.points();
+        let fallback_h = theme.palette_metrics().max_height.points();
+        let fallback_screen = Vec2::new(fallback_w * 2.0, fallback_h * 2.0);
         let screen_rect = ctx
             .input(|i| i.raw.screen_rect)
-            .unwrap_or(Rect::from_min_size(Pos2::ZERO, Vec2::new(800.0, 600.0)));
-        #[allow(deprecated)]
-        let area_id = egui::Id::new("mac_toast_layer");
+            .unwrap_or(Rect::from_min_size(Pos2::ZERO, fallback_screen));
+        let area_id = Id::NULL.with("mac_toast_layer");
 
         Area::new(area_id)
             .order(Order::Tooltip)
             .fixed_pos(screen_rect.min)
             .show(ctx, |ui| {
-                let start_y = 20.0f32;
-                let toast_h = 32.0f32;
-                let spacing = 8.0f32;
-
                 for (idx, toast) in self.toasts.iter_mut().enumerate() {
-                    let fraction = toast.entry_fraction().clamp(0.0, 1.2);
+                    let fraction = toast.entry_fraction().clamp(0.0, 1.0 + 0.5);
                     let target_y = start_y + (idx as f32) * (toast_h + spacing);
                     let anim_y = -toast_h + (target_y - (-toast_h)) * fraction;
 
-                    let font_id = FontId::proportional(12.0);
                     let galley = ui.painter().layout_no_wrap(
                         toast.message.clone(),
                         font_id.clone(),
                         theme.label(),
                     );
-                    let toast_w = (galley.size().x + 32.0).max(120.0);
+                    let toast_w = (galley.size().x + padding_h * 2.0).max(min_w);
                     let center_x = screen_rect.center().x;
 
                     let toast_rect = Rect::from_center_size(
@@ -208,7 +213,8 @@ impl MacToastManager {
                         ToastLevel::Success => (theme.system_green(), theme.system_green()),
                         ToastLevel::Warning => (theme.control_accent(), theme.control_accent()),
                         ToastLevel::Error => {
-                            (theme.traffic_light_close().0, theme.traffic_light_close().1)
+                            let (c_fill, c_border) = theme.traffic_light_close();
+                            (c_fill, c_border)
                         }
                     };
 
@@ -216,13 +222,13 @@ impl MacToastManager {
                         toast_rect,
                         CornerRadius::same((toast_h * 0.5) as u8),
                         bg,
-                        Stroke::new(1.0, border),
+                        Stroke::new(border_w, border),
                         StrokeKind::Inside,
                     );
 
                     let fg = match toast.level {
                         ToastLevel::Info => theme.label(),
-                        _ => Color32::WHITE,
+                        _ => on_accent,
                     };
 
                     painter.galley(

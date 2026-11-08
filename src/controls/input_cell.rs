@@ -4,7 +4,23 @@
 //! Fully data-driven: zero hardcoded colors, radiuses, or padding metrics.
 
 use crate::theme::MacTheme;
-use egui::{Color32, CornerRadius, Key, Response, Stroke, StrokeKind, Ui, Vec2};
+use egui::{Color32, CornerRadius, Key, Modifiers, Response, Stroke, StrokeKind, Ui, Vec2};
+
+/// Standard AppKit `NSControlSize` variants for `MacInputCell`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum MacControlSize {
+    /// `NSControlSizeRegular` (`22pt` height, `13pt` font).
+    Regular,
+    /// `NSControlSizeSmall` (`19pt` height, `11pt` font).
+    Small,
+    /// `NSControlSizeMini` (`16pt` height, `9pt` font).
+    Mini,
+    /// `NSControlSizeLarge` (`28pt` height, `16pt` font).
+    Large,
+    /// Dense inspector / HUD infobox cell (`18pt` height, `11pt` font).
+    #[default]
+    CompactInfobox,
+}
 
 /// Authentic macOS compact text entry cell (AppKit `NSTextFieldCell` style).
 ///
@@ -36,6 +52,8 @@ pub struct MacInputCell<'a> {
     height: Option<f32>,
     font_size: Option<f32>,
     corner_radius: Option<f32>,
+    control_size: MacControlSize,
+    enabled: bool,
     next_focus_id: Option<egui::Id>,
     prev_focus_id: Option<egui::Id>,
     placeholder: Option<&'a str>,
@@ -44,20 +62,8 @@ pub struct MacInputCell<'a> {
 impl<'a> MacInputCell<'a> {
     /// Creates a new `MacInputCell` bound to `value` and identified by `id_source`.
     pub fn new(id_source: impl std::hash::Hash + std::fmt::Debug, value: &'a mut String) -> Self {
-        #[allow(deprecated)]
-        let id = egui::Id::new(id_source);
-        Self {
-            id,
-            value,
-            theme: None,
-            width: None,
-            height: None,
-            font_size: None,
-            corner_radius: None,
-            next_focus_id: None,
-            prev_focus_id: None,
-            placeholder: None,
-        }
+        let id = egui::Id::NULL.with(id_source);
+        Self::with_id(id, value)
     }
 
     /// Creates a cell directly with an existing `egui::Id` without double-hashing.
@@ -70,10 +76,24 @@ impl<'a> MacInputCell<'a> {
             height: None,
             font_size: None,
             corner_radius: None,
+            control_size: MacControlSize::CompactInfobox,
+            enabled: true,
             next_focus_id: None,
             prev_focus_id: None,
             placeholder: None,
         }
+    }
+
+    /// Sets the AppKit control size preset (`Regular`, `Small`, `Mini`, `Large`, `CompactInfobox`).
+    pub fn control_size(mut self, control_size: MacControlSize) -> Self {
+        self.control_size = control_size;
+        self
+    }
+
+    /// Enables or disables user interaction on the input cell.
+    pub fn enabled(mut self, enabled: bool) -> Self {
+        self.enabled = enabled;
+        self
     }
 
     /// Injects dynamic theme to eliminate hardcoded metrics and colors.
@@ -124,12 +144,19 @@ impl<'a> MacInputCell<'a> {
         let theme = match self.theme {
             Some(t) => t,
             None => {
-                fallback_theme = MacTheme::default();
+                fallback_theme = MacTheme::from_ctx(ui.ctx());
                 &fallback_theme
             }
         };
 
-        let metrics = &theme.control_metrics().text_field.compact_infobox;
+        let tf_tokens = &theme.control_metrics().text_field;
+        let metrics = match self.control_size {
+            MacControlSize::Regular => &tf_tokens.regular,
+            MacControlSize::Small => &tf_tokens.small,
+            MacControlSize::Mini => &tf_tokens.mini,
+            MacControlSize::Large => &tf_tokens.large,
+            MacControlSize::CompactInfobox => &tf_tokens.compact_infobox,
+        };
         let ring_metrics = theme.focus_ring();
 
         let height = self.height.unwrap_or_else(|| metrics.height.points());
@@ -140,18 +167,125 @@ impl<'a> MacInputCell<'a> {
             .unwrap_or_else(|| metrics.corner_radius.points());
 
         let desired_size = Vec2::new(width, height);
-        let (rect, mut response) =
-            ui.allocate_exact_size(desired_size, egui::Sense::click_and_drag());
+        let sense = if self.enabled {
+            egui::Sense::click_and_drag()
+        } else {
+            egui::Sense::hover()
+        };
+        let (rect, mut response) = ui.allocate_exact_size(desired_size, sense);
 
-        if response.clicked() {
+        if self.enabled && (response.clicked() || response.has_focus()) {
             ui.memory_mut(|m| m.request_focus(self.id));
         }
 
-        let is_focused = ui.memory(|m| m.has_focus(self.id));
+        let is_focused = self.enabled && ui.memory(|m| m.has_focus(self.id));
+        let alpha_factor = if self.enabled {
+            1.0
+        } else {
+            theme.disabled_opacity()
+        };
+
+        // Transactional buffer state management in egui::Memory
+        let active_key = self.id.with("mac_input_editing_active");
+        let snapshot_key = self.id.with("mac_input_snapshot");
+        let buffer_key = self.id.with("mac_input_buffer");
+        let was_active = ui.data(|d| d.get_temp::<bool>(active_key).unwrap_or(false));
+
+        let esc_pressed = (is_focused || was_active)
+            && (ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Escape))
+                || ui.input(|i| {
+                    i.raw.events.iter().any(|e| {
+                        matches!(
+                            e,
+                            egui::Event::Key {
+                                key: Key::Escape,
+                                pressed: true,
+                                ..
+                            }
+                        )
+                    })
+                }));
+
+        if is_focused && !was_active && !esc_pressed {
+            let initial = self.value.clone();
+            ui.data_mut(|d| {
+                d.insert_temp(active_key, true);
+                d.insert_temp(snapshot_key, initial.clone());
+                d.insert_temp(buffer_key, initial);
+            });
+        } else if !is_focused && was_active && !esc_pressed {
+            if let Some(buf) = ui.data(|d| d.get_temp::<String>(buffer_key)) {
+                *self.value = buf;
+            }
+            ui.data_mut(|d| {
+                d.insert_temp(active_key, false);
+            });
+        }
+
+        // Prevent egui's built-in FocusDirection::Next / Previous from hijacking Tab/Shift+Tab
+        if is_focused || was_active || self.next_focus_id.is_some() || self.prev_focus_id.is_some()
+        {
+            ui.memory_mut(|m| m.move_focus(egui::FocusDirection::None));
+        }
+
+        // Intercept Escape, Enter, and Tab/Shift+Tab before TextEdit surrenders focus or cascades
+        let mut focus_transition_to: Option<egui::Id> = None;
+        let mut surrender_now = false;
+
+        if esc_pressed {
+            if let Some(snapshot) = ui.data(|d| d.get_temp::<String>(snapshot_key)) {
+                *self.value = snapshot.clone();
+                ui.data_mut(|d| d.insert_temp(buffer_key, snapshot));
+                response.mark_changed();
+            }
+            ui.data_mut(|d| d.insert_temp(active_key, false));
+            ui.memory_mut(|m| m.surrender_focus(self.id));
+            surrender_now = true;
+        } else if is_focused {
+            if ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Enter)) {
+                if let Some(buf) = ui.data(|d| d.get_temp::<String>(buffer_key)) {
+                    *self.value = buf;
+                }
+                ui.data_mut(|d| {
+                    d.insert_temp(active_key, false);
+                    d.insert_temp(snapshot_key, self.value.clone());
+                });
+                ui.memory_mut(|m| m.surrender_focus(self.id));
+                surrender_now = true;
+            } else if let Some(prev) = self.prev_focus_id {
+                if ui.input_mut(|i| i.consume_key(Modifiers::SHIFT, Key::Tab)) {
+                    if let Some(buf) = ui.data(|d| d.get_temp::<String>(buffer_key)) {
+                        *self.value = buf;
+                    }
+                    ui.data_mut(|d| d.insert_temp(active_key, false));
+                    ui.memory_mut(|m| m.surrender_focus(self.id));
+                    focus_transition_to = Some(prev);
+                } else if let Some(next) = self.next_focus_id {
+                    if ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Tab)) {
+                        if let Some(buf) = ui.data(|d| d.get_temp::<String>(buffer_key)) {
+                            *self.value = buf;
+                        }
+                        ui.data_mut(|d| d.insert_temp(active_key, false));
+                        ui.memory_mut(|m| m.surrender_focus(self.id));
+                        focus_transition_to = Some(next);
+                    }
+                }
+            } else if let Some(next) = self.next_focus_id {
+                if ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Tab)) {
+                    if let Some(buf) = ui.data(|d| d.get_temp::<String>(buffer_key)) {
+                        *self.value = buf;
+                    }
+                    ui.data_mut(|d| d.insert_temp(active_key, false));
+                    ui.memory_mut(|m| m.surrender_focus(self.id));
+                    focus_transition_to = Some(next);
+                }
+            }
+        }
+
         let painter = ui.painter_at(rect);
 
         // 1. Draw outer focus ring halo (NSFocusRingPlacementOutside) when focused
-        if is_focused {
+        if is_focused && !surrender_now {
             let halo_offset = ring_metrics.offset.points();
             let halo_stroke_width = ring_metrics.stroke_width.points();
             let halo_radius = corner_radius + ring_metrics.corner_radius_delta.points();
@@ -166,12 +300,15 @@ impl<'a> MacInputCell<'a> {
             );
         }
 
-        // 2. Control background and border
-        let bg_color = theme.control_background();
-        let border_stroke = if is_focused {
+        // 2. Control background and border (painted BEFORE TextEdit so text is never obscured)
+        let bg_color = theme.control_background().gamma_multiply(alpha_factor);
+        let border_stroke = if is_focused && !surrender_now {
             Stroke::new(metrics.border_width.points(), theme.control_accent())
         } else {
-            Stroke::new(metrics.border_width.points(), theme.separator())
+            Stroke::new(
+                metrics.border_width.points(),
+                theme.separator().gamma_multiply(alpha_factor),
+            )
         };
 
         painter.rect(
@@ -182,23 +319,7 @@ impl<'a> MacInputCell<'a> {
             StrokeKind::Inside,
         );
 
-        // 3. Tab-chain handling
-        if is_focused {
-            let tab_pressed = ui.input(|i| i.key_pressed(Key::Tab));
-            let shift_down = ui.input(|i| i.modifiers.shift);
-
-            if tab_pressed {
-                if shift_down {
-                    if let Some(prev) = self.prev_focus_id {
-                        ui.memory_mut(|m| m.request_focus(prev));
-                    }
-                } else if let Some(next) = self.next_focus_id {
-                    ui.memory_mut(|m| m.request_focus(next));
-                }
-            }
-        }
-
-        // 4. Inner text edit
+        // 3. Inner text edit bound to transactional memory buffer while active
         let shrink_pad = metrics
             .padding_horizontal
             .as_ref()
@@ -206,25 +327,87 @@ impl<'a> MacInputCell<'a> {
             .unwrap_or_else(|| metrics.corner_radius.points());
         let mut child_ui = ui.new_child(
             egui::UiBuilder::new()
-                .max_rect(rect.shrink(shrink_pad))
+                .max_rect(rect.shrink2(Vec2::new(shrink_pad, 0.0)))
                 .layout(egui::Layout::left_to_right(egui::Align::Center)),
         );
 
-        let mut text_edit = egui::TextEdit::singleline(self.value)
+        let mut edit_buf = if is_focused && !surrender_now {
+            ui.data(|d| d.get_temp::<String>(buffer_key))
+                .unwrap_or_else(|| self.value.clone())
+        } else {
+            self.value.clone()
+        };
+
+        let mut text_edit = egui::TextEdit::singleline(&mut edit_buf)
             .id(self.id)
             .font(egui::FontId::proportional(font_size))
-            .desired_width(width - shrink_pad * 2.0)
-            .frame(egui::Frame::NONE);
+            .text_color(theme.label().gamma_multiply(alpha_factor))
+            .desired_width((width - shrink_pad * 2.0).max(0.0))
+            .frame(egui::Frame::NONE)
+            .lock_focus(true)
+            .interactive(self.enabled);
 
         if let Some(hint) = self.placeholder {
             text_edit = text_edit.hint_text(hint);
         }
 
         let text_res = child_ui.add(text_edit);
-        if text_res.changed() {
+        if text_res.changed() && !surrender_now {
+            *self.value = edit_buf.clone();
+            ui.data_mut(|d| d.insert_temp(buffer_key, edit_buf));
             response.mark_changed();
         }
 
-        response
+        if is_focused && !surrender_now {
+            // Consume single-character canvas keys and editing keys so they don't leak after TextEdit processes them
+            ui.input_mut(|i| {
+                let _ = i.consume_key(Modifiers::NONE, Key::Backspace);
+                let _ = i.consume_key(Modifiers::NONE, Key::Delete);
+                let _ = i.consume_key(Modifiers::NONE, Key::Space);
+                let _ = i.consume_key(Modifiers::NONE, Key::ArrowLeft);
+                let _ = i.consume_key(Modifiers::NONE, Key::ArrowRight);
+                if !i.modifiers.command && !i.modifiers.ctrl && !i.modifiers.mac_cmd {
+                    i.keys_down.clear();
+                }
+                i.events.retain(|ev| match ev {
+                    egui::Event::Key { modifiers, .. } => {
+                        modifiers.command || modifiers.ctrl || modifiers.mac_cmd
+                    }
+                    _ => true,
+                });
+            });
+        }
+
+        let post_focused = ui.memory(|m| m.has_focus(self.id));
+        if is_focused && !post_focused && !surrender_now && focus_transition_to.is_none() {
+            // Focus lost via outside click (blur) -> commit transactional buffer
+            if let Some(buf) = ui.data(|d| d.get_temp::<String>(buffer_key)) {
+                *self.value = buf;
+            }
+            ui.data_mut(|d| d.insert_temp(active_key, false));
+        }
+
+        if surrender_now {
+            ui.memory_mut(|m| m.surrender_focus(self.id));
+        } else if let Some(target_id) = focus_transition_to {
+            ui.memory_mut(|m| {
+                m.move_focus(egui::FocusDirection::None);
+                m.request_focus(target_id);
+            });
+        } else if post_focused {
+            ui.memory_mut(|m| {
+                m.set_focus_lock_filter(
+                    self.id,
+                    egui::EventFilter {
+                        tab: true,
+                        horizontal_arrows: true,
+                        vertical_arrows: true,
+                        escape: true,
+                    },
+                );
+            });
+        }
+
+        text_res.union(response).with_new_rect(rect)
     }
 }

@@ -6,7 +6,7 @@
 use crate::layout::subpixel_snap_rect;
 use crate::theme::MacTheme;
 use egui::{
-    Align2, Area, Color32, CornerRadius, FontId, Key, Order, Pos2, Rect, Response, Sense, Stroke,
+    Align2, Area, CornerRadius, FontId, Key, Modifiers, Order, Pos2, Rect, Response, Sense, Stroke,
     StrokeKind, Ui, Vec2, Widget,
 };
 
@@ -33,6 +33,7 @@ use egui::{
 /// # output.textures_delta.clear();
 /// ```
 pub struct MacPopUpButton<'a> {
+    id: Option<egui::Id>,
     selected_index: &'a mut usize,
     items: &'a [&'a str],
     theme: Option<&'a MacTheme>,
@@ -46,6 +47,7 @@ impl<'a> MacPopUpButton<'a> {
     /// Creates a new popup dropdown button for an item slice and a mutable selected index.
     pub fn new(selected_index: &'a mut usize, items: &'a [&'a str]) -> Self {
         Self {
+            id: None,
             selected_index,
             items,
             theme: None,
@@ -54,6 +56,12 @@ impl<'a> MacPopUpButton<'a> {
             corner_radius: None,
             enabled: true,
         }
+    }
+
+    /// Sets an explicit widget `Id`.
+    pub fn id(mut self, id_source: impl std::hash::Hash + std::fmt::Debug) -> Self {
+        self.id = Some(egui::Id::NULL.with(id_source));
+        self
     }
 
     /// Sets the dynamic theme.
@@ -98,7 +106,7 @@ impl<'a> Widget for MacPopUpButton<'a> {
         let theme = match self.theme {
             Some(t) => t,
             None => {
-                fallback_theme = MacTheme::default();
+                fallback_theme = MacTheme::from_ctx(ui.ctx());
                 &fallback_theme
             }
         };
@@ -119,30 +127,43 @@ impl<'a> Widget for MacPopUpButton<'a> {
         }
         let current_text = self.items.get(*self.selected_index).copied().unwrap_or("");
 
-        let text_layout =
-            ui.painter()
-                .layout_no_wrap(current_text.to_owned(), font_id.clone(), Color32::WHITE);
-        let desired_width = self.width.unwrap_or_else(|| {
-            text_layout.size().x + padding_h * 2.0 + chevron_size + chevron_spacing
-        });
+        // Measure max width across all items so unselected longer items are never clipped
+        let mut max_item_text_w = 0.0f32;
+        for &item in self.items {
+            let w = ui
+                .painter()
+                .layout_no_wrap(item.to_owned(), font_id.clone(), theme.label())
+                .size()
+                .x;
+            max_item_text_w = max_item_text_w.max(w);
+        }
+        let auto_width = max_item_text_w + padding_h * 2.0 + chevron_size + chevron_spacing;
+        let desired_width = self.width.unwrap_or(auto_width);
 
         let sense = if self.enabled {
             Sense::click()
         } else {
             Sense::hover()
         };
-        let (raw_rect, mut response) =
-            ui.allocate_exact_size(Vec2::new(desired_width, height), sense);
+        let (raw_rect, mut response) = if let Some(explicit_id) = self.id {
+            let (r, _) = ui.allocate_exact_size(Vec2::new(desired_width, height), Sense::hover());
+            let resp = ui.interact(r, explicit_id, sense);
+            (r, resp)
+        } else {
+            ui.allocate_exact_size(Vec2::new(desired_width, height), sense)
+        };
         let rect = subpixel_snap_rect(raw_rect, ui.ctx().pixels_per_point());
 
         // Keyboard arrow navigation when focused
         if self.enabled && response.has_focus() {
-            if ui.input(|i| i.key_pressed(Key::ArrowDown)) {
+            if ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::ArrowDown)) {
                 if *self.selected_index + 1 < self.items.len() {
                     *self.selected_index += 1;
                     response.mark_changed();
                 }
-            } else if ui.input(|i| i.key_pressed(Key::ArrowUp)) && *self.selected_index > 0 {
+            } else if ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::ArrowUp))
+                && *self.selected_index > 0
+            {
                 *self.selected_index -= 1;
                 response.mark_changed();
             }
@@ -242,7 +263,8 @@ impl<'a> Widget for MacPopUpButton<'a> {
                 is_popup_open = !is_popup_open;
                 ui.data_mut(|d| d.insert_temp(is_open_id, is_popup_open));
             } else if response.has_focus()
-                && ui.input(|i| i.key_pressed(Key::Space) || i.key_pressed(Key::Enter))
+                && (ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Space))
+                    || ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Enter)))
             {
                 is_popup_open = !is_popup_open;
                 ui.data_mut(|d| d.insert_temp(is_open_id, is_popup_open));
@@ -250,10 +272,12 @@ impl<'a> Widget for MacPopUpButton<'a> {
         }
 
         if self.enabled && is_popup_open {
-            let menu_width = desired_width.max(metrics.menu_min_width.points());
+            let menu_width = desired_width
+                .max(auto_width)
+                .max(metrics.menu_min_width.points());
             let item_height = height.max(metrics.menu_item_height.points());
             let menu_padding = metrics.menu_item_padding.points();
-            let total_menu_height = item_height * (self.items.len() as f32) + menu_padding;
+            let total_menu_height = item_height * (self.items.len() as f32) + menu_padding * 2.0;
 
             let screen_rect = ui
                 .ctx()
@@ -274,15 +298,22 @@ impl<'a> Widget for MacPopUpButton<'a> {
             };
             let popup_pos = Pos2::new(popup_x, popup_y);
             let area_id = response.id.with("mac_popup_area");
+            let mut item_selected_this_frame = false;
+
             Area::new(area_id)
                 .order(Order::Foreground)
+                .sense(Sense::click())
                 .fixed_pos(popup_pos)
                 .show(ui.ctx(), |menu_ui| {
-                    let menu_rect =
-                        Rect::from_min_size(popup_pos, Vec2::new(menu_width, total_menu_height));
+                    let (menu_rect, _bg_resp) = menu_ui
+                        .allocate_exact_size(Vec2::new(menu_width, total_menu_height), Sense::click());
+                    if menu_ui.rect_contains_pointer(menu_rect) {
+                        menu_ui.input_mut(|i| {
+                            i.smooth_scroll_delta = Vec2::ZERO;
+                        });
+                    }
                     let menu_painter = menu_ui.painter_at(menu_rect);
 
-                    // Panel background & shadow/border
                     menu_painter.rect(
                         menu_rect,
                         CornerRadius::same(corner_radius as u8),
@@ -298,9 +329,11 @@ impl<'a> Widget for MacPopUpButton<'a> {
                                 menu_rect.left() + item_margin,
                                 menu_rect.top() + item_margin + (idx as f32) * item_height,
                             ),
-                            Vec2::new(menu_width - menu_padding, item_height),
+                            Vec2::new(menu_width - item_margin * 2.0, item_height),
                         );
-                        let is_hovered = menu_ui.rect_contains_pointer(item_rect);
+                        let item_resp =
+                            menu_ui.interact(item_rect, area_id.with(idx), Sense::click());
+                        let is_hovered = item_resp.hovered();
                         let is_active = idx == *self.selected_index;
 
                         if is_hovered || is_active {
@@ -317,7 +350,7 @@ impl<'a> Widget for MacPopUpButton<'a> {
                         }
 
                         let item_text_color = if is_hovered {
-                            theme.control_background()
+                            theme.on_accent_text()
                         } else {
                             theme.label()
                         };
@@ -330,20 +363,19 @@ impl<'a> Widget for MacPopUpButton<'a> {
                             item_text_color,
                         );
 
-                        if menu_ui.input(|i| i.pointer.button_clicked(egui::PointerButton::Primary))
-                            && is_hovered
-                        {
+                        if item_resp.clicked() {
                             *self.selected_index = idx;
+                            item_selected_this_frame = true;
                             menu_ui.data_mut(|d| d.insert_temp(is_open_id, false));
                             response.mark_changed();
                         }
                     }
                 });
 
-            // Dismiss popup when pressing Escape or clicking outside
-            if ui.input(|i| i.key_pressed(Key::Escape)) {
+            if ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Escape)) {
                 ui.data_mut(|d| d.insert_temp(is_open_id, false));
-            } else if ui.input(|i| i.pointer.button_clicked(egui::PointerButton::Primary))
+            } else if !item_selected_this_frame
+                && ui.input(|i| i.pointer.button_clicked(egui::PointerButton::Primary))
                 && !response.clicked()
             {
                 let popup_bounds =

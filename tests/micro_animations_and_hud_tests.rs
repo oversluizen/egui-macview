@@ -8,9 +8,10 @@
 //! - SPEC-001 §4.14: Authentic AppKit Vector Rendering Oracles.
 //! - GL-1015: Regel 0 (De Verankeringswet) & Regel 7 (ISO/IEC/IEEE 29119 Spec-First).
 
+use egui::{Context, Event, Modifiers, PointerButton, Pos2, RawInput};
 use egui_macview::{
     theme::{MacAppearance, MacTheme, WindowControlsStyle},
-    CASpring,
+    CASpring, MacFloatingInfoBox, MacToolbar,
 };
 
 #[test]
@@ -215,3 +216,98 @@ fn test_window_controls_style_geometry_and_glyph_metrics_oracle() {
         WindowControlsStyle::NativeHost
     );
 }
+
+#[test]
+fn test_mac_toolbar_widget_traffic_lights_and_windows_caption_interactions() {
+    let ctx = Context::default();
+    let apple_theme = MacTheme::new(MacAppearance::DarkAqua)
+        .with_window_controls_style(WindowControlsStyle::AppleTrafficLights);
+
+    // 1. Render MacToolbar with AppleTrafficLights
+    let mut close_pos = Pos2::new(24.0, 22.0);
+    let mut out1 = ctx.run_ui(RawInput::default(), |ui| {
+        let resp = MacToolbar::new("test_toolbar")
+            .theme(&apple_theme)
+            .show(ui, |center_ui| {
+                center_ui.label("Document Title");
+            });
+        assert_eq!(resp.response.rect.height(), 44.0);
+        assert!(!resp.close_clicked);
+        let r = apple_theme.toolbar_metrics().traffic_light_radius.points();
+        close_pos = Pos2::new(resp.response.rect.left() + r * 4.0, resp.response.rect.center().y);
+    });
+    out1.textures_delta.clear();
+
+    // 2. Click close traffic light
+    let mut press_in = RawInput::default();
+    press_in.events.push(Event::PointerMoved(close_pos));
+    press_in.events.push(Event::PointerButton {
+        pos: close_pos,
+        button: PointerButton::Primary,
+        pressed: true,
+        modifiers: Modifiers::NONE,
+    });
+    let mut out2 = ctx.run_ui(press_in, |ui| {
+        MacToolbar::new("test_toolbar")
+            .theme(&apple_theme)
+            .show(ui, |center_ui| {
+                center_ui.label("Document Title");
+            });
+    });
+    out2.textures_delta.clear();
+
+    let mut release_in = RawInput::default();
+    release_in.events.push(Event::PointerMoved(close_pos));
+    release_in.events.push(Event::PointerButton {
+        pos: close_pos,
+        button: PointerButton::Primary,
+        pressed: false,
+        modifiers: Modifiers::NONE,
+    });
+    let mut close_fired = false;
+    let mut out3 = ctx.run_ui(release_in, |ui| {
+        let resp = MacToolbar::new("test_toolbar")
+            .theme(&apple_theme)
+            .show(ui, |center_ui| {
+                center_ui.label("Document Title");
+            });
+        close_fired = resp.close_clicked;
+    });
+    out3.textures_delta.clear();
+    assert!(close_fired, "Clicking Apple close traffic light must set close_clicked = true");
+
+    // 3. Render MacToolbar with WindowsCaptionButtons
+    let win_theme = MacTheme::new(MacAppearance::DarkAqua)
+        .with_window_controls_style(WindowControlsStyle::WindowsCaptionButtons);
+    let mut out4 = ctx.run_ui(RawInput::default(), |ui| {
+        let resp = MacToolbar::new("test_toolbar_win")
+            .theme(&win_theme)
+            .show(ui, |center_ui| {
+                center_ui.label("Windows Caption Mode");
+            });
+        assert_eq!(resp.response.rect.height(), 44.0);
+    });
+    out4.textures_delta.clear();
+}
+
+#[test]
+fn test_mac_floating_infobox_widget_rendering_oracle() {
+    let ctx = Context::default();
+    let theme = MacTheme::new(MacAppearance::DarkAqua);
+    let mut pos = Pos2::new(40.0, 40.0);
+    let mut x = "10.0".to_string();
+    let mut y = "20.0".to_string();
+    let mut w = "100.0".to_string();
+    let mut h = "80.0".to_string();
+
+    let mut out = ctx.run_ui(RawInput::default(), |ui| {
+        let resp = MacFloatingInfoBox::new("oracle_hud", &mut pos)
+            .theme(&theme)
+            .title("Compact HUD")
+            .show_xywh(ui.ctx(), &mut x, &mut y, &mut w, &mut h);
+        assert_eq!(resp.rect.width(), 178.0);
+        assert_eq!(resp.rect.height(), 63.0);
+    });
+    out.textures_delta.clear();
+}
+

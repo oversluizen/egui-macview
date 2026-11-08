@@ -5,6 +5,24 @@ All notable changes to the `egui-macview` crate will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2026-11-08
+
+### Added
+- **Unified Window Toolbar (`MacToolbar`, `SPEC-005`)**: First-class library widget with 3-zone AppKit layout, configurable `WindowControlsStyle` (`AppleTrafficLights` with cluster-wide hover glyphs, `WindowsCaptionButtons` with 46pt Fitts's Law caption buttons, `NativeHost`), double-click maximize, and background window dragging.
+- **Floating Compact HUD Palette (`MacFloatingInfoBox`, `SPEC-006 §2.2`)**: First-class `178x63pt` translucent utility HUD palette with `22pt` draggable header and two `18pt` rows rendered inside an `Order::Foreground` `egui::Area` with full click, drag, and scroll isolation.
+- **Context-Aware Theme Fallback (`MacTheme::from_ctx`)**: `MacTheme::apply_to_egui` stores the active theme in `egui::Context` data so any widget omitting `.theme(...)` inherits the active `Aqua` / `DarkAqua` appearance automatically.
+- **Expanded W3C DTCG Token Coverage**: Full token coverage for `navigation` (`footer`, `palette`, `menu`), `feedback` (`context_menu`, `toast`), `surfaces` (`hud`), and `theme` with zero hardcoded magic numbers or colors across all UI modules.
+
+### Fixed
+- **DTCG Color Parser (`parse_color32`)**: Fixed 8-digit hex (`#RRGGBBAA`) and `rgba(r, g, b, a)` parsing to use `Color32::from_rgba_unmultiplied` instead of `from_rgba_premultiplied`.
+- **`MacInputCell` Transactional Buffer & Tab FSM**: Implemented `egui::Memory`-backed transactional edit buffer (snapshot on focus, commit on `Enter`/`Tab`/blur, rollback on `Escape`) and eliminated same-frame `Tab`/`Shift+Tab` domino cascades via `consume_key` and `.lock_focus(true)`.
+- **`MacSearchField` Paint Z-Order**: Painted pill background, border, focus ring, and search icon prior to `TextEdit::singleline` so typed text and cursor are never occluded.
+- **Foreground & Click/Scroll Isolation**: Prevented click and scroll-wheel pass-through across `MacPopUpButton`, `MacPanel`, `MacPopover`, `MacFloatingInfoBox`, and `MacOutlineView` trailing accessories.
+- **Spring Micro-Animations & Menu Guards**: Upgraded `MacOutlineView` disclosure chevrons, `MacSegmentedControl` active pills, and `MacToggle` thumbs to evaluate `CASpring` physics; guarded `MacMenuBar::handle_shortcuts` when `ctx.wants_keyboard_input()` is active.
+
+### Removed
+- Removed empty `MacFlexView` stub in favor of `MacRow` and `MacStackView`.
+
 ## [0.4.0] - 2026-11-07
 
 ### Added

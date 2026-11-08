@@ -108,7 +108,7 @@ impl<'a> MacCard<'a> {
         let theme = match self.theme {
             Some(t) => t,
             None => {
-                fallback_theme = MacTheme::default();
+                fallback_theme = MacTheme::from_ctx(ui.ctx());
                 &fallback_theme
             }
         };
@@ -122,6 +122,12 @@ impl<'a> MacCard<'a> {
             .stroke
             .unwrap_or_else(|| Stroke::new(metrics.border_width.points(), theme.separator()));
 
+        let resp = ui.interact(
+            rect,
+            ui.scope_id().with("mac_card"),
+            Sense::click_and_drag(),
+        );
+
         let painter = ui.painter_at(rect);
 
         // Ambient drop shadow if enabled
@@ -131,7 +137,7 @@ impl<'a> MacCard<'a> {
             painter.rect_filled(
                 shadow_rect,
                 CornerRadius::same((rounding + metrics.border_width.points()) as u8),
-                egui::Color32::from_black_alpha(25),
+                theme.drop_shadow(),
             );
         }
 
@@ -154,13 +160,6 @@ impl<'a> MacCard<'a> {
                 .layout(egui::Layout::top_down(egui::Align::Min)),
         );
         let ret = add_contents(&mut child_ui, bg_style);
-
-        #[allow(deprecated)]
-        let resp = ui.interact(
-            rect,
-            ui.scope_id().with("mac_card"),
-            Sense::click_and_drag(),
-        );
 
         (resp, ret)
     }

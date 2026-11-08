@@ -165,7 +165,7 @@ fn test_mac_row_budget_allocation() {
     assert_eq!(row.remaining_width(), 10.0);
 }
 
-/// Test 4: Verifies DTCG color token string parser.
+/// Test 4: Verifies DTCG color token string parser uses unmultiplied sRGBA conversion.
 #[test]
 fn test_dtcg_color_parser() {
     assert_eq!(parse_color32("#ECECEC"), Color32::from_rgb(236, 236, 236));
@@ -173,19 +173,25 @@ fn test_dtcg_color_parser() {
     assert_eq!(parse_color32("#007AFF"), Color32::from_rgb(0, 122, 255));
     assert_eq!(
         parse_color32("#12345678"),
-        Color32::from_rgba_premultiplied(0x12, 0x34, 0x56, 0x78)
+        Color32::from_rgba_unmultiplied(0x12, 0x34, 0x56, 0x78)
     );
 
     // CSS rgba string
     let parsed_alpha = parse_color32("rgba(0, 0, 0, 0.10)");
-    assert_eq!(parsed_alpha.r(), 0);
-    assert_eq!(parsed_alpha.g(), 0);
-    assert_eq!(parsed_alpha.b(), 0);
-    assert!((parsed_alpha.a() as i32 - 25).abs() <= 1);
+    let srgba_alpha = parsed_alpha.to_srgba_unmultiplied();
+    assert_eq!(srgba_alpha[0], 0);
+    assert_eq!(srgba_alpha[1], 0);
+    assert_eq!(srgba_alpha[2], 0);
+    assert!((srgba_alpha[3] as i32 - 25).abs() <= 1);
 
     let parsed_focus = parse_color32("rgba(0, 103, 244, 0.50)");
-    assert_eq!(parsed_focus.r(), 0);
-    assert_eq!(parsed_focus.g(), 103);
-    assert_eq!(parsed_focus.b(), 244);
-    assert!((parsed_focus.a() as i32 - 128).abs() <= 1);
+    assert_eq!(
+        parsed_focus,
+        Color32::from_rgba_unmultiplied(0, 103, 244, 128)
+    );
+    let srgba_focus = parsed_focus.to_srgba_unmultiplied();
+    assert_eq!(srgba_focus[0], 0);
+    assert!((srgba_focus[1] as i32 - 103).abs() <= 1);
+    assert!((srgba_focus[2] as i32 - 244).abs() <= 1);
+    assert_eq!(srgba_focus[3], 128);
 }

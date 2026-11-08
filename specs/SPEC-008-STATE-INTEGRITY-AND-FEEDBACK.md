@@ -1,8 +1,8 @@
-# SPEC-008: State Integrity, Context Menus & Micro-Feedback Architecture
+# SPEC-008B: State Integrity, Context Menus & Micro-Feedback Architecture
 
 | Attribute | Specification Value |
 | :--- | :--- |
-| **Document ID** | SPEC-008 |
+| **Document ID** | SPEC-008B |
 | **Document Title** | State Integrity, Context Menus & Micro-Feedback Architecture |
 | **Document Version** | `0.4.0` |
 | **Status** | Accepted / Normative |
@@ -21,6 +21,7 @@
 | `0.1.0` | 2026-11-05 | Architecture Team | Baseline Initial Release: State Management Foundation |
 | `0.2.0` | 2026-11-06 | Architecture Team | Prototyping Milestone: NSUndoManager Bounded Ringbuffer, Clamped Context Menus, and Animated Toast Notifications |
 | `0.4.0` | 2026-11-07 | Architecture Team | Milestone 0.4.0 Release: Transactional state integrity, boundary-clamped context menus, and CASpring micro-feedback |
+| `0.4.1` | 2026-11-08 | Architecture Team | Consolidation Hardening: Disambiguated Document ID (`SPEC-008B`), tokenized `MacContextMenu` & `MacToast`, and dynamic context menu width auto-sizing |
 
 ---
 

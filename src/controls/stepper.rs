@@ -105,7 +105,7 @@ impl<'a> Widget for MacStepper<'a> {
         let theme = match self.theme {
             Some(t) => t,
             None => {
-                fallback_theme = MacTheme::default();
+                fallback_theme = MacTheme::from_ctx(ui.ctx());
                 &fallback_theme
             }
         };
@@ -160,17 +160,132 @@ impl<'a> Widget for MacStepper<'a> {
 
         let clicked_top = top_resp.clicked();
         let clicked_bottom = bottom_resp.clicked();
-        if clicked_top || clicked_bottom {
+        if clicked_top || clicked_bottom || top_resp.is_pointer_button_down_on() || bottom_resp.is_pointer_button_down_on() {
             response.request_focus();
         }
 
+        let now = ui.input(|i| i.time);
+        let repeat_delay = metrics.auto_repeat_delay.points() as f64;
+        let repeat_interval = metrics.auto_repeat_interval.points() as f64;
+
+        let repeat_top = if self.enabled && top_resp.is_pointer_button_down_on() {
+            ui.ctx().request_repaint();
+            let state = ui.data_mut(|d| d.get_temp::<(f64, f64)>(top_id));
+            match state {
+                None => {
+                    ui.data_mut(|d| d.insert_temp(top_id, (now, now)));
+                    false
+                }
+                Some((press_start, last_repeat)) => {
+                    if now - press_start >= repeat_delay && now - last_repeat >= repeat_interval {
+                        ui.data_mut(|d| d.insert_temp(top_id, (press_start, now)));
+                        true
+                    } else {
+                        false
+                    }
+                }
+            }
+        } else {
+            ui.data_mut(|d| d.remove_temp::<(f64, f64)>(top_id));
+            false
+        };
+
+        let repeat_bottom = if self.enabled && bottom_resp.is_pointer_button_down_on() {
+            ui.ctx().request_repaint();
+            let state = ui.data_mut(|d| d.get_temp::<(f64, f64)>(bottom_id));
+            match state {
+                None => {
+                    ui.data_mut(|d| d.insert_temp(bottom_id, (now, now)));
+                    false
+                }
+                Some((press_start, last_repeat)) => {
+                    if now - press_start >= repeat_delay && now - last_repeat >= repeat_interval {
+                        ui.data_mut(|d| d.insert_temp(bottom_id, (press_start, now)));
+                        true
+                    } else {
+                        false
+                    }
+                }
+            }
+        } else {
+            ui.data_mut(|d| d.remove_temp::<(f64, f64)>(bottom_id));
+            false
+        };
+
+        let ptr_mods = ui.input(|i| {
+            let mut m = i.modifiers;
+            for ev in &i.raw.events {
+                if let egui::Event::PointerButton { modifiers, .. } = ev {
+                    m |= *modifiers;
+                }
+            }
+            m
+        });
+        let shift_mult = metrics.shift_multiplier.points() as f64;
+        let cmd_mult = metrics.cmd_multiplier.points() as f64;
+        let ptr_mult = if ptr_mods.command || ptr_mods.ctrl || ptr_mods.mac_cmd {
+            cmd_mult
+        } else if ptr_mods.shift {
+            shift_mult
+        } else {
+            1.0
+        };
+
+        let key_up_mult = if self.enabled && response.has_focus() {
+            ui.input_mut(|i| {
+                if i.consume_key(egui::Modifiers::COMMAND, Key::ArrowUp)
+                    || i.consume_key(egui::Modifiers::CTRL, Key::ArrowUp)
+                    || i.consume_key(egui::Modifiers::MAC_CMD, Key::ArrowUp)
+                {
+                    Some(cmd_mult)
+                } else if i.consume_key(egui::Modifiers::SHIFT, Key::ArrowUp) {
+                    Some(shift_mult)
+                } else if i.consume_key(egui::Modifiers::NONE, Key::ArrowUp) {
+                    Some(1.0)
+                } else {
+                    None
+                }
+            })
+        } else {
+            None
+        };
+
+        let key_down_mult = if self.enabled && response.has_focus() {
+            ui.input_mut(|i| {
+                if i.consume_key(egui::Modifiers::COMMAND, Key::ArrowDown)
+                    || i.consume_key(egui::Modifiers::CTRL, Key::ArrowDown)
+                    || i.consume_key(egui::Modifiers::MAC_CMD, Key::ArrowDown)
+                {
+                    Some(cmd_mult)
+                } else if i.consume_key(egui::Modifiers::SHIFT, Key::ArrowDown) {
+                    Some(shift_mult)
+                } else if i.consume_key(egui::Modifiers::NONE, Key::ArrowDown) {
+                    Some(1.0)
+                } else {
+                    None
+                }
+            })
+        } else {
+            None
+        };
+
+        let step_up_mult = if self.enabled && (clicked_top || repeat_top) {
+            Some(ptr_mult)
+        } else {
+            key_up_mult
+        };
+
+        let step_down_mult = if self.enabled && (clicked_bottom || repeat_bottom) {
+            Some(ptr_mult)
+        } else {
+            key_down_mult
+        };
+
         let eps = 1e-9 * self.step.abs().max(1.0);
 
-        // Up arrow click handling
-        if self.enabled
-            && (clicked_top || (response.has_focus() && ui.input(|i| i.key_pressed(Key::ArrowUp))))
-        {
-            let next_val = *self.value + self.step;
+        // Up arrow click / hold-to-repeat / keyboard handling
+        if let Some(mult) = step_up_mult {
+            let next_val = *self.value + self.step * mult;
             if next_val <= max_val + eps {
                 *self.value = next_val.min(max_val);
             } else if self.wraps {
@@ -181,12 +296,9 @@ impl<'a> Widget for MacStepper<'a> {
             changed = true;
         }
 
-        // Down arrow click handling
-        if self.enabled
-            && (clicked_bottom
-                || (response.has_focus() && ui.input(|i| i.key_pressed(Key::ArrowDown))))
-        {
-            let next_val = *self.value - self.step;
+        // Down arrow click / hold-to-repeat / keyboard handling
+        if let Some(mult) = step_down_mult {
+            let next_val = *self.value - self.step * mult;
             if next_val >= min_val - eps {
                 *self.value = next_val.max(min_val);
             } else if self.wraps {

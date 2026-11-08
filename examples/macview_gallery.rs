@@ -53,12 +53,12 @@ use egui_macview::{
     contrast_ratio, relative_luminance, setup_symbols_font,
     theme::{MacAppearance, MacTheme, WindowControlsStyle},
     CASpring, CommandPaletteItem, MacBackgroundStyle, MacButtonCell, MacCanvasFooter,
-    MacCanvasFooterAction, MacColorWell, MacCommandPalette, MacContextMenu, MacFixedView,
-    MacForm, MacInputCell, MacMenuBar, MacOutlineView, MacPopUpButton, MacPopover,
-    MacPopoverArrowEdge, MacRow, MacScrollView, MacSearchField, MacSegmentedControl,
-    MacSlider, MacSplitOrientation, MacSplitView, MacStackOrientation, MacStackView,
-    MacStepper, MacSymbol, MacThumbnailCell, MacToastManager, MacToggle, NSMenu,
-    NSMenuItem, NSUndoManager, CANVAS_FOOTER_HEIGHT,
+    MacCanvasFooterAction, MacColorWell, MacCommandPalette, MacContextMenu, MacControlSize,
+    MacFixedView, MacFloatingInfoBox, MacForm, MacInputCell, MacMenuBar, MacOutlineView,
+    MacPopUpButton, MacPopover, MacPopoverArrowEdge, MacRow, MacScrollView, MacSearchField,
+    MacSegmentedControl, MacSlider, MacSplitOrientation, MacSplitView, MacStackOrientation,
+    MacStackView, MacStepper, MacSymbol, MacThumbnailCell, MacToastManager, MacToggle, MacToolbar,
+    NSMenu, NSMenuItem, NSUndoManager, CANVAS_FOOTER_HEIGHT,
 };
 use std::cell::{Cell, RefCell};
 
@@ -370,6 +370,12 @@ struct CenterState {
     card_menu_open: bool,
     card_menu_pos: Pos2,
     card_menu_selected: Option<usize>,
+    showcase_control_size_idx: usize,
+    showcase_controls_enabled: bool,
+    showcase_text: String,
+    showcase_step_val: f64,
+    showcase_popup_idx: usize,
+    showcase_color: Color32,
 }
 
 impl Default for CenterState {
@@ -396,6 +402,12 @@ impl Default for CenterState {
             card_menu_open: false,
             card_menu_pos: Pos2::ZERO,
             card_menu_selected: None,
+            showcase_control_size_idx: 3,
+            showcase_controls_enabled: true,
+            showcase_text: "AppKit v0.4.1".to_string(),
+            showcase_step_val: 42.0,
+            showcase_popup_idx: 0,
+            showcase_color: Color32::from_rgb(0, 122, 255),
         }
     }
 }
@@ -650,21 +662,21 @@ impl eframe::App for GalleryApp {
         }
         self.active_text_focus.set(focused_id);
 
-        // Track pointer drag transitions for bounded transactional undo snapshot recording
+        // Track pointer drag transitions for bounded transactional undo snapshot recording (`begin_grouping` / `end_grouping`)
         let any_pointer_down = ui.input(|i| i.pointer.any_down());
         if any_pointer_down {
             if !self.is_dragging_card.get() {
                 self.is_dragging_card.set(true);
-                *self.drag_start_card.borrow_mut() = Some(self.last_stable_card.borrow().clone());
+                let initial = self.last_stable_card.borrow().clone();
+                *self.drag_start_card.borrow_mut() = Some(initial.clone());
+                self.undo_manager.borrow_mut().begin_grouping(initial);
             }
         } else if self.is_dragging_card.get() {
             self.is_dragging_card.set(false);
-            if let Some(start_card) = self.drag_start_card.borrow_mut().take() {
-                let current = self.card.borrow().clone();
-                if current != start_card {
-                    self.undo_manager.borrow_mut().push_snapshot(start_card);
-                    *self.last_stable_card.borrow_mut() = current;
-                }
+            let _ = self.drag_start_card.borrow_mut().take();
+            let current = self.card.borrow().clone();
+            if self.undo_manager.borrow_mut().end_grouping(&current) {
+                *self.last_stable_card.borrow_mut() = current;
             }
         }
 
@@ -864,15 +876,19 @@ impl eframe::App for GalleryApp {
                 .show(
                     body_ui,
                     |center_ui| {
+                        let mut s = active_screen_cell.get();
                         center.render(
                             center_ui,
                             &theme,
                             card,
+                            &self.undo_manager,
+                            &self.last_stable_card,
                             inspector_mode_cell.get(),
-                            active_screen_cell.get(),
+                            &mut s,
                             snapping_enabled,
                             &self.toasts,
                         );
+                        active_screen_cell.set(s);
                     },
                     |inspector_ui| {
                         let mut m = inspector_mode_cell.get();
@@ -884,7 +900,12 @@ impl eframe::App for GalleryApp {
         );
 
         self.inspector_mode = inspector_mode_cell.get();
-        self.active_screen = active_screen_cell.get();
+        let new_screen = active_screen_cell.get();
+        if self.active_screen != new_screen {
+            self.active_screen = new_screen;
+            self.sidebar.active_screen = new_screen;
+            self.sidebar.selected_node = new_screen.title().to_string();
+        }
 
         self.left_split_pos = left_split_pos;
         self.inspector_width = (available_body_w - right_split_pos).clamp(min_inspector_w, max_inspector_w);
@@ -906,465 +927,172 @@ impl eframe::App for GalleryApp {
 }
 
 impl GalleryApp {
-    /// Renders the authentic AppKit unified window toolbar with interactive traffic lights / Windows caption buttons,
-    /// window dragging, inspector mode selector, window controls style switcher, and theme toggle.
+    /// Renders the authentic AppKit unified window toolbar via [`MacToolbar`] (`SPEC-005`)
+    /// with interactive traffic lights / Windows caption buttons, window dragging,
+    /// inspector mode selector, window controls style switcher, and theme toggle.
     fn render_toolbar(&mut self, ui: &mut Ui, rect: Rect, theme: &MacTheme) {
-        let painter = ui.painter_at(rect);
-        let border_stroke = Stroke::new(1.0, theme.separator());
+        let mut is_max = self.is_maximized;
+        let mut next_appearance = self.appearance;
+        let mut next_style = self.window_controls_style;
+        let mut next_mode = self.inspector_mode;
+        let mut toggle_palette = false;
+        let palette_open = self.palette.open;
 
-        // Background with top rounded corners
-        let top_corners = CornerRadius {
-            nw: 10,
-            ne: 10,
-            sw: 0,
-            se: 0,
-        };
-        painter.rect_filled(rect, top_corners, theme.control_background());
-        painter.line_segment(
-            [pos2(rect.min.x, rect.max.y), pos2(rect.max.x, rect.max.y)],
-            border_stroke,
-        );
+        let tb_resp = MacToolbar::new("")
+            .id("gallery_main_toolbar")
+            .theme(theme)
+            .window_controls_style(self.window_controls_style)
+            .maximized(&mut is_max)
+            .show_in_rect(ui, rect, |tb_ui| {
+                let right_area = tb_ui.max_rect();
+                let mut trailing_start_x = right_area.max.x;
+                if right_area.width() > 0.0 {
+                    let mut right_ui = tb_ui.new_child(
+                        egui::UiBuilder::new()
+                            .max_rect(right_area)
+                            .layout(Layout::right_to_left(Align::Center)),
+                    );
 
-        // Window drag interaction on empty toolbar background
-        let toolbar_bg_resp = ui.interact(
-            rect,
-            ui.scope_id().with("mac_toolbar_drag"),
-            Sense::click_and_drag(),
-        );
-        if toolbar_bg_resp.drag_started() {
-            ui.ctx().send_viewport_cmd(ViewportCommand::StartDrag);
+                    // 1. Dynamic Theme Toggle [ Aqua | DarkAqua ]
+                    let current_theme_idx = match next_appearance {
+                        MacAppearance::Aqua => 0,
+                        MacAppearance::DarkAqua => 1,
+                    };
+                    MacSegmentedControl::new(&["Aqua", "DarkAqua"], current_theme_idx)
+                        .theme(theme)
+                        .height(24.0)
+                        .show(&mut right_ui, |idx| {
+                            next_appearance = match idx {
+                                0 => MacAppearance::Aqua,
+                                _ => MacAppearance::DarkAqua,
+                            };
+                        });
+
+                    right_ui.add_space(8.0);
+
+                    // 2. Configurable Window Controls Style Switcher [ Apple | Windows | Native ]
+                    let current_style_idx = match next_style {
+                        WindowControlsStyle::AppleTrafficLights => 0,
+                        WindowControlsStyle::WindowsCaptionButtons => 1,
+                        WindowControlsStyle::NativeHost => 2,
+                    };
+                    MacSegmentedControl::new(&["Apple", "Windows", "Native"], current_style_idx)
+                        .theme(theme)
+                        .height(24.0)
+                        .show(&mut right_ui, |idx| {
+                            next_style = match idx {
+                                0 => WindowControlsStyle::AppleTrafficLights,
+                                1 => WindowControlsStyle::WindowsCaptionButtons,
+                                _ => WindowControlsStyle::NativeHost,
+                            };
+                        });
+
+                    right_ui.add_space(8.0);
+
+                    // 3. Center Toolbar: Inspector Mode Switcher [ Default NIB | Compact HUD | Expanded Pro ]
+                    let current_mode_idx = match next_mode {
+                        InspectorMode::DefaultNib => 0,
+                        InspectorMode::CompactHud => 1,
+                        InspectorMode::ExpandedPro => 2,
+                    };
+                    let mode_def = format!("{} Default", MacSymbol::Gear.as_str());
+                    let mode_hud = format!("{} Compact", MacSymbol::Sliders.as_str());
+                    let mode_pro = format!("{} Expanded", MacSymbol::Plus.as_str());
+                    let mode_items = [mode_def.as_str(), mode_hud.as_str(), mode_pro.as_str()];
+                    MacSegmentedControl::new(&mode_items, current_mode_idx)
+                        .theme(theme)
+                        .height(24.0)
+                        .show(&mut right_ui, |idx| {
+                            next_mode = match idx {
+                                0 => InspectorMode::DefaultNib,
+                                1 => InspectorMode::CompactHud,
+                                _ => InspectorMode::ExpandedPro,
+                            };
+                        });
+
+                    right_ui.add_space(8.0);
+
+                    // 4. Spotlight Command Palette Button [ Search ⌘K on macOS, Ctrl+K on Windows ]
+                    let k_str = if cfg!(target_os = "macos") { "⌘K" } else { "Ctrl+K" };
+                    let search_label = format!("{} {}", MacSymbol::Search.as_str(), k_str);
+                    let spot_btn = right_ui.add(
+                        MacButtonCell::new(&search_label)
+                            .theme(theme)
+                            .height(24.0)
+                            .selected(palette_open),
+                    );
+                    if spot_btn.clicked() {
+                        toggle_palette = true;
+                    }
+
+                    if right_ui.min_rect().is_positive() {
+                        trailing_start_x = right_ui.min_rect().left();
+                    }
+                }
+
+                // Window Title (AppKit 3-zone flex layout with dynamic centering & truncation)
+                let title_min_x = right_area.min.x + 8.0;
+                let title_max_x = trailing_start_x - 12.0;
+                let available_title_w = title_max_x - title_min_x;
+
+                if available_title_w >= 40.0 {
+                    let painter = tb_ui.painter();
+                    let title_font = FontId::proportional(theme.text_field().regular.font_size.points());
+                    let title_color = theme.label();
+                    let title_str = format!(
+                        "macview_gallery v{} (AppKit macOS 15 Parity)",
+                        egui_macview::VERSION
+                    );
+
+                    let full_galley = painter.layout_no_wrap(title_str.clone(), title_font.clone(), title_color);
+                    let full_w = full_galley.size().x;
+                    let center_x = rect.center().x;
+                    let traffic_y = rect.center().y;
+                    let centered_min_x = center_x - full_w * 0.5;
+                    let centered_max_x = center_x + full_w * 0.5;
+
+                    if full_w <= available_title_w && centered_min_x >= title_min_x && centered_max_x <= title_max_x {
+                        let pos = pos2(centered_min_x, traffic_y - full_galley.size().y * 0.5);
+                        painter.galley(pos, full_galley, title_color);
+                    } else if full_w <= available_title_w {
+                        let pos = pos2(title_min_x, traffic_y - full_galley.size().y * 0.5);
+                        painter.galley(pos, full_galley, title_color);
+                    } else {
+                        let format = egui::TextFormat {
+                            font_id: title_font,
+                            color: title_color,
+                            ..Default::default()
+                        };
+                        let mut job = egui::text::LayoutJob::single_section(title_str, format);
+                        job.wrap.max_width = available_title_w;
+                        job.wrap.max_rows = 1;
+                        job.wrap.break_anywhere = false;
+                        let truncated_galley = painter.layout_job(job);
+                        let pos = pos2(title_min_x, traffic_y - truncated_galley.size().y * 0.5);
+                        painter.galley(pos, truncated_galley, title_color);
+                    }
+                }
+            });
+
+        self.appearance = next_appearance;
+        self.window_controls_style = next_style;
+        self.inspector_mode = next_mode;
+        self.is_maximized = is_max;
+        if toggle_palette {
+            self.palette.toggle();
         }
-        if toolbar_bg_resp.double_clicked() {
-            self.is_maximized = !self.is_maximized;
+        if tb_resp.close_clicked {
+            ui.ctx().send_viewport_cmd(ViewportCommand::Close);
+        }
+        if tb_resp.minimize_clicked {
+            ui.ctx().send_viewport_cmd(ViewportCommand::Minimized(true));
+        }
+        if tb_resp.zoom_toggled {
             ui.ctx()
                 .send_viewport_cmd(ViewportCommand::Maximized(self.is_maximized));
         }
-
-        let traffic_inset = 18.0;
-        let traffic_y = rect.center().y;
-        let traffic_radius = theme.toolbar_metrics().traffic_light_radius.points();
-        let traffic_spacing = theme.toolbar_metrics().traffic_light_spacing.points();
-
-        let close_pos = pos2(rect.min.x + traffic_inset, traffic_y);
-        let min_pos = pos2(
-            close_pos.x + traffic_radius * 2.0 + traffic_spacing,
-            traffic_y,
-        );
-        let zoom_pos = pos2(
-            min_pos.x + traffic_radius * 2.0 + traffic_spacing,
-            traffic_y,
-        );
-
-        // Zone 1 (Leading Zone): Apple Traffic Lights (Leading / Left)
-        let leading_end_x = if self.window_controls_style == WindowControlsStyle::AppleTrafficLights {
-            let (close_fill, close_border) = theme.traffic_light_close();
-            let (min_fill, min_border) = theme.traffic_light_minimize();
-            let (zoom_fill, zoom_border) = theme.traffic_light_zoom();
-
-            let traffic_cluster_rect = Rect::from_min_max(
-                pos2(close_pos.x - traffic_radius - 2.0, rect.min.y),
-                pos2(zoom_pos.x + traffic_radius + 6.0, rect.max.y),
-            );
-            let cluster_hovered = ui.rect_contains_pointer(traffic_cluster_rect);
-
-            // Close button
-            let close_rect = Rect::from_center_size(close_pos, vec2(14.0, 14.0));
-            let close_resp = ui.interact(
-                close_rect,
-                ui.scope_id().with("traffic_close"),
-                Sense::click(),
-            );
-            if close_resp.clicked() {
-                ui.ctx().send_viewport_cmd(ViewportCommand::Close);
-            }
-            painter.circle(
-                close_pos,
-                traffic_radius,
-                close_fill,
-                Stroke::new(0.5, close_border),
-            );
-            if cluster_hovered {
-                let symbol_col = Color32::from_black_alpha(160);
-                let d = 2.5;
-                painter.line_segment(
-                    [
-                        pos2(close_pos.x - d, close_pos.y - d),
-                        pos2(close_pos.x + d, close_pos.y + d),
-                    ],
-                    Stroke::new(1.0, symbol_col),
-                );
-                painter.line_segment(
-                    [
-                        pos2(close_pos.x - d, close_pos.y + d),
-                        pos2(close_pos.x + d, close_pos.y - d),
-                    ],
-                    Stroke::new(1.0, symbol_col),
-                );
-            }
-
-            // Minimize button
-            let min_rect = Rect::from_center_size(min_pos, vec2(14.0, 14.0));
-            let min_resp = ui.interact(min_rect, ui.scope_id().with("traffic_min"), Sense::click());
-            if min_resp.clicked() {
-                ui.ctx().send_viewport_cmd(ViewportCommand::Minimized(true));
-            }
-            painter.circle(
-                min_pos,
-                traffic_radius,
-                min_fill,
-                Stroke::new(0.5, min_border),
-            );
-            if cluster_hovered {
-                let symbol_col = Color32::from_black_alpha(160);
-                painter.line_segment(
-                    [
-                        pos2(min_pos.x - 2.8, min_pos.y),
-                        pos2(min_pos.x + 2.8, min_pos.y),
-                    ],
-                    Stroke::new(1.1, symbol_col),
-                );
-            }
-
-            // Zoom/Maximize button
-            let zoom_rect = Rect::from_center_size(zoom_pos, vec2(14.0, 14.0));
-            let zoom_resp = ui.interact(
-                zoom_rect,
-                ui.scope_id().with("traffic_zoom"),
-                Sense::click(),
-            );
-            if zoom_resp.clicked() {
-                self.is_maximized = !self.is_maximized;
-                ui.ctx()
-                    .send_viewport_cmd(ViewportCommand::Maximized(self.is_maximized));
-            }
-            painter.circle(
-                zoom_pos,
-                traffic_radius,
-                zoom_fill,
-                Stroke::new(0.5, zoom_border),
-            );
-            if cluster_hovered {
-                let symbol_col = Color32::from_black_alpha(160);
-                painter.line_segment(
-                    [
-                        pos2(zoom_pos.x - 2.5, zoom_pos.y),
-                        pos2(zoom_pos.x + 2.5, zoom_pos.y),
-                    ],
-                    Stroke::new(1.0, symbol_col),
-                );
-                painter.line_segment(
-                    [
-                        pos2(zoom_pos.x, zoom_pos.y - 2.5),
-                        pos2(zoom_pos.x, zoom_pos.y + 2.5),
-                    ],
-                    Stroke::new(1.0, symbol_col),
-                );
-            }
-            zoom_pos.x + traffic_radius + 16.0
-        } else {
-            rect.min.x + 16.0
-        };
-
-        // Zone 3 (Trailing Zone): Windows 11 Caption Buttons (if enabled) + Trailing Controls
-        let btn_w = theme.toolbar_metrics().caption_button_width.points();
-        let icon_box_size = theme.toolbar_metrics().caption_icon_size.points();
-        let half_icon = icon_box_size * 0.5;
-
-        let right_offset = if self.window_controls_style
-            == WindowControlsStyle::WindowsCaptionButtons
-        {
-            // Three contiguous caption buttons flush to the top-right boundary (Fitts's Law):
-            // Close: [max.x - 46, max.x]
-            let close_rect = Rect::from_min_max(
-                pos2(rect.max.x - btn_w, rect.min.y),
-                pos2(rect.max.x, rect.max.y),
-            );
-            // Maximize / Restore: [max.x - 92, max.x - 46]
-            let max_rect = Rect::from_min_max(
-                pos2(rect.max.x - btn_w * 2.0, rect.min.y),
-                pos2(rect.max.x - btn_w, rect.max.y),
-            );
-            // Minimize: [max.x - 138, max.x - 92]
-            let min_rect = Rect::from_min_max(
-                pos2(rect.max.x - btn_w * 3.0, rect.min.y),
-                pos2(rect.max.x - btn_w * 2.0, rect.max.y),
-            );
-
-            // 1. Close Button
-            let close_resp = ui.interact(
-                close_rect,
-                ui.scope_id().with("win11_caption_close"),
-                Sense::click(),
-            );
-            if close_resp.clicked() {
-                ui.ctx().send_viewport_cmd(ViewportCommand::Close);
-            }
-            let (close_bg, close_symbol_col) = if close_resp.is_pointer_button_down_on() {
-                (theme.windows_caption_close_pressed_bg(), Color32::WHITE)
-            } else if close_resp.hovered() {
-                (theme.windows_caption_close_hover_bg(), Color32::WHITE)
-            } else {
-                (Color32::TRANSPARENT, theme.label())
-            };
-            if close_bg != Color32::TRANSPARENT {
-                painter.rect_filled(
-                    close_rect,
-                    CornerRadius {
-                        nw: 0,
-                        ne: 10,
-                        sw: 0,
-                        se: 0,
-                    },
-                    close_bg,
-                );
-            }
-            let c_center = close_rect.center();
-            painter.line_segment(
-                [
-                    pos2(c_center.x - half_icon, c_center.y - half_icon),
-                    pos2(c_center.x + half_icon, c_center.y + half_icon),
-                ],
-                Stroke::new(1.0, close_symbol_col),
-            );
-            painter.line_segment(
-                [
-                    pos2(c_center.x - half_icon, c_center.y + half_icon),
-                    pos2(c_center.x + half_icon, c_center.y - half_icon),
-                ],
-                Stroke::new(1.0, close_symbol_col),
-            );
-
-            // 2. Maximize / Restore Button
-            let max_resp = ui.interact(
-                max_rect,
-                ui.scope_id().with("win11_caption_max"),
-                Sense::click(),
-            );
-            if max_resp.clicked() {
-                self.is_maximized = !self.is_maximized;
-                ui.ctx()
-                    .send_viewport_cmd(ViewportCommand::Maximized(self.is_maximized));
-            }
-            let (max_bg, max_symbol_col) = if max_resp.is_pointer_button_down_on() {
-                (theme.windows_caption_pressed_bg(), theme.label())
-            } else if max_resp.hovered() {
-                (theme.windows_caption_hover_bg(), theme.label())
-            } else {
-                (Color32::TRANSPARENT, theme.label())
-            };
-            if max_bg != Color32::TRANSPARENT {
-                painter.rect_filled(max_rect, CornerRadius::ZERO, max_bg);
-            }
-            let m_center = max_rect.center();
-            if self.is_maximized {
-                // Restore icon (dual nested squares)
-                let back_sq_min = pos2(m_center.x - 3.0, m_center.y - 5.0);
-                let back_sq_max = pos2(m_center.x + 5.0, m_center.y + 3.0);
-                painter.line_segment(
-                    [back_sq_min, pos2(back_sq_max.x, back_sq_min.y)],
-                    Stroke::new(1.0, max_symbol_col),
-                );
-                painter.line_segment(
-                    [pos2(back_sq_max.x, back_sq_min.y), back_sq_max],
-                    Stroke::new(1.0, max_symbol_col),
-                );
-                painter.line_segment(
-                    [pos2(back_sq_min.x + 2.0, back_sq_max.y), back_sq_max],
-                    Stroke::new(1.0, max_symbol_col),
-                );
-                painter.line_segment(
-                    [back_sq_min, pos2(back_sq_min.x, back_sq_min.y + 2.0)],
-                    Stroke::new(1.0, max_symbol_col),
-                );
-                let front_sq = Rect::from_min_max(
-                    pos2(m_center.x - 5.0, m_center.y - 3.0),
-                    pos2(m_center.x + 3.0, m_center.y + 5.0),
-                );
-                painter.rect_stroke(
-                    front_sq,
-                    CornerRadius::ZERO,
-                    Stroke::new(1.0, max_symbol_col),
-                    StrokeKind::Inside,
-                );
-            } else {
-                let box_rect = Rect::from_center_size(m_center, vec2(icon_box_size, icon_box_size));
-                painter.rect_stroke(
-                    box_rect,
-                    CornerRadius::ZERO,
-                    Stroke::new(1.0, max_symbol_col),
-                    StrokeKind::Inside,
-                );
-            }
-
-            // 3. Minimize Button
-            let min_resp = ui.interact(
-                min_rect,
-                ui.scope_id().with("win11_caption_min"),
-                Sense::click(),
-            );
-            if min_resp.clicked() {
-                ui.ctx().send_viewport_cmd(ViewportCommand::Minimized(true));
-            }
-            let (min_bg, min_symbol_col) = if min_resp.is_pointer_button_down_on() {
-                (theme.windows_caption_pressed_bg(), theme.label())
-            } else if min_resp.hovered() {
-                (theme.windows_caption_hover_bg(), theme.label())
-            } else {
-                (Color32::TRANSPARENT, theme.label())
-            };
-            if min_bg != Color32::TRANSPARENT {
-                painter.rect_filled(min_rect, CornerRadius::ZERO, min_bg);
-            }
-            let min_center = min_rect.center();
-            painter.line_segment(
-                [
-                    pos2(min_center.x - half_icon, min_center.y),
-                    pos2(min_center.x + half_icon, min_center.y),
-                ],
-                Stroke::new(1.0, min_symbol_col),
-            );
-
-            btn_w * 3.0 + 12.0
-        } else {
-            16.0
-        };
-
-        // Trailing Controls via Layout::right_to_left
-        let right_area = Rect::from_min_max(
-            pos2(leading_end_x + 8.0, rect.min.y),
-            pos2(rect.max.x - right_offset, rect.max.y),
-        );
-
-        let mut trailing_start_x = rect.max.x - right_offset;
-        if right_area.width() > 0.0 {
-            let mut right_ui = ui.new_child(
-                egui::UiBuilder::new()
-                    .max_rect(right_area)
-                    .layout(Layout::right_to_left(Align::Center)),
-            );
-
-            // 1. Dynamic Theme Toggle [ Aqua | DarkAqua ]
-            let current_theme_idx = match self.appearance {
-                MacAppearance::Aqua => 0,
-                MacAppearance::DarkAqua => 1,
-            };
-            MacSegmentedControl::new(&["Aqua", "DarkAqua"], current_theme_idx)
-                .theme(theme)
-                .height(24.0)
-                .show(&mut right_ui, |idx| {
-                    self.appearance = match idx {
-                        0 => MacAppearance::Aqua,
-                        _ => MacAppearance::DarkAqua,
-                    };
-                });
-
-            right_ui.add_space(8.0);
-
-            // 2. Strategy 2 Configurable Window Controls Style Switcher [ Apple | Windows | Native ]
-            let current_style_idx = match self.window_controls_style {
-                WindowControlsStyle::AppleTrafficLights => 0,
-                WindowControlsStyle::WindowsCaptionButtons => 1,
-                WindowControlsStyle::NativeHost => 2,
-            };
-            MacSegmentedControl::new(&["Apple", "Windows", "Native"], current_style_idx)
-                .theme(theme)
-                .height(24.0)
-                .show(&mut right_ui, |idx| {
-                    self.window_controls_style = match idx {
-                        0 => WindowControlsStyle::AppleTrafficLights,
-                        1 => WindowControlsStyle::WindowsCaptionButtons,
-                        _ => WindowControlsStyle::NativeHost,
-                    };
-                });
-
-            right_ui.add_space(8.0);
-
-            // 3. Center Toolbar: Inspector Mode Switcher [ Default NIB | Compact HUD | Expanded Pro ]
-            let current_mode_idx = match self.inspector_mode {
-                InspectorMode::DefaultNib => 0,
-                InspectorMode::CompactHud => 1,
-                InspectorMode::ExpandedPro => 2,
-            };
-            let mode_def = format!("{} Default", MacSymbol::Gear.as_str());
-            let mode_hud = format!("{} Compact", MacSymbol::Sliders.as_str());
-            let mode_pro = format!("{} Expanded", MacSymbol::Plus.as_str());
-            let mode_items = [mode_def.as_str(), mode_hud.as_str(), mode_pro.as_str()];
-            MacSegmentedControl::new(
-                &mode_items,
-                current_mode_idx,
-            )
-            .theme(theme)
-            .height(24.0)
-            .show(&mut right_ui, |idx| {
-                self.inspector_mode = match idx {
-                    0 => InspectorMode::DefaultNib,
-                    1 => InspectorMode::CompactHud,
-                    _ => InspectorMode::ExpandedPro,
-                };
-            });
-
-            right_ui.add_space(8.0);
-
-            // 4. Spotlight Command Palette Button [ Search ⌘K on macOS, Ctrl+K on Windows ]
-            let k_str = if cfg!(target_os = "macos") { "⌘K" } else { "Ctrl+K" };
-            let search_label = format!("{} {}", MacSymbol::Search.as_str(), k_str);
-            let spot_btn = right_ui.add(
-                MacButtonCell::new(&search_label)
-                    .theme(theme)
-                    .height(24.0)
-                    .selected(self.palette.open),
-            );
-            if spot_btn.clicked() {
-                self.palette.toggle();
-            }
-
-            if right_ui.min_rect().is_positive() {
-                trailing_start_x = right_ui.min_rect().left();
-            }
-        }
-
-        // Zone 2 (Center Zone): Window Title (AppKit 3-zone flex layout with dynamic centering & truncation)
-        let title_min_x = leading_end_x + 8.0;
-        let title_max_x = trailing_start_x - 12.0;
-        let available_title_w = title_max_x - title_min_x;
-
-        if available_title_w >= 40.0 {
-            let title_font = FontId::proportional(theme.text_field().regular.font_size.points());
-            let title_color = theme.label();
-            let title_str = format!(
-                "macview_gallery v{} (AppKit macOS 15 Parity)",
-                egui_macview::VERSION
-            );
-
-            let full_galley = painter.layout_no_wrap(title_str.clone(), title_font.clone(), title_color);
-            let full_w = full_galley.size().x;
-
-            let center_x = rect.center().x;
-            let centered_min_x = center_x - full_w * 0.5;
-            let centered_max_x = center_x + full_w * 0.5;
-
-            // Center if space allows without colliding with leading or trailing controls;
-            // otherwise leading-align or gracefully truncate with an ellipsis.
-            if full_w <= available_title_w && centered_min_x >= title_min_x && centered_max_x <= title_max_x {
-                let pos = pos2(centered_min_x, traffic_y - full_galley.size().y * 0.5);
-                painter.galley(pos, full_galley, title_color);
-            } else if full_w <= available_title_w {
-                let pos = pos2(title_min_x, traffic_y - full_galley.size().y * 0.5);
-                painter.galley(pos, full_galley, title_color);
-            } else {
-                let format = egui::TextFormat {
-                    font_id: title_font,
-                    color: title_color,
-                    ..Default::default()
-                };
-                let mut job = egui::text::LayoutJob::single_section(title_str, format);
-                job.wrap.max_width = available_title_w;
-                job.wrap.max_rows = 1;
-                job.wrap.break_anywhere = false;
-                let truncated_galley = painter.layout_job(job);
-                let pos = pos2(title_min_x, traffic_y - truncated_galley.size().y * 0.5);
-                painter.galley(pos, truncated_galley, title_color);
-            }
+        if tb_resp.drag_started {
+            ui.ctx().send_viewport_cmd(ViewportCommand::StartDrag);
         }
     }
 }
@@ -1710,13 +1438,16 @@ impl SidebarState {
 impl CenterState {
     /// Renders the Center View containing Search, the active Master-Detail AppKit capability screen,
     /// and the Canvas Footer with reactive breadcrumbs.
+    #[allow(clippy::too_many_arguments)]
     fn render(
         &mut self,
         ui: &mut Ui,
         theme: &MacTheme,
         card_cell: &RefCell<CardModel>,
+        undo_manager: &RefCell<NSUndoManager<CardModel>>,
+        last_stable_card: &RefCell<CardModel>,
         inspector_mode: InspectorMode,
-        active_screen: GalleryScreen,
+        active_screen: &mut GalleryScreen,
         snapping_enabled: bool,
         toasts: &RefCell<MacToastManager>,
     ) {
@@ -1743,7 +1474,7 @@ impl CenterState {
                 .layout(Layout::left_to_right(Align::Center)),
         );
 
-        let placeholder = match active_screen {
+        let placeholder = match *active_screen {
             GalleryScreen::CanvasPhysics => "Search canvas geometry, transforms, CASpring physics...",
             GalleryScreen::VectorAssets => "Filter 14 AppKit vector symbols (e.g. search, chevron, gear)...",
             GalleryScreen::DesignTokensWcag => "Filter W3C design tokens (e.g. button, metric, motion)...",
@@ -1779,9 +1510,21 @@ impl CenterState {
             .height(footer_h)
             .show(&mut footer_ui, footer_rect.width());
 
-        if let Some(MacCanvasFooterAction::SelectZoom(z)) = footer_action {
-            card.scale_pct = z * 100.0;
-            toasts.borrow_mut().info("Preset applied");
+        match footer_action {
+            Some(MacCanvasFooterAction::SelectZoom(z)) => {
+                card.scale_pct = z * 100.0;
+                toasts.borrow_mut().info("Preset applied");
+            }
+            Some(MacCanvasFooterAction::BreadcrumbClicked(crumb_idx)) => {
+                if crumb_idx == 0 {
+                    *active_screen = GalleryScreen::CanvasPhysics;
+                } else {
+                    let cur_idx = *active_screen as usize;
+                    *active_screen = GalleryScreen::ALL[(cur_idx + 1) % GalleryScreen::ALL.len()];
+                }
+                toasts.borrow_mut().info(active_screen.title());
+            }
+            None => {}
         }
 
         // Scrollable Canvas Area via MacScrollView (above footer)
@@ -1804,12 +1547,14 @@ impl CenterState {
             .max_height(scroll_rect.height())
             .max_width(scroll_rect.width())
             .show(&mut scroll_container_ui, |content_ui| {
-                match active_screen {
+                match *active_screen {
                     GalleryScreen::CanvasPhysics => {
                         self.render_screen_canvas_physics(
                             content_ui,
                             theme,
                             &mut card,
+                            undo_manager,
+                            last_stable_card,
                             inspector_mode,
                             snapping_enabled,
                             toasts,
@@ -1830,11 +1575,14 @@ impl CenterState {
     /// Screen 1: Interactive Canvas & Physics
     /// Showcases 2D Affine Matrix live transforms, rotation, scale, grid snap with snapping_enabled,
     /// CASpring damped harmonic oscillator pulse, and interactive canvas click.
+    #[allow(clippy::too_many_arguments)]
     fn render_screen_canvas_physics(
         &mut self,
         content_ui: &mut Ui,
         theme: &MacTheme,
         card: &mut CardModel,
+        undo_manager: &RefCell<NSUndoManager<CardModel>>,
+        last_stable_card: &RefCell<CardModel>,
         inspector_mode: InspectorMode,
         snapping_enabled: bool,
         toasts: &RefCell<MacToastManager>,
@@ -2072,7 +1820,10 @@ impl CenterState {
             NSMenuItem::action("Center Card", "card.center"),
             NSMenuItem::action("Fill Width", "card.fill_width"),
             NSMenuItem::separator(),
-            NSMenuItem::action("Toggle Proportions", "card.toggle_proportions"),
+            NSMenuItem::action("Toggle Proportions", "card.toggle_proportions")
+                .checked(card.constrain_proportions),
+            NSMenuItem::action("Toggle Drop Shadow", "card.toggle_shadow")
+                .checked(card.shadow_enabled),
             NSMenuItem::action("Copy Style", "card.copy_style"),
         ];
 
@@ -2114,6 +1865,15 @@ impl CenterState {
                     };
                     toasts.borrow_mut().info(msg);
                 }
+                "card.toggle_shadow" => {
+                    card.shadow_enabled = !card.shadow_enabled;
+                    let msg = if card.shadow_enabled {
+                        "Drop shadow enabled"
+                    } else {
+                        "Drop shadow disabled"
+                    };
+                    toasts.borrow_mut().info(msg);
+                }
                 "card.copy_style" => {
                     let style_str = format!(
                         "/* MacView Card Style */\nwidth: {}pt;\nheight: {}pt;\ncorner-radius: {}pt;\nbackground: #{:02X}{:02X}{:02X};\nopacity: {:.0}%;",
@@ -2150,6 +1910,25 @@ impl CenterState {
                 toasts.borrow_mut().info("Transform reset");
             }
 
+            let (can_undo, can_redo, undo_n, redo_m) = {
+                let um = undo_manager.borrow();
+                (um.can_undo(), um.can_redo(), um.undo_count(), um.redo_count())
+            };
+            let undo_label = format!("{} Undo ({})", MacSymbol::ArrowCounterClockwise.as_str(), undo_n);
+            if h.add(MacButtonCell::new(&undo_label).theme(theme).enabled(can_undo)).clicked()
+                && undo_manager.borrow_mut().undo(card)
+            {
+                *last_stable_card.borrow_mut() = card.clone();
+                toasts.borrow_mut().info("Undo applied");
+            }
+            let redo_label = format!("{} Redo ({})", MacSymbol::ArrowClockwise.as_str(), redo_m);
+            if h.add(MacButtonCell::new(&redo_label).theme(theme).enabled(can_redo)).clicked()
+                && undo_manager.borrow_mut().redo(card)
+            {
+                *last_stable_card.borrow_mut() = card.clone();
+                toasts.borrow_mut().info("Redo applied");
+            }
+
             let snap_status = if snapping_enabled {
                 "Snap: 15° / 25%"
             } else {
@@ -2159,92 +1938,84 @@ impl CenterState {
             h.label(egui::RichText::new("T₀=0.35s, ζ=0.65").size(10.5).color(theme.placeholder_text()));
         });
 
-        // Floating Compact HUD Palette (when Compact HUD mode active)
+        // Floating Compact HUD Palette (`MacFloatingInfoBox`, SPEC-006 §2.2)
         if inspector_mode == InspectorMode::CompactHud {
-            let hud_w = 178.0;
-            let hud_h = 63.0;
-
-            let hud_min = pos2(canvas_rect.min.x + self.hud_pos.x, canvas_rect.min.y + self.hud_pos.y);
-            let hud_rect = Rect::from_min_size(hud_min, vec2(hud_w, hud_h));
-
-            let hud_painter = content_ui.painter_at(hud_rect);
-
-            hud_painter.rect_filled(
-                hud_rect.translate(vec2(0.0, 3.0)),
-                CornerRadius::same(8),
-                Color32::from_black_alpha(90),
+            let mut hud_abs_pos = pos2(
+                canvas_rect.min.x + self.hud_pos.x,
+                canvas_rect.min.y + self.hud_pos.y,
             );
-            hud_painter.rect(
-                hud_rect,
-                CornerRadius::same(6),
-                Color32::from_rgba_premultiplied(26, 26, 28, 220),
-                Stroke::new(1.0, Color32::from_rgb(60, 60, 62)),
-                StrokeKind::Inside,
-            );
+            let label_col = theme.hud_secondary_text();
+            let font_pt = theme.text_field().compact_infobox.font_size.points();
+            let cell_w = theme.text_field().compact_infobox.default_width.points();
 
-            let header_h = 22.0;
-            let header_rect = Rect::from_min_size(hud_rect.min, vec2(hud_w, header_h));
-            hud_painter.line_segment(
-                [pos2(hud_rect.min.x, hud_rect.min.y + header_h), pos2(hud_rect.max.x, hud_rect.min.y + header_h)],
-                Stroke::new(1.0, Color32::from_rgb(48, 48, 50)),
-            );
-
-            let header_resp = content_ui.interact(
-                header_rect,
-                content_ui.scope_id().with("hud_header_drag"),
-                Sense::click_and_drag(),
-            );
-            if header_resp.dragged() {
-                self.hud_pos.x = (self.hud_pos.x + header_resp.drag_delta().x).clamp(0.0, canvas_w - hud_w);
-                self.hud_pos.y = (self.hud_pos.y + header_resp.drag_delta().y).clamp(0.0, canvas_h - hud_h);
-            }
-
-            hud_painter.circle_filled(pos2(hud_rect.min.x + 10.0, hud_rect.min.y + 11.0), 3.0, Color32::from_rgb(180, 180, 184));
-            hud_painter.text(
-                pos2(hud_rect.min.x + 20.0, hud_rect.min.y + 11.0),
-                Align2::LEFT_CENTER,
-                "HUD Palette",
-                FontId::proportional(10.5),
-                Color32::WHITE,
-            );
-
-            let row1_y = hud_rect.min.y + header_h + 3.0;
-            let row1_rect = Rect::from_min_size(pos2(hud_rect.min.x + 6.0, row1_y), vec2(hud_w - 12.0, 18.0));
-            let mut row1_ui = content_ui.new_child(
-                egui::UiBuilder::new()
-                    .max_rect(row1_rect)
-                    .layout(Layout::left_to_right(Align::Center)),
-            );
-            row1_ui.label(egui::RichText::new("W:").size(10.0).color(Color32::from_rgb(180, 180, 184)));
-            MacInputCell::with_id(Id::NULL.with("hud_w"), &mut card.width)
+            MacFloatingInfoBox::new("gallery_compact_hud", &mut hud_abs_pos)
                 .theme(theme)
-                .width(42.0)
-                .show(&mut row1_ui);
-            row1_ui.add_space(4.0);
-            row1_ui.label(egui::RichText::new("H:").size(10.0).color(Color32::from_rgb(180, 180, 184)));
-            MacInputCell::with_id(Id::NULL.with("hud_h"), &mut card.height)
-                .theme(theme)
-                .width(42.0)
-                .show(&mut row1_ui);
-
-            let row2_y = row1_y + 18.0 + 1.0;
-            let row2_rect = Rect::from_min_size(pos2(hud_rect.min.x + 6.0, row2_y), vec2(hud_w - 12.0, 18.0));
-            let mut row2_ui = content_ui.new_child(
-                egui::UiBuilder::new()
-                    .max_rect(row2_rect)
-                    .layout(Layout::left_to_right(Align::Center)),
+                .title("HUD Palette")
+                .bounds(canvas_rect)
+                .show(
+                    content_ui.ctx(),
+                    |row1_ui| {
+                        row1_ui.label(
+                            egui::RichText::new("W:")
+                                .size(font_pt)
+                                .color(label_col),
+                        );
+                        let hud_w_id = Id::NULL.with("hud_w");
+                        let hud_h_id = Id::NULL.with("hud_h");
+                        let hud_r_id = Id::NULL.with("hud_r");
+                        MacInputCell::with_id(hud_w_id, &mut card.width)
+                            .theme(theme)
+                            .control_size(MacControlSize::CompactInfobox)
+                            .width(cell_w)
+                            .prev_focus(hud_r_id)
+                            .next_focus(hud_h_id)
+                            .show(row1_ui);
+                        row1_ui.add_space(4.0);
+                        row1_ui.label(
+                            egui::RichText::new("H:")
+                                .size(font_pt)
+                                .color(label_col),
+                        );
+                        MacInputCell::with_id(hud_h_id, &mut card.height)
+                            .theme(theme)
+                            .control_size(MacControlSize::CompactInfobox)
+                            .width(cell_w)
+                            .prev_focus(hud_w_id)
+                            .next_focus(hud_r_id)
+                            .show(row1_ui);
+                    },
+                    |row2_ui| {
+                        let hud_w_id = Id::NULL.with("hud_w");
+                        let hud_h_id = Id::NULL.with("hud_h");
+                        let hud_r_id = Id::NULL.with("hud_r");
+                        row2_ui.label(
+                            egui::RichText::new("R:")
+                                .size(font_pt)
+                                .color(label_col),
+                        );
+                        MacInputCell::with_id(hud_r_id, &mut card.radius)
+                            .theme(theme)
+                            .control_size(MacControlSize::CompactInfobox)
+                            .width(cell_w)
+                            .prev_focus(hud_h_id)
+                            .next_focus(hud_w_id)
+                            .show(row2_ui);
+                        row2_ui.add_space(4.0);
+                        row2_ui.label(
+                            egui::RichText::new("θ:")
+                                .size(font_pt)
+                                .color(label_col),
+                        );
+                        MacSlider::new(&mut card.rotation_deg, 0.0..=360.0)
+                            .theme(theme)
+                            .width(55.0)
+                            .show(row2_ui);
+                    },
+                );
+            self.hud_pos = pos2(
+                hud_abs_pos.x - canvas_rect.min.x,
+                hud_abs_pos.y - canvas_rect.min.y,
             );
-            row2_ui.label(egui::RichText::new("R:").size(10.0).color(Color32::from_rgb(180, 180, 184)));
-            MacInputCell::with_id(Id::NULL.with("hud_r"), &mut card.radius)
-                .theme(theme)
-                .width(42.0)
-                .show(&mut row2_ui);
-            row2_ui.add_space(4.0);
-            row2_ui.label(egui::RichText::new("θ:").size(10.0).color(Color32::from_rgb(180, 180, 184)));
-            MacSlider::new(&mut card.rotation_deg, 0.0..=360.0)
-                .theme(theme)
-                .width(55.0)
-                .show(&mut row2_ui);
         }
 
         // CASpring Damped Harmonic Oscillator Waveform Popover
@@ -3112,6 +2883,111 @@ impl CenterState {
             .size(10.5)
             .color(theme.secondary_label()),
         );
+
+        // Section 3: v0.4.1 Control Size Tiers (`MacControlSize`), Transactional Buffer & Disabled State Matrix
+        content_ui.add_space(16.0);
+        content_ui.label(
+            egui::RichText::new(
+                "v0.4.1 Control Size Tiers (MacControlSize), Transactional Buffer & Disabled State Matrix",
+            )
+            .font(FontId::proportional(12.0))
+            .strong(),
+        );
+        content_ui.label(
+            egui::RichText::new(
+                "Live AppKit NSControlSize scaling, transactional NSTextField commit/rollback buffer, modifier-scaled NSStepper, and disabled state matrix.",
+            )
+            .size(11.0),
+        );
+        content_ui.add_space(6.0);
+
+        content_ui.horizontal(|h| {
+            h.label(egui::RichText::new("Control Size:").size(11.0).strong());
+            MacSegmentedControl::new(
+                &[
+                    "Mini (16pt)",
+                    "Compact (18pt)",
+                    "Small (19pt)",
+                    "Regular (22pt)",
+                    "Large (28pt)",
+                ],
+                self.showcase_control_size_idx,
+            )
+            .theme(theme)
+            .height(22.0)
+            .show(h, |idx| {
+                self.showcase_control_size_idx = idx;
+            });
+            h.add_space(8.0);
+            h.label(egui::RichText::new("Enable Controls:").size(11.0).strong());
+            h.add(MacToggle::new(&mut self.showcase_controls_enabled).theme(theme));
+        });
+
+        content_ui.add_space(6.0);
+        let active_ctrl_size = match self.showcase_control_size_idx {
+            0 => MacControlSize::Mini,
+            1 => MacControlSize::CompactInfobox,
+            2 => MacControlSize::Small,
+            3 => MacControlSize::Regular,
+            _ => MacControlSize::Large,
+        };
+        let is_en = self.showcase_controls_enabled;
+
+        content_ui.horizontal(|h| {
+            MacInputCell::with_id(Id::NULL.with("showcase_input_cell"), &mut self.showcase_text)
+                .theme(theme)
+                .control_size(active_ctrl_size)
+                .width(120.0)
+                .enabled(is_en)
+                .show(h);
+
+            let _ = h.add(
+                MacButtonCell::new("Action")
+                    .theme(theme)
+                    .enabled(is_en),
+            );
+
+            MacStepper::new(&mut self.showcase_step_val, -1000.0..=1000.0, 1.0)
+                .theme(theme)
+                .enabled(is_en)
+                .show(h);
+            h.label(
+                egui::RichText::new(format!("{:.0}", self.showcase_step_val))
+                    .size(11.0)
+                    .strong(),
+            );
+
+            MacPopUpButton::new(
+                &mut self.showcase_popup_idx,
+                &["Aqua Preset", "Graphite", "Vibrant Pro"],
+            )
+            .theme(theme)
+            .width(110.0)
+            .enabled(is_en)
+            .show(h);
+
+            MacColorWell::new(&mut self.showcase_color)
+                .theme(theme)
+                .enabled(is_en)
+                .show(h);
+        });
+
+        content_ui.add_space(4.0);
+        content_ui.horizontal(|h| {
+            h.label(
+                egui::RichText::new("Stepper: Click=±1, Shift=±10, Cmd/Ctrl=±100, Hold=Auto-Repeat")
+                    .size(10.5)
+                    .color(theme.secondary_label()),
+            );
+            h.add_space(8.0);
+            h.label(
+                egui::RichText::new(
+                    "Type text → Enter/Tab/Click-outside commits, Escape rolls back",
+                )
+                .size(10.5)
+                .color(theme.control_accent()),
+            );
+        });
 
         content_ui.add_space(24.0);
     }

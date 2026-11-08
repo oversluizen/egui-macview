@@ -17,7 +17,7 @@ pub mod toggle;
 
 pub use button_cell::MacButtonCell;
 pub use color_well::MacColorWell;
-pub use input_cell::MacInputCell;
+pub use input_cell::{MacControlSize, MacInputCell};
 pub use outline_view::{MacOutlineRow, MacOutlineRowResponse, MacOutlineTree, MacOutlineView};
 pub use popup_button::MacPopUpButton;
 pub use search_field::MacSearchField;

@@ -4,10 +4,13 @@
 //! Fully data-driven: zero hardcoded colors or dimensions.
 
 pub mod card;
+pub mod hud;
 pub use card::MacCard;
+pub use hud::MacFloatingInfoBox;
 
 use crate::theme::MacTheme;
-use egui::{CornerRadius, Pos2, Rect, Response, Stroke, StrokeKind, Ui, Vec2};
+use egui::{CornerRadius, Id, Pos2, Rect, Response, Stroke, StrokeKind, Ui, Vec2};
+use std::hash::Hash;
 
 /// Authentic macOS NSPanel floating surface container.
 ///
@@ -35,6 +38,7 @@ use egui::{CornerRadius, Pos2, Rect, Response, Stroke, StrokeKind, Ui, Vec2};
 /// ```
 #[derive(Default)]
 pub struct MacPanel<'a> {
+    id: Option<Id>,
     title: Option<String>,
     theme: Option<&'a MacTheme>,
     rounding: Option<u8>,
@@ -44,6 +48,12 @@ impl<'a> MacPanel<'a> {
     /// Creates a new floating panel surface.
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Sets an explicit widget `Id` for this panel.
+    pub fn id(mut self, id_source: impl Hash + std::fmt::Debug) -> Self {
+        self.id = Some(Id::NULL.with(id_source));
+        self
     }
 
     /// Injects dynamic theme to eliminate hardcoded metrics and colors.
@@ -75,10 +85,25 @@ impl<'a> MacPanel<'a> {
         let theme = match self.theme {
             Some(t) => t,
             None => {
-                fallback_theme = MacTheme::default();
+                fallback_theme = MacTheme::from_ctx(ui.ctx());
                 &fallback_theme
             }
         };
+
+        let panel_id = self.id.unwrap_or_else(|| {
+            ui.scope_id().with((
+                "mac_panel",
+                self.title.as_deref().unwrap_or(""),
+                rect.min.x.to_bits(),
+                rect.min.y.to_bits(),
+            ))
+        });
+        let resp = ui.interact(rect, panel_id, egui::Sense::click_and_drag());
+        if ui.rect_contains_pointer(rect) {
+            ui.input_mut(|i| {
+                i.smooth_scroll_delta = Vec2::ZERO;
+            });
+        }
 
         let popover_metrics = theme.popover_metrics();
         let rounding = self
@@ -126,11 +151,6 @@ impl<'a> MacPanel<'a> {
                 .layout(egui::Layout::top_down(egui::Align::Min)),
         );
         let ret = add_contents(&mut child_ui);
-        let resp = ui.interact(
-            rect,
-            ui.scope_id().with("mac_panel"),
-            egui::Sense::click_and_drag(),
-        );
         (resp, ret)
     }
 }
@@ -176,6 +196,7 @@ pub enum MacPopoverArrowEdge {
 /// # output.textures_delta.clear();
 /// ```
 pub struct MacPopover<'a> {
+    id: Option<Id>,
     theme: Option<&'a MacTheme>,
     arrow_edge: MacPopoverArrowEdge,
     arrow_offset: Option<f32>,
@@ -186,6 +207,7 @@ pub struct MacPopover<'a> {
 impl<'a> Default for MacPopover<'a> {
     fn default() -> Self {
         Self {
+            id: None,
             theme: None,
             arrow_edge: MacPopoverArrowEdge::Top,
             arrow_offset: None,
@@ -199,6 +221,12 @@ impl<'a> MacPopover<'a> {
     /// Creates a new popover surface.
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Sets an explicit widget `Id` for this popover.
+    pub fn id(mut self, id_source: impl Hash + std::fmt::Debug) -> Self {
+        self.id = Some(Id::NULL.with(id_source));
+        self
     }
 
     /// Injects dynamic theme to eliminate hardcoded metrics and colors.
@@ -242,7 +270,7 @@ impl<'a> MacPopover<'a> {
         let theme = match self.theme {
             Some(t) => t,
             None => {
-                fallback_theme = MacTheme::default();
+                fallback_theme = MacTheme::from_ctx(ui.ctx());
                 &fallback_theme
             }
         };
@@ -257,6 +285,21 @@ impl<'a> MacPopover<'a> {
         let center = rect.center();
         let scaled_size = rect.size() * self.scale.max(f32::EPSILON);
         let active_rect = Rect::from_center_size(center, scaled_size);
+
+        let popover_id = self.id.unwrap_or_else(|| {
+            ui.scope_id().with((
+                "mac_popover",
+                rect.min.x.to_bits(),
+                rect.min.y.to_bits(),
+                self.arrow_edge as u8,
+            ))
+        });
+        let resp = ui.interact(active_rect, popover_id, egui::Sense::click_and_drag());
+        if ui.rect_contains_pointer(active_rect) {
+            ui.input_mut(|i| {
+                i.smooth_scroll_delta = Vec2::ZERO;
+            });
+        }
 
         let bg_color = theme.window_background().gamma_multiply(self.alpha);
         let border_color = theme.separator().gamma_multiply(self.alpha);
@@ -335,11 +378,6 @@ impl<'a> MacPopover<'a> {
                 .layout(egui::Layout::top_down(egui::Align::Min)),
         );
         let ret = add_contents(&mut child_ui);
-        let resp = ui.interact(
-            active_rect,
-            ui.scope_id().with("mac_popover"),
-            egui::Sense::click_and_drag(),
-        );
         (resp, ret)
     }
 }

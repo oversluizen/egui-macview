@@ -1,6 +1,6 @@
 [package]
 name = "egui-macview"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 authors = ["Jaco Oversluizen", "egui-macview contributors"]
@@ -29,6 +29,18 @@ proptest = "1.6"
 [[test]]
 name = "appkit_primitives_tests"
 path = "tests/appkit_primitives_tests.rs"
+
+[[test]]
+name = "layout_engines_tests"
+path = "tests/layout_engines_tests.rs"
+
+[[test]]
+name = "input_and_focus_tests"
+path = "tests/input_and_focus_tests.rs"
+
+[[test]]
+name = "surface_and_hud_isolation_tests"
+path = "tests/surface_and_hud_isolation_tests.rs"
 
 [[test]]
 name = "architecture_guard_tests"
@@ -61,6 +73,14 @@ path = "tests/zero_hardcoding_and_primitive_tests.rs"
 [[test]]
 name = "menu_and_palette_tests"
 path = "tests/menu_and_palette_tests.rs"
+
+[[test]]
+name = "palette_and_footer_tests"
+path = "tests/palette_and_footer_tests.rs"
+
+[[test]]
+name = "gallery_binding_tests"
+path = "tests/gallery_binding_tests.rs"
 
 [[test]]
 name = "undo_and_feedback_tests"

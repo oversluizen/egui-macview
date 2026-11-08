@@ -5,95 +5,12 @@
 
 use crate::theme::MacTheme;
 use egui::{
-    Align2, Area, Color32, CornerRadius, FontId, Key, Order, Pos2, Rect, ScrollArea, Sense, Stroke,
-    StrokeKind, TextEdit, Vec2,
+    Align, Align2, Area, CornerRadius, FontId, Frame, Id, Key, Layout, Modifiers, Order, Pos2,
+    Rect, ScrollArea, Sense, Stroke, StrokeKind, TextEdit, UiBuilder, Vec2,
 };
 
-use super::item::MacKeyboardShortcut;
-
-/// Default command palette width in points.
-pub const COMMAND_PALETTE_WIDTH: f32 = 480.0;
-/// Default command palette height in points.
-pub const COMMAND_PALETTE_HEIGHT: f32 = 280.0;
-
-/// Trait for types that can be converted into a shortcut string representation.
-pub trait IntoShortcutString {
-    /// Converts into a human-readable shortcut string.
-    fn into_shortcut_string(self) -> String;
-}
-
-impl IntoShortcutString for String {
-    fn into_shortcut_string(self) -> String {
-        self
-    }
-}
-
-impl IntoShortcutString for &str {
-    fn into_shortcut_string(self) -> String {
-        self.to_string()
-    }
-}
-
-impl IntoShortcutString for MacKeyboardShortcut {
-    fn into_shortcut_string(self) -> String {
-        self.format_text()
-    }
-}
-
-/// Individual registered command entry.
-#[derive(Debug, Clone, PartialEq)]
-pub struct CommandPaletteItem {
-    /// Action identifier returned when command is executed.
-    pub id: String,
-    /// Human-readable command title label.
-    pub title: String,
-    /// Optional explanatory subtitle.
-    pub subtitle: Option<String>,
-    /// Optional command group/category name (e.g. "File", "View").
-    pub category: Option<String>,
-    /// Optional keyboard shortcut display string (e.g. "Ctrl+S").
-    pub shortcut: Option<String>,
-    /// Keywords for query search matching.
-    pub keywords: Vec<String>,
-}
-
-impl CommandPaletteItem {
-    /// Constructs a basic command palette item.
-    pub fn new(id: impl Into<String>, title: impl Into<String>) -> Self {
-        Self {
-            id: id.into(),
-            title: title.into(),
-            subtitle: None,
-            category: None,
-            shortcut: None,
-            keywords: Vec::new(),
-        }
-    }
-
-    /// Sets the subtitle.
-    pub fn subtitle(mut self, sub: impl Into<String>) -> Self {
-        self.subtitle = Some(sub.into());
-        self
-    }
-
-    /// Sets the category group.
-    pub fn category(mut self, cat: impl Into<String>) -> Self {
-        self.category = Some(cat.into());
-        self
-    }
-
-    /// Sets keyboard shortcut display string or MacKeyboardShortcut.
-    pub fn shortcut(mut self, sc: impl IntoShortcutString) -> Self {
-        self.shortcut = Some(sc.into_shortcut_string());
-        self
-    }
-
-    /// Sets search keywords.
-    pub fn keywords(mut self, kw: &[impl AsRef<str>]) -> Self {
-        self.keywords = kw.iter().map(|s| s.as_ref().to_string()).collect();
-        self
-    }
-}
+pub use super::fuzzy::{CommandPaletteItem, IntoShortcutString};
+pub use crate::tokens::metrics::navigation::{COMMAND_PALETTE_HEIGHT, COMMAND_PALETTE_WIDTH};
 
 /// Floating modal command palette state and renderer.
 pub struct MacCommandPalette {
@@ -179,7 +96,6 @@ impl MacCommandPalette {
     }
 
     /// Computes a fuzzy match score for pattern against text.
-    /// Returns `Some(score)` if pattern is a subsequence of text (case-insensitive), or `None` otherwise.
     #[inline]
     pub fn fuzzy_match_score(pattern: &str, text: &str) -> Option<i32> {
         super::fuzzy::fuzzy_match_score(pattern, text)
@@ -212,7 +128,6 @@ impl MacCommandPalette {
             })
             .collect();
 
-        // Sort descending by score, tie-break by original index
         scored.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(&b.1)));
         scored.into_iter().map(|(_, _, it)| it).collect()
     }
@@ -249,18 +164,16 @@ impl MacCommandPalette {
         }
     }
 
-    /// Handles keyboard events (Cmd+K / Ctrl+K, Arrows, Enter, Escape).
+    /// Handles keyboard events (`Cmd+K` / `Ctrl+K`, Arrows, Enter, Escape).
     pub fn handle_input(&mut self, input: &egui::InputState) -> Option<String> {
         let cmd = input.modifiers.command || input.modifiers.ctrl;
         if cmd && input.key_pressed(Key::K) {
             self.toggle();
             return None;
         }
-
         if !self.open {
             return None;
         }
-
         if input.key_pressed(Key::Escape) {
             if !self.query.is_empty() {
                 self.query.clear();
@@ -270,59 +183,105 @@ impl MacCommandPalette {
             }
             return None;
         }
-
         if input.key_pressed(Key::ArrowDown) {
             self.select_next();
             return None;
         }
-
         if input.key_pressed(Key::ArrowUp) {
             self.select_prev();
             return None;
         }
-
         if input.key_pressed(Key::Enter) {
             return self.execute_selected();
         }
-
         None
     }
 
     /// Renders the modal command palette window, returning action ID if triggered.
     pub fn show(&mut self, ctx: &egui::Context, theme: &MacTheme) -> Option<String> {
+        let cmd_toggled = ctx.input_mut(|i| {
+            let cmd = i.modifiers.command || i.modifiers.ctrl;
+            if cmd && i.key_pressed(Key::K) {
+                let mods = i.modifiers;
+                i.consume_key(mods, Key::K);
+                return true;
+            }
+            false
+        });
+        if cmd_toggled {
+            self.toggle();
+            return None;
+        }
+
         if !self.open {
             return None;
         }
 
-        let mut triggered_action = None;
-
-        // Check global shortcuts first
-        if let Some(action) = ctx.input(|i| self.handle_input(i)) {
+        let key_action = ctx.input_mut(|i| {
+            if i.consume_key(Modifiers::NONE, Key::Escape) {
+                if !self.query.is_empty() {
+                    self.query.clear();
+                    self.selected_index = 0;
+                } else {
+                    self.close();
+                }
+                return None;
+            }
+            if i.consume_key(Modifiers::NONE, Key::ArrowDown) {
+                self.select_next();
+                return None;
+            }
+            if i.consume_key(Modifiers::NONE, Key::ArrowUp) {
+                self.select_prev();
+                return None;
+            }
+            if i.consume_key(Modifiers::NONE, Key::Enter) {
+                return self.execute_selected();
+            }
+            None
+        });
+        if let Some(action) = key_action {
             return Some(action);
         }
+        if !self.open {
+            return None;
+        }
 
+        let pal = theme.palette_metrics();
+        let border_w = theme.popover_metrics().border_width.points();
+        let corner_r = pal.corner_radius.points() as u8;
+        let header_h = pal.search_bar_height.points();
+        let search_margin = pal.search_padding_x.points() * 0.5;
+        let search_font_pt = pal.query_font_size.points();
+        let row_height = pal.row_height.points();
+        let row_corner_r = pal.row_corner_radius.points() as u8;
+        let row_inset_x = pal.row_inset.points();
+        let row_inset_y = border_w;
+        let padding_h = pal.row_padding_x.points();
+        let title_font_pt = pal.item_font_size.points();
+        let badge_font_pt = pal.category_font_size.points();
+        let cat_offset_x = pal.row_padding_x.points() * 2.0;
+        let on_accent = theme.on_accent_text();
+
+        let fallback_screen = Vec2::new(self.width * 2.0, self.height * 2.0);
         let screen_rect = ctx
             .input(|i| i.raw.screen_rect)
-            .unwrap_or(Rect::from_min_size(Pos2::ZERO, Vec2::new(800.0, 600.0)));
+            .unwrap_or(Rect::from_min_size(Pos2::ZERO, fallback_screen));
         let palette_rect =
             Rect::from_center_size(screen_rect.center(), Vec2::new(self.width, self.height));
 
         let mut should_close = false;
         let mut backdrop_clicked = false;
+        let mut triggered_action = None;
 
-        // Backdrop dimmer
-        #[allow(deprecated)]
-        let backdrop_id = egui::Id::new("command_palette_backdrop");
+        let backdrop_id = Id::NULL.with("command_palette_backdrop");
         Area::new(backdrop_id)
             .order(Order::Middle)
             .fixed_pos(screen_rect.min)
             .show(ctx, |ui| {
                 let resp = ui.allocate_response(screen_rect.size(), Sense::click());
-                ui.painter().rect_filled(
-                    screen_rect,
-                    CornerRadius::ZERO,
-                    Color32::from_black_alpha(100),
-                );
+                ui.painter()
+                    .rect_filled(screen_rect, CornerRadius::ZERO, theme.backdrop_dim());
                 if resp.clicked() {
                     backdrop_clicked = true;
                 }
@@ -333,80 +292,66 @@ impl MacCommandPalette {
             return None;
         }
 
-        // Floating Palette Modal
-        #[allow(deprecated)]
-        let modal_id = egui::Id::new("command_palette_modal");
+        let modal_id = Id::NULL.with("command_palette_modal");
         Area::new(modal_id)
             .order(Order::Foreground)
             .fixed_pos(palette_rect.min)
             .show(ctx, |ui| {
+                let _ = ui.allocate_rect(palette_rect, Sense::click());
                 let painter = ui.painter();
-                let corner_r = 10u8;
 
-                // Window background and stroke
                 painter.rect(
                     palette_rect,
                     CornerRadius::same(corner_r),
                     theme.window_background(),
-                    Stroke::new(1.0, theme.separator()),
+                    Stroke::new(border_w, theme.separator()),
                     StrokeKind::Inside,
                 );
 
-                let header_h = 36.0f32;
                 let header_rect = Rect::from_min_size(
                     palette_rect.min,
                     Vec2::new(palette_rect.width(), header_h),
                 );
-
-                // Bottom divider under search bar
                 painter.line_segment(
                     [
                         Pos2::new(header_rect.left(), header_rect.bottom()),
                         Pos2::new(header_rect.right(), header_rect.bottom()),
                     ],
-                    Stroke::new(1.0, theme.separator()),
+                    Stroke::new(border_w, theme.separator()),
                 );
 
-                // Search field text edit
-                let search_margin = 8.0f32;
                 let search_box_rect = header_rect.shrink(search_margin);
                 let mut search_ui = ui.new_child(
-                    egui::UiBuilder::new()
+                    UiBuilder::new()
                         .max_rect(search_box_rect)
-                        .layout(egui::Layout::left_to_right(egui::Align::Center)),
+                        .layout(Layout::left_to_right(Align::Center)),
                 );
 
                 let text_edit = TextEdit::singleline(&mut self.query)
                     .hint_text("Type a command or search...")
-                    .font(FontId::proportional(14.0))
-                    .frame(egui::Frame::NONE)
+                    .font(FontId::proportional(search_font_pt))
+                    .frame(Frame::NONE)
                     .desired_width(search_box_rect.width());
 
                 let edit_resp = search_ui.add(text_edit);
                 edit_resp.request_focus();
 
-                // Results list
                 let results_rect = Rect::from_min_max(
-                    Pos2::new(palette_rect.min.x, header_rect.bottom() + 1.0),
+                    Pos2::new(palette_rect.min.x, header_rect.bottom() + border_w),
                     palette_rect.max,
                 );
 
-                let filtered_count = Self::filter_items(&self.items, &self.query).len();
-
+                let filtered = Self::filter_items(&self.items, &self.query);
+                let filtered_count = filtered.len();
                 if self.selected_index >= filtered_count && filtered_count > 0 {
                     self.selected_index = filtered_count - 1;
                 }
                 let active_selected_idx = self.selected_index;
 
-                let filtered = Self::filter_items(&self.items, &self.query);
-
-                let row_height = 28.0f32;
-                let padding_h = 12.0f32;
-
                 let mut list_ui = ui.new_child(
-                    egui::UiBuilder::new()
+                    UiBuilder::new()
                         .max_rect(results_rect)
-                        .layout(egui::Layout::top_down(egui::Align::Min)),
+                        .layout(Layout::top_down(Align::Min)),
                 );
 
                 ScrollArea::vertical()
@@ -419,18 +364,20 @@ impl MacCommandPalette {
                             );
 
                             let is_selected = active_selected_idx == idx;
+                            let highlight_rect =
+                                row_rect.shrink2(Vec2::new(row_inset_x, row_inset_y));
                             if is_selected {
                                 scroll_ui.painter().rect(
-                                    row_rect.shrink2(Vec2::new(4.0, 1.0)),
-                                    CornerRadius::same(5),
+                                    highlight_rect,
+                                    CornerRadius::same(row_corner_r),
                                     theme.control_accent(),
                                     Stroke::NONE,
                                     StrokeKind::Inside,
                                 );
                             } else if resp.hovered() {
                                 scroll_ui.painter().rect(
-                                    row_rect.shrink2(Vec2::new(4.0, 1.0)),
-                                    CornerRadius::same(5),
+                                    highlight_rect,
+                                    CornerRadius::same(row_corner_r),
                                     theme.control(),
                                     Stroke::NONE,
                                     StrokeKind::Inside,
@@ -438,44 +385,43 @@ impl MacCommandPalette {
                             }
 
                             let text_color = if is_selected {
-                                Color32::WHITE
+                                on_accent
                             } else {
                                 theme.label()
                             };
-
                             let sec_color = if is_selected {
-                                Color32::WHITE
+                                on_accent
                             } else {
                                 theme.secondary_label()
                             };
 
-                            // Title
                             scroll_ui.painter().text(
                                 Pos2::new(row_rect.left() + padding_h, row_rect.center().y),
                                 Align2::LEFT_CENTER,
                                 &item.title,
-                                FontId::proportional(12.5),
+                                FontId::proportional(title_font_pt),
                                 text_color,
                             );
 
-                            // Category badge
                             if let Some(cat) = &item.category {
                                 scroll_ui.painter().text(
-                                    Pos2::new(row_rect.center().x + 20.0, row_rect.center().y),
+                                    Pos2::new(
+                                        row_rect.center().x + cat_offset_x,
+                                        row_rect.center().y,
+                                    ),
                                     Align2::LEFT_CENTER,
                                     cat,
-                                    FontId::proportional(10.5),
+                                    FontId::proportional(badge_font_pt),
                                     sec_color,
                                 );
                             }
 
-                            // Shortcut badge
                             if let Some(sc) = &item.shortcut {
                                 scroll_ui.painter().text(
                                     Pos2::new(row_rect.right() - padding_h, row_rect.center().y),
                                     Align2::RIGHT_CENTER,
                                     sc,
-                                    FontId::monospace(10.5),
+                                    FontId::monospace(badge_font_pt),
                                     sec_color,
                                 );
                             }

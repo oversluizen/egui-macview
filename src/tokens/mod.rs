@@ -12,11 +12,13 @@ pub mod typography;
 pub use color::{MacAppearanceColors, MacColorTokens};
 pub use dtcg::{ColorValue, DimensionValue};
 pub use metrics::{
-    ButtonMetrics, ButtonSizeMetrics, ColorWellMetrics, FocusRingMetrics, LayoutMetrics,
-    MacControlMetrics, MacMetricsTokens, OutlineViewMetrics, PopUpButtonMetrics, PopoverMetrics,
+    ButtonMetrics, ButtonSizeMetrics, ColorWellMetrics, ContextMenuMetrics, FocusRingMetrics,
+    FooterMetrics, LayoutMetrics, MacControlMetrics, MacMetricsTokens, MenuBarMetrics,
+    NavigationMetrics, OutlineViewMetrics, PaletteMetrics, PopUpButtonMetrics, PopoverMetrics,
     ScrollViewMetrics, SearchFieldMetrics, SegmentedMetrics, SegmentedSizeMetrics, SliderMetrics,
     SplitViewMetrics, StackViewMetrics, StepperMetrics, TextFieldMetrics, TextFieldSizeMetrics,
-    ThumbnailCellMetrics, ToggleMetrics, ToolbarMetrics,
+    ThumbnailCellMetrics, ToastMetrics, ToggleMetrics, ToolbarMetrics, CANVAS_FOOTER_HEIGHT,
+    COMMAND_PALETTE_HEIGHT, COMMAND_PALETTE_WIDTH, DEFAULT_TOAST_DURATION,
 };
 pub use motion::{MacMotionTokens, MotionPresetToken};
 pub use typography::{
@@ -166,6 +168,42 @@ impl MacDesignTokens {
     #[inline]
     pub fn toggle_metrics(&self) -> &ToggleMetrics {
         &self.macview.metrics.control.toggle
+    }
+
+    /// Accesses navigation and feedback metrics tokens.
+    #[inline]
+    pub fn navigation_metrics(&self) -> &NavigationMetrics {
+        &self.macview.metrics.navigation
+    }
+
+    /// Accesses menu bar metrics tokens.
+    #[inline]
+    pub fn menu_bar_metrics(&self) -> &MenuBarMetrics {
+        &self.macview.metrics.navigation.menu_bar
+    }
+
+    /// Accesses canvas footer metrics tokens.
+    #[inline]
+    pub fn footer_metrics(&self) -> &FooterMetrics {
+        &self.macview.metrics.navigation.footer
+    }
+
+    /// Accesses command palette metrics tokens.
+    #[inline]
+    pub fn palette_metrics(&self) -> &PaletteMetrics {
+        &self.macview.metrics.navigation.palette
+    }
+
+    /// Accesses context menu metrics tokens.
+    #[inline]
+    pub fn context_menu_metrics(&self) -> &ContextMenuMetrics {
+        &self.macview.metrics.navigation.context_menu
+    }
+
+    /// Accesses toast notification metrics tokens.
+    #[inline]
+    pub fn toast_metrics(&self) -> &ToastMetrics {
+        &self.macview.metrics.navigation.toast
     }
 
     /// Accesses semantic color tokens.

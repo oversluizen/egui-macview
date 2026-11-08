@@ -1,8 +1,8 @@
-# SPEC-008: AppKit Vector Symbols, Iconography & CupertinoIcons Engine
+# SPEC-008A: AppKit Vector Symbols, Iconography & CupertinoIcons Engine
 
 | Attribute | Specification Value |
 | :--- | :--- |
-| **Document ID** | SPEC-008 (Symbols) |
+| **Document ID** | SPEC-008A |
 | **Document Title** | AppKit Vector Symbols, Iconography & CupertinoIcons Engine |
 | **Document Version** | `0.4.0` |
 | **Status** | Accepted / Normative |
@@ -22,6 +22,7 @@
 | `0.2.0` | 2026-11-06 | Architecture Team | Problem Identification: Windows Segoe UI Emoji Multi-Color Divergence in `macview_gallery` |
 | `0.3.0` | 2026-11-06 | Architecture Team | Normative Release: CupertinoIcons Vector Font Engine (`MacSymbol`, `setup_symbols_font`, Anti-Emoji Guard) |
 | `0.4.0` | 2026-11-07 | Architecture Team | Milestone 0.4.0 Release: Full AppKit Vector Symbol suite synchronized with Crate v0.4.0 |
+| `0.4.1` | 2026-11-08 | Architecture Team | Consolidation Hardening: Disambiguated Document ID (`SPEC-008A`) and menu checkmark vector rendering |
 
 ---
 

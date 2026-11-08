@@ -43,6 +43,40 @@ impl NSMenu {
         Self::find_shortcut_in_items(&self.items, input)
     }
 
+    /// Recursively searches for and consumes a matching keyboard shortcut in this menu.
+    pub fn consume_shortcut(&self, input: &mut egui::InputState) -> Option<String> {
+        Self::consume_shortcut_in_items(&self.items, input)
+    }
+
+    /// Recursively searches items for a matching keyboard shortcut and consumes it.
+    pub fn consume_shortcut_in_items(
+        items: &[NSMenuItem],
+        input: &mut egui::InputState,
+    ) -> Option<String> {
+        for item in items {
+            if !item.enabled {
+                continue;
+            }
+            match &item.kind {
+                super::item::MacMenuItemKind::Action {
+                    id,
+                    shortcut: Some(sc),
+                } => {
+                    if sc.consume(input) {
+                        return Some(id.clone());
+                    }
+                }
+                super::item::MacMenuItemKind::Submenu { menu } => {
+                    if let Some(act) = Self::consume_shortcut_in_items(&menu.items, input) {
+                        return Some(act);
+                    }
+                }
+                _ => {}
+            }
+        }
+        None
+    }
+
     /// Recursively searches items for a matching keyboard shortcut.
     pub fn find_shortcut_in_items(
         items: &[NSMenuItem],

@@ -4,7 +4,7 @@
 //! Fully data-driven: zero hardcoded colors or dimensions.
 
 use crate::theme::MacTheme;
-use egui::{Color32, CornerRadius, Response, Stroke, StrokeKind, Ui, Vec2, Widget};
+use egui::{CornerRadius, Response, Stroke, StrokeKind, Ui, Vec2, Widget};
 
 /// Authentic macOS AppKit Push Button / Tool Button (`NSButtonCell` equivalent).
 ///
@@ -29,6 +29,7 @@ use egui::{Color32, CornerRadius, Response, Stroke, StrokeKind, Ui, Vec2, Widget
 pub struct MacButtonCell<'a> {
     text: &'a str,
     selected: bool,
+    enabled: bool,
     theme: Option<&'a MacTheme>,
     width: Option<f32>,
     height: Option<f32>,
@@ -41,11 +42,18 @@ impl<'a> MacButtonCell<'a> {
         Self {
             text,
             selected: false,
+            enabled: true,
             theme: None,
             width: None,
             height: None,
             corner_radius: None,
         }
+    }
+
+    /// Enables or disables the button cell.
+    pub fn enabled(mut self, enabled: bool) -> Self {
+        self.enabled = enabled;
+        self
     }
 
     /// Injects dynamic theme to eliminate hardcoded metrics and colors.
@@ -85,7 +93,7 @@ impl<'a> Widget for MacButtonCell<'a> {
         let theme = match self.theme {
             Some(t) => t,
             None => {
-                fallback_theme = MacTheme::default();
+                fallback_theme = MacTheme::from_ctx(ui.ctx());
                 &fallback_theme
             }
         };
@@ -104,28 +112,47 @@ impl<'a> Widget for MacButtonCell<'a> {
         let font_id = egui::FontId::proportional(metrics.font_size.points());
         let text_layout =
             ui.painter()
-                .layout_no_wrap(self.text.to_owned(), font_id.clone(), Color32::WHITE);
+                .layout_no_wrap(self.text.to_owned(), font_id.clone(), theme.label());
         let desired_width = self
             .width
             .unwrap_or_else(|| text_layout.size().x + padding_h * 2.0);
 
-        let (rect, response) =
-            ui.allocate_exact_size(Vec2::new(desired_width, height), egui::Sense::click());
-
+        let sense = if self.enabled {
+            egui::Sense::click()
+        } else {
+            egui::Sense::hover()
+        };
+        let (rect, response) = ui.allocate_exact_size(Vec2::new(desired_width, height), sense);
         let painter = ui.painter_at(rect);
 
-        // Dynamic AppKit styling
-        let bg_color = if self.selected {
-            theme.selected_control()
+        let alpha_factor = if self.enabled {
+            1.0
+        } else {
+            theme.disabled_opacity()
+        };
+
+        // Dynamic AppKit styling (pressed feedback works even when selected == true)
+        let base_bg = if !self.enabled {
+            if self.selected {
+                theme.selected_control_inactive()
+            } else {
+                theme.control_background()
+            }
         } else if response.is_pointer_button_down_on() {
             theme.selected_control_inactive()
+        } else if self.selected {
+            theme.selected_control()
         } else if response.hovered() {
             theme.control()
         } else {
             theme.control_background()
         };
+        let bg_color = base_bg.gamma_multiply(alpha_factor);
 
-        let border_stroke = Stroke::new(metrics.border_width.points(), theme.separator());
+        let border_stroke = Stroke::new(
+            metrics.border_width.points(),
+            theme.separator().gamma_multiply(alpha_factor),
+        );
 
         painter.rect(
             rect,
@@ -135,8 +162,10 @@ impl<'a> Widget for MacButtonCell<'a> {
             StrokeKind::Inside,
         );
 
-        let bg_style = theme.background_style(bg_color);
-        let text_color = bg_style.primary_text_color(theme);
+        let bg_style = theme.background_style(base_bg);
+        let text_color = bg_style
+            .primary_text_color(theme)
+            .gamma_multiply(alpha_factor);
 
         painter.text(
             rect.center(),

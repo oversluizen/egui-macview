@@ -24,8 +24,8 @@ fn test_token_catalog_deserialization() {
 
     // Verify metadata
     assert_eq!(tokens.name, "egui-macview Design Tokens");
-    assert_eq!(tokens.version, "0.4.0");
-    assert_eq!(egui_macview::VERSION, "0.4.0");
+    assert_eq!(tokens.version, "0.4.1");
+    assert_eq!(egui_macview::VERSION, "0.4.1");
     assert!(!tokens.description.is_empty());
 
     // Verify Control Metrics
@@ -335,20 +335,24 @@ fn test_version_synchronization_invariants() {
     // 1. Cargo.toml version
     let cargo_toml = fs::read_to_string(manifest_dir.join("Cargo.toml")).expect("read Cargo.toml");
     assert!(
-        cargo_toml.contains("version = \"0.4.0\""),
-        "Cargo.toml must have version = \"0.4.0\""
+        cargo_toml.contains("version = \"0.4.1\""),
+        "Cargo.toml must have version = \"0.4.1\""
     );
 
     // 2. Exported crate version constant
-    assert_eq!(egui_macview::VERSION, "0.4.0");
+    assert_eq!(egui_macview::VERSION, "0.4.1");
 
     // 3. Design tokens version
     let tokens = MacDesignTokens::load_default();
-    assert_eq!(tokens.version, "0.4.0");
+    assert_eq!(tokens.version, "0.4.1");
 
-    // 4. CHANGELOG.md strictly documents [0.4.0] - 2026-11-07, [0.3.1] - 2026-11-06, [0.3.0] - 2026-11-06, [0.2.0] - 2026-11-06 and [0.1.0] - 2026-11-05
+    // 4. CHANGELOG.md strictly documents [0.4.1] - 2026-11-08, [0.4.0] - 2026-11-07, [0.3.1] - 2026-11-06, [0.2.0] - 2026-11-06 and [0.1.0] - 2026-11-05
     let changelog =
         fs::read_to_string(manifest_dir.join("CHANGELOG.md")).expect("read CHANGELOG.md");
+    assert!(
+        changelog.contains("## [0.4.1] - 2026-11-08"),
+        "CHANGELOG.md must contain header '## [0.4.1] - 2026-11-08'"
+    );
     assert!(
         changelog.contains("## [0.4.0] - 2026-11-07"),
         "CHANGELOG.md must contain header '## [0.4.0] - 2026-11-07'"
@@ -369,7 +373,8 @@ fn test_version_synchronization_invariants() {
     // 5. Specs in specs/ have synchronized versions according to release roadmap:
     // - SPEC-001..SPEC-006 have Document Version 0.2.0
     // - SPEC-007 has Document Version 0.3.0 (Milestone 0.3.0 Released)
-    // - SPEC-008 and SPEC-INDEX have Document Version 0.4.0 (Milestone 0.4.0 Released)
+    // - SPEC-008 has Document Version 0.4.0 (Milestone 0.4.0 Released)
+    // - SPEC-INDEX has Document Version 0.4.1 (Milestone 0.4.1 Released)
     let specs_dir = manifest_dir.join("specs");
     let entries = fs::read_dir(&specs_dir).expect("read specs dir");
     let mut spec_count = 0;
@@ -398,7 +403,7 @@ fn test_version_synchronization_invariants() {
                     content.contains("Milestone 0.3.1"),
                     "{file_name} missing Target Milestone `Milestone 0.3.1`"
                 );
-            } else if file_name.starts_with("SPEC-008") || file_name.starts_with("SPEC-INDEX") {
+            } else if file_name.starts_with("SPEC-008") {
                 assert!(
                     content.contains("**Document Version** | `0.4.0`"),
                     "{file_name} missing Document Version `0.4.0`"
@@ -406,6 +411,15 @@ fn test_version_synchronization_invariants() {
                 assert!(
                     content.contains("Milestone 0.4.0"),
                     "{file_name} missing Target Milestone `Milestone 0.4.0`"
+                );
+            } else if file_name.starts_with("SPEC-INDEX") {
+                assert!(
+                    content.contains("**Document Version** | `0.4.1`"),
+                    "{file_name} missing Document Version `0.4.1`"
+                );
+                assert!(
+                    content.contains("Milestone 0.4.1"),
+                    "{file_name} missing Target Milestone `Milestone 0.4.1`"
                 );
             } else {
                 assert!(
@@ -472,50 +486,17 @@ fn test_mac_form_cots_zoom_alignment_and_no_overlap() {
         }
 
         assert_eq!(row_rects.len(), 3, "All 3 rows must be recorded at zoom {zoom}");
-
-        // 1. Column 0 (trailing labels): All labels should align on their right (trailing) edge
         let right_edge_0 = row_rects[0].0.max.x;
-        for (idx, (label_rect, _)) in row_rects.iter().enumerate() {
-            let diff = (label_rect.max.x - right_edge_0).abs();
-            assert!(
-                diff <= 1.0,
-                "At zoom {zoom}, row {idx} label trailing edge ({}) does not align with row 0 ({}), diff: {diff}",
-                label_rect.max.x,
-                right_edge_0
-            );
-        }
-
-        // 2. Column 1 (leading controls): All controls should align on their left (leading) edge
         let left_edge_1 = row_rects[0].1.min.x;
-        for (idx, (_, control_rect)) in row_rects.iter().enumerate() {
-            let diff = (control_rect.min.x - left_edge_1).abs();
-            assert!(
-                diff <= 1.0,
-                "At zoom {zoom}, row {idx} control leading edge ({}) does not align with row 0 ({}), diff: {diff}",
-                control_rect.min.x,
-                left_edge_1
-            );
-        }
-
-        // 3. No overlap: for every row, label.max.x must be strictly less than control.min.x
         for (idx, (label_rect, control_rect)) in row_rects.iter().enumerate() {
-            assert!(
-                label_rect.max.x < control_rect.min.x,
-                "At zoom {zoom}, row {idx} label overlaps control! label.max.x={}, control.min.x={}",
-                label_rect.max.x,
-                control_rect.min.x
-            );
-        }
-
-        // 4. Vertical ordering: no vertical overlap between consecutive rows
-        for i in 0..row_rects.len() - 1 {
-            let current_bottom = row_rects[i].0.max.y.max(row_rects[i].1.max.y);
-            let next_top = row_rects[i + 1].0.min.y.min(row_rects[i + 1].1.min.y);
-            assert!(
-                current_bottom <= next_top + 0.1,
-                "At zoom {zoom}, row {i} vertically overlaps row {}! bottom={current_bottom}, next_top={next_top}",
-                i + 1
-            );
+            assert!((label_rect.max.x - right_edge_0).abs() <= 1.0);
+            assert!((control_rect.min.x - left_edge_1).abs() <= 1.0);
+            assert!(label_rect.max.x < control_rect.min.x);
+            if idx + 1 < row_rects.len() {
+                let current_bottom = label_rect.max.y.max(control_rect.max.y);
+                let next_top = row_rects[idx + 1].0.min.y.min(row_rects[idx + 1].1.min.y);
+                assert!(current_bottom <= next_top + 0.1);
+            }
         }
     }
 }

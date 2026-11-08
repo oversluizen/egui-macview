@@ -8,7 +8,7 @@
 //!   [`MacSegmentedControl`], [`MacPopUpButton`], [`MacSearchField`], [`MacStepper`], [`MacColorWell`],
 //!   [`MacOutlineView`], [`MacButtonCell`], [`MacInputCell`], and [`MacThumbnailCell`].
 //! - **Deterministic Layout Engines**: Subpixel-snapped linear [`MacStackView`] (`NSStackView`), draggable hairline [`MacSplitView`] (`NSSplitView`),
-//!   zero-gutter floating overlay [`MacScrollView`] (`NSScrollView`), absolute [`MacFixedView`], and autolayout [`MacFlexView`].
+//!   zero-gutter floating overlay [`MacScrollView`] (`NSScrollView`), absolute [`MacFixedView`], and autolayout [`MacRow`].
 //! - **CoreAnimation Physics**: Analytical spring physics runtime [`CASpring`] matching Apple's `CASpringAnimation`
 //!   and SwiftUI `.spring(response:dampingRatio:)` with analytical displacement and velocity calculations.
 //! - **W3C DTCG Token Catalog & Theming**: Dynamic theming via [`MacTheme`] and [`MacAppearance`] supporting Aqua and DarkAqua
@@ -80,25 +80,24 @@ pub use theme::{
 };
 
 pub use controls::{
-    MacButtonCell, MacColorWell, MacInputCell, MacOutlineRow, MacOutlineRowResponse,
-    MacOutlineTree, MacOutlineView, MacPopUpButton, MacSearchField, MacSegmentedControl, MacSlider,
-    MacStepper, MacThumbnailCell, MacToggle,
+    MacButtonCell, MacColorWell, MacControlSize, MacInputCell, MacOutlineRow,
+    MacOutlineRowResponse, MacOutlineTree, MacOutlineView, MacPopUpButton, MacSearchField,
+    MacSegmentedControl, MacSlider, MacStepper, MacThumbnailCell, MacToggle,
 };
 pub use feedback::{clamp_menu_rect, MacContextMenu, MacToast, MacToastManager, ToastLevel};
 pub use layout::{
-    subpixel_snap, subpixel_snap_pos, subpixel_snap_rect, MacFixedView, MacFlexView, MacForm,
-    MacFormUi, MacFrame, MacRow, MacScrollView, MacScrollViewOutput, MacSplitOrientation,
-    MacSplitView, MacStackAlignment, MacStackOrientation, MacStackUi, MacStackView,
-    MacStackViewOutput,
+    subpixel_snap, subpixel_snap_pos, subpixel_snap_rect, MacFixedView, MacForm, MacFormUi,
+    MacFrame, MacRow, MacScrollView, MacScrollViewOutput, MacSplitOrientation, MacSplitView,
+    MacStackAlignment, MacStackOrientation, MacStackUi, MacStackView, MacStackViewOutput,
 };
 pub use motion::CASpring;
 pub use navigation::{
     CommandPaletteItem, MacCanvasFooter, MacCanvasFooterAction, MacCommandPalette,
-    MacKeyboardShortcut, MacMenuBar, MacMenuItemKind, NSMenu, NSMenuItem, CANVAS_FOOTER_HEIGHT,
-    COMMAND_PALETTE_HEIGHT, COMMAND_PALETTE_WIDTH,
+    MacKeyboardShortcut, MacMenuBar, MacMenuItemKind, MacToolbar, MacToolbarResponse, NSMenu,
+    NSMenuItem, CANVAS_FOOTER_HEIGHT, COMMAND_PALETTE_HEIGHT, COMMAND_PALETTE_WIDTH,
 };
 pub use state::{NSUndoManager, DEFAULT_UNDO_CAPACITY};
-pub use surfaces::{MacCard, MacPanel, MacPopover, MacPopoverArrowEdge};
+pub use surfaces::{MacCard, MacFloatingInfoBox, MacPanel, MacPopover, MacPopoverArrowEdge};
 pub use tokens::{
     sf_pro_tracking, ColorWellMetrics, LayoutMetrics, MacColorTokens, MacControlMetrics,
     MacDesignTokens, MacMotionTokens, MacTypographyTokens, OutlineViewMetrics, PopUpButtonMetrics,

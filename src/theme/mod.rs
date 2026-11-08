@@ -4,17 +4,11 @@
 //! Guarantees zero hardcoded constants by deriving all geometry metrics,
 //! typography bounds, and semantic colors dynamically from [`MacDesignTokens`].
 
-use crate::tokens::{
-    ButtonMetrics, ColorWellMetrics, FocusRingMetrics, LayoutMetrics, MacAppearanceColors,
-    MacControlMetrics, MacDesignTokens, MacMotionTokens, MacTypographyTokens, OutlineViewMetrics,
-    PopUpButtonMetrics, PopoverMetrics, ScrollViewMetrics, SearchFieldMetrics, SegmentedMetrics,
-    SliderMetrics, SplitViewMetrics, StackViewMetrics, StepperMetrics, TextFieldMetrics,
-    ThumbnailCellMetrics, ToggleMetrics, ToolbarMetrics,
-};
-use egui::Color32;
-
+use crate::tokens::{MacAppearanceColors, MacDesignTokens};
+use egui::{Color32, Id};
 use std::sync::{Arc, OnceLock};
 
+pub mod accessors;
 pub mod contrast;
 pub use contrast::{
     contrast_ratio, relative_luminance, srgb_channel_to_linear, MacBackgroundStyle,
@@ -57,7 +51,6 @@ pub enum WindowControlsStyle {
 /// ```rust
 /// use egui_macview::{MacAppearance, MacTheme, WindowControlsStyle};
 ///
-/// // Create a dark aqua macOS theme
 /// let theme = MacTheme::new(MacAppearance::DarkAqua)
 ///     .with_window_controls_style(WindowControlsStyle::AppleTrafficLights);
 ///
@@ -91,6 +84,13 @@ impl MacTheme {
             tokens: default_cached_tokens(),
             custom_accent: None,
         }
+    }
+
+    /// Retrieves the active `MacTheme` stored in `egui::Context` by [`MacTheme::apply_to_egui`],
+    /// falling back to [`MacTheme::default`] (`Aqua`) if none was registered.
+    pub fn from_ctx(ctx: &egui::Context) -> Self {
+        ctx.data(|d| d.get_temp::<MacTheme>(Id::NULL))
+            .unwrap_or_default()
     }
 
     /// Sets the window controls presentation style (Strategy 2).
@@ -200,153 +200,49 @@ impl MacTheme {
         self.colors().secondary_label.to_color32()
     }
 
-    /// Synchronizes `egui::Context` theme and visuals with the macOS appearance.
-    pub fn apply_to_egui(&self, ctx: &egui::Context) {
-        let egui_theme = match self.appearance {
-            MacAppearance::Aqua => egui::Theme::Light,
-            MacAppearance::DarkAqua => egui::Theme::Dark,
-        };
-        ctx.set_theme(egui_theme);
-
-        let mut visuals = match self.appearance {
-            MacAppearance::Aqua => egui::Visuals::light(),
-            MacAppearance::DarkAqua => egui::Visuals::dark(),
-        };
-
-        let label_color = self.label();
-        visuals.override_text_color = Some(label_color);
-        visuals.widgets.noninteractive.fg_stroke.color = label_color;
-        visuals.widgets.noninteractive.bg_stroke = egui::Stroke::new(1.0, self.separator());
-        visuals.widgets.inactive.fg_stroke.color = label_color;
-        visuals.widgets.inactive.bg_stroke = egui::Stroke::new(1.0, self.separator());
-        visuals.panel_fill = self.window_background();
-        visuals.window_fill = self.window_background();
-        visuals.window_stroke = egui::Stroke::new(1.0, self.separator());
-
-        ctx.all_styles_mut(|style| {
-            use egui::{FontFamily, FontId, TextStyle};
-            style.text_styles = [
-                (TextStyle::Small, FontId::new(11.0, FontFamily::Proportional)),
-                (TextStyle::Body, FontId::new(12.0, FontFamily::Proportional)),
-                (TextStyle::Button, FontId::new(12.0, FontFamily::Proportional)),
-                (TextStyle::Heading, FontId::new(13.0, FontFamily::Proportional)),
-                (TextStyle::Monospace, FontId::new(12.0, FontFamily::Monospace)),
-            ]
-            .into();
-        });
-
-        ctx.set_visuals_of(egui_theme, visuals.clone());
-        ctx.set_visuals(visuals);
-    }
-
-    /// Resolves top-level control metrics collection.
-    pub fn control_metrics(&self) -> &MacControlMetrics {
-        self.tokens.control_metrics()
-    }
-
-    /// Resolves focus ring geometry metrics.
-    pub fn focus_ring(&self) -> &FocusRingMetrics {
-        &self.control_metrics().focus_ring
-    }
-
-    /// Resolves text field geometry metrics.
-    pub fn text_field(&self) -> &TextFieldMetrics {
-        &self.control_metrics().text_field
-    }
-
-    /// Resolves push button geometry metrics.
-    pub fn button(&self) -> &ButtonMetrics {
-        &self.control_metrics().button
-    }
-
-    /// Resolves segmented control geometry metrics.
-    pub fn segmented(&self) -> &SegmentedMetrics {
-        &self.control_metrics().segmented
-    }
-
-    /// Resolves popover and HUD panel geometry metrics.
-    pub fn popover_metrics(&self) -> &PopoverMetrics {
-        self.tokens.popover_metrics()
-    }
-
-    /// Resolves window toolbar geometry metrics.
-    pub fn toolbar_metrics(&self) -> &ToolbarMetrics {
-        self.tokens.toolbar_metrics()
-    }
-
-    /// Resolves slider control geometry metrics.
-    pub fn slider(&self) -> &SliderMetrics {
-        self.tokens.slider_metrics()
-    }
-
-    /// Resolves thumbnail cell geometry metrics.
-    pub fn thumbnail(&self) -> &ThumbnailCellMetrics {
-        self.tokens.thumbnail_metrics()
-    }
-
-    /// Resolves split view divider and handle geometry metrics.
-    pub fn split_view(&self) -> &SplitViewMetrics {
-        self.tokens.split_view_metrics()
-    }
-
-    /// Resolves layout container geometry metrics.
-    pub fn layout_metrics(&self) -> &LayoutMetrics {
-        self.tokens.layout_metrics()
-    }
-
-    /// Resolves scroll view and overlay scrollbar geometry metrics.
-    pub fn scroll_view(&self) -> &ScrollViewMetrics {
-        self.tokens.scroll_view_metrics()
-    }
-
-    /// Resolves stack view linear layout geometry metrics.
-    pub fn stack_view(&self) -> &StackViewMetrics {
-        self.tokens.stack_view_metrics()
-    }
-
-    /// Resolves outline view hierarchical table geometry metrics.
-    pub fn outline_view(&self) -> &OutlineViewMetrics {
-        self.tokens.outline_view_metrics()
-    }
-
-    /// Resolves pop-up button geometry metrics.
-    pub fn popup_button(&self) -> &PopUpButtonMetrics {
-        self.tokens.popup_button_metrics()
-    }
-
-    /// Resolves search field geometry metrics.
-    pub fn search_field(&self) -> &SearchFieldMetrics {
-        self.tokens.search_field_metrics()
-    }
-
-    /// Resolves numeric stepper control geometry metrics.
-    pub fn stepper(&self) -> &StepperMetrics {
-        self.tokens.stepper_metrics()
-    }
-
-    /// Resolves color well swatch control geometry metrics.
-    pub fn color_well(&self) -> &ColorWellMetrics {
-        self.tokens.color_well_metrics()
-    }
-
-    /// Resolves toggle switch control geometry metrics.
-    pub fn toggle(&self) -> &ToggleMetrics {
-        self.tokens.toggle_metrics()
-    }
-
-    /// Resolves CoreAnimation motion preset tokens.
-    pub fn motion(&self) -> &MacMotionTokens {
-        self.tokens.motion()
-    }
-
-    /// Resolves typography and SF Pro tracking tokens.
-    pub fn typography(&self) -> &MacTypographyTokens {
-        self.tokens.typography()
-    }
-
     /// Resolves Apple system green semantic color (`systemGreenColor`).
     pub fn system_green(&self) -> Color32 {
         self.colors().system_green.to_color32()
+    }
+
+    /// Resolves high-contrast white text color used on accent fills.
+    pub fn on_accent_text(&self) -> Color32 {
+        self.colors().on_accent_text.to_color32()
+    }
+
+    /// Resolves white thumb knob fill color for switches and sliders.
+    pub fn knob_fill(&self) -> Color32 {
+        self.colors().knob_fill.to_color32()
+    }
+
+    /// Resolves subtle ambient drop shadow color for controls and floating surfaces.
+    pub fn drop_shadow(&self) -> Color32 {
+        self.colors().drop_shadow.to_color32()
+    }
+
+    /// Resolves modal backdrop dimming overlay color.
+    pub fn backdrop_dim(&self) -> Color32 {
+        self.colors().backdrop_dim.to_color32()
+    }
+
+    /// Resolves translucent dark HUD palette background color (`SPEC-006 §2.2`).
+    pub fn hud_background(&self) -> Color32 {
+        self.colors().hud_background.to_color32()
+    }
+
+    /// Resolves dark HUD palette hairline border color.
+    pub fn hud_border(&self) -> Color32 {
+        self.colors().hud_border.to_color32()
+    }
+
+    /// Resolves dark HUD palette primary text color.
+    pub fn hud_text(&self) -> Color32 {
+        self.colors().hud_text.to_color32()
+    }
+
+    /// Resolves dark HUD palette secondary label color.
+    pub fn hud_secondary_text(&self) -> Color32 {
+        self.colors().hud_secondary_text.to_color32()
     }
 
     /// Resolves macOS window close traffic light fill and border colors `(fill, border)`.
@@ -373,49 +269,99 @@ impl MacTheme {
         )
     }
 
-    /// Background color for Windows 11 close caption button on hover (Fluent crimson red `#E81123`).
+    /// Interior glyph color for hovered macOS traffic light buttons.
+    pub fn traffic_light_glyph(&self) -> Color32 {
+        self.colors().traffic_light_glyph.to_color32()
+    }
+
+    /// Background color for Windows 11 close caption button on hover (`#E81123`).
     pub fn windows_caption_close_hover_bg(&self) -> Color32 {
-        Color32::from_rgb(232, 17, 35)
+        self.colors().caption_close_hover.to_color32()
     }
 
     /// Background color for Windows 11 close caption button when pressed (`#C42B1C`).
     pub fn windows_caption_close_pressed_bg(&self) -> Color32 {
-        Color32::from_rgb(196, 43, 28)
+        self.colors().caption_close_pressed.to_color32()
     }
 
     /// Background color for Windows 11 minimize/maximize caption buttons on hover.
     pub fn windows_caption_hover_bg(&self) -> Color32 {
-        match self.appearance {
-            MacAppearance::Aqua => Color32::from_black_alpha(15),
-            MacAppearance::DarkAqua => Color32::from_white_alpha(20),
-        }
+        self.colors().caption_hover.to_color32()
     }
 
     /// Background color for Windows 11 minimize/maximize caption buttons when pressed.
     pub fn windows_caption_pressed_bg(&self) -> Color32 {
-        match self.appearance {
-            MacAppearance::Aqua => Color32::from_black_alpha(25),
-            MacAppearance::DarkAqua => Color32::from_white_alpha(35),
-        }
+        self.colors().caption_pressed.to_color32()
     }
 
-    /// Resolves the `MacBackgroundStyle` (Light or Dark) for any background color.
-    pub fn background_style(&self, bg: Color32) -> MacBackgroundStyle {
-        MacBackgroundStyle::from_color(bg)
+    /// Overlay scrollbar thumb color scaled by fade `alpha_factor` in `[0.0, 1.0]`.
+    pub fn scrollbar_thumb_color(&self, active: bool, alpha_factor: f32) -> Color32 {
+        let base = if active {
+            self.colors().scrollbar_thumb_active.to_color32()
+        } else {
+            self.colors().scrollbar_thumb.to_color32()
+        };
+        base.gamma_multiply(alpha_factor.clamp(0.0, 1.0))
     }
 
-    /// Resolves the `MacBackgroundStyle` for the window background.
-    pub fn window_background_style(&self) -> MacBackgroundStyle {
-        MacBackgroundStyle::from_color(self.window_background())
-    }
+    /// Synchronizes `egui::Context` theme, visuals, and stored `MacTheme` with the macOS appearance.
+    pub fn apply_to_egui(&self, ctx: &egui::Context) {
+        ctx.data_mut(|d| d.insert_temp(Id::NULL, self.clone()));
 
-    /// Resolves the `MacBackgroundStyle` for the control background.
-    pub fn control_background_style(&self) -> MacBackgroundStyle {
-        MacBackgroundStyle::from_color(self.control_background())
-    }
+        let egui_theme = match self.appearance {
+            MacAppearance::Aqua => egui::Theme::Light,
+            MacAppearance::DarkAqua => egui::Theme::Dark,
+        };
+        ctx.set_theme(egui_theme);
 
-    /// Resolves the `MacBackgroundStyle` for the selected control background.
-    pub fn selected_control_background_style(&self) -> MacBackgroundStyle {
-        MacBackgroundStyle::from_color(self.selected_control())
+        let mut visuals = match self.appearance {
+            MacAppearance::Aqua => egui::Visuals::light(),
+            MacAppearance::DarkAqua => egui::Visuals::dark(),
+        };
+
+        let border_w = self.button().regular.border_width.points();
+        let label_color = self.label();
+        visuals.override_text_color = Some(label_color);
+        visuals.widgets.noninteractive.fg_stroke.color = label_color;
+        visuals.widgets.noninteractive.bg_stroke = egui::Stroke::new(border_w, self.separator());
+        visuals.widgets.inactive.fg_stroke.color = label_color;
+        visuals.widgets.inactive.bg_stroke = egui::Stroke::new(border_w, self.separator());
+        visuals.panel_fill = self.window_background();
+        visuals.window_fill = self.window_background();
+        visuals.window_stroke = egui::Stroke::new(border_w, self.separator());
+
+        let small_pt = self.text_field().small.font_size.points();
+        let body_pt = self.outline_view().font_size.points();
+        let heading_pt = self.text_field().regular.font_size.points();
+
+        ctx.all_styles_mut(|style| {
+            use egui::{FontFamily, FontId, TextStyle};
+            style.text_styles = [
+                (
+                    TextStyle::Small,
+                    FontId::new(small_pt, FontFamily::Proportional),
+                ),
+                (
+                    TextStyle::Body,
+                    FontId::new(body_pt, FontFamily::Proportional),
+                ),
+                (
+                    TextStyle::Button,
+                    FontId::new(body_pt, FontFamily::Proportional),
+                ),
+                (
+                    TextStyle::Heading,
+                    FontId::new(heading_pt, FontFamily::Proportional),
+                ),
+                (
+                    TextStyle::Monospace,
+                    FontId::new(body_pt, FontFamily::Monospace),
+                ),
+            ]
+            .into();
+        });
+
+        ctx.set_visuals_of(egui_theme, visuals.clone());
+        ctx.set_visuals(visuals);
     }
 }
