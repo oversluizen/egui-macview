@@ -64,14 +64,8 @@ impl<'a> MacFloatingInfoBox<'a> {
         row1: impl FnOnce(&mut Ui),
         row2: impl FnOnce(&mut Ui),
     ) -> Response {
-        let fallback_theme;
-        let theme = match self.theme {
-            Some(t) => t,
-            None => {
-                fallback_theme = MacTheme::from_ctx(ctx);
-                &fallback_theme
-            }
-        };
+        let theme_cow = MacTheme::resolve(self.theme, ctx);
+        let theme: &MacTheme = &theme_cow;
 
         let pop_metrics = theme.popover_metrics();
         let compact_tf = &theme.text_field().compact_infobox;
@@ -199,82 +193,46 @@ impl<'a> MacFloatingInfoBox<'a> {
         w_val: &mut String,
         h_val: &mut String,
     ) -> Response {
-        let fallback_theme;
-        let theme_ref = match self.theme {
-            Some(t) => t,
-            None => {
-                fallback_theme = MacTheme::from_ctx(ctx);
-                &fallback_theme
-            }
-        };
-        let theme_clone = theme_ref.clone();
+        let theme_cow = MacTheme::resolve(self.theme, ctx);
+        let theme_ref: &MacTheme = &theme_cow;
         let hud_id = self.id;
-        let cell_w = theme_clone
+        let cell_w = theme_ref
             .text_field()
             .compact_infobox
             .default_width
             .points();
-        let font_pt = theme_clone.text_field().compact_infobox.font_size.points();
-        let label_col = theme_clone.hud_secondary_text();
+        let font_pt = theme_ref.text_field().compact_infobox.font_size.points();
+        let label_col = theme_ref.hud_secondary_text();
 
         let id_x = hud_id.with("hud_x");
         let id_y = hud_id.with("hud_y");
         let id_w = hud_id.with("hud_w");
         let id_h = hud_id.with("hud_h");
 
+        let draw_cell = |ui: &mut Ui, lbl: &str, id: Id, val: &mut String, prev: Id, next: Id| {
+            ui.label(
+                RichText::new(lbl)
+                    .font(FontId::proportional(font_pt))
+                    .color(label_col),
+            );
+            MacInputCell::new(id, val)
+                .theme(theme_ref)
+                .control_size(MacControlSize::CompactInfobox)
+                .width(cell_w)
+                .prev_focus(prev)
+                .next_focus(next)
+                .show(ui);
+        };
+
         self.show(
             ctx,
             |r1| {
-                r1.label(
-                    RichText::new("X")
-                        .font(FontId::proportional(font_pt))
-                        .color(label_col),
-                );
-                MacInputCell::new(id_x, x_val)
-                    .theme(&theme_clone)
-                    .control_size(MacControlSize::CompactInfobox)
-                    .width(cell_w)
-                    .prev_focus(id_h)
-                    .next_focus(id_y)
-                    .show(r1);
-                r1.label(
-                    RichText::new("Y")
-                        .font(FontId::proportional(font_pt))
-                        .color(label_col),
-                );
-                MacInputCell::new(id_y, y_val)
-                    .theme(&theme_clone)
-                    .control_size(MacControlSize::CompactInfobox)
-                    .width(cell_w)
-                    .prev_focus(id_x)
-                    .next_focus(id_w)
-                    .show(r1);
+                draw_cell(r1, "X", id_x, x_val, id_h, id_y);
+                draw_cell(r1, "Y", id_y, y_val, id_x, id_w);
             },
             |r2| {
-                r2.label(
-                    RichText::new("W")
-                        .font(FontId::proportional(font_pt))
-                        .color(label_col),
-                );
-                MacInputCell::new(id_w, w_val)
-                    .theme(&theme_clone)
-                    .control_size(MacControlSize::CompactInfobox)
-                    .width(cell_w)
-                    .prev_focus(id_y)
-                    .next_focus(id_h)
-                    .show(r2);
-                r2.label(
-                    RichText::new("H")
-                        .font(FontId::proportional(font_pt))
-                        .color(label_col),
-                );
-                MacInputCell::new(id_h, h_val)
-                    .theme(&theme_clone)
-                    .control_size(MacControlSize::CompactInfobox)
-                    .width(cell_w)
-                    .prev_focus(id_w)
-                    .next_focus(id_x)
-                    .show(r2);
+                draw_cell(r2, "W", id_w, w_val, id_y, id_h);
+                draw_cell(r2, "H", id_h, h_val, id_w, id_x);
             },
         )
     }

@@ -79,6 +79,34 @@ pub(super) fn sync_aspect_height_changed(card: &mut CardModel, old_h_str: &str, 
     }
 }
 
+/// Renders the shared Width, Height, and Radius numeric `MacInputCell` rows with tab-chain focus and aspect locking.
+pub(crate) fn render_card_geometry_rows(
+    form: &mut egui_macview::MacFormUi<'_>,
+    theme: &MacTheme,
+    card: &mut CardModel,
+    unit_idx: usize,
+    ids: (Id, Id, Id),
+) {
+    let (id_w, id_h, id_r) = ids;
+    let (w_scale, h_scale, r_scale, u_str) = unit_scale_and_suffix(unit_idx);
+    form.row_label(egui::RichText::new(format!("Width ({u_str}):")).size(11.0), |ui| {
+        let prev_w = card.width.clone();
+        let w_range = ((60.0 * w_scale) as f64)..=((500.0 * w_scale) as f64);
+        MacInputCell::with_id(id_w, &mut card.width).theme(theme).numeric(w_range, 1.0).width(68.0).next_focus(id_h).prev_focus(id_r).placeholder("Width").show(ui);
+        sync_aspect_width_changed(card, &prev_w, unit_idx);
+    });
+    form.row_label(egui::RichText::new(format!("Height ({u_str}):")).size(11.0), |ui| {
+        let prev_h = card.height.clone();
+        let h_range = ((40.0 * h_scale) as f64)..=((300.0 * h_scale) as f64);
+        MacInputCell::with_id(id_h, &mut card.height).theme(theme).numeric(h_range, 1.0).width(68.0).next_focus(id_r).prev_focus(id_w).placeholder("Height").show(ui);
+        sync_aspect_height_changed(card, &prev_h, unit_idx);
+    });
+    form.row_label(egui::RichText::new(format!("Radius ({u_str}):")).size(11.0), |ui| {
+        let r_range = 0.0..=((40.0 * r_scale) as f64);
+        MacInputCell::with_id(id_r, &mut card.radius).theme(theme).numeric(r_range, 1.0).width(68.0).next_focus(id_w).prev_focus(id_h).placeholder("Radius").show(ui);
+    });
+}
+
 impl InspectorState {
     pub fn render(&mut self, ui: &mut Ui, theme: &MacTheme, card_cell: &RefCell<CardModel>, mode: &mut InspectorMode, toasts: &RefCell<MacToastManager>) {
         let mut card = card_cell.borrow_mut();
@@ -175,8 +203,7 @@ impl InspectorState {
                     });
                 }
                 ExpandedProTab::Metrics => {
-                    let (id_w, id_h, id_r) = (Id::NULL.with("exp_input_w"), Id::NULL.with("exp_input_h"), Id::NULL.with("exp_input_r"));
-                    let (w_scale, h_scale, r_scale, u_str) = unit_scale_and_suffix(self.unit_segmented_idx);
+                    let ids = (Id::NULL.with("exp_input_w"), Id::NULL.with("exp_input_h"), Id::NULL.with("exp_input_r"));
 
                     stack.add_section(Some("Dimensions & Corner Radius (↑/↓ Step)"), |sec_ui| {
                         MacForm::new("exp_dimensions_form").theme(theme).show(sec_ui, |form| {
@@ -187,22 +214,7 @@ impl InspectorState {
                                     convert_card_units(card, prev, idx);
                                 });
                             });
-                            form.row_label(egui::RichText::new(format!("Width ({u_str}):")).size(11.0), |ui| {
-                                let prev_w = card.width.clone();
-                                let w_range = ((60.0 * w_scale) as f64)..=((500.0 * w_scale) as f64);
-                                MacInputCell::with_id(id_w, &mut card.width).theme(theme).numeric(w_range, 1.0).width(68.0).next_focus(id_h).prev_focus(id_r).show(ui);
-                                sync_aspect_width_changed(card, &prev_w, self.unit_segmented_idx);
-                            });
-                            form.row_label(egui::RichText::new(format!("Height ({u_str}):")).size(11.0), |ui| {
-                                let prev_h = card.height.clone();
-                                let h_range = ((40.0 * h_scale) as f64)..=((300.0 * h_scale) as f64);
-                                MacInputCell::with_id(id_h, &mut card.height).theme(theme).numeric(h_range, 1.0).width(68.0).next_focus(id_r).prev_focus(id_w).show(ui);
-                                sync_aspect_height_changed(card, &prev_h, self.unit_segmented_idx);
-                            });
-                            form.row_label(egui::RichText::new(format!("Radius ({u_str}):")).size(11.0), |ui| {
-                                let r_range = 0.0..=((40.0 * r_scale) as f64);
-                                MacInputCell::with_id(id_r, &mut card.radius).theme(theme).numeric(r_range, 1.0).width(68.0).next_focus(id_w).prev_focus(id_h).show(ui);
-                            });
+                            render_card_geometry_rows(form, theme, card, self.unit_segmented_idx, ids);
                             form.row_label(egui::RichText::new("Constrain Aspect:").size(11.0), |ui| {
                                 ui.add(MacToggle::new(&mut card.constrain_proportions).theme(theme));
                             });
@@ -221,10 +233,7 @@ impl InspectorState {
                 }
                 ExpandedProTab::Matrix => {
                     stack.add_section(Some("2x2 Affine Transform Matrix [a, b; c, d]"), |sec_ui| {
-                        let theta = card.rotation_deg.to_radians();
-                        let scale = card.scale_pct / 100.0;
-                        let skew = card.skew_deg.to_radians().tan();
-                        let (a, b, c, d) = (scale * theta.cos(), -scale * theta.sin() + skew, scale * theta.sin(), scale * theta.cos());
+                        let (a, b, c, d) = card.affine_matrix(card.rotation_deg, card.scale_pct / 100.0);
 
                         let matrix_box = sec_ui.available_rect_before_wrap();
                         let m_rect = Rect::from_min_size(matrix_box.min, vec2(matrix_box.width(), 48.0));

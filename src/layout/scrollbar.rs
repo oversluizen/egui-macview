@@ -115,8 +115,11 @@ pub fn render_overlay_thumb(
         }
     }
 
-    if track_hovered || resp.hovered() || resp.dragged() || changed {
+    let pointer_moving = ui.input(|i| i.pointer.delta() != egui::Vec2::ZERO);
+    if resp.dragged() || changed || ((track_hovered || resp.hovered()) && pointer_moving) {
         ui.data_mut(|d| d.insert_temp(active_id, now));
+    }
+    if resp.dragged() || changed {
         ui.ctx().request_repaint();
     }
 

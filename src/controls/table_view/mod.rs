@@ -122,14 +122,8 @@ impl<'a> MacTableView<'a> {
         ui: &mut Ui,
         mut cell_ui: impl FnMut(&mut Ui, usize, usize),
     ) -> MacTableViewResponse {
-        let fallback_theme;
-        let theme = match self.theme {
-            Some(t) => t,
-            None => {
-                fallback_theme = MacTheme::from_ctx(ui.ctx());
-                &fallback_theme
-            }
-        };
+        let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
+        let theme: &MacTheme = &theme_cow;
 
         let tm = theme.table_view();
         let hdr_h = tm.header_height.points();

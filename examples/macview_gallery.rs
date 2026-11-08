@@ -26,13 +26,17 @@ pub use gallery::{
 use gallery::{inspector::InspectorState, CenterState, SidebarState};
 use std::cell::{Cell, RefCell};
 
-/// Formats uppercase section headers with optical tracking.
+/// Formats uppercase section headers with optical tracking without intermediate `Vec` allocations.
 pub fn format_tracked_small_caps(text: &str) -> String {
-    text.to_uppercase()
-        .split_whitespace()
-        .map(|w| w.chars().map(|c| c.to_string()).collect::<Vec<_>>().join("\u{2009}"))
-        .collect::<Vec<_>>()
-        .join("   ")
+    let mut out = String::with_capacity(text.len() * 3);
+    for (wi, word) in text.split_whitespace().enumerate() {
+        if wi > 0 { out.push_str("   "); }
+        for (ci, ch) in word.chars().enumerate() {
+            if ci > 0 { out.push('\u{2009}'); }
+            out.extend(ch.to_uppercase());
+        }
+    }
+    out
 }
 
 fn setup_system_or_custom_fonts(ctx: &egui::Context) {
@@ -180,7 +184,7 @@ pub(crate) struct GalleryApp {
 }
 
 impl GalleryApp {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         let palette_items = vec![
             CommandPaletteItem::new("edit.undo", "Edit: Undo").category("Edit").shortcut("⌘Z / Ctrl+Z"),
             CommandPaletteItem::new("edit.redo", "Edit: Redo").category("Edit").shortcut("⌘⇧Z / Ctrl+Shift+Z"),
@@ -226,6 +230,12 @@ impl GalleryApp {
 
 impl eframe::App for GalleryApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        self.render_ui(ui);
+    }
+}
+
+impl GalleryApp {
+    pub(crate) fn render_ui(&mut self, ui: &mut egui::Ui) {
         let focused_id = ui.memory(|m| m.focused());
         let prev_focused = self.active_text_focus.get();
         if prev_focused.is_some() && prev_focused != focused_id {
@@ -415,11 +425,11 @@ impl eframe::App for GalleryApp {
         self.inspector_width = (available_body_w - right_split_pos).clamp(min_inspector_w, max_inspector_w);
 
         if !ui.input(|i| i.pointer.any_down()) && !self.is_dragging_card.get() && focused_id.is_none() {
-            let current = self.card.borrow().clone();
-            let last_stable = self.last_stable_card.borrow().clone();
-            if current != last_stable {
-                self.undo_manager.borrow_mut().push_snapshot(last_stable);
-                *self.last_stable_card.borrow_mut() = current;
+            let changed = *self.card.borrow() != *self.last_stable_card.borrow();
+            if changed {
+                let current = self.card.borrow().clone();
+                let prev = std::mem::replace(&mut *self.last_stable_card.borrow_mut(), current);
+                self.undo_manager.borrow_mut().push_snapshot(prev);
             }
         }
         self.toasts.borrow_mut().show(ui.ctx(), &theme);

@@ -194,14 +194,8 @@ impl<'a> MacLevelIndicator<'a> {
 
 impl<'a> Widget for MacLevelIndicator<'a> {
     fn ui(self, ui: &mut Ui) -> Response {
-        let fallback_theme;
-        let theme = match self.theme {
-            Some(t) => t,
-            None => {
-                fallback_theme = MacTheme::from_ctx(ui.ctx());
-                &fallback_theme
-            }
-        };
+        let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
+        let theme: &MacTheme = &theme_cow;
 
         let lm = theme.level_indicator();
         let len = self.length.unwrap_or_else(|| lm.default_length.points());

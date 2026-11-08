@@ -42,51 +42,31 @@ fn test_canvas_footer_24pt_layout_budget_and_interactive_breadcrumbs() {
 
     // Frame 2: Click on the first breadcrumb segment ("macview_gallery" near x=25.0, y=12.0)
     let click_pos = Pos2::new(25.0, 12.0);
-    let mut press_input = RawInput::default();
-    press_input.events.push(Event::PointerMoved(click_pos));
-    press_input.events.push(Event::PointerButton {
-        pos: click_pos,
-        button: PointerButton::Primary,
-        pressed: true,
-        modifiers: Modifiers::NONE,
-    });
-    let mut out2 = ctx.run_ui(press_input, |ui| {
-        let footer =
-            MacCanvasFooter::new(&breadcrumbs, Some(cursor_pos), zoom_factor).theme(&theme);
-        let _ = footer.show(ui, container_width);
-    });
-    out2.textures_delta.clear();
-
-    let mut release_input = RawInput::default();
-    release_input.events.push(Event::PointerMoved(click_pos));
-    release_input.events.push(Event::PointerButton {
-        pos: click_pos,
-        button: PointerButton::Primary,
-        pressed: false,
-        modifiers: Modifiers::NONE,
-    });
-    let mut clicked_action = None;
-    let mut out3 = ctx.run_ui(release_input, |ui| {
-        let footer =
-            MacCanvasFooter::new(&breadcrumbs, Some(cursor_pos), zoom_factor).theme(&theme);
-        clicked_action = footer.show(ui, container_width);
-    });
-    out3.textures_delta.clear();
-
-    assert_eq!(
-        clicked_action,
-        Some(MacCanvasFooterAction::BreadcrumbClicked(0)),
-        "Clicking first breadcrumb segment in MacCanvasFooter must return BreadcrumbClicked(0)"
-    );
+    for (pressed, expect_click) in [(true, false), (false, true)] {
+        let inp = RawInput {
+            events: vec![
+                Event::PointerMoved(click_pos),
+                Event::PointerButton { pos: click_pos, button: PointerButton::Primary, pressed, modifiers: Modifiers::NONE },
+            ],
+            ..Default::default()
+        };
+        let mut clicked_action = None;
+        let mut out = ctx.run_ui(inp, |ui| {
+            let footer = MacCanvasFooter::new(&breadcrumbs, Some(cursor_pos), zoom_factor).theme(&theme);
+            clicked_action = footer.show(ui, container_width);
+        });
+        out.textures_delta.clear();
+        if expect_click {
+            assert_eq!(clicked_action, Some(MacCanvasFooterAction::BreadcrumbClicked(0)));
+        }
+    }
 }
 
 #[test]
 fn test_command_palette_query_filter_and_navigation() {
     let ctx = Context::default();
     let theme = MacTheme::new(MacAppearance::DarkAqua);
-
-    assert_eq!(COMMAND_PALETTE_WIDTH, 480.0);
-    assert_eq!(COMMAND_PALETTE_HEIGHT, 280.0);
+    assert_eq!((COMMAND_PALETTE_WIDTH, COMMAND_PALETTE_HEIGHT), (480.0, 280.0));
 
     let items = vec![
         CommandPaletteItem::new("cmd.save", "Save Document")
@@ -102,45 +82,26 @@ fn test_command_palette_query_filter_and_navigation() {
     ];
 
     let mut palette = MacCommandPalette::new(items).open(true);
-    assert_eq!(palette.filtered_items().len(), 4);
-    assert_eq!(palette.selected_index, 0);
+    assert_eq!((palette.filtered_items().len(), palette.selected_index), (4, 0));
 
     palette.set_query("export");
     let filtered = palette.filtered_items();
-    assert_eq!(filtered.len(), 1);
-    assert_eq!(filtered[0].id, "cmd.export");
+    assert_eq!((filtered.len(), filtered[0].id.as_str()), (1, "cmd.export"));
 
     palette.set_query("zoom");
     assert_eq!(palette.filtered_items().len(), 2);
 
-    let mut raw_down = RawInput::default();
-    raw_down.events.push(Event::Key {
-        key: Key::ArrowDown,
-        physical_key: None,
-        pressed: true,
-        repeat: false,
-        modifiers: Modifiers::default(),
-    });
-    let mut out1 = ctx.run_ui(raw_down, |ui| {
-        palette.show(ui.ctx(), &theme);
-    });
+    let key_inp = |key: Key| RawInput {
+        events: vec![Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers: Modifiers::default() }],
+        ..Default::default()
+    };
+    let mut out1 = ctx.run_ui(key_inp(Key::ArrowDown), |ui| { palette.show(ui.ctx(), &theme); });
     out1.textures_delta.clear();
     assert_eq!(palette.selected_index, 1);
 
-    let mut raw_enter = RawInput::default();
-    raw_enter.events.push(Event::Key {
-        key: Key::Enter,
-        physical_key: None,
-        pressed: true,
-        repeat: false,
-        modifiers: Modifiers::default(),
-    });
     let mut triggered = None;
-    let mut out2 = ctx.run_ui(raw_enter, |ui| {
-        triggered = palette.show(ui.ctx(), &theme);
-    });
+    let mut out2 = ctx.run_ui(key_inp(Key::Enter), |ui| { triggered = palette.show(ui.ctx(), &theme); });
     out2.textures_delta.clear();
-
     assert_eq!(triggered, Some("cmd.zoom_out".to_string()));
     assert!(!palette.is_open(), "Palette must close on Enter execution");
 }
@@ -166,37 +127,19 @@ fn test_command_palette_fuzzy_subsequence_scoring_and_escape() {
     let mut palette = MacCommandPalette::new(items).open(true);
     palette.set_query("export");
 
-    // First Escape clears query and consumes Escape
-    let mut raw_escape1 = RawInput::default();
-    raw_escape1.events.push(Event::Key {
-        key: Key::Escape,
-        physical_key: None,
-        pressed: true,
-        repeat: false,
-        modifiers: Modifiers::default(),
-    });
+    let esc_inp = || RawInput {
+        events: vec![Event::Key { key: Key::Escape, physical_key: None, pressed: true, repeat: false, modifiers: Modifiers::default() }],
+        ..Default::default()
+    };
     let mut esc_leaked = false;
-    let mut out1 = ctx.run_ui(raw_escape1, |ui| {
+    let mut out1 = ctx.run_ui(esc_inp(), |ui| {
         palette.show(ui.ctx(), &theme);
         esc_leaked = ui.input(|i| i.key_pressed(Key::Escape));
     });
     out1.textures_delta.clear();
-    assert!(palette.is_open());
-    assert_eq!(palette.query(), "");
-    assert!(!esc_leaked, "MacCommandPalette must consume Key::Escape");
+    assert!(palette.is_open() && palette.query().is_empty() && !esc_leaked);
 
-    // Second Escape closes palette
-    let mut raw_escape2 = RawInput::default();
-    raw_escape2.events.push(Event::Key {
-        key: Key::Escape,
-        physical_key: None,
-        pressed: true,
-        repeat: false,
-        modifiers: Modifiers::default(),
-    });
-    let mut out2 = ctx.run_ui(raw_escape2, |ui| {
-        palette.show(ui.ctx(), &theme);
-    });
+    let mut out2 = ctx.run_ui(esc_inp(), |ui| { palette.show(ui.ctx(), &theme); });
     out2.textures_delta.clear();
     assert!(!palette.is_open());
 }
@@ -403,5 +346,94 @@ fn test_inspector_convert_card_units_and_scale() {
     assert_eq!(card.height, "150.0");
     assert_eq!(card.radius, "10.0");
 }
+
+#[test]
+fn test_full_gallery_cpu_hygiene_all_states_and_frame_pacing() {
+    let ctx = Context::default();
+    let mut app = GalleryApp::new();
+
+    let run_gallery_frame =
+        |app: &mut GalleryApp, time: f64, hover_pos: Option<Pos2>| -> std::time::Duration {
+            let mut raw = RawInput {
+                time: Some(time),
+                screen_rect: Some(egui::Rect::from_min_size(
+                    Pos2::ZERO,
+                    egui::vec2(1160.0, 740.0),
+                )),
+                ..Default::default()
+            };
+            if let Some(pos) = hover_pos {
+                raw.events.push(Event::PointerMoved(pos));
+            }
+            let mut out = ctx.run_ui(raw, |ui| {
+                app.render_ui(ui);
+            });
+            out.textures_delta.clear();
+            out.viewport_output[&egui::ViewportId::ROOT].repaint_delay
+        };
+
+    // 1. Verify MacTheme::apply_to_egui idempotence (zero Arc<Style> clone thrashing when unchanged)
+    let theme = MacTheme::new(MacAppearance::Aqua);
+    theme.apply_to_egui(&ctx);
+    let style_arc_1 = ctx.global_style();
+    theme.apply_to_egui(&ctx);
+    let style_arc_2 = ctx.global_style();
+    assert!(
+        std::sync::Arc::ptr_eq(&style_arc_1, &style_arc_2),
+        "MacTheme::apply_to_egui must be O(1) no-op when theme/appearance/accent has not changed"
+    );
+
+    // 2. Verify all 5 GalleryScreen states settle to zero immediate repaints (!delay.is_zero())
+    let mut t = 10.0;
+    for screen in GalleryScreen::ALL {
+        app.active_screen = screen;
+        app.sidebar.active_screen = screen;
+        for _ in 0..4 {
+            t += 0.25;
+            let _ = run_gallery_frame(&mut app, t, None);
+        }
+        t += 1.0;
+        let _ = run_gallery_frame(&mut app, t, None);
+        t += 0.5;
+        let delay = run_gallery_frame(&mut app, t, None);
+        let causes = ctx.repaint_causes();
+        assert!(
+            !delay.is_zero(),
+            "GalleryScreen::{screen:?} at rest must NOT request Duration::ZERO busy-loop repaints (got delay={delay:?}, causes={causes:?})"
+        );
+    }
+
+    // 3. Verify stationary pointer hovering over a scrollbar track/thumb does NOT cause a 0ms busy-loop
+    let scrollbar_pos = egui::pos2(1152.0, 300.0);
+    t += 0.05;
+    let _ = run_gallery_frame(&mut app, t, Some(scrollbar_pos));
+    t += 0.05;
+    let _ = run_gallery_frame(&mut app, t, None);
+    t += 0.05;
+    let hover_active_delay = run_gallery_frame(&mut app, t, None);
+    let hover_causes = ctx.repaint_causes();
+    assert!(
+        !hover_active_delay.is_zero(),
+        "Stationary pointer over scrollbar must schedule timer fade-out, never Duration::ZERO (got {hover_active_delay:?}, causes={hover_causes:?})"
+    );
+    t += 1.2;
+    let hover_settled_delay = run_gallery_frame(&mut app, t, None);
+    assert!(
+        !hover_settled_delay.is_zero(),
+        "Stationary pointer over scrollbar after fade timeout must remain idle (got {hover_settled_delay:?})"
+    );
+
+    // 4. Verify active timeline playback on State 5 uses frame-paced delay (>= 16ms), never Duration::ZERO
+    app.active_screen = GalleryScreen::AvKitMediaStudio;
+    app.center.media_playing = true;
+    t += 0.033;
+    let play_delay = run_gallery_frame(&mut app, t, None);
+    assert!(
+        !play_delay.is_zero() && play_delay <= std::time::Duration::from_millis(50),
+        "Active timeline playback must be frame-paced (e.g. ~30fps), never a 0ms busy-loop (got {play_delay:?})"
+    );
+    app.center.media_playing = false;
+}
+
 
 

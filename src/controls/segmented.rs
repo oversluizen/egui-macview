@@ -72,14 +72,8 @@ impl<'a> MacSegmentedControl<'a> {
 
     /// Renders the segmented control and fires `on_select` when a new segment is clicked.
     pub fn show(self, ui: &mut Ui, mut on_select: impl FnMut(usize)) -> Response {
-        let fallback_theme;
-        let theme = match self.theme {
-            Some(t) => t,
-            None => {
-                fallback_theme = MacTheme::from_ctx(ui.ctx());
-                &fallback_theme
-            }
-        };
+        let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
+        let theme: &MacTheme = &theme_cow;
 
         let segmented_tokens = theme.segmented();
         let metrics = &segmented_tokens.regular;

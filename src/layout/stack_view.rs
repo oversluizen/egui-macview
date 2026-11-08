@@ -272,14 +272,8 @@ impl<'a> MacStackView<'a> {
         ui: &mut Ui,
         add_contents: impl FnOnce(&mut MacStackUi<'_>) -> R,
     ) -> MacStackViewOutput<R> {
-        let fallback_theme;
-        let theme = match self.theme {
-            Some(t) => t,
-            None => {
-                fallback_theme = MacTheme::from_ctx(ui.ctx());
-                &fallback_theme
-            }
-        };
+        let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
+        let theme: &MacTheme = &theme_cow;
 
         let metrics = theme.stack_view();
         let spacing = self

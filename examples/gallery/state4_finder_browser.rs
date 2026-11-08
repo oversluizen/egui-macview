@@ -80,8 +80,10 @@ impl CenterState {
         let t = content_ui.input(|i| i.time);
 
         if self.is_publishing {
-            content_ui.ctx().request_repaint();
-            self.publish_progress = (self.publish_progress + 0.008).min(1.0);
+            content_ui
+                .ctx()
+                .request_repaint_after(std::time::Duration::from_millis(33));
+            self.publish_progress = (self.publish_progress + 0.015).min(1.0);
             if self.publish_progress >= 1.0 {
                 self.is_publishing = false;
                 toasts
@@ -296,15 +298,20 @@ impl CenterState {
             }
             bar.show(ui);
 
-            MacProgressIndicator::spinning(t.fract())
+            let spin_t = if self.is_publishing || self.publish_indeterminate {
+                t.fract().max(1e-4)
+            } else {
+                0.0
+            };
+            MacProgressIndicator::spinning(spin_t)
                 .theme(theme)
                 .control_size(MacProgressControlSize::Regular)
                 .show(ui);
-            MacProgressIndicator::spinning(t.fract())
+            MacProgressIndicator::spinning(spin_t)
                 .theme(theme)
                 .control_size(MacProgressControlSize::Small)
                 .show(ui);
-            MacProgressIndicator::spinning(t.fract())
+            MacProgressIndicator::spinning(spin_t)
                 .theme(theme)
                 .control_size(MacProgressControlSize::Mini)
                 .show(ui);

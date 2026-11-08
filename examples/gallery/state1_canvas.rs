@@ -127,7 +127,7 @@ impl CenterState {
         let bounce_scale = self.bounce_start_time.map_or(1.0, |start_t| {
             let elapsed = (cur_time - start_t) as f32;
             if elapsed < self.bounce_spring.settling_duration() {
-                content_ui.ctx().request_repaint();
+                content_ui.ctx().request_repaint_after_secs(1.0 / 60.0);
                 let p = self.bounce_spring.evaluate(elapsed);
                 1.0 + 0.20 * (1.0 - p).abs() * (elapsed * 12.0).sin()
             } else {
@@ -145,15 +145,8 @@ impl CenterState {
         } else {
             card.scale_pct
         };
-        let theta = effective_rot.to_radians();
         let scale_factor = (effective_scale / 100.0) * bounce_scale;
-        let skew_val = card.skew_deg.to_radians().tan();
-        let (a, b, c, d) = (
-            scale_factor * theta.cos(),
-            -scale_factor * theta.sin() + skew_val,
-            scale_factor * theta.sin(),
-            scale_factor * theta.cos(),
-        );
+        let (a, b, c, d) = card.affine_matrix(effective_rot, scale_factor);
 
         let card_center = pos2(
             (base_center_x + self.card_drag_offset.x).clamp(canvas_rect.min.x + 40.0, canvas_rect.max.x - 40.0),
@@ -175,7 +168,7 @@ impl CenterState {
             card_bg_style.secondary_text_color(theme),
         );
 
-        if (theta.abs() < 1e-4) && (skew_val.abs() < 1e-4) {
+        if (effective_rot.abs() < 1e-4) && (card.skew_deg.abs() < 1e-4) {
             let card_rect = Rect::from_center_size(card_center, vec2(card_w * scale_factor, card_h * scale_factor));
             if card.shadow_enabled && card.shadow_blur > 0.1 {
                 let blur = card.shadow_blur as f32;

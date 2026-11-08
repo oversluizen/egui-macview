@@ -87,14 +87,22 @@ pub fn parse_color32(s: &str) -> Color32 {
             }
             _ => {}
         }
-    } else if trimmed.starts_with("rgba(") && trimmed.ends_with(')') {
-        let inside = &trimmed[5..trimmed.len() - 1];
-        let parts: Vec<&str> = inside.split(',').map(|p| p.trim()).collect();
-        if parts.len() == 4 {
-            let r = parts[0].parse::<u8>().unwrap_or(0);
-            let g = parts[1].parse::<u8>().unwrap_or(0);
-            let b = parts[2].parse::<u8>().unwrap_or(0);
-            let a_f = parts[3].parse::<f32>().unwrap_or(1.0);
+    } else if let Some(inside) = trimmed
+        .strip_prefix("rgba(")
+        .and_then(|s| s.strip_suffix(')'))
+    {
+        let mut parts = inside.split(',').map(str::trim);
+        if let (Some(r_s), Some(g_s), Some(b_s), Some(a_s), None) = (
+            parts.next(),
+            parts.next(),
+            parts.next(),
+            parts.next(),
+            parts.next(),
+        ) {
+            let r = r_s.parse::<u8>().unwrap_or(0);
+            let g = g_s.parse::<u8>().unwrap_or(0);
+            let b = b_s.parse::<u8>().unwrap_or(0);
+            let a_f = a_s.parse::<f32>().unwrap_or(1.0);
             let a = (a_f.clamp(0.0, 1.0) * 255.0).round() as u8;
             return Color32::from_rgba_unmultiplied(r, g, b, a);
         }

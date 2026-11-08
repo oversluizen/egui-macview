@@ -159,14 +159,8 @@ impl<'a> MacContextMenu<'a> {
             return None;
         }
 
-        let fallback_theme;
-        let theme = match self.theme {
-            Some(t) => t,
-            None => {
-                fallback_theme = MacTheme::from_ctx(ui.ctx());
-                &fallback_theme
-            }
-        };
+        let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
+        let theme: &MacTheme = &theme_cow;
 
         let key_action = ui.input_mut(|i| {
             if i.consume_key(Modifiers::NONE, Key::Escape) {

@@ -89,14 +89,8 @@ impl<'a> MacButtonCell<'a> {
 
 impl<'a> Widget for MacButtonCell<'a> {
     fn ui(self, ui: &mut Ui) -> Response {
-        let fallback_theme;
-        let theme = match self.theme {
-            Some(t) => t,
-            None => {
-                fallback_theme = MacTheme::from_ctx(ui.ctx());
-                &fallback_theme
-            }
-        };
+        let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
+        let theme: &MacTheme = &theme_cow;
 
         let metrics = &theme.button().regular;
         let height = self.height.unwrap_or_else(|| metrics.height.points());

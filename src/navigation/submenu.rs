@@ -108,6 +108,48 @@ pub fn handle_submenu_input(
     }
 }
 
+/// Computes the maximum required item width across `items` for a menu or submenu dropdown.
+pub(crate) fn measure_menu_items_max_width(
+    painter: &egui::Painter,
+    items: &[crate::navigation::item::NSMenuItem],
+    font_id: &FontId,
+    on_accent: egui::Color32,
+    lead_offset: f32,
+    padding_h: f32,
+    min_clearance: f32,
+) -> f32 {
+    let mut max_item_w = 0.0f32;
+    for item in items {
+        if matches!(item.kind, MacMenuItemKind::Separator) {
+            continue;
+        }
+        let title_w = painter
+            .layout_no_wrap(item.title.clone(), font_id.clone(), on_accent)
+            .size()
+            .x;
+        let trailing_str = match &item.kind {
+            MacMenuItemKind::Action {
+                shortcut: Some(sc), ..
+            } => Some(sc.format_text()),
+            MacMenuItemKind::Submenu { .. } => Some("›".to_string()),
+            _ => None,
+        };
+        let trailing_w = trailing_str.map_or(0.0, |s| {
+            painter
+                .layout_no_wrap(s, font_id.clone(), on_accent)
+                .size()
+                .x
+        });
+        let item_w = if trailing_w > 0.0 {
+            lead_offset + padding_h + title_w + min_clearance + trailing_w * 2.0
+        } else {
+            lead_offset + padding_h + title_w
+        };
+        max_item_w = max_item_w.max(item_w);
+    }
+    max_item_w
+}
+
 /// Renders a cascading submenu popover adjacent to its parent menu item.
 pub fn render_submenu_popover(
     child_menu: &NSMenu,
@@ -137,44 +179,15 @@ pub fn render_submenu_popover(
         .fixed_pos(sub_pos)
         .show(ctx, |sub_ui| {
             let painter = sub_ui.painter();
-
-            let mut max_item_w = 0.0f32;
-            for item in &child_menu.items {
-                if matches!(item.kind, MacMenuItemKind::Separator) {
-                    continue;
-                }
-                let title_w = painter
-                    .layout_no_wrap(item.title.clone(), font_id.clone(), on_accent)
-                    .size()
-                    .x;
-                let trailing_w = match &item.kind {
-                    MacMenuItemKind::Action {
-                        shortcut: Some(sc), ..
-                    } => {
-                        painter
-                            .layout_no_wrap(sc.format_text(), font_id.clone(), on_accent)
-                            .size()
-                            .x
-                    }
-                    MacMenuItemKind::Submenu { .. } => {
-                        painter
-                            .layout_no_wrap("›".to_string(), font_id.clone(), on_accent)
-                            .size()
-                            .x
-                    }
-                    _ => 0.0,
-                };
-
-                let item_w = if trailing_w > 0.0 {
-                    padding_h * 2.0 + title_w + min_clearance + trailing_w * 2.0
-                } else {
-                    padding_h * 2.0 + title_w
-                };
-
-                if item_w > max_item_w {
-                    max_item_w = item_w;
-                }
-            }
+            let max_item_w = measure_menu_items_max_width(
+                painter,
+                &child_menu.items,
+                &font_id,
+                on_accent,
+                padding_h,
+                padding_h,
+                min_clearance,
+            );
 
             let sub_menu_w = base_sub_min_w.max(max_item_w + menu_padding * 2.0);
             let sub_rect = Rect::from_min_size(sub_pos, Vec2::new(sub_menu_w, sub_total_h));

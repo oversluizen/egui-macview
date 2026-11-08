@@ -95,6 +95,14 @@ impl MacTheme {
             .unwrap_or_default()
     }
 
+    /// Resolves an optional borrowed [`MacTheme`], falling back to [`MacTheme::from_ctx`].
+    pub fn resolve<'a>(theme: Option<&'a Self>, ctx: &egui::Context) -> std::borrow::Cow<'a, Self> {
+        match theme {
+            Some(t) => std::borrow::Cow::Borrowed(t),
+            None => std::borrow::Cow::Owned(Self::from_ctx(ctx)),
+        }
+    }
+
     /// Sets the window controls presentation style (Strategy 2).
     pub fn with_window_controls_style(mut self, style: WindowControlsStyle) -> Self {
         self.window_controls_style = style;
@@ -362,7 +370,21 @@ impl MacTheme {
     }
 
     /// Synchronizes `egui::Context` theme, visuals, and stored `MacTheme` with the macOS appearance.
+    ///
+    /// Performs an $O(1)$ short-circuit when the active `MacTheme` stored in `ctx` already matches
+    /// the current appearance, window controls style, accent override, and token catalog pointer.
     pub fn apply_to_egui(&self, ctx: &egui::Context) {
+        let unchanged = ctx.data(|d| {
+            d.get_temp::<MacTheme>(Id::NULL).is_some_and(|prev| {
+                prev.appearance == self.appearance
+                    && prev.window_controls_style == self.window_controls_style
+                    && prev.custom_accent == self.custom_accent
+                    && Arc::ptr_eq(&prev.tokens, &self.tokens)
+            })
+        });
+        if unchanged {
+            return;
+        }
         ctx.data_mut(|d| d.insert_temp(Id::NULL, self.clone()));
 
         let egui_theme = match self.appearance {

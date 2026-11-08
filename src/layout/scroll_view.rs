@@ -147,14 +147,8 @@ impl<'a> MacScrollView<'a> {
         ui: &mut Ui,
         content: impl FnOnce(&mut Ui) -> R,
     ) -> MacScrollViewOutput<R> {
-        let fallback_theme;
-        let theme = match self.theme {
-            Some(t) => t,
-            None => {
-                fallback_theme = MacTheme::from_ctx(ui.ctx());
-                &fallback_theme
-            }
-        };
+        let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
+        let theme: &MacTheme = &theme_cow;
 
         let metrics = theme.scroll_view();
         let scrollbar_thickness = metrics.scrollbar_thickness.points();
@@ -254,20 +248,26 @@ impl<'a> MacScrollView<'a> {
             ui.data_mut(|d| d.insert_temp(init_id, true));
         }
 
+        let has_v = self.vertical && max_scroll_y > 0.0;
+        let has_h = self.horizontal && max_scroll_x > 0.0;
         let elapsed = (now - last_active).max(0.0);
-        let is_active = !self.auto_hide || !initialized || elapsed < (fade_timeout as f64);
-        let alpha = if self.auto_hide {
-            if !initialized {
-                1.0
-            } else {
-                let a = ui.ctx().animate_bool(self.id.with("fade_anim"), is_active);
-                if a > 0.0 && a < 1.0 {
-                    ui.ctx().request_repaint();
-                }
-                a
-            }
-        } else {
+        let timeout_secs = fade_timeout as f64;
+        let fade_duration = timeout_secs * 0.5 * 0.5;
+        let alpha = if !self.auto_hide {
             1.0
+        } else if !(has_v || has_h) {
+            0.0
+        } else if !initialized || elapsed < timeout_secs {
+            let remaining = (timeout_secs - elapsed).max(0.0) as f32;
+            ui.ctx().request_repaint_after_secs(remaining);
+            1.0
+        } else if elapsed < timeout_secs + fade_duration {
+            let t = ((elapsed - timeout_secs) / fade_duration).clamp(0.0, 1.0) as f32;
+            ui.ctx()
+                .request_repaint_after(std::time::Duration::from_millis(16));
+            1.0 - t
+        } else {
+            0.0
         };
 
         let painter = ui.painter_at(viewport_rect);
@@ -277,9 +277,6 @@ impl<'a> MacScrollView<'a> {
             theme.scrollbar_thumb_color(hovered || dragged, alpha)
         };
         let track_bg_color = theme.control().gamma_multiply(alpha * 0.5);
-
-        let has_v = self.vertical && max_scroll_y > 0.0;
-        let has_h = self.horizontal && max_scroll_x > 0.0;
 
         // 4. Vertical Floating Overlay Scrollbar
         if has_v {

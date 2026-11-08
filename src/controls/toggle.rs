@@ -55,14 +55,8 @@ impl<'a> MacToggle<'a> {
 
 impl<'a> Widget for MacToggle<'a> {
     fn ui(self, ui: &mut Ui) -> Response {
-        let fallback_theme;
-        let theme = match self.theme {
-            Some(t) => t,
-            None => {
-                fallback_theme = MacTheme::from_ctx(ui.ctx());
-                &fallback_theme
-            }
-        };
+        let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
+        let theme: &MacTheme = &theme_cow;
 
         let metrics = theme.toggle();
         let height = metrics.height.points();

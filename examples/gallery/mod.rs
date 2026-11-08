@@ -44,6 +44,20 @@ pub struct CardModel {
     pub alignment_idx: usize,
 }
 
+impl CardModel {
+    /// Computes the 2x2 affine transform matrix `(a, b, c, d)` for `rot_deg` and `scale_factor`.
+    pub fn affine_matrix(&self, rot_deg: f32, scale_factor: f32) -> (f32, f32, f32, f32) {
+        let theta = rot_deg.to_radians();
+        let skew_val = self.skew_deg.to_radians().tan();
+        (
+            scale_factor * theta.cos(),
+            -scale_factor * theta.sin() + skew_val,
+            scale_factor * theta.sin(),
+            scale_factor * theta.cos(),
+        )
+    }
+}
+
 impl Default for CardModel {
     fn default() -> Self {
         let default_theme = MacTheme::default();

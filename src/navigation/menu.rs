@@ -126,14 +126,8 @@ impl<'a> MacMenuBar<'a> {
 
     /// Renders the menu bar into the given UI, returning triggered action if any.
     pub fn show(mut self, ui: &mut Ui) -> Option<String> {
-        let fallback_theme;
-        let theme = match self.theme {
-            Some(t) => t,
-            None => {
-                fallback_theme = MacTheme::from_ctx(ui.ctx());
-                &fallback_theme
-            }
-        };
+        let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
+        let theme: &MacTheme = &theme_cow;
 
         let sub_temp_id = Id::NULL.with("mac_menu_bar_submenu_highlight");
         let mut sub_highlight: Option<usize> = ui.ctx().data(|d| d.get_temp(sub_temp_id));
@@ -263,37 +257,15 @@ impl<'a> MacMenuBar<'a> {
                     padding_h
                 };
 
-                let mut max_item_w = 0.0f32;
-                for item in &menu.items {
-                    if matches!(item.kind, MacMenuItemKind::Separator) {
-                        continue;
-                    }
-                    let title_w = ui
-                        .painter()
-                        .layout_no_wrap(item.title.clone(), font_id.clone(), on_accent)
-                        .size()
-                        .x;
-                    let trailing_str = match &item.kind {
-                        MacMenuItemKind::Action {
-                            shortcut: Some(sc), ..
-                        } => Some(sc.format_text()),
-                        MacMenuItemKind::Submenu { .. } => Some("›".to_string()),
-                        _ => None,
-                    };
-                    let trailing_w = trailing_str.map_or(0.0, |s| {
-                        ui.painter()
-                            .layout_no_wrap(s, font_id.clone(), on_accent)
-                            .size()
-                            .x
-                    });
-
-                    let item_w = if trailing_w > 0.0 {
-                        lead_offset + padding_h + title_w + min_clearance + trailing_w * 2.0
-                    } else {
-                        lead_offset + padding_h + title_w
-                    };
-                    max_item_w = max_item_w.max(item_w);
-                }
+                let max_item_w = super::submenu::measure_menu_items_max_width(
+                    ui.painter(),
+                    &menu.items,
+                    &font_id,
+                    on_accent,
+                    lead_offset,
+                    padding_h,
+                    min_clearance,
+                );
 
                 let menu_width = base_min_width.max(max_item_w + menu_padding * 2.0);
                 let popup_pos = Pos2::new(anchor.left(), anchor.bottom());

@@ -99,16 +99,63 @@ impl<'a> MacStepper<'a> {
     }
 }
 
+/// Consumes an arrow key (`ArrowUp` / `ArrowDown`) with optional `Cmd`/`Ctrl` (`cmd_mult`)
+/// or `Shift` (`shift_mult`) accelerator multiplier.
+pub(crate) fn consume_step_arrow_mult(
+    ui: &mut Ui,
+    key: Key,
+    cmd_mult: f64,
+    shift_mult: f64,
+) -> Option<f64> {
+    ui.input_mut(|i| {
+        if i.consume_key(egui::Modifiers::COMMAND, key)
+            || i.consume_key(egui::Modifiers::CTRL, key)
+            || i.consume_key(egui::Modifiers::MAC_CMD, key)
+        {
+            Some(cmd_mult)
+        } else if i.consume_key(egui::Modifiers::SHIFT, key) {
+            Some(shift_mult)
+        } else if i.consume_key(egui::Modifiers::NONE, key) {
+            Some(1.0)
+        } else {
+            None
+        }
+    })
+}
+
+fn eval_auto_repeat(
+    ui: &mut Ui,
+    held: bool,
+    state_id: egui::Id,
+    now: f64,
+    repeat_delay: f64,
+    repeat_interval: f64,
+) -> bool {
+    if held {
+        ui.ctx().request_repaint_after_secs(repeat_interval as f32);
+        match ui.data_mut(|d| d.get_temp::<(f64, f64)>(state_id)) {
+            None => {
+                ui.data_mut(|d| d.insert_temp(state_id, (now, now)));
+                false
+            }
+            Some((press_start, last_repeat)) => {
+                if now - press_start >= repeat_delay && now - last_repeat >= repeat_interval {
+                    ui.data_mut(|d| d.insert_temp(state_id, (press_start, now)));
+                    true
+                } else {
+                    false
+                }
+            }
+        }
+    } else {
+        ui.data_mut(|d| d.remove_temp::<(f64, f64)>(state_id));
+        false
+    }
+}
+
 impl<'a> Widget for MacStepper<'a> {
     fn ui(self, ui: &mut Ui) -> Response {
-        let fallback_theme;
-        let theme = match self.theme {
-            Some(t) => t,
-            None => {
-                fallback_theme = MacTheme::from_ctx(ui.ctx());
-                &fallback_theme
-            }
-        };
+        let theme = MacTheme::resolve(self.theme, ui.ctx());
 
         let metrics = theme.stepper();
         let width = self.width.unwrap_or_else(|| metrics.width.points());
@@ -172,49 +219,22 @@ impl<'a> Widget for MacStepper<'a> {
         let repeat_delay = metrics.auto_repeat_delay.points() as f64;
         let repeat_interval = metrics.auto_repeat_interval.points() as f64;
 
-        let repeat_top = if self.enabled && top_resp.is_pointer_button_down_on() {
-            ui.ctx().request_repaint();
-            let state = ui.data_mut(|d| d.get_temp::<(f64, f64)>(top_id));
-            match state {
-                None => {
-                    ui.data_mut(|d| d.insert_temp(top_id, (now, now)));
-                    false
-                }
-                Some((press_start, last_repeat)) => {
-                    if now - press_start >= repeat_delay && now - last_repeat >= repeat_interval {
-                        ui.data_mut(|d| d.insert_temp(top_id, (press_start, now)));
-                        true
-                    } else {
-                        false
-                    }
-                }
-            }
-        } else {
-            ui.data_mut(|d| d.remove_temp::<(f64, f64)>(top_id));
-            false
-        };
-
-        let repeat_bottom = if self.enabled && bottom_resp.is_pointer_button_down_on() {
-            ui.ctx().request_repaint();
-            let state = ui.data_mut(|d| d.get_temp::<(f64, f64)>(bottom_id));
-            match state {
-                None => {
-                    ui.data_mut(|d| d.insert_temp(bottom_id, (now, now)));
-                    false
-                }
-                Some((press_start, last_repeat)) => {
-                    if now - press_start >= repeat_delay && now - last_repeat >= repeat_interval {
-                        ui.data_mut(|d| d.insert_temp(bottom_id, (press_start, now)));
-                        true
-                    } else {
-                        false
-                    }
-                }
-            }
-        } else {
-            ui.data_mut(|d| d.remove_temp::<(f64, f64)>(bottom_id));
-            false
-        };
+        let repeat_top = eval_auto_repeat(
+            ui,
+            self.enabled && top_resp.is_pointer_button_down_on(),
+            top_id,
+            now,
+            repeat_delay,
+            repeat_interval,
+        );
+        let repeat_bottom = eval_auto_repeat(
+            ui,
+            self.enabled && bottom_resp.is_pointer_button_down_on(),
+            bottom_id,
+            now,
+            repeat_delay,
+            repeat_interval,
+        );
 
         let ptr_mods = ui.input(|i| {
             let mut m = i.modifiers;
@@ -235,43 +255,12 @@ impl<'a> Widget for MacStepper<'a> {
             1.0
         };
 
-        let key_up_mult = if self.enabled && response.has_focus() {
-            ui.input_mut(|i| {
-                if i.consume_key(egui::Modifiers::COMMAND, Key::ArrowUp)
-                    || i.consume_key(egui::Modifiers::CTRL, Key::ArrowUp)
-                    || i.consume_key(egui::Modifiers::MAC_CMD, Key::ArrowUp)
-                {
-                    Some(cmd_mult)
-                } else if i.consume_key(egui::Modifiers::SHIFT, Key::ArrowUp) {
-                    Some(shift_mult)
-                } else if i.consume_key(egui::Modifiers::NONE, Key::ArrowUp) {
-                    Some(1.0)
-                } else {
-                    None
-                }
-            })
-        } else {
-            None
-        };
-
-        let key_down_mult = if self.enabled && response.has_focus() {
-            ui.input_mut(|i| {
-                if i.consume_key(egui::Modifiers::COMMAND, Key::ArrowDown)
-                    || i.consume_key(egui::Modifiers::CTRL, Key::ArrowDown)
-                    || i.consume_key(egui::Modifiers::MAC_CMD, Key::ArrowDown)
-                {
-                    Some(cmd_mult)
-                } else if i.consume_key(egui::Modifiers::SHIFT, Key::ArrowDown) {
-                    Some(shift_mult)
-                } else if i.consume_key(egui::Modifiers::NONE, Key::ArrowDown) {
-                    Some(1.0)
-                } else {
-                    None
-                }
-            })
-        } else {
-            None
-        };
+        let key_up_mult = (self.enabled && response.has_focus())
+            .then(|| consume_step_arrow_mult(ui, Key::ArrowUp, cmd_mult, shift_mult))
+            .flatten();
+        let key_down_mult = (self.enabled && response.has_focus())
+            .then(|| consume_step_arrow_mult(ui, Key::ArrowDown, cmd_mult, shift_mult))
+            .flatten();
 
         let step_up_mult = if self.enabled && (clicked_top || repeat_top) {
             Some(ptr_mult)
@@ -321,15 +310,7 @@ impl<'a> Widget for MacStepper<'a> {
 
         // Outer focus ring
         if self.enabled && response.has_focus() {
-            let ring = theme.focus_ring();
-            let focus_rect = rect.expand(ring.offset.points());
-            let focus_radius = corner_radius + ring.corner_radius_delta.points();
-            painter.rect_stroke(
-                focus_rect,
-                CornerRadius::same(focus_radius as u8),
-                Stroke::new(ring.stroke_width.points(), theme.keyboard_focus_indicator()),
-                StrokeKind::Outside,
-            );
+            theme.paint_focus_ring(&painter, rect, corner_radius);
         }
 
         // Outer bezel

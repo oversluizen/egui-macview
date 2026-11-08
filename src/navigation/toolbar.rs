@@ -104,14 +104,8 @@ impl<'a> MacToolbar<'a> {
         rect: Rect,
         contents: impl FnOnce(&mut Ui),
     ) -> MacToolbarResponse {
-        let fallback_theme;
-        let theme = match self.theme {
-            Some(t) => t,
-            None => {
-                fallback_theme = MacTheme::from_ctx(ui.ctx());
-                &fallback_theme
-            }
-        };
+        let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
+        let theme: &MacTheme = &theme_cow;
 
         let tb = theme.toolbar_metrics();
         let style = self.style.unwrap_or(theme.window_controls_style);
@@ -371,14 +365,8 @@ impl<'a> MacToolbar<'a> {
 
     /// Allocates full width and renders the toolbar with center/trailing controls closure.
     pub fn show(self, ui: &mut Ui, contents: impl FnOnce(&mut Ui)) -> MacToolbarResponse {
-        let fallback_theme;
-        let theme = match self.theme {
-            Some(t) => t,
-            None => {
-                fallback_theme = MacTheme::from_ctx(ui.ctx());
-                &fallback_theme
-            }
-        };
+        let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
+        let theme: &MacTheme = &theme_cow;
         let tb = theme.toolbar_metrics();
         let target_h = self.height.unwrap_or_else(|| {
             if self.compact {

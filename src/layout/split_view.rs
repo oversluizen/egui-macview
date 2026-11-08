@@ -141,14 +141,8 @@ impl<'a> MacSplitView<'a> {
     /// Computes the layout geometry, handles divider drag interaction and painting,
     /// and returns `(first_rect, second_rect)` for caller-managed child rendering.
     pub fn split_panes(&mut self, ui: &mut Ui) -> (Rect, Rect) {
-        let fallback_theme;
-        let theme = match self.theme {
-            Some(t) => t,
-            None => {
-                fallback_theme = MacTheme::from_ctx(ui.ctx());
-                &fallback_theme
-            }
-        };
+        let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
+        let theme: &MacTheme = &theme_cow;
 
         let metrics = theme.split_view();
         let divider_thickness = metrics.divider_thickness.points();

@@ -109,14 +109,7 @@ impl<'a> MacColorWell<'a> {
 
 impl<'a> Widget for MacColorWell<'a> {
     fn ui(self, ui: &mut Ui) -> Response {
-        let fallback_theme;
-        let theme = match self.theme {
-            Some(t) => t,
-            None => {
-                fallback_theme = MacTheme::from_ctx(ui.ctx());
-                &fallback_theme
-            }
-        };
+        let theme = MacTheme::resolve(self.theme, ui.ctx());
 
         let metrics = theme.color_well();
         let width = self.width.unwrap_or_else(|| metrics.width.points());
@@ -147,15 +140,7 @@ impl<'a> Widget for MacColorWell<'a> {
 
         // Outer focus ring
         if self.enabled && response.has_focus() {
-            let ring = theme.focus_ring();
-            let focus_rect = rect.expand(ring.offset.points());
-            let focus_radius = corner_radius + ring.corner_radius_delta.points();
-            painter.rect_stroke(
-                focus_rect,
-                CornerRadius::same(focus_radius as u8),
-                Stroke::new(ring.stroke_width.points(), theme.keyboard_focus_indicator()),
-                StrokeKind::Outside,
-            );
+            theme.paint_focus_ring(&painter, rect, corner_radius);
         }
 
         // Outer bezel

@@ -4,7 +4,7 @@
 //! Fully data-driven: zero hardcoded colors, radiuses, or padding metrics.
 
 use crate::theme::MacTheme;
-use egui::{Color32, CornerRadius, Key, Modifiers, Response, Stroke, StrokeKind, Ui, Vec2};
+use egui::{CornerRadius, Key, Modifiers, Response, Stroke, StrokeKind, Ui, Vec2};
 use std::ops::RangeInclusive;
 
 fn decimal_places_if_valid(s: &str) -> usize {
@@ -174,14 +174,7 @@ impl<'a> MacInputCell<'a> {
 
     /// Renders the input cell into `ui` and handles keyboard/focus interaction.
     pub fn show(self, ui: &mut Ui) -> Response {
-        let fallback_theme;
-        let theme = match self.theme {
-            Some(t) => t,
-            None => {
-                fallback_theme = MacTheme::from_ctx(ui.ctx());
-                &fallback_theme
-            }
-        };
+        let theme = MacTheme::resolve(self.theme, ui.ctx());
 
         let tf_tokens = &theme.control_metrics().text_field;
         let metrics = match self.control_size {
@@ -191,7 +184,6 @@ impl<'a> MacInputCell<'a> {
             MacControlSize::Large => &tf_tokens.large,
             MacControlSize::CompactInfobox => &tf_tokens.compact_infobox,
         };
-        let ring_metrics = theme.focus_ring();
 
         let height = self.height.unwrap_or_else(|| metrics.height.points());
         let width = self.width.unwrap_or_else(|| metrics.default_width.points());
@@ -280,26 +272,21 @@ impl<'a> MacInputCell<'a> {
                 let stepper_tokens = &theme.control_metrics().stepper;
                 let shift_mult = stepper_tokens.shift_multiplier.points() as f64;
                 let cmd_mult = stepper_tokens.cmd_multiplier.points() as f64;
-                let num_delta = ui.input_mut(|i| {
-                    let mut check_dir = |key: Key| -> Option<f64> {
-                        if i.consume_key(Modifiers::COMMAND, key)
-                            || i.consume_key(Modifiers::CTRL, key)
-                            || i.consume_key(Modifiers::MAC_CMD, key)
-                        {
-                            Some(cmd_mult)
-                        } else if i.consume_key(Modifiers::SHIFT, key) {
-                            Some(shift_mult)
-                        } else if i.consume_key(Modifiers::NONE, key) {
-                            Some(1.0)
-                        } else {
-                            None
-                        }
-                    };
-                    if let Some(m) = check_dir(Key::ArrowUp) {
-                        Some(step * m)
-                    } else {
-                        check_dir(Key::ArrowDown).map(|m| -step * m)
-                    }
+                let num_delta = super::stepper::consume_step_arrow_mult(
+                    ui,
+                    Key::ArrowUp,
+                    cmd_mult,
+                    shift_mult,
+                )
+                .map(|m| step * m)
+                .or_else(|| {
+                    super::stepper::consume_step_arrow_mult(
+                        ui,
+                        Key::ArrowDown,
+                        cmd_mult,
+                        shift_mult,
+                    )
+                    .map(|m| -step * m)
                 });
                 if let Some(delta) = num_delta {
                     let cur_str = ui
@@ -323,43 +310,35 @@ impl<'a> MacInputCell<'a> {
                     response.mark_changed();
                 }
             }
-            if ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Enter)) {
+
+            let mut commit_and_surrender = |ui: &mut Ui, update_snapshot: bool| {
                 if let Some(buf) = ui.data(|d| d.get_temp::<String>(buffer_key)) {
                     *self.value = buf;
                 }
                 ui.data_mut(|d| {
                     d.insert_temp(active_key, false);
-                    d.insert_temp(snapshot_key, self.value.clone());
+                    if update_snapshot {
+                        d.insert_temp(snapshot_key, self.value.clone());
+                    }
                 });
                 ui.memory_mut(|m| m.surrender_focus(self.id));
+            };
+
+            if ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Enter)) {
+                commit_and_surrender(ui, true);
                 surrender_now = true;
-            } else if let Some(prev) = self.prev_focus_id {
-                if ui.input_mut(|i| i.consume_key(Modifiers::SHIFT, Key::Tab)) {
-                    if let Some(buf) = ui.data(|d| d.get_temp::<String>(buffer_key)) {
-                        *self.value = buf;
-                    }
-                    ui.data_mut(|d| d.insert_temp(active_key, false));
-                    ui.memory_mut(|m| m.surrender_focus(self.id));
-                    focus_transition_to = Some(prev);
-                } else if let Some(next) = self.next_focus_id {
-                    if ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Tab)) {
-                        if let Some(buf) = ui.data(|d| d.get_temp::<String>(buffer_key)) {
-                            *self.value = buf;
-                        }
-                        ui.data_mut(|d| d.insert_temp(active_key, false));
-                        ui.memory_mut(|m| m.surrender_focus(self.id));
-                        focus_transition_to = Some(next);
-                    }
-                }
-            } else if let Some(next) = self.next_focus_id {
-                if ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Tab)) {
-                    if let Some(buf) = ui.data(|d| d.get_temp::<String>(buffer_key)) {
-                        *self.value = buf;
-                    }
-                    ui.data_mut(|d| d.insert_temp(active_key, false));
-                    ui.memory_mut(|m| m.surrender_focus(self.id));
-                    focus_transition_to = Some(next);
-                }
+            } else if let Some(prev) = self
+                .prev_focus_id
+                .filter(|_| ui.input_mut(|i| i.consume_key(Modifiers::SHIFT, Key::Tab)))
+            {
+                commit_and_surrender(ui, false);
+                focus_transition_to = Some(prev);
+            } else if let Some(next) = self
+                .next_focus_id
+                .filter(|_| ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Tab)))
+            {
+                commit_and_surrender(ui, false);
+                focus_transition_to = Some(next);
             }
         }
 
@@ -367,18 +346,7 @@ impl<'a> MacInputCell<'a> {
 
         // 1. Draw outer focus ring halo (NSFocusRingPlacementOutside) when focused
         if is_focused && !surrender_now {
-            let halo_offset = ring_metrics.offset.points();
-            let halo_stroke_width = ring_metrics.stroke_width.points();
-            let halo_radius = corner_radius + ring_metrics.corner_radius_delta.points();
-            let halo_rect = rect.expand(halo_offset);
-
-            painter.rect(
-                halo_rect,
-                CornerRadius::same(halo_radius as u8),
-                Color32::TRANSPARENT,
-                Stroke::new(halo_stroke_width, theme.keyboard_focus_indicator()),
-                StrokeKind::Outside,
-            );
+            theme.paint_focus_ring(&painter, rect, corner_radius);
         }
 
         // 2. Control background and border (painted BEFORE TextEdit so text is never obscured)

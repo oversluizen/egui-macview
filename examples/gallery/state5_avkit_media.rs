@@ -19,13 +19,15 @@ impl CenterState {
         let label_font = FontId::proportional(12.0);
         let now = content_ui.input(|i| i.time);
 
-        // Advance playhead when playing
+        // Advance playhead when playing (frame-paced at ~30fps to preserve battery)
         if self.media_playing {
-            content_ui.ctx().request_repaint();
+            content_ui
+                .ctx()
+                .request_repaint_after(std::time::Duration::from_millis(33));
             let dt = self
                 .media_last_time
                 .map(|prev| (now - prev).clamp(0.0, 0.1))
-                .unwrap_or(1.0 / 60.0);
+                .unwrap_or(1.0 / 30.0);
             self.media_playhead += dt * 14.0;
             if self.media_playhead >= self.media_out_point {
                 if self.media_loop {
@@ -52,12 +54,17 @@ impl CenterState {
         self.audio_level_l = ((wave_amp * 9.2 + jitter) * self.media_gain).clamp(0.4, 10.0);
         self.audio_level_r =
             (((wave_amp * 8.7 - jitter * 0.8) + 0.35) * self.media_gain).clamp(0.4, 10.0);
-        self.audio_peak_l = (self.audio_peak_l - 0.03)
-            .max(self.audio_level_l)
-            .clamp(0.4, 10.0);
-        self.audio_peak_r = (self.audio_peak_r - 0.03)
-            .max(self.audio_level_r)
-            .clamp(0.4, 10.0);
+        if self.media_playing {
+            self.audio_peak_l = (self.audio_peak_l - 0.03)
+                .max(self.audio_level_l)
+                .clamp(0.4, 10.0);
+            self.audio_peak_r = (self.audio_peak_r - 0.03)
+                .max(self.audio_level_r)
+                .clamp(0.4, 10.0);
+        } else {
+            self.audio_peak_l = self.audio_peak_l.max(self.audio_level_l).clamp(0.4, 10.0);
+            self.audio_peak_r = self.audio_peak_r.max(self.audio_level_r).clamp(0.4, 10.0);
+        }
 
         content_ui.label(
             egui::RichText::new(

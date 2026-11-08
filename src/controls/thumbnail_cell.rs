@@ -98,14 +98,8 @@ impl<'a> MacThumbnailCell<'a> {
 
     /// Paints the thumbnail cell inside a specific rect using an existing painter.
     pub fn paint_in_rect(self, painter: &Painter, rect: Rect, hovered: bool) {
-        let fallback_theme;
-        let theme = match self.theme {
-            Some(t) => t,
-            None => {
-                fallback_theme = MacTheme::from_ctx(painter.ctx());
-                &fallback_theme
-            }
-        };
+        let theme_cow = MacTheme::resolve(self.theme, painter.ctx());
+        let theme: &MacTheme = &theme_cow;
 
         let metrics = theme.thumbnail();
         let corner_radius = self
@@ -148,14 +142,8 @@ impl<'a> MacThumbnailCell<'a> {
 
 impl<'a> Widget for MacThumbnailCell<'a> {
     fn ui(self, ui: &mut Ui) -> Response {
-        let fallback_theme;
-        let theme = match self.theme {
-            Some(t) => t,
-            None => {
-                fallback_theme = MacTheme::from_ctx(ui.ctx());
-                &fallback_theme
-            }
-        };
+        let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
+        let theme: &MacTheme = &theme_cow;
 
         let metrics = theme.thumbnail();
         let default_side = metrics.size.points();

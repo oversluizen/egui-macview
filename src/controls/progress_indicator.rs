@@ -181,14 +181,8 @@ impl<'a> MacProgressIndicator<'a> {
 
 impl<'a> Widget for MacProgressIndicator<'a> {
     fn ui(self, ui: &mut Ui) -> Response {
-        let fallback_theme;
-        let theme = match self.theme {
-            Some(t) => t,
-            None => {
-                fallback_theme = MacTheme::from_ctx(ui.ctx());
-                &fallback_theme
-            }
-        };
+        let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
+        let theme: &MacTheme = &theme_cow;
 
         let pm = theme.progress_indicator();
         let sm = self.size_metrics(theme);
@@ -261,13 +255,16 @@ impl<'a> Widget for MacProgressIndicator<'a> {
                         from_p = cur_p;
                         to_p = target_p;
                         start_t = now;
-                        ui.ctx().request_repaint();
+                        ui.ctx().request_repaint_after(std::time::Duration::from_millis(16));
                         from_p
-                    } else {
-                        if (to_p - from_p).abs() > f32::EPSILON && elapsed < spring.response * 2.0 {
-                            ui.ctx().request_repaint();
-                        }
+                    } else if (to_p - from_p).abs() > f32::EPSILON
+                        && elapsed < spring.settling_duration()
+                    {
+                        ui.ctx().request_repaint_after(std::time::Duration::from_millis(16));
                         cur_p
+                    } else {
+                        from_p = to_p;
+                        to_p
                     };
                     ui.data_mut(|d| d.insert_temp(anim_id, (from_p, to_p, start_t)));
 
@@ -290,7 +287,9 @@ impl<'a> Widget for MacProgressIndicator<'a> {
                         Vec2::new(pill_w, bar_h),
                     );
                     painter.rect_filled(pill_rect, radius, fill_color);
-                    ui.ctx().request_repaint();
+                    if self.time > 0.0 {
+                        ui.ctx().request_repaint_after(std::time::Duration::from_millis(33));
+                    }
                 }
 
                 if let Some(text) = status_text {
@@ -345,7 +344,11 @@ impl<'a> Widget for MacProgressIndicator<'a> {
                     painter.circle_filled(p1, tip_r, spoke_color);
                 }
 
-                ui.ctx().request_repaint();
+                if self.time > 0.0 {
+                    let step_secs =
+                        (1.0 / (speed_hz * spoke_count as f64)).min(1.0) as f32;
+                    ui.ctx().request_repaint_after_secs(step_secs);
+                }
                 response
             }
         }

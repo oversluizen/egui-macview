@@ -60,14 +60,8 @@ impl<'a> MacCanvasFooter<'a> {
 
     /// Renders the canvas footer within the allocated container rectangle.
     pub fn show(self, ui: &mut Ui, container_width: f32) -> Option<MacCanvasFooterAction> {
-        let fallback_theme;
-        let theme = match self.theme {
-            Some(t) => t,
-            None => {
-                fallback_theme = MacTheme::from_ctx(ui.ctx());
-                &fallback_theme
-            }
-        };
+        let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
+        let theme: &MacTheme = &theme_cow;
 
         let fm = theme.footer_metrics();
         let footer_height = self.height;

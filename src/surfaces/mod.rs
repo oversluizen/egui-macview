@@ -81,14 +81,8 @@ impl<'a> MacPanel<'a> {
         rect: Rect,
         add_contents: impl FnOnce(&mut Ui) -> R,
     ) -> (Response, R) {
-        let fallback_theme;
-        let theme = match self.theme {
-            Some(t) => t,
-            None => {
-                fallback_theme = MacTheme::from_ctx(ui.ctx());
-                &fallback_theme
-            }
-        };
+        let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
+        let theme: &MacTheme = &theme_cow;
 
         let panel_id = self.id.unwrap_or_else(|| {
             ui.scope_id().with((
@@ -267,14 +261,8 @@ impl<'a> MacPopover<'a> {
         rect: Rect,
         add_contents: impl FnOnce(&mut Ui) -> R,
     ) -> (Response, R) {
-        let fallback_theme;
-        let theme = match self.theme {
-            Some(t) => t,
-            None => {
-                fallback_theme = MacTheme::from_ctx(ui.ctx());
-                &fallback_theme
-            }
-        };
+        let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
+        let theme: &MacTheme = &theme_cow;
 
         let metrics = theme.popover_metrics();
         let corner_radius = metrics.corner_radius.points();

@@ -160,11 +160,28 @@ impl MacToastManager {
 
     /// Renders active toasts as floating pill banners in the given UI context.
     pub fn show(&mut self, ctx: &egui::Context, theme: &MacTheme) {
+        if self.toasts.is_empty() {
+            return;
+        }
         let dt = ctx.input(|i| i.stable_dt).clamp(0.0, 0.5);
         self.update(dt);
 
         if self.toasts.is_empty() {
             return;
+        }
+        let mut anim_in_flight = false;
+        let mut next_wake = f32::MAX;
+        for t in &self.toasts {
+            if t.elapsed < t.spring.settling_duration() {
+                anim_in_flight = true;
+            } else {
+                next_wake = next_wake.min((t.duration - t.elapsed).max(0.0));
+            }
+        }
+        if anim_in_flight {
+            ctx.request_repaint_after(std::time::Duration::from_millis(16));
+        } else if next_wake < f32::MAX {
+            ctx.request_repaint_after_secs(next_wake);
         }
 
         let tm = theme.toast_metrics();

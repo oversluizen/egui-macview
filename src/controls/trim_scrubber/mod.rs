@@ -147,14 +147,8 @@ impl<'a> MacTrimScrubber<'a> {
 
     /// Renders the trim scrubber in `ui`.
     pub fn show(self, ui: &mut Ui) -> MacTrimScrubberResponse {
-        let fallback_theme;
-        let theme = match self.theme {
-            Some(t) => t,
-            None => {
-                fallback_theme = MacTheme::from_ctx(ui.ctx());
-                &fallback_theme
-            }
-        };
+        let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
+        let theme: &MacTheme = &theme_cow;
 
         let sm = theme.trim_scrubber();
         let width = self.width.unwrap_or_else(|| sm.default_width.points());

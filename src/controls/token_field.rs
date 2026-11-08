@@ -110,8 +110,8 @@ impl<'a> MacTokenField<'a> {
 
 impl<'a> Widget for MacTokenField<'a> {
     fn ui(self, ui: &mut Ui) -> Response {
-        let default_theme = MacTheme::from_ctx(ui.ctx());
-        let theme = self.theme.unwrap_or(&default_theme);
+        let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
+        let theme: &MacTheme = &theme_cow;
         let tfm = theme.token_field();
         let pad_h = tfm.padding_horizontal.points();
         let pad_v = tfm.padding_vertical.points();
@@ -250,11 +250,7 @@ impl<'a> Widget for MacTokenField<'a> {
         let bezel_r = tfm.corner_radius.points();
 
         if self.enabled && is_focused {
-            let ring = theme.focus_ring();
-            let focus_rect = rect.expand(ring.offset.points());
-            let focus_r = CornerRadius::same((bezel_r + ring.corner_radius_delta.points()) as u8);
-            let focus_s = Stroke::new(ring.stroke_width.points(), theme.keyboard_focus_indicator());
-            painter.rect_stroke(focus_rect, focus_r, focus_s, StrokeKind::Outside);
+            theme.paint_focus_ring(&painter, rect, bezel_r);
         }
 
         let border_col = if is_focused {

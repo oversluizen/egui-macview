@@ -202,4 +202,17 @@ impl MacTheme {
     pub fn selected_control_background_style(&self) -> MacBackgroundStyle {
         MacBackgroundStyle::from_color(self.selected_control())
     }
+
+    /// Renders an AppKit outer keyboard focus ring (`NSFocusRingPlacementOutside`) around `rect`.
+    pub fn paint_focus_ring(&self, painter: &egui::Painter, rect: egui::Rect, corner_radius: f32) {
+        let ring = self.focus_ring();
+        let focus_rect = rect.expand(ring.offset.points());
+        let focus_radius = corner_radius + ring.corner_radius_delta.points();
+        painter.rect_stroke(
+            focus_rect,
+            egui::CornerRadius::same(focus_radius as u8),
+            egui::Stroke::new(ring.stroke_width.points(), self.keyboard_focus_indicator()),
+            egui::StrokeKind::Outside,
+        );
+    }
 }

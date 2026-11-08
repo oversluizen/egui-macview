@@ -95,14 +95,8 @@ impl<'a> MacOutlineView<'a> {
 
     /// Renders the outline view container with a tree builder closure.
     pub fn show<R>(self, ui: &mut Ui, content: impl FnOnce(&mut MacOutlineTree<'_>) -> R) -> R {
-        let fallback_theme;
-        let theme = match self.theme {
-            Some(t) => t,
-            None => {
-                fallback_theme = MacTheme::from_ctx(ui.ctx());
-                &fallback_theme
-            }
-        };
+        let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
+        let theme: &MacTheme = &theme_cow;
 
         ui.with_layout(egui::Layout::top_down(egui::Align::Min), |child_ui| {
             let mut tree = MacOutlineTree {

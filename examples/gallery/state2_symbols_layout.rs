@@ -254,7 +254,7 @@ impl CenterState {
                     let (disp_y, alpha) = if let Some(start_t) = self.cascade_start_time {
                         let elapsed = (cur_time - start_t) as f32;
                         if elapsed < self.bounce_spring.settling_duration() + 0.3 {
-                            fixed_view.ui.ctx().request_repaint();
+                            fixed_view.ui.ctx().request_repaint_after_secs(1.0 / 60.0);
                         }
                         let p = self.bounce_spring.evaluate((elapsed - delay).max(0.0));
                         ((1.0 - p) * 20.0, p.clamp(0.0, 1.0))
