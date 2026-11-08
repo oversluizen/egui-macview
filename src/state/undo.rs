@@ -189,4 +189,37 @@ impl<T: Clone + PartialEq> NSUndoManager<T> {
         self.redo_stack.clear();
         self.active_group_initial = None;
     }
+
+    /// Validates all `NSUndoManager` structural invariants (`GL-1015 §3.5`):
+    /// 1. `capacity >= 1`
+    /// 2. `undo_stack.len() <= capacity` and `redo_stack.len() <= capacity`
+    /// 3. Zero consecutive identical snapshots in `undo_stack`
+    pub fn validate_invariants(&self) -> Result<(), String> {
+        if self.capacity == 0 {
+            return Err("NSUndoManager capacity must be >= 1".to_string());
+        }
+        if self.undo_stack.len() > self.capacity {
+            return Err(format!(
+                "undo_stack len ({}) exceeds capacity ({})",
+                self.undo_stack.len(),
+                self.capacity
+            ));
+        }
+        if self.redo_stack.len() > self.capacity {
+            return Err(format!(
+                "redo_stack len ({}) exceeds capacity ({})",
+                self.redo_stack.len(),
+                self.capacity
+            ));
+        }
+        for i in 1..self.undo_stack.len() {
+            if self.undo_stack[i - 1] == self.undo_stack[i] {
+                return Err(format!(
+                    "duplicate consecutive undo snapshot at index {}",
+                    i
+                ));
+            }
+        }
+        Ok(())
+    }
 }

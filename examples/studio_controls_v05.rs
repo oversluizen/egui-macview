@@ -20,22 +20,22 @@ use egui_macview::{
 };
 use std::collections::BTreeSet;
 
-struct StudioApp {
-    appearance: MacAppearance,
-    progress: f32,
-    indeterminate: bool,
-    sort_dir: Option<MacSortDirection>,
-    selected_rows: BTreeSet<usize>,
-    tokens: Vec<String>,
-    token_draft: String,
-    audio_level_l: f32,
-    audio_level_r: f32,
-    segmented_vu: bool,
-    in_point: f64,
-    out_point: f64,
-    playhead: f64,
-    waveform: Vec<f32>,
-    active_path_idx: usize,
+pub struct StudioApp {
+    pub appearance: MacAppearance,
+    pub progress: f32,
+    pub indeterminate: bool,
+    pub sort_dir: Option<MacSortDirection>,
+    pub selected_rows: BTreeSet<usize>,
+    pub tokens: Vec<String>,
+    pub token_draft: String,
+    pub audio_level_l: f32,
+    pub audio_level_r: f32,
+    pub segmented_vu: bool,
+    pub in_point: f64,
+    pub out_point: f64,
+    pub playhead: f64,
+    pub waveform: Vec<f32>,
+    pub active_path_idx: usize,
 }
 
 impl Default for StudioApp {
@@ -70,10 +70,8 @@ impl Default for StudioApp {
     }
 }
 
-impl eframe::App for StudioApp {
-    fn logic(&mut self, _ctx: &egui::Context, _frame: &mut eframe::Frame) {}
-
-    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+impl StudioApp {
+    pub fn render_ui(&mut self, ui: &mut egui::Ui) {
         let theme = MacTheme::new(self.appearance);
         theme.apply_to_egui(ui.ctx());
         let t = ui.input(|i| i.time);
@@ -238,6 +236,14 @@ impl eframe::App for StudioApp {
             .width(640.0)
             .show(ui);
         });
+    }
+}
+
+impl eframe::App for StudioApp {
+    fn logic(&mut self, _ctx: &egui::Context, _frame: &mut eframe::Frame) {}
+
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        self.render_ui(ui);
     }
 }
 

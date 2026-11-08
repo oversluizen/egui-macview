@@ -28,7 +28,7 @@ pub use types::{
 };
 
 /// Dynamic properties of the interactive Canvas Vector Card.
-#[derive(Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CardModel {
     pub width: String,
     pub height: String,

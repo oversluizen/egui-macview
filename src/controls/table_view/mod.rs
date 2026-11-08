@@ -155,14 +155,20 @@ impl<'a> MacTableView<'a> {
             self.enabled,
         );
 
+        let mut clicked_row = None;
+        let mut selection_changed = false;
+        let prev_sel_len = self.selection.len();
+        self.selection.retain(|&idx| idx < self.row_count);
+        if self.selection.len() != prev_sel_len {
+            selection_changed = true;
+        }
+
         let anchor_id = self.id.with("selection_anchor");
         let mut anchor = ui
             .data(|d| d.get_temp::<usize>(anchor_id))
+            .filter(|&a| a < self.row_count)
             .or_else(|| self.selection.iter().next().copied())
             .unwrap_or(0);
-
-        let mut clicked_row = None;
-        let mut selection_changed = false;
 
         // Keyboard ArrowUp / ArrowDown navigation when enabled and a row is selected or focused
         if self.enabled

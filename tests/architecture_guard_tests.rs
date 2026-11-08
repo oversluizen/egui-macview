@@ -1,319 +1,15 @@
-//! Automated Architecture Guard Suite (Fitness Functions).
+//! Automated Architecture Guard Suite (GL-1015 Golden Master Fitness Functions).
 //!
-//! Normative reference: GL-1015 (Rules 8, 9, 10, 11, 13: Zero Hardcoding, Zero Token Cheating,
-//! Domain-Agnostic Separation, Documentation Completeness, and File Size Ceilings).
+//! Normative reference: GL-1015 (Zero Hardcoding, Zero Token Cheating, Domain-Agnostic Separation,
+//! Documentation Completeness, File Size Ceilings, Windows GUI Subsystem & Safe `eframe` Startup,
+//! Anti-Spookcode & Zero Unused Dependencies, and State-Invariant Roundtrip Verification).
 
+mod guard_helpers;
+
+use guard_helpers::*;
 use std::collections::BTreeSet;
 use std::fs;
-use std::path::{Path, PathBuf};
-
-const ALLOWED_RATIOS: &[f64] = &[0.0, 0.5, 1.0, 2.0];
-const FORBIDDEN_DOMAIN_TERMS: &[&str] = &[
-    "pedigree", "gedcom", "kinship", "ancestor", "proband", "marriage", "ahnen", "stamboom",
-    "divorce", "adoptive", "foster", "sibling",
-];
-const MAX_PHYSICAL_LINES: usize = 599;
-const MAX_ESLOC: usize = 400;
-
-fn collect_rs_files(dir: &Path) -> Vec<PathBuf> {
-    let mut files = Vec::new();
-    if let Ok(entries) = fs::read_dir(dir) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.is_dir() {
-                files.extend(collect_rs_files(&path));
-            } else if path.extension().and_then(|s| s.to_str()) == Some("rs") {
-                files.push(path);
-            }
-        }
-    }
-    files.sort();
-    files
-}
-
-/// Strips comments (`//`, `/* ... */`) and string literals (`"..."`) while preserving line count.
-pub fn strip_comments_and_strings(source: &str) -> String {
-    let mut out = String::with_capacity(source.len());
-    let chars: Vec<char> = source.chars().collect();
-    let (mut i, n) = (0, chars.len());
-    while i < n {
-        if i + 1 < n && chars[i] == '/' && chars[i + 1] == '/' {
-            while i < n && chars[i] != '\n' {
-                i += 1;
-            }
-            continue;
-        }
-        if i + 1 < n && chars[i] == '/' && chars[i + 1] == '*' {
-            i += 2;
-            let mut depth = 1usize;
-            while i < n && depth > 0 {
-                if i + 1 < n && chars[i] == '/' && chars[i + 1] == '*' {
-                    depth += 1;
-                    i += 2;
-                } else if i + 1 < n && chars[i] == '*' && chars[i + 1] == '/' {
-                    depth -= 1;
-                    i += 2;
-                } else {
-                    if chars[i] == '\n' {
-                        out.push('\n');
-                    }
-                    i += 1;
-                }
-            }
-            continue;
-        }
-        if chars[i] == 'r' && i + 1 < n && (chars[i + 1] == '#' || chars[i + 1] == '"') {
-            let (mut hashes, mut j) = (0usize, i + 1);
-            while j < n && chars[j] == '#' {
-                hashes += 1;
-                j += 1;
-            }
-            if j < n && chars[j] == '"' {
-                out.push('"');
-                i = j + 1;
-                while i < n {
-                    if chars[i] == '"' {
-                        let mut k = 0;
-                        while i + 1 + k < n && chars[i + 1 + k] == '#' && k < hashes {
-                            k += 1;
-                        }
-                        if k == hashes {
-                            i += 1 + hashes;
-                            break;
-                        }
-                    }
-                    if chars[i] == '\n' {
-                        out.push('\n');
-                    }
-                    i += 1;
-                }
-                out.push('"');
-                continue;
-            }
-        }
-        if chars[i] == '"' {
-            out.push('"');
-            i += 1;
-            while i < n {
-                if chars[i] == '\\' {
-                    i += 2;
-                    continue;
-                }
-                if chars[i] == '"' {
-                    i += 1;
-                    break;
-                }
-                if chars[i] == '\n' {
-                    out.push('\n');
-                }
-                i += 1;
-            }
-            out.push('"');
-            continue;
-        }
-        out.push(chars[i]);
-        i += 1;
-    }
-    out
-}
-
-/// Counts physical lines and effective SLOC (non-empty, non-comment lines).
-pub fn count_lines_and_esloc(source: &str) -> (usize, usize) {
-    let physical = source.lines().count();
-    let stripped = strip_comments_and_strings(source);
-    let esloc = stripped.lines().filter(|l| !l.trim().is_empty()).count();
-    (physical, esloc)
-}
-
-pub fn extract_float_literals(code: &str) -> Vec<(usize, String, f64)> {
-    let mut results = Vec::new();
-    for (line_idx, line) in code.lines().enumerate() {
-        let (line_num, bytes, len, mut i) = (line_idx + 1, line.as_bytes(), line.len(), 0);
-        while i < len {
-            let b = bytes[i];
-            if b.is_ascii_alphabetic() || b == b'_' {
-                while i < len
-                    && (bytes[i].is_ascii_alphanumeric() || bytes[i] == b'_' || bytes[i] == b'.')
-                {
-                    i += 1;
-                }
-                continue;
-            }
-            if b.is_ascii_digit() {
-                let start = i;
-                while i < len && (bytes[i].is_ascii_digit() || bytes[i] == b'_') {
-                    i += 1;
-                }
-                if i + 1 < len && bytes[i] == b'.' && bytes[i + 1].is_ascii_digit() {
-                    i += 1;
-                    while i < len && (bytes[i].is_ascii_digit() || bytes[i] == b'_') {
-                        i += 1;
-                    }
-                    let num_end = i;
-                    if i + 3 <= len && (&line[i..i + 3] == "f32" || &line[i..i + 3] == "f64") {
-                        i += 3;
-                    }
-                    if let Ok(val) = line[start..num_end].replace('_', "").parse::<f64>() {
-                        results.push((line_num, line[start..i].to_string(), val));
-                    }
-                    continue;
-                }
-                if i + 3 <= len && (&line[i..i + 3] == "f32" || &line[i..i + 3] == "f64") {
-                    let num_end = i;
-                    i += 3;
-                    if let Ok(val) = line[start..num_end].replace('_', "").parse::<f64>() {
-                        results.push((line_num, line[start..i].to_string(), val));
-                    }
-                    continue;
-                }
-                continue;
-            }
-            i += 1;
-        }
-    }
-    results
-}
-
-pub fn check_magic_numbers_in_source(file_label: &str, source: &str) -> Vec<String> {
-    let stripped = strip_comments_and_strings(source);
-    extract_float_literals(&stripped)
-        .into_iter()
-        .filter(|(_, _, val)| !ALLOWED_RATIOS.iter().any(|&a| (val - a).abs() < 1e-9))
-        .map(|(line_num, raw, val)| {
-            format!("{file_label}:{line_num} -> forbidden magic float literal `{raw}` ({val})")
-        })
-        .collect()
-}
-
-pub fn check_hardcoded_colors_in_source(file_label: &str, source: &str) -> Vec<String> {
-    let mut violations = Vec::new();
-    let stripped = strip_comments_and_strings(source);
-    let forbidden_calls = [
-        "Color32::from_rgb(",
-        "Color32::from_rgba_premultiplied(",
-        "Color32::from_rgba_unmultiplied(",
-        "Color32::from_black_alpha(",
-        "Color32::WHITE",
-    ];
-    for (idx, line) in stripped.lines().enumerate() {
-        for call in &forbidden_calls {
-            if line.contains(call) {
-                violations.push(format!("{file_label}:{} -> `{call}`", idx + 1));
-            }
-        }
-    }
-    for (idx, raw_line) in source.lines().enumerate() {
-        let trimmed = raw_line.trim();
-        if trimmed.starts_with("//") || trimmed.starts_with("/*") || trimmed.starts_with('*') {
-            continue;
-        }
-        if let Some(pos) = raw_line.find("\"#") {
-            let after = &raw_line[pos + 2..];
-            let hex_len = after.chars().take_while(|c| c.is_ascii_hexdigit()).count();
-            if (hex_len == 6 || hex_len == 8) && after.as_bytes().get(hex_len) == Some(&b'"') {
-                violations.push(format!(
-                    "{file_label}:{} -> inline hex `\"#{}\"`",
-                    idx + 1,
-                    &after[..hex_len]
-                ));
-            }
-        }
-    }
-    violations
-}
-
-pub fn check_token_arithmetic_cheating(file_label: &str, source: &str) -> Vec<String> {
-    let stripped = strip_comments_and_strings(source);
-    let mut violations = Vec::new();
-    for (idx, line) in stripped.lines().enumerate() {
-        if let Some(pos) = line.find(".points()") {
-            let after = line[pos + ".points()".len()..].trim_start();
-            if after.starts_with('+') || after.starts_with('-') {
-                let expr_rest = after[1..].trim_start();
-                for (_, raw, val) in extract_float_literals(expr_rest) {
-                    let is_allowed = ALLOWED_RATIOS.iter().any(|&a| (val - a).abs() < 1e-9);
-                    if !is_allowed && expr_rest.starts_with(&raw) {
-                        violations.push(format!(
-                            "{file_label}:{} -> `.points() {} {raw}`",
-                            idx + 1,
-                            &after[..1]
-                        ));
-                    }
-                }
-            }
-        }
-    }
-    violations
-}
-
-pub fn check_domain_leakage_in_source(file_label: &str, source: &str) -> Vec<String> {
-    let mut violations = Vec::new();
-    for (idx, line) in source.lines().enumerate() {
-        let lower = line.to_lowercase();
-        for &term in FORBIDDEN_DOMAIN_TERMS {
-            if lower.contains(term) {
-                violations.push(format!("{file_label}:{} -> `{term}`", idx + 1));
-            }
-        }
-    }
-    violations
-}
-
-pub fn check_uibuilder_id_salt_in_source(file_label: &str, source: &str) -> Vec<String> {
-    let stripped = strip_comments_and_strings(source);
-    let (mut violations, needle, mut from) = (Vec::new(), "UiBuilder::new()", 0);
-    while let Some(rel) = stripped[from..].find(needle) {
-        let abs = from + rel;
-        let line_num = stripped[..abs].lines().count().max(1);
-        let after = &stripped[abs + needle.len()..];
-        let span = after
-            .find(';')
-            .unwrap_or(after.len())
-            .min(after.find(needle).unwrap_or(after.len()))
-            .min(300);
-        if !after[..span].contains(".id_salt(") {
-            violations.push(format!(
-                "{file_label}:{line_num} -> `UiBuilder::new()` missing `.id_salt(...)`"
-            ));
-        }
-        from = abs + needle.len();
-    }
-    violations
-}
-
-fn collect_json_leaf_paths(
-    val: &serde_json::Value,
-    prefix: String,
-    is_in_metrics_or_color: bool,
-    out: &mut BTreeSet<String>,
-) {
-    if let Some(obj) = val.as_object() {
-        let is_dtcg_leaf = obj.contains_key("$value")
-            || (obj.contains_key("value") && obj.contains_key("$type"))
-            || (obj.contains_key("mass") && obj.contains_key("stiffness"))
-            || (obj.contains_key("size_pt") && obj.contains_key("tracking_pt"));
-        if is_dtcg_leaf && is_in_metrics_or_color {
-            out.insert(prefix);
-            return;
-        }
-        for (k, v) in obj {
-            if k.starts_with('$') || k == "polynomial_spec001" {
-                continue;
-            }
-            let next = if prefix.is_empty() {
-                k.clone()
-            } else {
-                format!("{prefix}.{k}")
-            };
-            let track = is_in_metrics_or_color
-                || next.starts_with("macview.metrics")
-                || next.starts_with("macview.color")
-                || next.starts_with("macview.motion")
-                || next.starts_with("macview.typography.tracking_table");
-            collect_json_leaf_paths(v, next, track, out);
-        }
-    }
-}
+use std::path::Path;
 
 const UI_COMPONENT_DIRS: &[&str] = &[
     "src/controls",
@@ -510,4 +206,100 @@ fn test_guard_zero_cross_component_token_borrowing_and_self_check() {
         "ui.new_child(UiBuilder::new().id_salt(\"s\").max_rect(r));"
     )
     .is_empty());
+}
+
+#[test]
+fn test_guard_windows_gui_subsystem_and_safe_eframe_startup() {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let mut violations = Vec::new();
+    let mut checked_entrypoints = 0usize;
+    for dir_rel in &["examples", "src/bin"] {
+        let dir_path = manifest_dir.join(dir_rel);
+        if !dir_path.exists() {
+            continue;
+        }
+        for file in collect_rs_files(&dir_path) {
+            let rel = file
+                .strip_prefix(manifest_dir)
+                .unwrap_or(&file)
+                .to_string_lossy();
+            let content = fs::read_to_string(&file).expect("read entrypoint candidate");
+            if strip_comments_and_strings(&content).contains("fn main") {
+                checked_entrypoints += 1;
+            }
+            violations.extend(check_gui_entrypoint_safety(&rel, &content));
+        }
+    }
+    assert!(
+        checked_entrypoints >= 3,
+        "Expected at least 3 GUI entrypoints in examples/"
+    );
+    assert!(
+        violations.is_empty(),
+        "Windows GUI Subsystem & Safe eframe Startup Guard (GL-1015 §3.3):\n{violations:#?}"
+    );
+
+    // Self-check: bare NativeOptions::default() without windows_subsystem or safe flags must fail
+    let bad_gui = "fn main() { let _ = eframe::run_native(\"app\", eframe::NativeOptions::default(), Box::new(|_| unreachable!())); }";
+    let self_check = check_gui_entrypoint_safety("bad_example.rs", bad_gui);
+    assert!(
+        self_check.len() >= 5,
+        "Self-check must catch missing subsystem + 4 eframe safety flags: {self_check:#?}"
+    );
+}
+
+#[test]
+fn test_guard_anti_spookcode_and_zero_unused_dependencies() {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let mut spook_violations = Vec::new();
+    let mut combined_src = String::new();
+
+    for file in collect_rs_files(&manifest_dir.join("src")) {
+        let rel = file
+            .strip_prefix(manifest_dir)
+            .unwrap_or(&file)
+            .to_string_lossy();
+        let content = fs::read_to_string(&file).expect("read src file");
+        spook_violations.extend(check_anti_spookcode_in_source(&rel, &content));
+        combined_src.push_str(&strip_comments_and_strings(&content));
+        combined_src.push('\n');
+    }
+    assert!(
+        spook_violations.is_empty(),
+        "Anti-Spookcode Guard (`allow(dead_code)` forbidden in `src/`):\n{spook_violations:#?}"
+    );
+    assert!(
+        !check_anti_spookcode_in_source("src/bad.rs", "#[allow(dead_code)]\nstruct Ghost;")
+            .is_empty()
+    );
+
+    let cargo_toml = fs::read_to_string(manifest_dir.join("Cargo.toml")).expect("read Cargo.toml");
+    let deps = extract_cargo_dependencies(&cargo_toml);
+    assert!(
+        !deps.is_empty(),
+        "Cargo.toml [dependencies] must not be empty"
+    );
+
+    let mut unused_deps = Vec::new();
+    for dep in &deps {
+        let used = combined_src.contains(&format!("{dep}::"))
+            || combined_src.contains(&format!("use {dep}"))
+            || (dep == "serde"
+                && (combined_src.contains("Serialize") || combined_src.contains("Deserialize")));
+        if !used {
+            unused_deps.push(dep.clone());
+        }
+    }
+    assert!(
+        unused_deps.is_empty(),
+        "Zero Unused Dependencies Guard: crates in [dependencies] unused in `src/`:\n{unused_deps:#?}"
+    );
+
+    // State-Invariant & Undo/Redo Roundtrip Guard (GL-1015 §3.5)
+    let undo_src =
+        fs::read_to_string(manifest_dir.join("src/state/undo.rs")).expect("read undo.rs");
+    assert!(
+        undo_src.contains("pub fn validate_invariants("),
+        "NSUndoManager in `src/state/undo.rs` must expose `pub fn validate_invariants(&self)` (GL-1015 §3.5)"
+    );
 }
