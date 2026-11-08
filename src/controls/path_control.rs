@@ -131,7 +131,7 @@ impl<'a> MacPathControl<'a> {
 
     /// Renders the path control bar in `ui`.
     pub fn show(self, ui: &mut Ui) -> MacPathControlResponse {
-        let default_theme = MacTheme::default();
+        let default_theme = MacTheme::from_ctx(ui.ctx());
         let theme = self.theme.unwrap_or(&default_theme);
         let pcm = theme.path_control();
 

@@ -382,7 +382,7 @@ fn test_guard_documentation_and_file_size_ceilings() {
             .any(|l| l.trim_start().starts_with("//!")));
     }
     let mut violations = Vec::new();
-    for dir_rel in &["src", "tests"] {
+    for dir_rel in &["src", "tests", "examples"] {
         for file in collect_rs_files(&manifest_dir.join(dir_rel)) {
             let rel = file
                 .strip_prefix(manifest_dir)

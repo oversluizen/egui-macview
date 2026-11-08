@@ -379,3 +379,49 @@ fn test_input_cell_consumes_single_char_keys_and_commits_on_outside_popup_click(
         "Clicking MacPopUpButton while MacInputCell was focused must open the popup immediately"
     );
 }
+
+#[test]
+fn test_input_cell_numeric_arrow_key_stepping_and_clamping() {
+    let (ctx, theme, mut val) = (Context::default(), MacTheme::new(MacAppearance::Aqua), "100.0".to_string());
+    for _ in 0..2 {
+        ctx.run_ui(RawInput::default(), |ui| {
+            MacInputCell::new("num_cell", &mut val).theme(&theme).numeric(50.0..=250.0, 1.0).show(ui).request_focus();
+        }).textures_delta.clear();
+    }
+    let cases = [
+        (Key::ArrowUp, Modifiers::NONE, "101.0"),
+        (Key::ArrowDown, Modifiers::NONE, "100.0"),
+        (Key::ArrowUp, Modifiers::SHIFT, "110.0"),
+        (Key::ArrowDown, Modifiers::SHIFT, "100.0"),
+        (Key::ArrowUp, Modifiers::COMMAND, "200.0"),
+        (Key::ArrowUp, Modifiers::COMMAND, "250.0"),
+        (Key::ArrowDown, Modifiers::CTRL, "150.0"),
+        (Key::ArrowDown, Modifiers::CTRL, "50.0"),
+        (Key::ArrowDown, Modifiers::NONE, "50.0"),
+    ];
+    for (key, modifiers, expected) in cases {
+        let ev = Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers };
+        let mut changed = false;
+        ctx.run_ui(RawInput { events: vec![ev], ..Default::default() }, |ui| {
+            changed = MacInputCell::new("num_cell", &mut val).theme(&theme).numeric(50.0..=250.0, 1.0).show(ui).changed();
+        }).textures_delta.clear();
+        assert_eq!(val, expected);
+        assert!(changed);
+    }
+
+    // Edge cases: non-numeric ("abc"), scientific notation ("1e2"), and Escape rollback
+    for (buf_override, key, expected) in [
+        ("abc", Key::ArrowUp, "51.0"),
+        ("1e2", Key::ArrowUp, "101.0"),
+        ("corrupted", Key::Escape, "101.0"),
+    ] {
+        let ev = Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers: Modifiers::NONE };
+        ctx.run_ui(RawInput { events: vec![ev], ..Default::default() }, |ui| {
+            let edit_id = Id::NULL.with("num_cell").with("mac_input_buffer");
+            ui.data_mut(|d| d.insert_temp(edit_id, buf_override.to_string()));
+            MacInputCell::new("num_cell", &mut val).theme(&theme).numeric(50.0..=250.0, 1.0).show(ui);
+        }).textures_delta.clear();
+        assert_eq!(val, expected);
+    }
+}
+

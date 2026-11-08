@@ -161,8 +161,19 @@ fn test_setup_symbols_font_registration() {
 #[test]
 fn test_anti_emoji_guard_in_gallery() {
     let gallery_path = concat!(env!("CARGO_MANIFEST_DIR"), "/examples/macview_gallery.rs");
-    let content = std::fs::read_to_string(gallery_path)
+    let mut content = std::fs::read_to_string(gallery_path)
         .unwrap_or_else(|e| panic!("Failed to read {gallery_path}: {e}"));
+    let gallery_dir = concat!(env!("CARGO_MANIFEST_DIR"), "/examples/gallery");
+    if let Ok(entries) = std::fs::read_dir(gallery_dir) {
+        for entry in entries.flatten() {
+            if entry.path().extension().and_then(|s| s.to_str()) == Some("rs") {
+                if let Ok(sub) = std::fs::read_to_string(entry.path()) {
+                    content.push('\n');
+                    content.push_str(&sub);
+                }
+            }
+        }
+    }
 
     // Anti-Emoji Guard: Zero occurrences of Windows Segoe UI / Apple Color Emoji '🔍'
     let emoji = "🔍";

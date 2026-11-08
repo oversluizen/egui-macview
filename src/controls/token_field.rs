@@ -110,7 +110,7 @@ impl<'a> MacTokenField<'a> {
 
 impl<'a> Widget for MacTokenField<'a> {
     fn ui(self, ui: &mut Ui) -> Response {
-        let default_theme = MacTheme::default();
+        let default_theme = MacTheme::from_ctx(ui.ctx());
         let theme = self.theme.unwrap_or(&default_theme);
         let tfm = theme.token_field();
         let pad_h = tfm.padding_horizontal.points();

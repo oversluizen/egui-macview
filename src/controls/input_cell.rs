@@ -5,6 +5,28 @@
 
 use crate::theme::MacTheme;
 use egui::{Color32, CornerRadius, Key, Modifiers, Response, Stroke, StrokeKind, Ui, Vec2};
+use std::ops::RangeInclusive;
+
+fn decimal_places_if_valid(s: &str) -> usize {
+    let t = s.trim();
+    if t.parse::<f64>().is_ok() {
+        t.split_once('.')
+            .map_or(0, |(_, f)| f.split(['e', 'E']).next().unwrap_or("").len())
+    } else {
+        0
+    }
+}
+
+fn format_stepped_number(reference: &str, fallback_ref: &str, step: f64, val: f64) -> String {
+    let ref_decimals = decimal_places_if_valid(reference).max(decimal_places_if_valid(fallback_ref));
+    let step_decimals = if (step - step.round()).abs() > f64::EPSILON {
+        format!("{step}").split_once('.').map_or(1, |(_, f)| f.len())
+    } else {
+        0
+    };
+    let prec = ref_decimals.max(step_decimals);
+    format!("{val:.prec$}")
+}
 
 /// Standard AppKit `NSControlSize` variants for `MacInputCell`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -57,6 +79,7 @@ pub struct MacInputCell<'a> {
     next_focus_id: Option<egui::Id>,
     prev_focus_id: Option<egui::Id>,
     placeholder: Option<&'a str>,
+    numeric_config: Option<(RangeInclusive<f64>, f64)>,
 }
 
 impl<'a> MacInputCell<'a> {
@@ -81,7 +104,15 @@ impl<'a> MacInputCell<'a> {
             next_focus_id: None,
             prev_focus_id: None,
             placeholder: None,
+            numeric_config: None,
         }
+    }
+
+    /// Configures numeric arrow-key stepping (`ArrowUp`/`ArrowDown` by `±step`,
+    /// `Shift` by `±10 * step`, `Cmd`/`Ctrl` by `±100 * step`, clamped to `range`).
+    pub fn numeric(mut self, range: RangeInclusive<f64>, step: f64) -> Self {
+        self.numeric_config = Some((range, step));
+        self
     }
 
     /// Sets the AppKit control size preset (`Regular`, `Small`, `Mini`, `Large`, `CompactInfobox`).
@@ -242,6 +273,53 @@ impl<'a> MacInputCell<'a> {
             ui.memory_mut(|m| m.surrender_focus(self.id));
             surrender_now = true;
         } else if is_focused {
+            if let Some((ref range, step)) = self.numeric_config {
+                let stepper_tokens = &theme.control_metrics().stepper;
+                let shift_mult = stepper_tokens.shift_multiplier.points() as f64;
+                let cmd_mult = stepper_tokens.cmd_multiplier.points() as f64;
+                let num_delta = ui.input_mut(|i| {
+                    let mut check_dir = |key: Key| -> Option<f64> {
+                        if i.consume_key(Modifiers::COMMAND, key)
+                            || i.consume_key(Modifiers::CTRL, key)
+                            || i.consume_key(Modifiers::MAC_CMD, key)
+                        {
+                            Some(cmd_mult)
+                        } else if i.consume_key(Modifiers::SHIFT, key) {
+                            Some(shift_mult)
+                        } else if i.consume_key(Modifiers::NONE, key) {
+                            Some(1.0)
+                        } else {
+                            None
+                        }
+                    };
+                    if let Some(m) = check_dir(Key::ArrowUp) {
+                        Some(step * m)
+                    } else {
+                        check_dir(Key::ArrowDown).map(|m| -step * m)
+                    }
+                });
+                if let Some(delta) = num_delta {
+                    let cur_str = ui
+                        .data(|d| d.get_temp::<String>(buffer_key))
+                        .unwrap_or_else(|| self.value.clone());
+                    let snap_str = ui
+                        .data(|d| d.get_temp::<String>(snapshot_key))
+                        .unwrap_or_else(|| self.value.clone());
+                    let cur_val = cur_str
+                        .trim()
+                        .parse::<f64>()
+                        .or_else(|_| snap_str.trim().parse::<f64>())
+                        .unwrap_or(*range.start());
+                    let next_val = (cur_val + delta).clamp(*range.start(), *range.end());
+                    let formatted = format_stepped_number(&cur_str, &snap_str, step, next_val);
+                    *self.value = formatted.clone();
+                    ui.data_mut(|d| {
+                        d.insert_temp(buffer_key, formatted.clone());
+                        d.insert_temp(snapshot_key, formatted);
+                    });
+                    response.mark_changed();
+                }
+            }
             if ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Enter)) {
                 if let Some(buf) = ui.data(|d| d.get_temp::<String>(buffer_key)) {
                     *self.value = buf;

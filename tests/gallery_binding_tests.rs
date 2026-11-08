@@ -28,33 +28,32 @@ fn collect_text_shapes<'a>(
     }
 }
 
+fn read_all_gallery_sources() -> String {
+    let mut src = std::fs::read_to_string("examples/macview_gallery.rs").expect("read gallery");
+    if let Ok(entries) = std::fs::read_dir("examples/gallery") {
+        for e in entries.flatten().filter(|e| e.path().extension().and_then(|s| s.to_str()) == Some("rs")) {
+            if let Ok(sub) = std::fs::read_to_string(e.path()) {
+                src.push('\n');
+                src.push_str(&sub);
+            }
+        }
+    }
+    src
+}
+
 #[test]
 fn test_sidebar_navigator_clean_labels_and_sufficient_width() {
-    let ctx = Context::default();
-    let theme = MacTheme::new(MacAppearance::DarkAqua);
-
-    let gallery_src = std::fs::read_to_string("examples/macview_gallery.rs")
-        .expect("Must read examples/macview_gallery.rs");
-
-    assert!(!gallery_src.contains("\"Default NIB (260pt)\""));
-    assert!(!gallery_src.contains("\"Compact HUD (178x63)\""));
-    assert!(!gallery_src.contains("\"Expanded Pro (380pt)\""));
-
+    let (ctx, theme, gallery_src) = (Context::default(), MacTheme::new(MacAppearance::DarkAqua), read_all_gallery_sources());
+    for bad in ["\"Default NIB (260pt)\"", "\"Compact HUD (178x63)\"", "\"Expanded Pro (380pt)\""] {
+        assert!(!gallery_src.contains(bad));
+    }
     let clean_labels = ["Default NIB", "Compact HUD", "Expanded Pro"];
     let outline_metrics = theme.outline_view();
-    let base_w = outline_metrics.indent_step.points()
-        + theme.thumbnail().size.points()
-        + outline_metrics.content_spacing.points()
-        + 16.0f32;
-
+    let base_w = outline_metrics.indent_step.points() + theme.thumbnail().size.points() + outline_metrics.content_spacing.points() + 16.0f32;
     let mut out = ctx.run_ui(RawInput::default(), |ui| {
         let font_id = egui::FontId::proportional(outline_metrics.font_size.points());
         for label in &clean_labels {
-            let text_w = ui
-                .painter()
-                .layout_no_wrap((*label).to_string(), font_id.clone(), egui::Color32::WHITE)
-                .size()
-                .x;
+            let text_w = ui.painter().layout_no_wrap((*label).to_string(), font_id.clone(), egui::Color32::WHITE).size().x;
             assert!(base_w + text_w <= 220.0);
         }
     });
@@ -63,18 +62,10 @@ fn test_sidebar_navigator_clean_labels_and_sufficient_width() {
 
 #[test]
 fn test_screen_navigator_and_bidirectional_gallery_bindings() {
-    let gallery_src = std::fs::read_to_string("examples/macview_gallery.rs")
-        .expect("Must read examples/macview_gallery.rs");
-
-    assert!(gallery_src.contains("enum GalleryScreen"));
-    assert!(gallery_src.contains("CanvasPhysics") && gallery_src.contains("VectorAssets"));
-    assert!(!gallery_src.contains("\"Expanded Inspector\""));
-    assert!(!gallery_src.contains("if resp.is_selected {"));
-    assert!(gallery_src.contains("if resp.clicked {"));
-    assert!(
-        gallery_src.contains("MacToolbar::new") || gallery_src.contains("MacFloatingInfoBox::new"),
-        "Gallery must wire MacToolbar and MacFloatingInfoBox"
-    );
+    let gallery_src = read_all_gallery_sources();
+    assert!(gallery_src.contains("enum GalleryScreen") && gallery_src.contains("CanvasPhysics") && gallery_src.contains("VectorAssets"));
+    assert!(!gallery_src.contains("\"Expanded Inspector\"") && !gallery_src.contains("if resp.is_selected {") && gallery_src.contains("if resp.clicked {"));
+    assert!(gallery_src.contains("MacToolbar::new") && gallery_src.contains("MacFloatingInfoBox::new"));
 }
 
 #[test]
@@ -436,3 +427,4 @@ fn test_undo_manager_grouping_deduplication_and_context_menu_checkmarks() {
     let chk = egui_macview::MacSymbol::Checkmark.as_str();
     assert!(text_shapes.iter().any(|t| t.galley.text() == chk));
 }
+

@@ -193,3 +193,50 @@ fn test_command_palette_fuzzy_subsequence_scoring_and_escape() {
     out2.textures_delta.clear();
     assert!(!palette.is_open());
 }
+
+#[test]
+fn test_gallery_v05_five_state_studio_and_frameless_decorations() {
+    let mut combined_src = std::fs::read_to_string("examples/macview_gallery.rs")
+        .expect("Must read examples/macview_gallery.rs");
+    if let Ok(entries) = std::fs::read_dir("examples/gallery") {
+        for entry in entries.flatten() {
+            if entry.path().extension().and_then(|s| s.to_str()) == Some("rs") {
+                if let Ok(sub) = std::fs::read_to_string(entry.path()) {
+                    combined_src.push('\n');
+                    combined_src.push_str(&sub);
+                }
+            }
+        }
+    }
+
+    assert!(
+        combined_src.contains("ViewportCommand::Decorations("),
+        "Gallery must dynamically toggle ViewportCommand::Decorations based on WindowControlsStyle"
+    );
+    assert!(
+        combined_src.contains("ViewportCommand::BeginResize("),
+        "Frameless gallery must support edge/corner resizing via ViewportCommand::BeginResize"
+    );
+    assert!(
+        combined_src.contains(".numeric("),
+        "Gallery numeric inspector fields must wire .numeric(range, step) for arrow-key stepping"
+    );
+    for required_v05 in [
+        "MacPathControl::new",
+        "MacTableView::new",
+        "MacTokenField::new",
+        ".max_chars(",
+        "MacProgressIndicator::",
+        "MacTrimScrubber::new",
+        "MacLevelIndicator::new",
+        ".peak_hold(",
+        "interactive_canvas_card_resize",
+        "!on_resize_border",
+    ] {
+        assert!(
+            combined_src.contains(required_v05),
+            "5-State v0.5 Gallery must integrate {required_v05}"
+        );
+    }
+}
+
