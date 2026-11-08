@@ -60,7 +60,7 @@ pub struct MacPathControlResponse {
 /// Authentic macOS AppKit breadcrumb path bar (`NSPathControl` equivalent).
 pub struct MacPathControl<'a> {
     id: Id,
-    components: Vec<MacPathComponent<'a>>,
+    components: std::borrow::Cow<'a, [MacPathComponent<'a>]>,
     show_choose_button: bool,
     choose_label: &'a str,
     width: Option<f32>,
@@ -71,6 +71,8 @@ pub struct MacPathControl<'a> {
 impl<'a> MacPathControl<'a> {
     /// Creates a new `MacPathControl` from a slice of string segment names (all folders except last).
     pub fn from_segments(id_source: impl Hash + Debug, segments: &'a [&'a str]) -> Self {
+        #[allow(deprecated)]
+        let id = Id::new(id_source);
         let n = segments.len();
         let comps: Vec<_> = segments
             .iter()
@@ -81,16 +83,24 @@ impl<'a> MacPathControl<'a> {
                 symbol: None,
             })
             .collect();
-        Self::new(id_source, &comps)
+        Self {
+            id,
+            components: std::borrow::Cow::Owned(comps),
+            show_choose_button: false,
+            choose_label: "Choose...",
+            width: None,
+            enabled: true,
+            theme: None,
+        }
     }
 
     /// Creates a new `MacPathControl` from explicit [`MacPathComponent`] items.
-    pub fn new(id_source: impl Hash + Debug, components: &[MacPathComponent<'a>]) -> Self {
+    pub fn new(id_source: impl Hash + Debug, components: &'a [MacPathComponent<'a>]) -> Self {
         #[allow(deprecated)]
         let id = Id::new(id_source);
         Self {
             id,
-            components: components.to_vec(),
+            components: std::borrow::Cow::Borrowed(components),
             show_choose_button: false,
             choose_label: "Choose...",
             width: None,

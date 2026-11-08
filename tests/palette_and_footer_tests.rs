@@ -231,52 +231,36 @@ fn test_caspring_controls_do_not_request_repaint_at_rest() {
     let mut slider_val = 50.0;
     let mut expanded = true;
 
-    let run_frame = |time: f64,
-                     toggle_val: &mut bool,
-                     slider_val: &mut f32,
-                     expanded: &mut bool|
-     -> std::time::Duration {
-        let raw = RawInput {
-            time: Some(time),
-            ..Default::default()
-        };
-        let mut out = ctx.run_ui(raw, |ui| {
-            ui.add(egui_macview::MacToggle::new(toggle_val).theme(&theme));
-            egui_macview::MacSegmentedControl::new(&["Points", "Pixels", "Percent"], 0)
-                .theme(&theme)
-                .show(ui, |_| {});
-            egui_macview::MacSlider::new(slider_val, 0.0..=100.0)
-                .theme(&theme)
-                .show(ui);
-            egui_macview::MacOutlineView::new("idle_outline")
-                .theme(&theme)
-                .show(ui, |tree| {
+    let run_frame =
+        |time: f64, toggle_val: &mut bool, slider_val: &mut f32, expanded: &mut bool| {
+            let raw = RawInput { time: Some(time), ..Default::default() };
+            let mut out = ctx.run_ui(raw, |ui| {
+                ui.add(egui_macview::MacToggle::new(toggle_val).theme(&theme));
+                egui_macview::MacSegmentedControl::new(&["Points", "Pixels", "Percent"], 0)
+                    .theme(&theme)
+                    .show(ui, |_| {});
+                egui_macview::MacSlider::new(slider_val, 0.0..=100.0).theme(&theme).show(ui);
+                egui_macview::MacOutlineView::new("idle_outline").theme(&theme).show(ui, |tree| {
                     tree.row("row_a", 0, true, expanded, false, |row| {
                         row.label("Idle Row");
                     });
                 });
-        });
-        out.textures_delta.clear();
-        out.viewport_output[&egui::ViewportId::ROOT].repaint_delay
-    };
+            });
+            out.textures_delta.clear();
+            out.viewport_output[&egui::ViewportId::ROOT].repaint_delay
+        };
 
     // Frame 1 & 2: initial layout/font warmup
     let _ = run_frame(1.0, &mut toggle_val, &mut slider_val, &mut expanded);
     let _ = run_frame(1.016, &mut toggle_val, &mut slider_val, &mut expanded);
     // Frame 3: steady state with zero state transitions must NOT request immediate repaint
     let delay = run_frame(1.032, &mut toggle_val, &mut slider_val, &mut expanded);
-    assert!(
-        !delay.is_zero(),
-        "Steady-state CASpring controls must not request continuous repaints when target has not changed (got delay={delay:?})"
-    );
+    assert!(!delay.is_zero(), "Steady-state CASpring controls must not request continuous repaints (got {delay:?})");
 
     // Frame 4: state transition (toggle_val: true -> false) MUST request immediate repaint and interpolate
     toggle_val = false;
     let delay_on_change = run_frame(2.0, &mut toggle_val, &mut slider_val, &mut expanded);
-    assert!(
-        delay_on_change.is_zero(),
-        "Changing MacToggle state must trigger an immediate CASpring animation repaint"
-    );
+    assert!(delay_on_change.is_zero(), "Changing MacToggle state must trigger an immediate CASpring animation repaint");
 
     // Direct CASpring::animate_f32 mid-flight interpolation, reversal, and settling verification
     let spring_ctx = Context::default();
@@ -284,15 +268,9 @@ fn test_caspring_controls_do_not_request_repaint_at_rest() {
     let anim_id = egui::Id::NULL.with("direct_spring_test");
     let eval_at = |time: f64, target: f32| -> (f32, std::time::Duration) {
         let mut val = 0.0;
-        let mut out = spring_ctx.run_ui(
-            RawInput {
-                time: Some(time),
-                ..Default::default()
-            },
-            |ui| {
-                val = spring.animate_f32(ui.ctx(), anim_id, target);
-            },
-        );
+        let mut out = spring_ctx.run_ui(RawInput { time: Some(time), ..Default::default() }, |ui| {
+            val = spring.animate_f32(ui.ctx(), anim_id, target);
+        });
         out.textures_delta.clear();
         (val, out.viewport_output[&egui::ViewportId::ROOT].repaint_delay)
     };
@@ -304,16 +282,10 @@ fn test_caspring_controls_do_not_request_repaint_at_rest() {
     let (v_start, d_start) = eval_at(2.0, 1.0);
     assert!((v_start - 0.0).abs() < 1e-4 && d_start.is_zero());
     let (v_mid, d_mid) = eval_at(2.1, 1.0);
-    assert!(
-        v_mid > 0.1 && v_mid < 0.99 && d_mid.is_zero(),
-        "Mid-flight spring must interpolate strictly between start and target (got v_mid={v_mid})"
-    );
+    assert!(v_mid > 0.1 && v_mid < 0.99 && d_mid.is_zero(), "Mid-flight spring must interpolate (got {v_mid})");
     // Mid-flight reversal back to 0.0 must start smoothly from v_mid
     let (v_rev, d_rev) = eval_at(2.15, 0.0);
-    assert!(
-        v_rev > 0.1 && v_rev < 1.0 && d_rev.is_zero(),
-        "Mid-flight reversal must preserve current displacement (got v_rev={v_rev})"
-    );
+    assert!(v_rev > 0.1 && v_rev < 1.0 && d_rev.is_zero(), "Mid-flight reversal must preserve displacement (got {v_rev})");
     // After settling_duration(), spring must settle at 0.0 and stop requesting repaints
     let _ = eval_at(2.15 + spring.settling_duration() as f64 + 0.1, 0.0);
     let (v_settled, d_settled) = eval_at(2.15 + spring.settling_duration() as f64 + 0.2, 0.0);
@@ -324,27 +296,19 @@ fn test_caspring_controls_do_not_request_repaint_at_rest() {
 #[test]
 fn test_inspector_convert_card_units_and_scale() {
     let mut card = gallery_app::CardModel::default();
-    assert_eq!(card.width, "260.0");
-    assert_eq!(card.height, "150.0");
-    assert_eq!(card.radius, "10.0");
+    assert_eq!((card.width.as_str(), card.height.as_str(), card.radius.as_str()), ("260.0", "150.0", "10.0"));
 
     // Points (0) -> Pixels (1) (2x Retina scale)
     gallery_app::convert_card_units(&mut card, 0, 1);
-    assert_eq!(card.width, "520.0");
-    assert_eq!(card.height, "300.0");
-    assert_eq!(card.radius, "20.0");
+    assert_eq!((card.width.as_str(), card.height.as_str(), card.radius.as_str()), ("520.0", "300.0", "20.0"));
 
     // Pixels (1) -> Percent (2) (260pt = 100%, 150pt = 100%, 10pt / 40pt = 25%)
     gallery_app::convert_card_units(&mut card, 1, 2);
-    assert_eq!(card.width, "100.0");
-    assert_eq!(card.height, "100.0");
-    assert_eq!(card.radius, "25.0");
+    assert_eq!((card.width.as_str(), card.height.as_str(), card.radius.as_str()), ("100.0", "100.0", "25.0"));
 
     // Percent (2) -> Points (0) round-trip
     gallery_app::convert_card_units(&mut card, 2, 0);
-    assert_eq!(card.width, "260.0");
-    assert_eq!(card.height, "150.0");
-    assert_eq!(card.radius, "10.0");
+    assert_eq!((card.width.as_str(), card.height.as_str(), card.radius.as_str()), ("260.0", "150.0", "10.0"));
 }
 
 #[test]
@@ -354,20 +318,12 @@ fn test_full_gallery_cpu_hygiene_all_states_and_frame_pacing() {
 
     let run_gallery_frame =
         |app: &mut GalleryApp, time: f64, hover_pos: Option<Pos2>| -> std::time::Duration {
-            let mut raw = RawInput {
-                time: Some(time),
-                screen_rect: Some(egui::Rect::from_min_size(
-                    Pos2::ZERO,
-                    egui::vec2(1160.0, 740.0),
-                )),
-                ..Default::default()
-            };
+            let screen_rect = Some(egui::Rect::from_min_size(Pos2::ZERO, egui::vec2(1160.0, 740.0)));
+            let mut raw = RawInput { time: Some(time), screen_rect, ..Default::default() };
             if let Some(pos) = hover_pos {
                 raw.events.push(Event::PointerMoved(pos));
             }
-            let mut out = ctx.run_ui(raw, |ui| {
-                app.render_ui(ui);
-            });
+            let mut out = ctx.run_ui(raw, |ui| app.render_ui(ui));
             out.textures_delta.clear();
             out.viewport_output[&egui::ViewportId::ROOT].repaint_delay
         };
@@ -377,61 +333,80 @@ fn test_full_gallery_cpu_hygiene_all_states_and_frame_pacing() {
     theme.apply_to_egui(&ctx);
     let style_arc_1 = ctx.global_style();
     theme.apply_to_egui(&ctx);
-    let style_arc_2 = ctx.global_style();
-    assert!(
-        std::sync::Arc::ptr_eq(&style_arc_1, &style_arc_2),
-        "MacTheme::apply_to_egui must be O(1) no-op when theme/appearance/accent has not changed"
-    );
+    assert!(std::sync::Arc::ptr_eq(&style_arc_1, &ctx.global_style()));
 
-    // 2. Verify all 5 GalleryScreen states settle to zero immediate repaints (!delay.is_zero())
+    // 2. Verify all 5 GalleryScreen states settle to Duration::MAX (zero pending timers)
     let mut t = 10.0;
     for screen in GalleryScreen::ALL {
         app.active_screen = screen;
         app.sidebar.active_screen = screen;
-        for _ in 0..4 {
-            t += 0.25;
+        for step in [0.25, 0.25, 0.25, 0.25, 1.0, 0.5] {
+            t += step;
             let _ = run_gallery_frame(&mut app, t, None);
         }
-        t += 1.0;
-        let _ = run_gallery_frame(&mut app, t, None);
         t += 0.5;
         let delay = run_gallery_frame(&mut app, t, None);
-        let causes = ctx.repaint_causes();
-        assert!(
-            !delay.is_zero(),
-            "GalleryScreen::{screen:?} at rest must NOT request Duration::ZERO busy-loop repaints (got delay={delay:?}, causes={causes:?})"
-        );
+        assert_eq!(delay, std::time::Duration::MAX, "GalleryScreen::{screen:?} at rest must settle to Duration::MAX");
     }
 
-    // 3. Verify stationary pointer hovering over a scrollbar track/thumb does NOT cause a 0ms busy-loop
-    let scrollbar_pos = egui::pos2(1152.0, 300.0);
-    t += 0.05;
-    let _ = run_gallery_frame(&mut app, t, Some(scrollbar_pos));
-    t += 0.05;
-    let _ = run_gallery_frame(&mut app, t, None);
-    t += 0.05;
-    let hover_active_delay = run_gallery_frame(&mut app, t, None);
-    let hover_causes = ctx.repaint_causes();
+    // 3. Verify stationary pointer hovering over an active overflowing scrollbar track/thumb
+    //    does NOT cause a 0ms busy-loop, and mid-fade reactivation resets the fade timeout
+    //    before settling to Duration::MAX.
+    let scroll_ctx = Context::default();
+    theme.apply_to_egui(&scroll_ctx);
+    let run_scroll_frame = |time: f64, hover_pos: Option<Pos2>| -> (std::time::Duration, egui::Rect) {
+        let screen_rect = Some(egui::Rect::from_min_size(Pos2::ZERO, egui::vec2(200.0, 120.0)));
+        let mut raw = RawInput { time: Some(time), screen_rect, ..Default::default() };
+        if let Some(pos) = hover_pos {
+            raw.events.push(Event::PointerMoved(pos));
+        }
+        let mut scroll_rect = egui::Rect::NOTHING;
+        let mut out = scroll_ctx.run_ui(raw, |ui| {
+            let s_out = egui_macview::MacScrollView::new("cpu_hygiene_scroll")
+                .theme(&theme)
+                .max_width(200.0)
+                .max_height(100.0)
+                .show(ui, |ui| {
+                    for i in 0..20 {
+                        ui.label(format!("Scrollable Row {i}"));
+                    }
+                });
+            scroll_rect = s_out.inner_rect;
+        });
+        out.textures_delta.clear();
+        (out.viewport_output[&egui::ViewportId::ROOT].repaint_delay, scroll_rect)
+    };
+
+    let _ = run_scroll_frame(1.0, Some(egui::pos2(10.0, 10.0)));
+    let _ = run_scroll_frame(1.016, None);
+    let (settled_initial, scroll_rect) = run_scroll_frame(2.5, None);
+    assert_eq!(settled_initial, std::time::Duration::MAX);
+
+    // Move pointer onto vertical scrollbar track -> hover-enter + thumb expansion frames -> ~800ms fade timer on stationary frame
+    let sb_x = scroll_rect.right() - 4.0;
+    let sb_y = scroll_rect.center().y;
+    let _ = run_scroll_frame(3.0, Some(egui::pos2(sb_x, sb_y)));
+    let _ = run_scroll_frame(3.016, None);
+    let (hover_active_delay, _) = run_scroll_frame(3.032, None);
     assert!(
-        !hover_active_delay.is_zero(),
-        "Stationary pointer over scrollbar must schedule timer fade-out, never Duration::ZERO (got {hover_active_delay:?}, causes={hover_causes:?})"
+        hover_active_delay >= std::time::Duration::from_millis(700)
+            && hover_active_delay <= std::time::Duration::from_millis(850),
+        "got hover_active_delay={hover_active_delay:?}, scroll_rect={scroll_rect:?}"
     );
-    t += 1.2;
-    let hover_settled_delay = run_gallery_frame(&mut app, t, None);
-    assert!(
-        !hover_settled_delay.is_zero(),
-        "Stationary pointer over scrollbar after fade timeout must remain idle (got {hover_settled_delay:?})"
-    );
+
+    // Advance into fade-out window (3.85s) -> 16ms frame-paced fade -> reactivate at 3.90s -> settle at 5.2s
+    assert_eq!(run_scroll_frame(3.85, None).0, std::time::Duration::from_millis(16));
+    let _ = run_scroll_frame(3.90, Some(egui::pos2(sb_x, sb_y + 8.0)));
+    let _ = run_scroll_frame(3.916, None);
+    assert!(run_scroll_frame(3.932, None).0 >= std::time::Duration::from_millis(700));
+    assert_eq!(run_scroll_frame(5.2, None).0, std::time::Duration::MAX);
 
     // 4. Verify active timeline playback on State 5 uses frame-paced delay (>= 16ms), never Duration::ZERO
     app.active_screen = GalleryScreen::AvKitMediaStudio;
     app.center.media_playing = true;
     t += 0.033;
     let play_delay = run_gallery_frame(&mut app, t, None);
-    assert!(
-        !play_delay.is_zero() && play_delay <= std::time::Duration::from_millis(50),
-        "Active timeline playback must be frame-paced (e.g. ~30fps), never a 0ms busy-loop (got {play_delay:?})"
-    );
+    assert!(!play_delay.is_zero() && play_delay <= std::time::Duration::from_millis(50));
     app.center.media_playing = false;
 }
 

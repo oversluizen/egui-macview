@@ -7,14 +7,11 @@
 
 #![cfg_attr(not(test), windows_subsystem = "windows")]
 
-use egui::{
-    pos2, vec2, Align2, Color32, CornerRadius, FontId, Id, Rect, Response, Sense, Stroke,
-    StrokeKind, Ui, ViewportCommand,
-};
+use egui::{pos2, vec2, CornerRadius, Id, Rect, Response, Sense, Stroke, StrokeKind, Ui};
 use egui_macview::{
     theme::{MacAppearance, MacTheme},
     MacInputCell, MacPopUpButton, MacSegmentedControl, MacStackOrientation, MacStackView,
-    MacToggle,
+    MacToggle, MacToolbar,
 };
 
 // ----------------------------------------------------------------------------
@@ -237,147 +234,30 @@ impl eframe::App for PreferencesApp {
             StrokeKind::Inside,
         );
 
-        // Titlebar area
+        // Unified macOS Window Titlebar & Traffic Lights
         let titlebar_rect = Rect::from_min_size(full_rect.min, vec2(full_rect.width(), 46.0));
-        let titlebar_response = ui.interact(
-            titlebar_rect,
-            ui.scope_id().with("pref_window_drag"),
-            Sense::click_and_drag(),
-        );
-        if titlebar_response.dragged() {
-            ui.ctx().send_viewport_cmd(ViewportCommand::StartDrag);
-        }
-
-        // Apple Traffic Lights
-        let traffic_y = titlebar_rect.center().y;
-        let traffic_radius = 6.0;
-        let close_pos = pos2(titlebar_rect.left() + 18.0, traffic_y);
-        let min_pos = pos2(close_pos.x + 20.0, traffic_y);
-        let zoom_pos = pos2(min_pos.x + 20.0, traffic_y);
-
-        let (close_fill, close_border) = self.theme.traffic_light_close();
-        let (min_fill, min_border) = self.theme.traffic_light_minimize();
-        let (zoom_fill, zoom_border) = self.theme.traffic_light_zoom();
-
-        let cluster_rect = Rect::from_min_max(
-            pos2(close_pos.x - 8.0, traffic_y - 8.0),
-            pos2(zoom_pos.x + 8.0, traffic_y + 8.0),
-        );
-        let cluster_hovered = ui.rect_contains_pointer(cluster_rect);
-
-        // Close
-        let close_resp = ui.interact(
-            Rect::from_center_size(close_pos, vec2(14.0, 14.0)),
-            ui.scope_id().with("tl_close"),
-            Sense::click(),
-        );
-        if close_resp.clicked() {
-            ui.ctx().send_viewport_cmd(ViewportCommand::Close);
-        }
-        painter.circle(
-            close_pos,
-            traffic_radius,
-            close_fill,
-            Stroke::new(0.5, close_border),
-        );
-
-        // Minimize
-        let min_resp = ui.interact(
-            Rect::from_center_size(min_pos, vec2(14.0, 14.0)),
-            ui.scope_id().with("tl_min"),
-            Sense::click(),
-        );
-        if min_resp.clicked() {
-            ui.ctx().send_viewport_cmd(ViewportCommand::Minimized(true));
-        }
-        painter.circle(
-            min_pos,
-            traffic_radius,
-            min_fill,
-            Stroke::new(0.5, min_border),
-        );
-
-        // Zoom
-        painter.circle(
-            zoom_pos,
-            traffic_radius,
-            zoom_fill,
-            Stroke::new(0.5, zoom_border),
-        );
-
-        if cluster_hovered {
-            let sym = Color32::from_black_alpha(160);
-            painter.line_segment(
-                [
-                    pos2(close_pos.x - 2.5, close_pos.y - 2.5),
-                    pos2(close_pos.x + 2.5, close_pos.y + 2.5),
-                ],
-                Stroke::new(1.0, sym),
-            );
-            painter.line_segment(
-                [
-                    pos2(close_pos.x - 2.5, close_pos.y + 2.5),
-                    pos2(close_pos.x + 2.5, close_pos.y - 2.5),
-                ],
-                Stroke::new(1.0, sym),
-            );
-            painter.line_segment(
-                [
-                    pos2(min_pos.x - 3.0, min_pos.y),
-                    pos2(min_pos.x + 3.0, min_pos.y),
-                ],
-                Stroke::new(1.0, sym),
-            );
-        }
-
-        // Window Title
-        painter.text(
-            titlebar_rect.center(),
-            Align2::CENTER_CENTER,
-            "Glyphs Preferences (Transpiled NIBs)",
-            FontId::proportional(13.0),
-            if is_dark {
-                Color32::from_rgb(235, 235, 240)
-            } else {
-                Color32::from_rgb(30, 30, 32)
-            },
-        );
-
-        // Dark/Light toggle on top right
-        let toggle_rect = Rect::from_min_size(
-            pos2(
-                titlebar_rect.right() - 88.0,
-                titlebar_rect.center().y - 10.0,
-            ),
-            vec2(76.0, 20.0),
-        );
-        let mut toggle_ui = ui.new_child(
+        let mut titlebar_ui = ui.new_child(
             egui::UiBuilder::new()
-                .id_salt("prefs_dark_toggle")
-                .max_rect(toggle_rect),
+                .id_salt("prefs_titlebar")
+                .max_rect(titlebar_rect),
         );
-        toggle_ui.horizontal(|h| {
-            let mut dark_mode = is_dark;
-            if h.add(MacToggle::new(&mut dark_mode).theme(&self.theme))
-                .changed()
-            {
-                self.theme = if dark_mode {
-                    MacTheme::new(MacAppearance::DarkAqua)
-                } else {
-                    MacTheme::new(MacAppearance::Aqua)
-                };
-            }
-            h.label(if is_dark { "Dark" } else { "Light" });
-        });
-
-        // Titlebar separator
-        painter.line_segment(
-            [
-                pos2(titlebar_rect.left(), titlebar_rect.bottom()),
-                pos2(titlebar_rect.right(), titlebar_rect.bottom()),
-            ],
-            Stroke::new(1.0, self.theme.separator()),
-        );
+        let mut dark_mode = is_dark;
+        MacToolbar::new("Glyphs Preferences (Transpiled NIBs)")
+            .height(46.0)
+            .theme(&self.theme)
+            .show(&mut titlebar_ui, |tb| {
+                tb.with_layout(egui::Layout::right_to_left(egui::Align::Center), |right| {
+                    right.label(if is_dark { "Dark" } else { "Light" });
+                    right.add(MacToggle::new(&mut dark_mode).theme(&self.theme));
+                });
+            });
+        if dark_mode != is_dark {
+            self.theme = if dark_mode {
+                MacTheme::new(MacAppearance::DarkAqua)
+            } else {
+                MacTheme::new(MacAppearance::Aqua)
+            };
+        }
 
         // Toolbar / Tab Segmented Control
         let toolbar_rect = Rect::from_min_size(

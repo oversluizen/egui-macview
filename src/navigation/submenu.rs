@@ -22,13 +22,13 @@ pub struct SubmenuKeyboardResult {
     pub consumed: bool,
 }
 
-/// Advances or decrements index to the next enabled non-separator item in a submenu.
-pub fn step_submenu_highlight(
-    child_menu: &NSMenu,
+/// Advances or decrements index to the next enabled non-separator item in `items`.
+pub(crate) fn step_enabled_menu_item(
+    items: &[super::item::NSMenuItem],
     curr: Option<usize>,
     forward: bool,
 ) -> Option<usize> {
-    let len = child_menu.items.len();
+    let len = items.len();
     if len == 0 {
         return None;
     }
@@ -43,13 +43,22 @@ pub fn step_submenu_highlight(
         } else {
             (start + len - (step % len)) % len
         };
-        if let Some(it) = child_menu.items.get(candidate) {
+        if let Some(it) = items.get(candidate) {
             if it.enabled && !matches!(it.kind, MacMenuItemKind::Separator) {
                 return Some(candidate);
             }
         }
     }
     None
+}
+
+/// Advances or decrements index to the next enabled non-separator item in a submenu.
+pub fn step_submenu_highlight(
+    child_menu: &NSMenu,
+    curr: Option<usize>,
+    forward: bool,
+) -> Option<usize> {
+    step_enabled_menu_item(&child_menu.items, curr, forward)
 }
 
 /// Processes keyboard navigation events targeting an active submenu.
@@ -327,34 +336,18 @@ pub fn handle_menu_bar_navigation(
             return None;
         }
         if input.key_pressed(egui::Key::ArrowDown) {
-            let len = menu.items.len();
-            if len > 0 {
-                let curr = highlighted_item_idx.unwrap_or(0);
-                for step in 1..=len {
-                    let next = (curr + step) % len;
-                    if let Some(item) = menu.items.get(next) {
-                        if item.enabled && !matches!(item.kind, MacMenuItemKind::Separator) {
-                            *highlighted_item_idx = Some(next);
-                            break;
-                        }
-                    }
-                }
+            if let Some(next) =
+                step_enabled_menu_item(&menu.items, Some(highlighted_item_idx.unwrap_or(0)), true)
+            {
+                *highlighted_item_idx = Some(next);
             }
             return None;
         }
         if input.key_pressed(egui::Key::ArrowUp) {
-            let len = menu.items.len();
-            if len > 0 {
-                let curr = highlighted_item_idx.unwrap_or(0);
-                for step in 1..=len {
-                    let prev = (curr + len - (step % len)) % len;
-                    if let Some(item) = menu.items.get(prev) {
-                        if item.enabled && !matches!(item.kind, MacMenuItemKind::Separator) {
-                            *highlighted_item_idx = Some(prev);
-                            break;
-                        }
-                    }
-                }
+            if let Some(prev) =
+                step_enabled_menu_item(&menu.items, Some(highlighted_item_idx.unwrap_or(0)), false)
+            {
+                *highlighted_item_idx = Some(prev);
             }
             return None;
         }

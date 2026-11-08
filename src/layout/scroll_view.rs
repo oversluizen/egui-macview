@@ -258,8 +258,13 @@ impl<'a> MacScrollView<'a> {
         } else if !(has_v || has_h) {
             0.0
         } else if !initialized || elapsed < timeout_secs {
-            let remaining = (timeout_secs - elapsed).max(0.0) as f32;
-            ui.ctx().request_repaint_after_secs(remaining);
+            let remaining = (timeout_secs - elapsed) as f32;
+            if remaining > 0.0 {
+                ui.ctx().request_repaint_after_secs(remaining);
+            } else {
+                ui.ctx()
+                    .request_repaint_after(std::time::Duration::from_millis(16));
+            }
             1.0
         } else if elapsed < timeout_secs + fade_duration {
             let t = ((elapsed - timeout_secs) / fade_duration).clamp(0.0, 1.0) as f32;
@@ -347,6 +352,20 @@ impl<'a> MacScrollView<'a> {
             ) && self.offset_override.is_none()
             {
                 ui.data_mut(|d| d.insert_temp(self.id.with("drag_offset"), Some(current_offset)));
+            }
+        }
+
+        if self.auto_hide && (has_v || has_h) {
+            let updated_last_active: f64 = ui
+                .data(|d| d.get_temp(last_active_id))
+                .unwrap_or(last_active);
+            if updated_last_active > last_active {
+                if alpha < 1.0 {
+                    ui.ctx()
+                        .request_repaint_after(std::time::Duration::from_millis(16));
+                } else {
+                    ui.ctx().request_repaint_after_secs(fade_timeout);
+                }
             }
         }
 

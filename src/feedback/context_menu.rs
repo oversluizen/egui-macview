@@ -88,30 +88,12 @@ impl<'a> MacContextMenu<'a> {
     }
 
     fn step_selection(&mut self, forward: bool) {
-        let items_len = self.items.len();
-        if items_len == 0 {
-            return;
-        }
-        let start = if forward {
-            self.selected_idx.map_or(0, |idx| (idx + 1) % items_len)
-        } else {
-            self.selected_idx
-                .map_or(items_len.saturating_sub(1), |idx| {
-                    (idx + items_len - 1) % items_len
-                })
-        };
-        for step in 0..items_len {
-            let candidate = if forward {
-                (start + step) % items_len
-            } else {
-                (start + items_len - (step % items_len)) % items_len
-            };
-            if let Some(item) = self.items.get(candidate) {
-                if item.enabled && !matches!(item.kind, MacMenuItemKind::Separator) {
-                    *self.selected_idx = Some(candidate);
-                    break;
-                }
-            }
+        if let Some(candidate) = crate::navigation::submenu::step_enabled_menu_item(
+            self.items,
+            *self.selected_idx,
+            forward,
+        ) {
+            *self.selected_idx = Some(candidate);
         }
     }
 
@@ -208,34 +190,15 @@ impl<'a> MacContextMenu<'a> {
             padding_h
         };
 
-        let mut max_item_w = 0.0f32;
-        for item in self.items {
-            if matches!(item.kind, MacMenuItemKind::Separator) {
-                continue;
-            }
-            let title_w = ui
-                .painter()
-                .layout_no_wrap(item.title.clone(), font_id.clone(), on_accent)
-                .size()
-                .x;
-            let sc_w = match &item.kind {
-                MacMenuItemKind::Action {
-                    shortcut: Some(sc), ..
-                } => {
-                    ui.painter()
-                        .layout_no_wrap(sc.format_text(), font_id.clone(), on_accent)
-                        .size()
-                        .x
-                }
-                _ => 0.0,
-            };
-            let item_w = if sc_w > 0.0 {
-                lead_offset + padding_h + title_w + min_clearance + sc_w
-            } else {
-                lead_offset + padding_h + title_w
-            };
-            max_item_w = max_item_w.max(item_w);
-        }
+        let max_item_w = crate::navigation::submenu::measure_menu_items_max_width(
+            ui.painter(),
+            self.items,
+            &font_id,
+            on_accent,
+            lead_offset,
+            padding_h,
+            min_clearance,
+        );
         let menu_width = min_width.max(max_item_w + padding * 2.0);
         let total_h = (self.items.len() as f32) * item_height + padding * 2.0;
 

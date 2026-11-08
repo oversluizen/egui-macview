@@ -120,9 +120,32 @@ impl CASpring {
     /// `elapsed < self.settling_duration()`.
     pub fn animate_f32(&self, ctx: &egui::Context, id: egui::Id, target: f32) -> f32 {
         let now = ctx.input(|i| i.time);
-        let (prev_target, start_val, start_time) = ctx.data_mut(|d| {
-            *d.get_temp_mut_or_insert_with::<(f32, f32, f64)>(id, || (target, target, now))
-        });
+        self.animate_f32_at(ctx, id, target, now, false)
+    }
+
+    /// Evaluates a stateful `CASpring` transition toward `target` at explicit timestamp `now`,
+    /// performing zero spring math or `IdTypeMap` write locks when settled at rest.
+    pub fn animate_f32_at(
+        &self,
+        ctx: &egui::Context,
+        id: egui::Id,
+        target: f32,
+        now: f64,
+        frame_paced: bool,
+    ) -> f32 {
+        let stored = ctx.data(|d| d.get_temp::<(f32, f32, f64)>(id));
+        let Some((prev_target, start_val, start_time)) = stored else {
+            ctx.data_mut(|d| d.insert_temp(id, (target, target, now)));
+            return target;
+        };
+
+        let request_next_frame = |ctx: &egui::Context| {
+            if frame_paced {
+                ctx.request_repaint_after(std::time::Duration::from_millis(16));
+            } else {
+                ctx.request_repaint();
+            }
+        };
 
         if (prev_target - target).abs() > f32::EPSILON {
             let elapsed = (now - start_time).max(0.0) as f32;
@@ -134,12 +157,12 @@ impl CASpring {
                 prev_target
             };
             ctx.data_mut(|d| d.insert_temp(id, (target, cur, now)));
-            ctx.request_repaint();
+            request_next_frame(ctx);
             cur
         } else {
             let elapsed = (now - start_time).max(0.0) as f32;
             if (target - start_val).abs() > f32::EPSILON && elapsed < self.settling_duration() {
-                ctx.request_repaint();
+                request_next_frame(ctx);
                 start_val + (target - start_val) * self.position_at(elapsed)
             } else {
                 if (target - start_val).abs() > f32::EPSILON {

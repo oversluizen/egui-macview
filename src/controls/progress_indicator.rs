@@ -243,30 +243,9 @@ impl<'a> Widget for MacProgressIndicator<'a> {
                     } else {
                         ui.input(|i| i.time)
                     };
-                    let (mut from_p, mut to_p, mut start_t) = ui
-                        .data(|d| d.get_temp::<(f32, f32, f64)>(anim_id))
-                        .unwrap_or((target_p, target_p, now));
-
-                    let elapsed = ((now - start_t).max(0.0)) as f32;
-                    let cur_eval = spring.evaluate(elapsed).clamp(0.0, 1.0);
-                    let cur_p = (from_p + (to_p - from_p) * cur_eval).clamp(0.0, 1.0);
-
-                    let smooth_p = if (target_p - to_p).abs() > f32::EPSILON {
-                        from_p = cur_p;
-                        to_p = target_p;
-                        start_t = now;
-                        ui.ctx().request_repaint_after(std::time::Duration::from_millis(16));
-                        from_p
-                    } else if (to_p - from_p).abs() > f32::EPSILON
-                        && elapsed < spring.settling_duration()
-                    {
-                        ui.ctx().request_repaint_after(std::time::Duration::from_millis(16));
-                        cur_p
-                    } else {
-                        from_p = to_p;
-                        to_p
-                    };
-                    ui.data_mut(|d| d.insert_temp(anim_id, (from_p, to_p, start_t)));
+                    let smooth_p = spring
+                        .animate_f32_at(ui.ctx(), anim_id, target_p, now, true)
+                        .clamp(0.0, 1.0);
 
                     if smooth_p > 0.0 {
                         let fill_w = track_rect.width() * smooth_p;

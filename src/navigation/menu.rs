@@ -54,25 +54,9 @@ impl<'a> MacMenuBar<'a> {
         let Some(menu) = (*self.open_menu_idx).and_then(|idx| self.menus.get(idx)) else {
             return;
         };
-        let len = menu.items.len();
-        if len == 0 {
-            return;
-        }
-        let curr = self.highlighted_item_idx.unwrap_or(0);
-        for step in 1..=len {
-            let next = if forward {
-                (curr + step) % len
-            } else {
-                (curr + len - (step % len)) % len
-            };
-            if menu
-                .items
-                .get(next)
-                .is_some_and(|it| it.enabled && !matches!(it.kind, MacMenuItemKind::Separator))
-            {
-                *self.highlighted_item_idx = Some(next);
-                break;
-            }
+        let curr = Some(self.highlighted_item_idx.unwrap_or(0));
+        if let Some(next) = super::submenu::step_enabled_menu_item(&menu.items, curr, forward) {
+            *self.highlighted_item_idx = Some(next);
         }
     }
 

@@ -75,7 +75,13 @@ impl eframe::App for StudioApp {
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let theme = MacTheme::new(self.appearance);
+        theme.apply_to_egui(ui.ctx());
         let t = ui.input(|i| i.time);
+        let spin_t = if self.indeterminate {
+            t.fract().max(1e-4)
+        } else {
+            0.0
+        };
 
         egui::CentralPanel::default().show(ui, |ui| {
             ui.horizontal(|ui| {
@@ -131,15 +137,15 @@ impl eframe::App for StudioApp {
                     bar = bar.indeterminate((t * 0.6).fract());
                 }
                 bar.show(ui);
-                MacProgressIndicator::spinning(t.fract())
+                MacProgressIndicator::spinning(spin_t)
                     .theme(&theme)
                     .control_size(MacProgressControlSize::Regular)
                     .show(ui);
-                MacProgressIndicator::spinning(t.fract())
+                MacProgressIndicator::spinning(spin_t)
                     .theme(&theme)
                     .control_size(MacProgressControlSize::Small)
                     .show(ui);
-                MacProgressIndicator::spinning(t.fract())
+                MacProgressIndicator::spinning(spin_t)
                     .theme(&theme)
                     .control_size(MacProgressControlSize::Mini)
                     .show(ui);
