@@ -420,6 +420,8 @@ impl GalleryApp {
             self.active_screen = new_screen;
             self.sidebar.active_screen = new_screen;
             self.sidebar.selected_node = new_screen.title().to_string();
+            self.center.media_playing = false;
+            self.center.is_publishing = false;
         }
         self.left_split_pos = left_split_pos;
         self.inspector_width = (available_body_w - right_split_pos).clamp(min_inspector_w, max_inspector_w);

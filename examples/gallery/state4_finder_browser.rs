@@ -79,10 +79,12 @@ impl CenterState {
         let label_font = FontId::proportional(12.0);
         let t = content_ui.input(|i| i.time);
 
-        if self.is_publishing {
+        let window_active =
+            content_ui.input(|i| i.focused && !i.viewport().minimized.unwrap_or(false));
+        if self.is_publishing && window_active {
             content_ui
                 .ctx()
-                .request_repaint_after(std::time::Duration::from_millis(33));
+                .request_repaint_after(std::time::Duration::from_millis(50));
             self.publish_progress = (self.publish_progress + 0.015).min(1.0);
             if self.publish_progress >= 1.0 {
                 self.is_publishing = false;
@@ -298,7 +300,7 @@ impl CenterState {
             }
             bar.show(ui);
 
-            let spin_t = if self.is_publishing || self.publish_indeterminate {
+            let spin_t = if (self.is_publishing || self.publish_indeterminate) && window_active {
                 t.fract().max(1e-4)
             } else {
                 0.0

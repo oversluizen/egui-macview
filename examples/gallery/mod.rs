@@ -199,7 +199,7 @@ impl Default for CenterState {
             publish_indeterminate: false,
             is_publishing: false,
             media_playing: false,
-            media_loop: true,
+            media_loop: false,
             media_in_point: 15.0,
             media_out_point: 92.0,
             media_playhead: 36.0,

@@ -8,7 +8,7 @@ use egui::{
 use egui_macview::{
     theme::MacTheme, MacButtonCell, MacColorWell, MacForm, MacInputCell, MacPopUpButton,
     MacScrollView, MacSegmentedControl, MacSlider, MacStackOrientation, MacStackView, MacStepper,
-    MacSymbol, MacToastManager, MacToggle,
+    MacToastManager, MacToggle,
 };
 use std::cell::RefCell;
 
@@ -79,6 +79,15 @@ pub(super) fn sync_aspect_height_changed(card: &mut CardModel, old_h_str: &str, 
     }
 }
 
+/// Returns `(width_label, height_label, radius_label)` static strings for unit index (`0=pt, 1=px, 2=%`).
+pub const fn unit_row_labels(unit_idx: usize) -> (&'static str, &'static str, &'static str) {
+    match unit_idx {
+        1 => ("Width (px):", "Height (px):", "Radius (px):"),
+        2 => ("Width (%):", "Height (%):", "Radius (%):"),
+        _ => ("Width (pt):", "Height (pt):", "Radius (pt):"),
+    }
+}
+
 /// Renders the shared Width, Height, and Radius numeric `MacInputCell` rows with tab-chain focus and aspect locking.
 pub(crate) fn render_card_geometry_rows(
     form: &mut egui_macview::MacFormUi<'_>,
@@ -88,20 +97,21 @@ pub(crate) fn render_card_geometry_rows(
     ids: (Id, Id, Id),
 ) {
     let (id_w, id_h, id_r) = ids;
-    let (w_scale, h_scale, r_scale, u_str) = unit_scale_and_suffix(unit_idx);
-    form.row_label(egui::RichText::new(format!("Width ({u_str}):")).size(11.0), |ui| {
+    let (w_scale, h_scale, r_scale, _) = unit_scale_and_suffix(unit_idx);
+    let (w_lbl, h_lbl, r_lbl) = unit_row_labels(unit_idx);
+    form.row_label(egui::RichText::new(w_lbl).size(11.0), |ui| {
         let prev_w = card.width.clone();
         let w_range = ((60.0 * w_scale) as f64)..=((500.0 * w_scale) as f64);
         MacInputCell::with_id(id_w, &mut card.width).theme(theme).numeric(w_range, 1.0).width(68.0).next_focus(id_h).prev_focus(id_r).placeholder("Width").show(ui);
         sync_aspect_width_changed(card, &prev_w, unit_idx);
     });
-    form.row_label(egui::RichText::new(format!("Height ({u_str}):")).size(11.0), |ui| {
+    form.row_label(egui::RichText::new(h_lbl).size(11.0), |ui| {
         let prev_h = card.height.clone();
         let h_range = ((40.0 * h_scale) as f64)..=((300.0 * h_scale) as f64);
         MacInputCell::with_id(id_h, &mut card.height).theme(theme).numeric(h_range, 1.0).width(68.0).next_focus(id_r).prev_focus(id_w).placeholder("Height").show(ui);
         sync_aspect_height_changed(card, &prev_h, unit_idx);
     });
-    form.row_label(egui::RichText::new(format!("Radius ({u_str}):")).size(11.0), |ui| {
+    form.row_label(egui::RichText::new(r_lbl).size(11.0), |ui| {
         let r_range = 0.0..=((40.0 * r_scale) as f64);
         MacInputCell::with_id(id_r, &mut card.radius).theme(theme).numeric(r_range, 1.0).width(68.0).next_focus(id_w).prev_focus(id_h).placeholder("Radius").show(ui);
     });
@@ -133,13 +143,10 @@ impl InspectorState {
     fn render_expanded_pro(&mut self, ui: &mut Ui, theme: &MacTheme, card: &mut CardModel, toasts: &RefCell<MacToastManager>) {
         ui.add_space(8.0);
         let tab_idx = self.expanded_tab as usize;
-        let t_attr = format!("{} Attributes", MacSymbol::Sliders.as_str());
-        let t_metr = format!("{} Metrics", MacSymbol::Gear.as_str());
-        let t_matr = format!("{} Matrix", MacSymbol::ArrowClockwise.as_str());
-        let tab_items = [t_attr.as_str(), t_metr.as_str(), t_matr.as_str()];
+        const TAB_ITEMS: [&str; 3] = ["\u{2630} Attributes", "\u{2699} Metrics", "\u{21BB} Matrix"];
 
         ui.vertical_centered(|c_ui| {
-            MacSegmentedControl::new(&tab_items, tab_idx).theme(theme).height(24.0).show(c_ui, |idx| {
+            MacSegmentedControl::new(&TAB_ITEMS, tab_idx).theme(theme).height(24.0).show(c_ui, |idx| {
                 self.expanded_tab = match idx {
                     0 => ExpandedProTab::Attributes,
                     1 => ExpandedProTab::Metrics,
@@ -269,8 +276,7 @@ impl InspectorState {
                             });
                         });
                         sec_ui.add_space(6.0);
-                        let reset_label = format!("{} Reset to Identity Matrix", MacSymbol::ArrowCounterClockwise.as_str());
-                        if sec_ui.add(MacButtonCell::new(&reset_label).theme(theme)).clicked() {
+                        if sec_ui.add(MacButtonCell::new("\u{21BA} Reset to Identity Matrix").theme(theme)).clicked() {
                             (card.rotation_deg, card.scale_pct, card.skew_deg) = (0.0, 100.0, 0.0);
                             toasts.borrow_mut().info("Transform reset");
                         }

@@ -3,11 +3,21 @@
 use egui::Color32;
 use serde::{Deserialize, Serialize};
 
+#[derive(Deserialize)]
+struct RawDimensionValue {
+    #[serde(alias = "$value", alias = "value")]
+    value: String,
+    #[serde(rename = "$type", default)]
+    token_type: Option<String>,
+    #[serde(rename = "$description", default)]
+    description: Option<String>,
+}
+
 /// Generic DTCG dimension token representation supporting `"22.0pt"` or `{ "value": "22.0pt" }`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(from = "RawDimensionValue")]
 pub struct DimensionValue {
     /// String representation of the dimension (e.g. `"22.0pt"`).
-    #[serde(alias = "$value", alias = "value")]
     pub value: String,
     /// DTCG token type (defaults to `"dimension"`).
     #[serde(rename = "$type", default)]
@@ -15,6 +25,20 @@ pub struct DimensionValue {
     /// Optional human-readable description.
     #[serde(rename = "$description", default)]
     pub description: Option<String>,
+    #[serde(skip)]
+    cached_points: f32,
+}
+
+impl From<RawDimensionValue> for DimensionValue {
+    fn from(raw: RawDimensionValue) -> Self {
+        let cached_points = parse_points(&raw.value);
+        Self {
+            value: raw.value,
+            token_type: raw.token_type,
+            description: raw.description,
+            cached_points,
+        }
+    }
 }
 
 impl DimensionValue {
@@ -24,24 +48,40 @@ impl DimensionValue {
             value: format!("{:.1}pt", pt),
             token_type: Some("dimension".to_string()),
             description: None,
+            cached_points: pt,
         }
     }
 
-    /// Extracts numeric value in logical points (AppKit pt).
+    /// Extracts numeric value in logical points (AppKit pt) in O(1) from the pre-parsed cache.
+    #[inline]
     pub fn points(&self) -> f32 {
-        self.value
-            .trim_end_matches("pt")
-            .trim()
-            .parse::<f32>()
-            .unwrap_or(0.0)
+        self.cached_points
     }
+}
+
+/// Parses a DTCG dimension string (e.g. `"22.0pt"`) into logical points (`f32`).
+pub fn parse_points(s: &str) -> f32 {
+    s.trim_end_matches("pt")
+        .trim()
+        .parse::<f32>()
+        .unwrap_or(0.0)
+}
+
+#[derive(Deserialize)]
+struct RawColorValue {
+    #[serde(alias = "$value", alias = "value")]
+    value: String,
+    #[serde(rename = "$type", default)]
+    token_type: Option<String>,
+    #[serde(rename = "$description", default)]
+    description: Option<String>,
 }
 
 /// Generic DTCG color token representation.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(from = "RawColorValue")]
 pub struct ColorValue {
     /// String representation of color (`#RRGGBB`, `#RRGGBBAA`, or `rgba(...)`).
-    #[serde(alias = "$value", alias = "value")]
     pub value: String,
     /// DTCG token type (defaults to `"color"`).
     #[serde(rename = "$type", default)]
@@ -49,17 +89,43 @@ pub struct ColorValue {
     /// Optional human-readable description.
     #[serde(rename = "$description", default)]
     pub description: Option<String>,
+    #[serde(skip)]
+    cached_color: Color32,
+}
+
+impl From<RawColorValue> for ColorValue {
+    fn from(raw: RawColorValue) -> Self {
+        let cached_color = parse_color32(&raw.value);
+        Self {
+            value: raw.value,
+            token_type: raw.token_type,
+            description: raw.description,
+            cached_color,
+        }
+    }
 }
 
 impl ColorValue {
+    /// Constructs a `ColorValue` from a hex or CSS `rgba(...)` string, pre-parsing `Color32`.
+    pub fn new(val: &str) -> Self {
+        Self {
+            value: val.to_string(),
+            token_type: Some("color".to_string()),
+            description: None,
+            cached_color: parse_color32(val),
+        }
+    }
+
     /// Returns the underlying hex or rgba string slice.
+    #[inline]
     pub fn hex_or_rgba(&self) -> &str {
         &self.value
     }
 
-    /// Converts DTCG color token string (`#RRGGBB`, `#RRGGBBAA`, or `rgba(r, g, b, a)`) to `egui::Color32`.
+    /// Returns the pre-parsed `egui::Color32` in O(1).
+    #[inline]
     pub fn to_color32(&self) -> Color32 {
-        parse_color32(&self.value)
+        self.cached_color
     }
 }
 

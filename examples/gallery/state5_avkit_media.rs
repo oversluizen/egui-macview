@@ -19,15 +19,17 @@ impl CenterState {
         let label_font = FontId::proportional(12.0);
         let now = content_ui.input(|i| i.time);
 
-        // Advance playhead when playing (frame-paced at ~30fps to preserve battery)
-        if self.media_playing {
+        // Advance playhead when playing (frame-paced at 20fps and paused when unfocused/minimized)
+        let window_active =
+            content_ui.input(|i| i.focused && !i.viewport().minimized.unwrap_or(false));
+        if self.media_playing && window_active {
             content_ui
                 .ctx()
-                .request_repaint_after(std::time::Duration::from_millis(33));
+                .request_repaint_after(std::time::Duration::from_millis(50));
             let dt = self
                 .media_last_time
                 .map(|prev| (now - prev).clamp(0.0, 0.1))
-                .unwrap_or(1.0 / 30.0);
+                .unwrap_or(1.0 / 20.0);
             self.media_playhead += dt * 14.0;
             if self.media_playhead >= self.media_out_point {
                 if self.media_loop {

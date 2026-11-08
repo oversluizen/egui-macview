@@ -125,156 +125,63 @@ pub struct MacAppearanceColors {
     pub scrollbar_thumb_active: ColorValue,
 }
 
-fn default_label_color() -> ColorValue {
-    ColorValue {
-        value: "rgba(0, 0, 0, 0.85)".to_string(),
-        token_type: Some("color".to_string()),
-        description: None,
-    }
-}
-
-fn default_secondary_label_color() -> ColorValue {
-    ColorValue {
-        value: "rgba(0, 0, 0, 0.50)".to_string(),
-        token_type: Some("color".to_string()),
-        description: None,
-    }
-}
-
-fn default_system_green() -> ColorValue {
-    ColorValue {
-        value: "#34C759".to_string(),
-        token_type: Some("color".to_string()),
-        description: None,
-    }
-}
-
-fn default_system_yellow() -> ColorValue {
-    ColorValue {
-        value: "#FFCC00".to_string(),
-        token_type: Some("color".to_string()),
-        description: None,
-    }
-}
-
-fn default_system_orange() -> ColorValue {
-    ColorValue {
-        value: "#FF9500".to_string(),
-        token_type: Some("color".to_string()),
-        description: None,
-    }
-}
-
-fn default_system_red() -> ColorValue {
-    ColorValue {
-        value: "#FF3B30".to_string(),
-        token_type: Some("color".to_string()),
-        description: None,
-    }
-}
-
-fn default_alternating_row_even() -> ColorValue {
-    ColorValue {
-        value: "#FFFFFF".to_string(),
-        token_type: Some("color".to_string()),
-        description: None,
-    }
-}
-
-fn default_alternating_row_odd() -> ColorValue {
-    ColorValue {
-        value: "#F4F5F5".to_string(),
-        token_type: Some("color".to_string()),
-        description: None,
-    }
-}
-
-fn default_scrubber_selection_border() -> ColorValue {
-    ColorValue {
-        value: "#FFCC00".to_string(),
-        token_type: Some("color".to_string()),
-        description: None,
-    }
-}
-
-fn default_scrubber_outside_dim() -> ColorValue {
-    ColorValue {
-        value: "rgba(0, 0, 0, 0.58)".to_string(),
-        token_type: Some("color".to_string()),
-        description: None,
-    }
-}
-
-fn default_scrubber_waveform() -> ColorValue {
-    ColorValue {
-        value: "#007AFF".to_string(),
-        token_type: Some("color".to_string()),
-        description: None,
-    }
-}
-
-fn default_scrubber_playhead() -> ColorValue {
-    ColorValue {
-        value: "#FFFFFF".to_string(),
-        token_type: Some("color".to_string()),
-        description: None,
-    }
-}
-
-fn default_traffic_light_close() -> ColorValue {
-    ColorValue {
-        value: "#FF5F56".to_string(),
-        token_type: Some("color".to_string()),
-        description: None,
-    }
-}
-
-fn default_traffic_light_close_border() -> ColorValue {
-    ColorValue {
-        value: "#E0443E".to_string(),
-        token_type: Some("color".to_string()),
-        description: None,
-    }
-}
-
-fn default_traffic_light_minimize() -> ColorValue {
-    ColorValue {
-        value: "#FFBD2E".to_string(),
-        token_type: Some("color".to_string()),
-        description: None,
-    }
-}
-
-fn default_traffic_light_minimize_border() -> ColorValue {
-    ColorValue {
-        value: "#D69A1E".to_string(),
-        token_type: Some("color".to_string()),
-        description: None,
-    }
-}
-
-fn default_traffic_light_zoom() -> ColorValue {
-    ColorValue {
-        value: "#27C93F".to_string(),
-        token_type: Some("color".to_string()),
-        description: None,
-    }
-}
-
-fn default_traffic_light_zoom_border() -> ColorValue {
-    ColorValue {
-        value: "#1BA931".to_string(),
-        token_type: Some("color".to_string()),
-        description: None,
-    }
-}
-
 fn color_val(val: &str) -> ColorValue {
-    ColorValue {
-        value: val.to_string(),
-        token_type: Some("color".to_string()),
-        description: None,
-    }
+    ColorValue::new(val)
+}
+
+fn default_label_color() -> ColorValue {
+    color_val("rgba(0, 0, 0, 0.85)")
+}
+fn default_secondary_label_color() -> ColorValue {
+    color_val("rgba(0, 0, 0, 0.50)")
+}
+fn default_system_green() -> ColorValue {
+    color_val("#34C759")
+}
+fn default_system_yellow() -> ColorValue {
+    color_val("#FFCC00")
+}
+fn default_system_orange() -> ColorValue {
+    color_val("#FF9500")
+}
+fn default_system_red() -> ColorValue {
+    color_val("#FF3B30")
+}
+fn default_alternating_row_even() -> ColorValue {
+    color_val("#FFFFFF")
+}
+fn default_alternating_row_odd() -> ColorValue {
+    color_val("#F4F5F5")
+}
+fn default_scrubber_selection_border() -> ColorValue {
+    color_val("#FFCC00")
+}
+fn default_scrubber_outside_dim() -> ColorValue {
+    color_val("rgba(0, 0, 0, 0.58)")
+}
+fn default_scrubber_waveform() -> ColorValue {
+    color_val("#007AFF")
+}
+fn default_scrubber_playhead() -> ColorValue {
+    color_val("#FFFFFF")
+}
+fn default_traffic_light_close() -> ColorValue {
+    color_val("#FF5F56")
+}
+fn default_traffic_light_close_border() -> ColorValue {
+    color_val("#E0443E")
+}
+fn default_traffic_light_minimize() -> ColorValue {
+    color_val("#FFBD2E")
+}
+fn default_traffic_light_minimize_border() -> ColorValue {
+    color_val("#D69A1E")
+}
+fn default_traffic_light_zoom() -> ColorValue {
+    color_val("#27C93F")
+}
+fn default_traffic_light_zoom_border() -> ColorValue {
+    color_val("#1BA931")
 }
 
 fn default_on_accent_text() -> ColorValue {

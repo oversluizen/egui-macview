@@ -401,12 +401,27 @@ fn test_full_gallery_cpu_hygiene_all_states_and_frame_pacing() {
     assert!(run_scroll_frame(3.932, None).0 >= std::time::Duration::from_millis(700));
     assert_eq!(run_scroll_frame(5.2, None).0, std::time::Duration::MAX);
 
-    // 4. Verify active timeline playback on State 5 uses frame-paced delay (>= 16ms), never Duration::ZERO
+    // 4. Verify active timeline playback on State 5 uses frame-paced delay (>= 16ms), never Duration::ZERO,
+    //    and pauses automatically (Duration::MAX) when the window loses focus.
     app.active_screen = GalleryScreen::AvKitMediaStudio;
     app.center.media_playing = true;
-    t += 0.033;
+    t += 0.050;
     let play_delay = run_gallery_frame(&mut app, t, None);
     assert!(!play_delay.is_zero() && play_delay <= std::time::Duration::from_millis(50));
+
+    let unfocused_raw = RawInput {
+        time: Some(t + 0.050),
+        focused: false,
+        screen_rect: Some(egui::Rect::from_min_size(Pos2::ZERO, egui::vec2(1160.0, 740.0))),
+        ..Default::default()
+    };
+    let mut unfocused_out = ctx.run_ui(unfocused_raw, |ui| app.render_ui(ui));
+    unfocused_out.textures_delta.clear();
+    assert_eq!(
+        unfocused_out.viewport_output[&egui::ViewportId::ROOT].repaint_delay,
+        std::time::Duration::MAX,
+        "Unfocused window must pause timeline repaints (0.0% background CPU)"
+    );
     app.center.media_playing = false;
 }
 
