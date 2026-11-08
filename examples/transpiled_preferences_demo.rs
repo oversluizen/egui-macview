@@ -66,13 +66,10 @@ impl SettingsNibGSAppearancePreferencesState {
                 stack.add_section(Some("Edit View"), |sec_ui| {
                     sec_ui.horizontal(|h| {
                         h.label("Text View width:");
-                        MacInputCell::with_id(
-                            Id::NULL.with("_NS:67"),
-                            &mut self.text_view_width,
-                        )
-                        .theme(theme)
-                        .width(90.0)
-                        .show(h);
+                        MacInputCell::with_id(Id::NULL.with("_NS:67"), &mut self.text_view_width)
+                            .theme(theme)
+                            .width(90.0)
+                            .show(h);
                     });
                     sec_ui.add_space(2.0);
                     sec_ui.horizontal(|h| {
@@ -269,27 +266,68 @@ impl eframe::App for PreferencesApp {
         let cluster_hovered = ui.rect_contains_pointer(cluster_rect);
 
         // Close
-        let close_resp = ui.interact(Rect::from_center_size(close_pos, vec2(14.0, 14.0)), ui.scope_id().with("tl_close"), Sense::click());
+        let close_resp = ui.interact(
+            Rect::from_center_size(close_pos, vec2(14.0, 14.0)),
+            ui.scope_id().with("tl_close"),
+            Sense::click(),
+        );
         if close_resp.clicked() {
             ui.ctx().send_viewport_cmd(ViewportCommand::Close);
         }
-        painter.circle(close_pos, traffic_radius, close_fill, Stroke::new(0.5, close_border));
+        painter.circle(
+            close_pos,
+            traffic_radius,
+            close_fill,
+            Stroke::new(0.5, close_border),
+        );
 
         // Minimize
-        let min_resp = ui.interact(Rect::from_center_size(min_pos, vec2(14.0, 14.0)), ui.scope_id().with("tl_min"), Sense::click());
+        let min_resp = ui.interact(
+            Rect::from_center_size(min_pos, vec2(14.0, 14.0)),
+            ui.scope_id().with("tl_min"),
+            Sense::click(),
+        );
         if min_resp.clicked() {
             ui.ctx().send_viewport_cmd(ViewportCommand::Minimized(true));
         }
-        painter.circle(min_pos, traffic_radius, min_fill, Stroke::new(0.5, min_border));
+        painter.circle(
+            min_pos,
+            traffic_radius,
+            min_fill,
+            Stroke::new(0.5, min_border),
+        );
 
         // Zoom
-        painter.circle(zoom_pos, traffic_radius, zoom_fill, Stroke::new(0.5, zoom_border));
+        painter.circle(
+            zoom_pos,
+            traffic_radius,
+            zoom_fill,
+            Stroke::new(0.5, zoom_border),
+        );
 
         if cluster_hovered {
             let sym = Color32::from_black_alpha(160);
-            painter.line_segment([pos2(close_pos.x - 2.5, close_pos.y - 2.5), pos2(close_pos.x + 2.5, close_pos.y + 2.5)], Stroke::new(1.0, sym));
-            painter.line_segment([pos2(close_pos.x - 2.5, close_pos.y + 2.5), pos2(close_pos.x + 2.5, close_pos.y - 2.5)], Stroke::new(1.0, sym));
-            painter.line_segment([pos2(min_pos.x - 3.0, min_pos.y), pos2(min_pos.x + 3.0, min_pos.y)], Stroke::new(1.0, sym));
+            painter.line_segment(
+                [
+                    pos2(close_pos.x - 2.5, close_pos.y - 2.5),
+                    pos2(close_pos.x + 2.5, close_pos.y + 2.5),
+                ],
+                Stroke::new(1.0, sym),
+            );
+            painter.line_segment(
+                [
+                    pos2(close_pos.x - 2.5, close_pos.y + 2.5),
+                    pos2(close_pos.x + 2.5, close_pos.y - 2.5),
+                ],
+                Stroke::new(1.0, sym),
+            );
+            painter.line_segment(
+                [
+                    pos2(min_pos.x - 3.0, min_pos.y),
+                    pos2(min_pos.x + 3.0, min_pos.y),
+                ],
+                Stroke::new(1.0, sym),
+            );
         }
 
         // Window Title
@@ -298,18 +336,27 @@ impl eframe::App for PreferencesApp {
             Align2::CENTER_CENTER,
             "Glyphs Preferences (Transpiled NIBs)",
             FontId::proportional(13.0),
-            if is_dark { Color32::from_rgb(235, 235, 240) } else { Color32::from_rgb(30, 30, 32) },
+            if is_dark {
+                Color32::from_rgb(235, 235, 240)
+            } else {
+                Color32::from_rgb(30, 30, 32)
+            },
         );
 
         // Dark/Light toggle on top right
         let toggle_rect = Rect::from_min_size(
-            pos2(titlebar_rect.right() - 88.0, titlebar_rect.center().y - 10.0),
+            pos2(
+                titlebar_rect.right() - 88.0,
+                titlebar_rect.center().y - 10.0,
+            ),
             vec2(76.0, 20.0),
         );
         let mut toggle_ui = ui.new_child(egui::UiBuilder::new().max_rect(toggle_rect));
         toggle_ui.horizontal(|h| {
             let mut dark_mode = is_dark;
-            if h.add(MacToggle::new(&mut dark_mode).theme(&self.theme)).changed() {
+            if h.add(MacToggle::new(&mut dark_mode).theme(&self.theme))
+                .changed()
+            {
                 self.theme = if dark_mode {
                     MacTheme::new(MacAppearance::DarkAqua)
                 } else {
@@ -321,7 +368,10 @@ impl eframe::App for PreferencesApp {
 
         // Titlebar separator
         painter.line_segment(
-            [pos2(titlebar_rect.left(), titlebar_rect.bottom()), pos2(titlebar_rect.right(), titlebar_rect.bottom())],
+            [
+                pos2(titlebar_rect.left(), titlebar_rect.bottom()),
+                pos2(titlebar_rect.right(), titlebar_rect.bottom()),
+            ],
             Stroke::new(1.0, self.theme.separator()),
         );
 

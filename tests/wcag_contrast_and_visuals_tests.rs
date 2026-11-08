@@ -32,10 +32,11 @@ fn relative_luminance(color: Color32) -> f32 {
 /// Computes WCAG 2.1 contrast ratio between foreground and background colors.
 /// If foreground has alpha < 255, it is alpha-blended over the background first.
 fn contrast_ratio(fg: Color32, bg: Color32) -> f32 {
-    let alpha = fg.a() as f32 / 255.0;
-    let blended_r = ((fg.r() as f32 * alpha) + (bg.r() as f32 * (1.0 - alpha))).round() as u8;
-    let blended_g = ((fg.g() as f32 * alpha) + (bg.g() as f32 * (1.0 - alpha))).round() as u8;
-    let blended_b = ((fg.b() as f32 * alpha) + (bg.b() as f32 * (1.0 - alpha))).round() as u8;
+    let [fg_r, fg_g, fg_b, fg_a] = fg.to_srgba_unmultiplied();
+    let alpha = fg_a as f32 / 255.0;
+    let blended_r = ((fg_r as f32 * alpha) + (bg.r() as f32 * (1.0 - alpha))).round() as u8;
+    let blended_g = ((fg_g as f32 * alpha) + (bg.g() as f32 * (1.0 - alpha))).round() as u8;
+    let blended_b = ((fg_b as f32 * alpha) + (bg.b() as f32 * (1.0 - alpha))).round() as u8;
     let effective_fg = Color32::from_rgb(blended_r, blended_g, blended_b);
 
     let l1 = relative_luminance(effective_fg);
@@ -291,4 +292,38 @@ fn test_mac_card_headless_contrast_evaluation() {
     });
     out_light.textures_delta.clear();
     assert_eq!(observed_style_light, Some(MacBackgroundStyle::Light));
+}
+
+#[test]
+fn test_v05_semantic_studio_colors_and_wcag_contrast() {
+    let aqua = MacTheme::new(MacAppearance::Aqua);
+    let dark_aqua = MacTheme::new(MacAppearance::DarkAqua);
+
+    // System semantic colors must differ appropriately between Aqua and DarkAqua
+    assert_eq!(aqua.system_yellow(), Color32::from_rgb(255, 204, 0));
+    assert_eq!(dark_aqua.system_yellow(), Color32::from_rgb(255, 214, 10));
+    assert_eq!(aqua.system_orange(), Color32::from_rgb(255, 149, 0));
+    assert_eq!(dark_aqua.system_orange(), Color32::from_rgb(255, 159, 10));
+    assert_eq!(aqua.system_red(), Color32::from_rgb(255, 59, 48));
+    assert_eq!(dark_aqua.system_red(), Color32::from_rgb(255, 69, 58));
+
+    // Alternating row backgrounds must maintain >= 4.5:1 label contrast
+    for row_idx in [0usize, 1usize] {
+        let aqua_row_bg = aqua.alternating_content_background(row_idx);
+        let dark_row_bg = dark_aqua.alternating_content_background(row_idx);
+        // Blend over control_background to verify effective cell contrast
+        let blend = |fg: Color32, bg: Color32| -> Color32 {
+            let [fr, fg_c, fb, fa] = fg.to_srgba_unmultiplied();
+            let a = fa as f32 / 255.0;
+            Color32::from_rgb(
+                (fr as f32 * a + bg.r() as f32 * (1.0 - a)).round() as u8,
+                (fg_c as f32 * a + bg.g() as f32 * (1.0 - a)).round() as u8,
+                (fb as f32 * a + bg.b() as f32 * (1.0 - a)).round() as u8,
+            )
+        };
+        let eff_aqua_bg = blend(aqua_row_bg, aqua.control_background());
+        let eff_dark_bg = blend(dark_row_bg, dark_aqua.control_background());
+        assert!(contrast_ratio(aqua.label(), eff_aqua_bg) >= 4.5);
+        assert!(contrast_ratio(dark_aqua.label(), eff_dark_bg) >= 4.5);
+    }
 }

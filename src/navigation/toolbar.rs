@@ -148,10 +148,8 @@ impl<'a> MacToolbar<'a> {
                 let c2_x = c1_x + diameter + spacing;
                 let c3_x = c2_x + diameter + spacing;
 
-                let cluster_rect = Rect::from_min_max(
-                    Pos2::new(c1_x - r, cy - r),
-                    Pos2::new(c3_x + r, cy + r),
-                );
+                let cluster_rect =
+                    Rect::from_min_max(Pos2::new(c1_x - r, cy - r), Pos2::new(c3_x + r, cy + r));
                 let cluster_hovered = ui.rect_contains_pointer(cluster_rect);
 
                 let close_rect = Rect::from_center_size(Pos2::new(c1_x, cy), Vec2::splat(diameter));
@@ -300,8 +298,14 @@ impl<'a> MacToolbar<'a> {
                     theme.label()
                 };
                 let close_stroke = Stroke::new(border_w, close_fg);
-                painter.line_segment([close_icon.left_top(), close_icon.right_bottom()], close_stroke);
-                painter.line_segment([close_icon.left_bottom(), close_icon.right_top()], close_stroke);
+                painter.line_segment(
+                    [close_icon.left_top(), close_icon.right_bottom()],
+                    close_stroke,
+                );
+                painter.line_segment(
+                    [close_icon.left_bottom(), close_icon.right_top()],
+                    close_stroke,
+                );
 
                 if close_resp.clicked() {
                     close_clicked = true;
@@ -351,7 +355,8 @@ impl<'a> MacToolbar<'a> {
         );
         contents(&mut child_ui);
 
-        let drag_started = bg_resp.drag_started() && !close_clicked && !minimize_clicked && !zoom_toggled;
+        let drag_started =
+            bg_resp.drag_started() && !close_clicked && !minimize_clicked && !zoom_toggled;
 
         MacToolbarResponse {
             response: bg_resp,
@@ -364,11 +369,7 @@ impl<'a> MacToolbar<'a> {
     }
 
     /// Allocates full width and renders the toolbar with center/trailing controls closure.
-    pub fn show(
-        self,
-        ui: &mut Ui,
-        contents: impl FnOnce(&mut Ui),
-    ) -> MacToolbarResponse {
+    pub fn show(self, ui: &mut Ui, contents: impl FnOnce(&mut Ui)) -> MacToolbarResponse {
         let fallback_theme;
         let theme = match self.theme {
             Some(t) => t,

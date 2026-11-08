@@ -227,11 +227,12 @@ impl<'a> MacContextMenu<'a> {
             let sc_w = match &item.kind {
                 MacMenuItemKind::Action {
                     shortcut: Some(sc), ..
-                } => ui
-                    .painter()
-                    .layout_no_wrap(sc.format_text(), font_id.clone(), on_accent)
-                    .size()
-                    .x,
+                } => {
+                    ui.painter()
+                        .layout_no_wrap(sc.format_text(), font_id.clone(), on_accent)
+                        .size()
+                        .x
+                }
                 _ => 0.0,
             };
             let item_w = if sc_w > 0.0 {
@@ -352,8 +353,7 @@ impl<'a> MacContextMenu<'a> {
                     );
 
                     if let MacMenuItemKind::Action {
-                        shortcut: Some(sc),
-                        ..
+                        shortcut: Some(sc), ..
                     } = &item.kind
                     {
                         painter.text(

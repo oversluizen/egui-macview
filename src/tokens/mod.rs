@@ -13,12 +13,14 @@ pub use color::{MacAppearanceColors, MacColorTokens};
 pub use dtcg::{ColorValue, DimensionValue};
 pub use metrics::{
     ButtonMetrics, ButtonSizeMetrics, ColorWellMetrics, ContextMenuMetrics, FocusRingMetrics,
-    FooterMetrics, LayoutMetrics, MacControlMetrics, MacMetricsTokens, MenuBarMetrics,
-    NavigationMetrics, OutlineViewMetrics, PaletteMetrics, PopUpButtonMetrics, PopoverMetrics,
+    FooterMetrics, LayoutMetrics, LevelIndicatorMetrics, MacControlMetrics, MacMetricsTokens,
+    MenuBarMetrics, NavigationMetrics, OutlineViewMetrics, PaletteMetrics, PathControlMetrics,
+    PopUpButtonMetrics, PopoverMetrics, ProgressIndicatorMetrics, ProgressSizeMetrics,
     ScrollViewMetrics, SearchFieldMetrics, SegmentedMetrics, SegmentedSizeMetrics, SliderMetrics,
-    SplitViewMetrics, StackViewMetrics, StepperMetrics, TextFieldMetrics, TextFieldSizeMetrics,
-    ThumbnailCellMetrics, ToastMetrics, ToggleMetrics, ToolbarMetrics, CANVAS_FOOTER_HEIGHT,
-    COMMAND_PALETTE_HEIGHT, COMMAND_PALETTE_WIDTH, DEFAULT_TOAST_DURATION,
+    SplitViewMetrics, StackViewMetrics, StepperMetrics, TableViewMetrics, TextFieldMetrics,
+    TextFieldSizeMetrics, ThumbnailCellMetrics, ToastMetrics, ToggleMetrics, TokenFieldMetrics,
+    ToolbarMetrics, TrimScrubberMetrics, CANVAS_FOOTER_HEIGHT, COMMAND_PALETTE_HEIGHT,
+    COMMAND_PALETTE_WIDTH, DEFAULT_TOAST_DURATION,
 };
 pub use motion::{MacMotionTokens, MotionPresetToken};
 pub use typography::{
@@ -204,6 +206,42 @@ impl MacDesignTokens {
     #[inline]
     pub fn toast_metrics(&self) -> &ToastMetrics {
         &self.macview.metrics.navigation.toast
+    }
+
+    /// Accesses progress indicator metrics tokens.
+    #[inline]
+    pub fn progress_indicator_metrics(&self) -> &ProgressIndicatorMetrics {
+        &self.macview.metrics.control.progress_indicator
+    }
+
+    /// Accesses table view metrics tokens.
+    #[inline]
+    pub fn table_view_metrics(&self) -> &TableViewMetrics {
+        &self.macview.metrics.control.table_view
+    }
+
+    /// Accesses token field metrics tokens.
+    #[inline]
+    pub fn token_field_metrics(&self) -> &TokenFieldMetrics {
+        &self.macview.metrics.control.token_field
+    }
+
+    /// Accesses level indicator metrics tokens.
+    #[inline]
+    pub fn level_indicator_metrics(&self) -> &LevelIndicatorMetrics {
+        &self.macview.metrics.control.level_indicator
+    }
+
+    /// Accesses trim scrubber metrics tokens.
+    #[inline]
+    pub fn trim_scrubber_metrics(&self) -> &TrimScrubberMetrics {
+        &self.macview.metrics.control.trim_scrubber
+    }
+
+    /// Accesses path control metrics tokens.
+    #[inline]
+    pub fn path_control_metrics(&self) -> &PathControlMetrics {
+        &self.macview.metrics.control.path_control
     }
 
     /// Accesses semantic color tokens.

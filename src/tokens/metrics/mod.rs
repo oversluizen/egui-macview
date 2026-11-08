@@ -5,10 +5,12 @@ pub mod layout;
 pub mod navigation;
 
 pub use controls::{
-    ButtonMetrics, ButtonSizeMetrics, ColorWellMetrics, FocusRingMetrics, MacControlMetrics,
-    OutlineViewMetrics, PopUpButtonMetrics, SearchFieldMetrics, SegmentedMetrics,
-    SegmentedSizeMetrics, SliderMetrics, StepperMetrics, TextFieldMetrics, TextFieldSizeMetrics,
-    ThumbnailCellMetrics, ToggleMetrics,
+    ButtonMetrics, ButtonSizeMetrics, ColorWellMetrics, FocusRingMetrics, LevelIndicatorMetrics,
+    MacControlMetrics, OutlineViewMetrics, PathControlMetrics, PopUpButtonMetrics,
+    ProgressIndicatorMetrics, ProgressSizeMetrics, SearchFieldMetrics, SegmentedMetrics,
+    SegmentedSizeMetrics, SliderMetrics, StepperMetrics, TableViewMetrics, TextFieldMetrics,
+    TextFieldSizeMetrics, ThumbnailCellMetrics, ToggleMetrics, TokenFieldMetrics,
+    TrimScrubberMetrics,
 };
 pub use layout::{
     LayoutMetrics, MacMetricsTokens, PopoverMetrics, ScrollViewMetrics, SplitViewMetrics,

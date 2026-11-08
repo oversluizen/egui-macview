@@ -205,6 +205,60 @@ impl MacTheme {
         self.colors().system_green.to_color32()
     }
 
+    /// Resolves Apple system yellow/amber semantic color (`systemYellowColor`).
+    pub fn system_yellow(&self) -> Color32 {
+        self.colors().system_yellow.to_color32()
+    }
+
+    /// Resolves Apple system orange semantic color (`systemOrangeColor`).
+    pub fn system_orange(&self) -> Color32 {
+        self.colors().system_orange.to_color32()
+    }
+
+    /// Resolves Apple system red semantic color (`systemRedColor`).
+    pub fn system_red(&self) -> Color32 {
+        self.colors().system_red.to_color32()
+    }
+
+    /// Resolves even table row background color (`alternatingContentBackgroundColors[0]`).
+    pub fn alternating_row_even(&self) -> Color32 {
+        self.colors().alternating_row_even.to_color32()
+    }
+
+    /// Resolves odd table row background color (`alternatingContentBackgroundColors[1]`).
+    pub fn alternating_row_odd(&self) -> Color32 {
+        self.colors().alternating_row_odd.to_color32()
+    }
+
+    /// Resolves alternating content background color for the given row index (`row_index % 2`).
+    pub fn alternating_content_background(&self, row_index: usize) -> Color32 {
+        if row_index.is_multiple_of(2) {
+            self.alternating_row_even()
+        } else {
+            self.alternating_row_odd()
+        }
+    }
+
+    /// Resolves QuickTime / AVKit trim selection border and handle color.
+    pub fn scrubber_selection_border(&self) -> Color32 {
+        self.colors().scrubber_selection_border.to_color32()
+    }
+
+    /// Resolves dimming overlay color for timeline regions outside active trim bounds.
+    pub fn scrubber_outside_dim(&self) -> Color32 {
+        self.colors().scrubber_outside_dim.to_color32()
+    }
+
+    /// Resolves waveform amplitude bar color inside trim scrubber track.
+    pub fn scrubber_waveform(&self) -> Color32 {
+        self.colors().scrubber_waveform.to_color32()
+    }
+
+    /// Resolves playhead cursor line and timecode badge accent color.
+    pub fn scrubber_playhead(&self) -> Color32 {
+        self.colors().scrubber_playhead.to_color32()
+    }
+
     /// Resolves high-contrast white text color used on accent fills.
     pub fn on_accent_text(&self) -> Color32 {
         self.colors().on_accent_text.to_color32()

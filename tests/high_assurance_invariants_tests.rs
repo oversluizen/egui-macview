@@ -13,6 +13,10 @@
 
 use egui_macview::layout::subpixel_snap;
 use egui_macview::motion::CASpring;
+use egui_macview::{
+    MacAppearance, MacLevelIndicator, MacLevelIndicatorStyle, MacLevelOrientation,
+    MacProgressIndicator, MacTheme, MacTimelineZone, MacTrimScrubber,
+};
 use proptest::prelude::*;
 
 proptest! {
@@ -247,4 +251,92 @@ proptest! {
             value
         );
     }
+
+    /// Invariant 5 (SPEC-011 Studio Controls Clamping & Range Monotonicity):
+    /// `MacProgressIndicator` clamps progress to `[0.0, 1.0]` and `MacTrimScrubber` preserves
+    /// `0.0 <= in_point <= playhead <= out_point <= duration`.
+    #[test]
+    fn prop_studio_scrubber_and_progress_invariants(
+        raw_progress in -5.0f32..5.0f32,
+        duration in 10.0f64..600.0f64,
+        in_frac in 0.0f64..1.0f64,
+        out_frac in 0.0f64..1.0f64,
+        play_frac in 0.0f64..1.0f64,
+    ) {
+        let (ctx, theme) = (egui::Context::default(), MacTheme::default());
+        let (mut in_pt, mut out_pt, mut playhead) = (in_frac * duration, out_frac * duration, play_frac * duration);
+        let (samples, zones) = ([0.2f32, 0.7, 0.95, 0.4, 0.6], [MacTimelineZone::new(0.0, duration * 0.5, "Intro")]);
+        let mut clamped_p = None;
+        let mut out = ctx.run_ui(egui::RawInput::default(), |ui| {
+            let pi = MacProgressIndicator::bar(raw_progress).theme(&theme);
+            clamped_p = pi.clamped_progress();
+            pi.show(ui);
+            MacTrimScrubber::new("prop_scrubber", duration, &mut in_pt, &mut out_pt, &mut playhead)
+                .theme(&theme)
+                .waveform(&samples)
+                .zones(&zones)
+                .show(ui);
+        });
+        out.textures_delta.clear();
+        prop_assert!((0.0..=1.0).contains(&clamped_p.unwrap()) && in_pt >= 0.0 && in_pt <= out_pt && out_pt <= duration && playhead >= in_pt && playhead <= out_pt);
+    }
+}
+
+/// TC-011-04: Verifies `MacLevelIndicator` uniform `.discreteCapacity` color, tick marks, and orientations.
+#[test]
+fn test_level_indicator_thresholds_and_orientations() {
+    let (ctx, theme) = (egui::Context::default(), MacTheme::new(MacAppearance::Aqua));
+    let meter = MacLevelIndicator::new(-14.0, -60.0..=0.0)
+        .theme(&theme)
+        .warning_value(-18.0)
+        .critical_value(-6.0)
+        .peak_hold(-3.0);
+    assert_eq!(meter.color_for_value(&theme, -30.0), theme.system_green());
+    assert_eq!(meter.color_for_value(&theme, -12.0), theme.system_yellow());
+    assert_eq!(meter.color_for_value(&theme, -2.0), theme.system_red());
+
+    let (mut horiz_rect, mut vert_rect) = (egui::Rect::NOTHING, egui::Rect::NOTHING);
+    let mut out = ctx.run_ui(egui::RawInput::default(), |ui| {
+        horiz_rect = MacLevelIndicator::new(-2.0, -60.0..=0.0)
+            .theme(&theme)
+            .warning_value(-18.0)
+            .critical_value(-6.0)
+            .style(MacLevelIndicatorStyle::Discrete)
+            .tick_marks(5)
+            .orientation(MacLevelOrientation::Horizontal)
+            .length(160.0)
+            .thickness(16.0)
+            .show(ui)
+            .rect;
+        vert_rect = MacLevelIndicator::new(-14.0, -60.0..=0.0)
+            .theme(&theme)
+            .style(MacLevelIndicatorStyle::Continuous)
+            .orientation(MacLevelOrientation::Vertical)
+            .length(120.0)
+            .thickness(16.0)
+            .show(ui)
+            .rect;
+    });
+    out.textures_delta.clear();
+    let non_red = out
+        .shapes
+        .iter()
+        .filter(|cs| match &cs.shape {
+            egui::Shape::Rect(r) if horiz_rect.contains(r.rect.center()) => {
+                r.fill == theme.system_green() || r.fill == theme.system_yellow()
+            }
+            _ => false,
+        })
+        .count();
+    let ticks = out
+        .shapes
+        .iter()
+        .filter(|cs| matches!(&cs.shape, egui::Shape::LineSegment { .. }))
+        .count();
+    assert!(
+        non_red == 0
+            && ticks >= 5
+            && horiz_rect.size() == egui::Vec2::new(160.0, 16.0)
+            && vert_rect.size() == egui::Vec2::new(16.0, 120.0)
+    );
 }

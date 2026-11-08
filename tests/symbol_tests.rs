@@ -34,15 +34,30 @@ fn test_mac_symbol_glyph_mappings() {
         (MacSymbol::ChevronLeft, '\u{f3d2}', 0xf3d2, "ChevronLeft"),
         (MacSymbol::ChevronDown, '\u{f5d5}', 0xf5d5, "ChevronDown"),
         (MacSymbol::ChevronUp, '\u{f5e5}', 0xf5e5, "ChevronUp"),
-        (MacSymbol::SidebarLeading, '\u{f7d6}', 0xf7d6, "SidebarLeading"),
+        (
+            MacSymbol::SidebarLeading,
+            '\u{f7d6}',
+            0xf7d6,
+            "SidebarLeading",
+        ),
         (MacSymbol::Gear, '\u{f43c}', 0xf43c, "Gear"),
         (MacSymbol::Sliders, '\u{f7dc}', 0xf7dc, "Sliders"),
         (MacSymbol::Checkmark, '\u{f3fd}', 0xf3fd, "Checkmark"),
         (MacSymbol::Xmark, '\u{f404}', 0xf404, "Xmark"),
         (MacSymbol::Plus, '\u{f489}', 0xf489, "Plus"),
         (MacSymbol::Minus, '\u{f70f}', 0xf70f, "Minus"),
-        (MacSymbol::ArrowClockwise, '\u{f49a}', 0xf49a, "ArrowClockwise"),
-        (MacSymbol::ArrowCounterClockwise, '\u{f21c}', 0xf21c, "ArrowCounterClockwise"),
+        (
+            MacSymbol::ArrowClockwise,
+            '\u{f49a}',
+            0xf49a,
+            "ArrowClockwise",
+        ),
+        (
+            MacSymbol::ArrowCounterClockwise,
+            '\u{f21c}',
+            0xf21c,
+            "ArrowCounterClockwise",
+        ),
     ];
 
     assert_eq!(test_cases.len(), 14, "Must cover all 14 MacSymbol variants");
@@ -203,9 +218,11 @@ fn test_symbols_headless_shaping_and_layout() {
             let font_id = egui::FontId::proportional(13.0);
 
             // 1. Isolated vector symbol shaping
-            let solo_galley =
-                ui.painter()
-                    .layout_no_wrap(sym.as_str().to_owned(), font_id.clone(), egui::Color32::BLACK);
+            let solo_galley = ui.painter().layout_no_wrap(
+                sym.as_str().to_owned(),
+                font_id.clone(),
+                egui::Color32::BLACK,
+            );
             assert!(
                 solo_galley.size().x > 0.0,
                 "Symbol {sym:?} isolated layout must have positive width, got {:?}",

@@ -160,7 +160,11 @@ impl<'a> Widget for MacStepper<'a> {
 
         let clicked_top = top_resp.clicked();
         let clicked_bottom = bottom_resp.clicked();
-        if clicked_top || clicked_bottom || top_resp.is_pointer_button_down_on() || bottom_resp.is_pointer_button_down_on() {
+        if clicked_top
+            || clicked_bottom
+            || top_resp.is_pointer_button_down_on()
+            || bottom_resp.is_pointer_button_down_on()
+        {
             response.request_focus();
         }
 

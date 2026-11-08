@@ -42,11 +42,10 @@ fn test_sidebar_navigator_clean_labels_and_sufficient_width() {
 
     let clean_labels = ["Default NIB", "Compact HUD", "Expanded Pro"];
     let outline_metrics = theme.outline_view();
-    let min_sidebar_w = 220.0f32;
-    let row_indent = outline_metrics.indent_step.points();
-    let thumb_w = theme.thumbnail().size.points();
-    let spacing = outline_metrics.content_spacing.points();
-    let padding_h = 16.0f32;
+    let base_w = outline_metrics.indent_step.points()
+        + theme.thumbnail().size.points()
+        + outline_metrics.content_spacing.points()
+        + 16.0f32;
 
     let mut out = ctx.run_ui(RawInput::default(), |ui| {
         let font_id = egui::FontId::proportional(outline_metrics.font_size.points());
@@ -56,8 +55,7 @@ fn test_sidebar_navigator_clean_labels_and_sufficient_width() {
                 .layout_no_wrap((*label).to_string(), font_id.clone(), egui::Color32::WHITE)
                 .size()
                 .x;
-            let total_row_w = row_indent + thumb_w + spacing + text_w + padding_h;
-            assert!(total_row_w <= min_sidebar_w);
+            assert!(base_w + text_w <= 220.0);
         }
     });
     out.textures_delta.clear();
@@ -117,29 +115,25 @@ fn test_adversarial_menu_accelerator_clearance_extreme_strings() {
     let mut highlighted_item_idx = Some(0);
 
     let raw_input = RawInput {
-        screen_rect: Some(egui::Rect::from_min_size(Pos2::ZERO, egui::vec2(1920.0, 1080.0))),
+        screen_rect: Some(Rect::from_min_size(Pos2::ZERO, egui::vec2(1920.0, 1080.0))),
         ..Default::default()
     };
-
     let mut out1 = ctx.run_ui(raw_input.clone(), |ui| {
         MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx)
             .theme(&theme)
             .show(ui);
     });
     out1.textures_delta.clear();
-
     let mut out = ctx.run_ui(raw_input, |ui| {
         MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx)
             .theme(&theme)
             .show(ui);
     });
     out.textures_delta.clear();
-
     let mut text_shapes = Vec::new();
     for clipped in &out.shapes {
         collect_text_shapes(&clipped.shape, &mut text_shapes);
     }
-
     let test_pairs = [
         (
             "Synthesize Deeply Nested Multi-Stage Hierarchical Cryptographic Artifact",
@@ -152,17 +146,12 @@ fn test_adversarial_menu_accelerator_clearance_extreme_strings() {
         ),
         ("Cascading Options...", "›"),
     ];
-
     for (title, sc) in &test_pairs {
         let title_shape = text_shapes
             .iter()
             .find(|t| t.galley.text() == *title)
-            .unwrap_or_else(|| panic!("Title '{title}' must be rendered in dropdown"));
-        let sc_shape = text_shapes
-            .iter()
-            .find(|t| t.galley.text() == *sc)
-            .unwrap_or_else(|| panic!("Shortcut / chevron '{sc}' must be rendered"));
-
+            .unwrap();
+        let sc_shape = text_shapes.iter().find(|t| t.galley.text() == *sc).unwrap();
         let title_right = title_shape.pos.x + title_shape.galley.size().x;
         let sc_left = sc_shape.pos.x - sc_shape.galley.size().x;
         assert!(sc_left - title_right >= 24.0);
@@ -171,63 +160,76 @@ fn test_adversarial_menu_accelerator_clearance_extreme_strings() {
 
 #[test]
 fn test_mac_stepper_modifier_multipliers_and_hold_to_repeat() {
-    let ctx = Context::default();
-    let theme = MacTheme::new(MacAppearance::Aqua);
-    let mut val = 0.0f64;
-    let mut stepper_rect = Rect::NOTHING;
+    let (ctx, theme, mut val, mut stepper_rect) = (
+        Context::default(),
+        MacTheme::new(MacAppearance::Aqua),
+        0.0f64,
+        Rect::NOTHING,
+    );
 
     let mut out0 = ctx.run_ui(RawInput::default(), |ui| {
-        let resp = MacStepper::new(&mut val, -1000.0..=1000.0, 1.0).theme(&theme).show(ui);
+        let resp = MacStepper::new(&mut val, -1000.0..=1000.0, 1.0)
+            .theme(&theme)
+            .show(ui);
         stepper_rect = resp.rect;
         resp.request_focus();
     });
     out0.textures_delta.clear();
 
-    let mut shift_up = RawInput::default();
-    shift_up.events.push(Event::Key {
-        key: Key::ArrowUp,
-        physical_key: None,
-        pressed: true,
-        repeat: false,
-        modifiers: egui::Modifiers::SHIFT,
-    });
-    let mut out1 = ctx.run_ui(shift_up, |ui| {
-        MacStepper::new(&mut val, -1000.0..=1000.0, 1.0).theme(&theme).show(ui);
-    });
-    out1.textures_delta.clear();
-    assert!((val - 10.0).abs() < 1e-6);
-
-    let mut cmd_up = RawInput::default();
-    cmd_up.events.push(Event::Key {
-        key: Key::ArrowUp,
-        physical_key: None,
-        pressed: true,
-        repeat: false,
-        modifiers: egui::Modifiers::COMMAND,
-    });
-    let mut out2 = ctx.run_ui(cmd_up, |ui| {
-        MacStepper::new(&mut val, -1000.0..=1000.0, 1.0).theme(&theme).show(ui);
-    });
-    out2.textures_delta.clear();
-    assert!((val - 110.0).abs() < 1e-6);
+    for (mods, expected) in [
+        (egui::Modifiers::SHIFT, 10.0),
+        (egui::Modifiers::COMMAND, 110.0),
+    ] {
+        let ev = Event::Key {
+            key: Key::ArrowUp,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: mods,
+        };
+        let mut out = ctx.run_ui(
+            RawInput {
+                events: vec![ev],
+                ..Default::default()
+            },
+            |ui| {
+                MacStepper::new(&mut val, -1000.0..=1000.0, 1.0)
+                    .theme(&theme)
+                    .show(ui);
+            },
+        );
+        out.textures_delta.clear();
+        assert!((val - expected).abs() < 1e-6);
+    }
 
     let top_pos = Pos2::new(stepper_rect.center().x, stepper_rect.top() + 3.0);
-    let mut press_in = RawInput { time: Some(1.0), ..Default::default() };
-    press_in.events.push(Event::PointerMoved(top_pos));
-    press_in.events.push(Event::PointerButton {
+    let btn = Event::PointerButton {
         pos: top_pos,
         button: PointerButton::Primary,
         pressed: true,
         modifiers: egui::Modifiers::default(),
-    });
+    };
+    let press_in = RawInput {
+        time: Some(1.0),
+        events: vec![Event::PointerMoved(top_pos), btn],
+        ..Default::default()
+    };
     let mut out3 = ctx.run_ui(press_in, |ui| {
-        MacStepper::new(&mut val, -1000.0..=1000.0, 1.0).theme(&theme).show(ui);
+        MacStepper::new(&mut val, -1000.0..=1000.0, 1.0)
+            .theme(&theme)
+            .show(ui);
     });
     out3.textures_delta.clear();
 
     let val_before_hold = val;
-    let mut out4 = ctx.run_ui(RawInput { time: Some(1.45), ..Default::default() }, |ui| {
-        MacStepper::new(&mut val, -1000.0..=1000.0, 1.0).theme(&theme).show(ui);
+    let hold_in = RawInput {
+        time: Some(1.45),
+        ..Default::default()
+    };
+    let mut out4 = ctx.run_ui(hold_in, |ui| {
+        MacStepper::new(&mut val, -1000.0..=1000.0, 1.0)
+            .theme(&theme)
+            .show(ui);
     });
     out4.textures_delta.clear();
     assert!(val > val_before_hold);
@@ -235,31 +237,48 @@ fn test_mac_stepper_modifier_multipliers_and_hold_to_repeat() {
 
 #[test]
 fn test_mac_slider_caspring_press_scale_and_scroll_page_jump() {
-    let ctx = Context::default();
-    let theme = MacTheme::new(MacAppearance::Aqua);
-    let mut val = 50.0f32;
-    let mut slider_rect = Rect::NOTHING;
-
-    let mut out0 = ctx.run_ui(RawInput { time: Some(0.0), ..Default::default() }, |ui| {
-        slider_rect = MacSlider::new(&mut val, 0.0..=100.0).theme(&theme).show(ui).rect;
+    let (ctx, theme, mut val, mut slider_rect) = (
+        Context::default(),
+        MacTheme::new(MacAppearance::Aqua),
+        50.0f32,
+        Rect::NOTHING,
+    );
+    let t0_in = RawInput {
+        time: Some(0.0),
+        ..Default::default()
+    };
+    let mut out0 = ctx.run_ui(t0_in, |ui| {
+        slider_rect = MacSlider::new(&mut val, 0.0..=100.0)
+            .theme(&theme)
+            .show(ui)
+            .rect;
     });
     out0.textures_delta.clear();
 
     let center = slider_rect.center();
-    let mut press_in = RawInput { time: Some(0.05), ..Default::default() };
-    press_in.events.push(Event::PointerMoved(center));
-    press_in.events.push(Event::PointerButton {
-        pos: center,
-        button: PointerButton::Primary,
-        pressed: true,
-        modifiers: egui::Modifiers::default(),
-    });
+    let press_in = RawInput {
+        time: Some(0.05),
+        events: vec![
+            Event::PointerMoved(center),
+            Event::PointerButton {
+                pos: center,
+                button: PointerButton::Primary,
+                pressed: true,
+                modifiers: egui::Modifiers::default(),
+            },
+        ],
+        ..Default::default()
+    };
     let mut out1 = ctx.run_ui(press_in, |ui| {
         MacSlider::new(&mut val, 0.0..=100.0).theme(&theme).show(ui);
     });
     out1.textures_delta.clear();
 
-    let mut out2 = ctx.run_ui(RawInput { time: Some(0.25), ..Default::default() }, |ui| {
+    let t2_in = RawInput {
+        time: Some(0.25),
+        ..Default::default()
+    };
+    let mut out2 = ctx.run_ui(t2_in, |ui| {
         MacSlider::new(&mut val, 0.0..=100.0).theme(&theme).show(ui);
     });
     out2.textures_delta.clear();
@@ -275,11 +294,9 @@ fn test_mac_slider_caspring_press_scale_and_scroll_page_jump() {
         .fold(0.0f32, f32::max);
     assert!(max_r > base_r);
 
-    // ScrollView hover-expansion (7pt -> 10pt) and vertical + horizontal track page-jump
-    let mut offset = Vec2::ZERO;
-    let mut viewport = Rect::NOTHING;
+    let (mut offset, mut viewport) = (Vec2::ZERO, Rect::NOTHING);
     let mut s0 = ctx.run_ui(RawInput::default(), |ui| {
-        let res = MacScrollView::both("hover_jump_scroll")
+        viewport = MacScrollView::both("hover_jump_scroll")
             .theme(&theme)
             .auto_hide(false)
             .with_offset(&mut offset)
@@ -287,33 +304,27 @@ fn test_mac_slider_caspring_press_scale_and_scroll_page_jump() {
             .max_height(100.0)
             .show(ui, |c| {
                 c.allocate_exact_size(Vec2::new(600.0, 500.0), Sense::hover());
-            });
-        viewport = res.inner_rect;
+            })
+            .inner_rect;
     });
     s0.textures_delta.clear();
 
-    let unhovered_v_thumbs: Vec<f32> = s0
-        .shapes
-        .iter()
-        .filter_map(|cs| match &cs.shape {
-            egui::epaint::Shape::Rect(r) if r.rect.height() > 15.0 && r.rect.width() <= 12.0 => {
-                Some(r.rect.width())
-            }
-            _ => None,
-        })
-        .collect();
-    assert!(unhovered_v_thumbs.iter().any(|&w| (w - 7.0).abs() < 1e-3));
+    assert!(s0.shapes.iter().any(|cs| matches!(&cs.shape, egui::epaint::Shape::Rect(r) if r.rect.height() > 15.0 && (r.rect.width() - 7.0).abs() < 1e-3)));
 
     let v_click_pos = Pos2::new(viewport.right() - 4.0, viewport.bottom() - 20.0);
     for pressed in [true, false] {
-        let mut inp = RawInput::default();
-        inp.events.push(Event::PointerMoved(v_click_pos));
-        inp.events.push(Event::PointerButton {
-            pos: v_click_pos,
-            button: PointerButton::Primary,
-            pressed,
-            modifiers: egui::Modifiers::default(),
-        });
+        let inp = RawInput {
+            events: vec![
+                Event::PointerMoved(v_click_pos),
+                Event::PointerButton {
+                    pos: v_click_pos,
+                    button: PointerButton::Primary,
+                    pressed,
+                    modifiers: egui::Modifiers::default(),
+                },
+            ],
+            ..Default::default()
+        };
         let mut s = ctx.run_ui(inp, |ui| {
             MacScrollView::both("hover_jump_scroll")
                 .theme(&theme)
@@ -326,19 +337,7 @@ fn test_mac_slider_caspring_press_scale_and_scroll_page_jump() {
                 });
         });
         if pressed {
-            let hovered_v_thumbs: Vec<f32> = s
-                .shapes
-                .iter()
-                .filter_map(|cs| match &cs.shape {
-                    egui::epaint::Shape::Rect(r)
-                        if r.rect.height() > 15.0 && r.rect.width() <= 12.0 =>
-                    {
-                        Some(r.rect.width())
-                    }
-                    _ => None,
-                })
-                .collect();
-            assert!(hovered_v_thumbs.iter().any(|&w| (w - 10.0).abs() < 1e-3));
+            assert!(s.shapes.iter().any(|cs| matches!(&cs.shape, egui::epaint::Shape::Rect(r) if r.rect.height() > 15.0 && (r.rect.width() - 10.0).abs() < 1e-3)));
         }
         s.textures_delta.clear();
     }
@@ -346,14 +345,18 @@ fn test_mac_slider_caspring_press_scale_and_scroll_page_jump() {
 
     let h_click_pos = Pos2::new(viewport.right() - 20.0, viewport.bottom() - 4.0);
     for pressed in [true, false] {
-        let mut inp = RawInput::default();
-        inp.events.push(Event::PointerMoved(h_click_pos));
-        inp.events.push(Event::PointerButton {
-            pos: h_click_pos,
-            button: PointerButton::Primary,
-            pressed,
-            modifiers: egui::Modifiers::default(),
-        });
+        let inp = RawInput {
+            events: vec![
+                Event::PointerMoved(h_click_pos),
+                Event::PointerButton {
+                    pos: h_click_pos,
+                    button: PointerButton::Primary,
+                    pressed,
+                    modifiers: egui::Modifiers::default(),
+                },
+            ],
+            ..Default::default()
+        };
         let mut s = ctx.run_ui(inp, |ui| {
             MacScrollView::both("hover_jump_scroll")
                 .theme(&theme)
@@ -408,11 +411,10 @@ fn test_undo_manager_grouping_deduplication_and_context_menu_checkmarks() {
         NSMenuItem::action("Toggle Grid", "view.grid").checked(true),
         NSMenuItem::action("Plain Item", "view.plain").checked(false),
     ];
-    let mut is_open = true;
-    let mut spawn_pos = Pos2::new(60.0, 60.0);
-    let mut selected_idx = None;
+    let (mut is_open, mut spawn_pos, mut selected_idx) = (true, Pos2::new(60.0, 60.0), None);
+    let screen_rect = Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(800.0, 600.0)));
     let raw_in = RawInput {
-        screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(800.0, 600.0))),
+        screen_rect,
         ..Default::default()
     };
     let mut out1 = ctx.run_ui(raw_in.clone(), |ui| {
@@ -431,5 +433,6 @@ fn test_undo_manager_grouping_deduplication_and_context_menu_checkmarks() {
     for cs in &out.shapes {
         collect_text_shapes(&cs.shape, &mut text_shapes);
     }
-    assert!(text_shapes.iter().any(|t| t.galley.text() == egui_macview::MacSymbol::Checkmark.as_str()));
+    let chk = egui_macview::MacSymbol::Checkmark.as_str();
+    assert!(text_shapes.iter().any(|t| t.galley.text() == chk));
 }

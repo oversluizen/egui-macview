@@ -239,3 +239,113 @@ fn test_live_macbook_ssh_connectivity_and_parity_harness() {
         "MacBook host python output missing 'Python 3': {stdout_str}"
     );
 }
+
+#[test]
+fn test_macbook_v05_studio_controls_ground_truth_parity() {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let golden_dir = manifest_dir
+        .join("tests")
+        .join("golden_master")
+        .join("macbook_ground_truth");
+    let studio_json_path = golden_dir.join("appkit_studio_v05_ground_truth.json");
+
+    assert!(
+        studio_json_path.exists(),
+        "Missing MacBook v0.5.0 studio ground truth JSON: {}",
+        studio_json_path.display()
+    );
+
+    let content = fs::read_to_string(&studio_json_path).expect("Read studio ground truth JSON");
+    let v: serde_json::Value = serde_json::from_str(&content).expect("Parse studio JSON");
+
+    let aqua = MacTheme::new(egui_macview::MacAppearance::Aqua);
+    let dark = MacTheme::new(egui_macview::MacAppearance::DarkAqua);
+
+    // 1. Exact sRGB color parity against MacBook NSColor extraction
+    assert_eq!(
+        aqua.system_yellow(),
+        egui::Color32::from_rgb(
+            v["colors"]["aqua"]["system_yellow"]["r"].as_u64().unwrap() as u8,
+            v["colors"]["aqua"]["system_yellow"]["g"].as_u64().unwrap() as u8,
+            v["colors"]["aqua"]["system_yellow"]["b"].as_u64().unwrap() as u8,
+        )
+    );
+    assert_eq!(
+        dark.system_yellow(),
+        egui::Color32::from_rgb(
+            v["colors"]["dark_aqua"]["system_yellow"]["r"]
+                .as_u64()
+                .unwrap() as u8,
+            v["colors"]["dark_aqua"]["system_yellow"]["g"]
+                .as_u64()
+                .unwrap() as u8,
+            v["colors"]["dark_aqua"]["system_yellow"]["b"]
+                .as_u64()
+                .unwrap() as u8,
+        )
+    );
+
+    // 2. Geometry parity against MacBook AppKit fitting/frame metrics
+    let mac_spin_reg = v["controls"]["progress_indicator"]["regular"]["spin_fitting_h"]
+        .as_f64()
+        .unwrap() as f32;
+    assert_eq!(
+        aqua.progress_indicator().regular.spinner_size.points(),
+        mac_spin_reg
+    );
+
+    let mac_spin_small = v["controls"]["progress_indicator"]["small"]["spin_fitting_h"]
+        .as_f64()
+        .unwrap() as f32;
+    assert_eq!(
+        aqua.progress_indicator().small.spinner_size.points(),
+        mac_spin_small
+    );
+
+    let mac_table_row_h = v["controls"]["table_view"]["row_height"].as_f64().unwrap() as f32;
+    let mac_table_hdr_h = v["controls"]["table_view"]["header_height"]
+        .as_f64()
+        .unwrap() as f32;
+    assert_eq!(aqua.table_view().row_height.points(), mac_table_row_h);
+    assert_eq!(aqua.table_view().header_height.points(), mac_table_hdr_h);
+
+    let mac_path_h = v["controls"]["path_control"]["fitting_h"].as_f64().unwrap() as f32;
+    assert_eq!(aqua.path_control().height.points(), mac_path_h);
+
+    // 3. Verify all 12 new v0.5.0 golden master bitmaps from MacBook Air (dimensions & non-empty pixel sampling)
+    let studio_bitmaps: [(&str, u32, u32); 12] = [
+        ("progress_bar_aqua.png", 160, 20),
+        ("progress_bar_dark.png", 160, 20),
+        ("progress_spin_aqua.png", 32, 32),
+        ("progress_spin_dark.png", 32, 32),
+        ("table_header_aqua.png", 240, 28),
+        ("table_header_dark.png", 240, 28),
+        ("token_field_aqua.png", 240, 22),
+        ("token_field_dark.png", 240, 22),
+        ("level_indicator_aqua.png", 160, 18),
+        ("level_indicator_dark.png", 160, 18),
+        ("path_control_aqua.png", 240, 22),
+        ("path_control_dark.png", 240, 22),
+    ];
+    for (name, exp_w, exp_h) in &studio_bitmaps {
+        let p = golden_dir.join(name);
+        assert!(
+            p.exists(),
+            "Missing studio golden master PNG: {}",
+            p.display()
+        );
+        let img = image::open(&p)
+            .expect("Valid studio golden master PNG")
+            .to_rgba8();
+        assert_eq!(
+            (img.width(), img.height()),
+            (*exp_w, *exp_h),
+            "Unexpected bitmap dimensions for {name}"
+        );
+        let non_empty_pixels = img.pixels().filter(|px| px[3] > 0).count();
+        assert!(
+            non_empty_pixels > 32,
+            "Golden master {name} must contain rendered AppKit control pixels"
+        );
+    }
+}

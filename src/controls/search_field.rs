@@ -179,8 +179,8 @@ impl<'a> Widget for MacSearchField<'a> {
         }
 
         let has_text = !self.text.is_empty();
-        let is_focused_pre =
-            !surrendered_by_escape && (ui.ctx().memory(|m| m.has_focus(text_id)) || response.has_focus());
+        let is_focused_pre = !surrendered_by_escape
+            && (ui.ctx().memory(|m| m.has_focus(text_id)) || response.has_focus());
 
         let content_gap = metrics.content_spacing.points();
         let text_min_x = rect.left() + padding_h + icon_size + content_gap;

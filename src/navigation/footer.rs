@@ -237,10 +237,10 @@ impl<'a> MacCanvasFooter<'a> {
                     (format!("{:.0}, {:.0} pt", pos.x, pos.y), coord_compact_w)
                 };
 
-                let center_x = rect.center().x.clamp(
-                    center_min_x + needed_w * 0.5,
-                    center_max_x - needed_w * 0.5,
-                );
+                let center_x = rect
+                    .center()
+                    .x
+                    .clamp(center_min_x + needed_w * 0.5, center_max_x - needed_w * 0.5);
                 let clip_rect = Rect::from_min_max(
                     Pos2::new(center_min_x, rect.top()),
                     Pos2::new(center_max_x, rect.bottom()),

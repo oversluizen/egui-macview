@@ -49,7 +49,12 @@ impl<'a> MacForm<'a> {
             let s = self
                 .theme
                 .map(|t| t.stack_view().default_spacing.points())
-                .unwrap_or_else(|| MacTheme::from_ctx(ui.ctx()).stack_view().default_spacing.points());
+                .unwrap_or_else(|| {
+                    MacTheme::from_ctx(ui.ctx())
+                        .stack_view()
+                        .default_spacing
+                        .points()
+                });
             vec2(s, s)
         });
 

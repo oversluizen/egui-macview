@@ -176,13 +176,19 @@ fn test_stepper_headless_execution_clamping_and_precision_wrapping() {
         modifiers: egui::Modifiers::default(),
     });
     let mut out1 = ctx.run_ui(input_up.clone(), |ui| {
-        MacStepper::new(&mut val, 0.0..=1.0, 0.1).theme(&theme).wraps(true).show(ui);
+        MacStepper::new(&mut val, 0.0..=1.0, 0.1)
+            .theme(&theme)
+            .wraps(true)
+            .show(ui);
     });
     out1.textures_delta.clear();
     assert!((val - 1.0).abs() < 1e-9);
 
     let mut out2 = ctx.run_ui(input_up, |ui| {
-        MacStepper::new(&mut val, 0.0..=1.0, 0.1).theme(&theme).wraps(true).show(ui);
+        MacStepper::new(&mut val, 0.0..=1.0, 0.1)
+            .theme(&theme)
+            .wraps(true)
+            .show(ui);
     });
     out2.textures_delta.clear();
     assert!((val - 0.0).abs() < 1e-9);
@@ -197,7 +203,10 @@ fn test_popup_and_color_well_keyboard_activation_and_escape() {
     let items = ["First", "Second", "Third"];
 
     let mut out1 = ctx.run_ui(RawInput::default(), |ui| {
-        MacPopUpButton::new(&mut selected, &items).theme(&theme).show(ui).request_focus();
+        MacPopUpButton::new(&mut selected, &items)
+            .theme(&theme)
+            .show(ui)
+            .request_focus();
     });
     out1.textures_delta.clear();
 
@@ -210,8 +219,13 @@ fn test_popup_and_color_well_keyboard_activation_and_escape() {
         modifiers: egui::Modifiers::default(),
     });
     let mut out2 = ctx.run_ui(input_space, |ui| {
-        let resp = MacPopUpButton::new(&mut selected, &items).theme(&theme).show(ui);
-        let is_open = ui.data(|d| d.get_temp::<bool>(resp.id.with("mac_popup_is_open")).unwrap_or(false));
+        let resp = MacPopUpButton::new(&mut selected, &items)
+            .theme(&theme)
+            .show(ui);
+        let is_open = ui.data(|d| {
+            d.get_temp::<bool>(resp.id.with("mac_popup_is_open"))
+                .unwrap_or(false)
+        });
         assert!(is_open, "Pressing Space when focused must open popup");
     });
     out2.textures_delta.clear();
@@ -225,8 +239,13 @@ fn test_popup_and_color_well_keyboard_activation_and_escape() {
         modifiers: egui::Modifiers::default(),
     });
     let mut out3 = ctx.run_ui(input_esc, |ui| {
-        let resp = MacPopUpButton::new(&mut selected, &items).theme(&theme).show(ui);
-        let is_open = ui.data(|d| d.get_temp::<bool>(resp.id.with("mac_popup_is_open")).unwrap_or(false));
+        let resp = MacPopUpButton::new(&mut selected, &items)
+            .theme(&theme)
+            .show(ui);
+        let is_open = ui.data(|d| {
+            d.get_temp::<bool>(resp.id.with("mac_popup_is_open"))
+                .unwrap_or(false)
+        });
         assert!(!is_open, "Pressing Escape must close popup");
     });
     out3.textures_delta.clear();
@@ -271,7 +290,10 @@ fn test_mac_toggle_headless_interaction_and_disabled_guard() {
         ui.add(MacToggle::new(&mut toggle_val).theme(&theme));
     });
     out3.textures_delta.clear();
-    assert!(toggle_val, "Clicking enabled toggle must invert value to true");
+    assert!(
+        toggle_val,
+        "Clicking enabled toggle must invert value to true"
+    );
 
     let mut out4 = ctx.run_ui(click_input, |ui| {
         ui.add(MacToggle::new(&mut toggle_val).theme(&theme).enabled(false));
@@ -305,11 +327,12 @@ fn test_button_segmented_from_ctx_inheritance_and_centering() {
             egui::Layout::top_down(egui::Align::Min),
             |p_ui| {
                 p_ui.vertical_centered(|c_ui| {
-                    let resp = MacSegmentedControl::new(&["Attributes", "Metrics", "Matrix"], selected)
-                        .height(24.0)
-                        .show(c_ui, |idx| {
-                            selected = idx;
-                        });
+                    let resp =
+                        MacSegmentedControl::new(&["Attributes", "Metrics", "Matrix"], selected)
+                            .height(24.0)
+                            .show(c_ui, |idx| {
+                                selected = idx;
+                            });
                     control_rect = resp.rect;
                 });
             },

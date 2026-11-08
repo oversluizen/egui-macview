@@ -42,7 +42,6 @@
 //!
 //! All components are domain-agnostic and ready to be dropped into any `egui` application.
 
-
 #![cfg_attr(not(test), windows_subsystem = "windows")]
 
 use egui::{
@@ -249,18 +248,18 @@ impl GalleryScreen {
 
     pub fn breadcrumb_path(&self) -> [&'static str; 3] {
         match self {
-            Self::CanvasPhysics => {
-                ["macview_gallery", "Screen 1", "Interactive Canvas & Physics"]
-            }
-            Self::VectorAssets => {
-                ["macview_gallery", "Screen 2", "Vector Assets Gallery"]
-            }
-            Self::DesignTokensWcag => {
-                ["macview_gallery", "Screen 3", "W3C Design Tokens & WCAG Engine"]
-            }
-            Self::LayoutEngines => {
-                ["macview_gallery", "Screen 4", "Layout Engines Playground"]
-            }
+            Self::CanvasPhysics => [
+                "macview_gallery",
+                "Screen 1",
+                "Interactive Canvas & Physics",
+            ],
+            Self::VectorAssets => ["macview_gallery", "Screen 2", "Vector Assets Gallery"],
+            Self::DesignTokensWcag => [
+                "macview_gallery",
+                "Screen 3",
+                "W3C Design Tokens & WCAG Engine",
+            ],
+            Self::LayoutEngines => ["macview_gallery", "Screen 4", "Layout Engines Playground"],
         }
     }
 }
@@ -908,7 +907,8 @@ impl eframe::App for GalleryApp {
         }
 
         self.left_split_pos = left_split_pos;
-        self.inspector_width = (available_body_w - right_split_pos).clamp(min_inspector_w, max_inspector_w);
+        self.inspector_width =
+            (available_body_w - right_split_pos).clamp(min_inspector_w, max_inspector_w);
 
         // Discrete state change tracking (button clicks, popup selections, toggles, steppers)
         let any_pointer_down_end = ui.input(|i| i.pointer.any_down());
@@ -1013,7 +1013,11 @@ impl GalleryApp {
                     right_ui.add_space(8.0);
 
                     // 4. Spotlight Command Palette Button [ Search ⌘K on macOS, Ctrl+K on Windows ]
-                    let k_str = if cfg!(target_os = "macos") { "⌘K" } else { "Ctrl+K" };
+                    let k_str = if cfg!(target_os = "macos") {
+                        "⌘K"
+                    } else {
+                        "Ctrl+K"
+                    };
                     let search_label = format!("{} {}", MacSymbol::Search.as_str(), k_str);
                     let spot_btn = right_ui.add(
                         MacButtonCell::new(&search_label)
@@ -1037,21 +1041,26 @@ impl GalleryApp {
 
                 if available_title_w >= 40.0 {
                     let painter = tb_ui.painter();
-                    let title_font = FontId::proportional(theme.text_field().regular.font_size.points());
+                    let title_font =
+                        FontId::proportional(theme.text_field().regular.font_size.points());
                     let title_color = theme.label();
                     let title_str = format!(
                         "macview_gallery v{} (AppKit macOS 15 Parity)",
                         egui_macview::VERSION
                     );
 
-                    let full_galley = painter.layout_no_wrap(title_str.clone(), title_font.clone(), title_color);
+                    let full_galley =
+                        painter.layout_no_wrap(title_str.clone(), title_font.clone(), title_color);
                     let full_w = full_galley.size().x;
                     let center_x = rect.center().x;
                     let traffic_y = rect.center().y;
                     let centered_min_x = center_x - full_w * 0.5;
                     let centered_max_x = center_x + full_w * 0.5;
 
-                    if full_w <= available_title_w && centered_min_x >= title_min_x && centered_max_x <= title_max_x {
+                    if full_w <= available_title_w
+                        && centered_min_x >= title_min_x
+                        && centered_max_x <= title_max_x
+                    {
                         let pos = pos2(centered_min_x, traffic_y - full_galley.size().y * 0.5);
                         painter.galley(pos, full_galley, title_color);
                     } else if full_w <= available_title_w {
@@ -1136,68 +1145,79 @@ impl SidebarState {
                 if self.expanded_components {
                     // Screen 1: Interactive Canvas & Physics
                     let sel_canvas = self.active_screen == GalleryScreen::CanvasPhysics;
-                    let resp = tree.row("node_screen_canvas", 1, false, &mut false, sel_canvas, |row| {
-                        let bg_style = theme.selected_control_background_style();
-                        row.thumbnail(|painter, rect| {
-                            let icon_color = if sel_canvas {
-                                bg_style.primary_text_color(theme)
-                            } else {
-                                theme.control_accent()
-                            };
-                            painter.rect_stroke(
-                                rect.shrink(2.5),
-                                CornerRadius::same(2),
-                                Stroke::new(1.2, icon_color),
-                                StrokeKind::Inside,
-                            );
-                            painter.rect_filled(
-                                rect.shrink(5.0),
-                                CornerRadius::same(1),
-                                icon_color,
-                            );
-                        });
-                        row.label("Interactive Canvas & Physics");
-                        row.accessory_custom(
-                            "vis_canvas",
-                            &mut self.vis_canvas,
-                            |painter, rect, active| {
-                                let color = if active {
-                                    if sel_canvas {
-                                        bg_style.primary_text_color(theme)
-                                    } else {
-                                        theme.control_accent()
-                                    }
+                    let resp = tree.row(
+                        "node_screen_canvas",
+                        1,
+                        false,
+                        &mut false,
+                        sel_canvas,
+                        |row| {
+                            let bg_style = theme.selected_control_background_style();
+                            row.thumbnail(|painter, rect| {
+                                let icon_color = if sel_canvas {
+                                    bg_style.primary_text_color(theme)
                                 } else {
-                                    if sel_canvas {
-                                        bg_style.secondary_text_color(theme)
-                                    } else {
-                                        theme.placeholder_text()
-                                    }
+                                    theme.control_accent()
                                 };
-                                painter.circle_filled(rect.center(), 3.5, color);
-                            },
-                        );
-                        row.accessory_custom(
-                            "lock_canvas",
-                            &mut self.lock_canvas,
-                            |painter, rect, active| {
-                                let color = if active {
-                                    if sel_canvas {
-                                        bg_style.primary_text_color(theme)
+                                painter.rect_stroke(
+                                    rect.shrink(2.5),
+                                    CornerRadius::same(2),
+                                    Stroke::new(1.2, icon_color),
+                                    StrokeKind::Inside,
+                                );
+                                painter.rect_filled(
+                                    rect.shrink(5.0),
+                                    CornerRadius::same(1),
+                                    icon_color,
+                                );
+                            });
+                            row.label("Interactive Canvas & Physics");
+                            row.accessory_custom(
+                                "vis_canvas",
+                                &mut self.vis_canvas,
+                                |painter, rect, active| {
+                                    let color = if active {
+                                        if sel_canvas {
+                                            bg_style.primary_text_color(theme)
+                                        } else {
+                                            theme.control_accent()
+                                        }
                                     } else {
-                                        theme.selected_control()
-                                    }
-                                } else {
-                                    if sel_canvas {
-                                        bg_style.secondary_text_color(theme)
+                                        if sel_canvas {
+                                            bg_style.secondary_text_color(theme)
+                                        } else {
+                                            theme.placeholder_text()
+                                        }
+                                    };
+                                    painter.circle_filled(rect.center(), 3.5, color);
+                                },
+                            );
+                            row.accessory_custom(
+                                "lock_canvas",
+                                &mut self.lock_canvas,
+                                |painter, rect, active| {
+                                    let color = if active {
+                                        if sel_canvas {
+                                            bg_style.primary_text_color(theme)
+                                        } else {
+                                            theme.selected_control()
+                                        }
                                     } else {
-                                        theme.placeholder_text()
-                                    }
-                                };
-                                painter.rect_filled(rect.shrink(4.0), CornerRadius::same(1), color);
-                            },
-                        );
-                    });
+                                        if sel_canvas {
+                                            bg_style.secondary_text_color(theme)
+                                        } else {
+                                            theme.placeholder_text()
+                                        }
+                                    };
+                                    painter.rect_filled(
+                                        rect.shrink(4.0),
+                                        CornerRadius::same(1),
+                                        color,
+                                    );
+                                },
+                            );
+                        },
+                    );
                     if resp.clicked {
                         self.active_screen = GalleryScreen::CanvasPhysics;
                         self.selected_node = "Interactive Canvas & Physics".to_string();
@@ -1206,64 +1226,75 @@ impl SidebarState {
 
                     // Screen 2: Vector Assets Gallery
                     let sel_vector = self.active_screen == GalleryScreen::VectorAssets;
-                    let resp = tree.row("node_screen_vector", 1, false, &mut false, sel_vector, |row| {
-                        let bg_style = theme.selected_control_background_style();
-                        row.thumbnail(|painter, rect| {
-                            let icon_color = if sel_vector {
-                                bg_style.primary_text_color(theme)
-                            } else {
-                                theme.system_green()
-                            };
-                            painter.line_segment(
-                                [
-                                    pos2(rect.min.x + 3.0, rect.max.y - 3.0),
-                                    pos2(rect.max.x - 3.0, rect.min.y + 3.0),
-                                ],
-                                Stroke::new(1.5, icon_color),
+                    let resp = tree.row(
+                        "node_screen_vector",
+                        1,
+                        false,
+                        &mut false,
+                        sel_vector,
+                        |row| {
+                            let bg_style = theme.selected_control_background_style();
+                            row.thumbnail(|painter, rect| {
+                                let icon_color = if sel_vector {
+                                    bg_style.primary_text_color(theme)
+                                } else {
+                                    theme.system_green()
+                                };
+                                painter.line_segment(
+                                    [
+                                        pos2(rect.min.x + 3.0, rect.max.y - 3.0),
+                                        pos2(rect.max.x - 3.0, rect.min.y + 3.0),
+                                    ],
+                                    Stroke::new(1.5, icon_color),
+                                );
+                            });
+                            row.label("Vector Assets Gallery");
+                            row.accessory_custom(
+                                "vis_vector",
+                                &mut self.vis_vector,
+                                |painter, rect, active| {
+                                    let color = if active {
+                                        if sel_vector {
+                                            bg_style.primary_text_color(theme)
+                                        } else {
+                                            theme.system_green()
+                                        }
+                                    } else {
+                                        if sel_vector {
+                                            bg_style.secondary_text_color(theme)
+                                        } else {
+                                            theme.placeholder_text()
+                                        }
+                                    };
+                                    painter.circle_filled(rect.center(), 3.5, color);
+                                },
                             );
-                        });
-                        row.label("Vector Assets Gallery");
-                        row.accessory_custom(
-                            "vis_vector",
-                            &mut self.vis_vector,
-                            |painter, rect, active| {
-                                let color = if active {
-                                    if sel_vector {
-                                        bg_style.primary_text_color(theme)
+                            row.accessory_custom(
+                                "lock_vector",
+                                &mut self.lock_vector,
+                                |painter, rect, active| {
+                                    let color = if active {
+                                        if sel_vector {
+                                            bg_style.primary_text_color(theme)
+                                        } else {
+                                            theme.selected_control()
+                                        }
                                     } else {
-                                        theme.system_green()
-                                    }
-                                } else {
-                                    if sel_vector {
-                                        bg_style.secondary_text_color(theme)
-                                    } else {
-                                        theme.placeholder_text()
-                                    }
-                                };
-                                painter.circle_filled(rect.center(), 3.5, color);
-                            },
-                        );
-                        row.accessory_custom(
-                            "lock_vector",
-                            &mut self.lock_vector,
-                            |painter, rect, active| {
-                                let color = if active {
-                                    if sel_vector {
-                                        bg_style.primary_text_color(theme)
-                                    } else {
-                                        theme.selected_control()
-                                    }
-                                } else {
-                                    if sel_vector {
-                                        bg_style.secondary_text_color(theme)
-                                    } else {
-                                        theme.placeholder_text()
-                                    }
-                                };
-                                painter.rect_filled(rect.shrink(4.0), CornerRadius::same(1), color);
-                            },
-                        );
-                    });
+                                        if sel_vector {
+                                            bg_style.secondary_text_color(theme)
+                                        } else {
+                                            theme.placeholder_text()
+                                        }
+                                    };
+                                    painter.rect_filled(
+                                        rect.shrink(4.0),
+                                        CornerRadius::same(1),
+                                        color,
+                                    );
+                                },
+                            );
+                        },
+                    );
                     if resp.clicked {
                         self.active_screen = GalleryScreen::VectorAssets;
                         self.selected_node = "Vector Assets Gallery".to_string();
@@ -1272,38 +1303,45 @@ impl SidebarState {
 
                     // Screen 3: W3C Design Tokens & WCAG Engine
                     let sel_tokens = self.active_screen == GalleryScreen::DesignTokensWcag;
-                    let resp = tree.row("node_screen_tokens", 1, false, &mut false, sel_tokens, |row| {
-                        let bg_style = theme.selected_control_background_style();
-                        row.thumbnail(|painter, rect| {
-                            let icon_color = if sel_tokens {
-                                bg_style.primary_text_color(theme)
-                            } else {
-                                theme.control_accent()
-                            };
-                            painter.circle_filled(rect.center(), 5.0, icon_color);
-                        });
-                        row.label("W3C Design Tokens & WCAG Engine");
-                        row.accessory_custom(
-                            "vis_tokens",
-                            &mut self.vis_tokens,
-                            |painter, rect, active| {
-                                let color = if active {
-                                    if sel_tokens {
-                                        bg_style.primary_text_color(theme)
-                                    } else {
-                                        theme.control_accent()
-                                    }
+                    let resp = tree.row(
+                        "node_screen_tokens",
+                        1,
+                        false,
+                        &mut false,
+                        sel_tokens,
+                        |row| {
+                            let bg_style = theme.selected_control_background_style();
+                            row.thumbnail(|painter, rect| {
+                                let icon_color = if sel_tokens {
+                                    bg_style.primary_text_color(theme)
                                 } else {
-                                    if sel_tokens {
-                                        bg_style.secondary_text_color(theme)
-                                    } else {
-                                        theme.placeholder_text()
-                                    }
+                                    theme.control_accent()
                                 };
-                                painter.circle_filled(rect.center(), 3.5, color);
-                            },
-                        );
-                    });
+                                painter.circle_filled(rect.center(), 5.0, icon_color);
+                            });
+                            row.label("W3C Design Tokens & WCAG Engine");
+                            row.accessory_custom(
+                                "vis_tokens",
+                                &mut self.vis_tokens,
+                                |painter, rect, active| {
+                                    let color = if active {
+                                        if sel_tokens {
+                                            bg_style.primary_text_color(theme)
+                                        } else {
+                                            theme.control_accent()
+                                        }
+                                    } else {
+                                        if sel_tokens {
+                                            bg_style.secondary_text_color(theme)
+                                        } else {
+                                            theme.placeholder_text()
+                                        }
+                                    };
+                                    painter.circle_filled(rect.center(), 3.5, color);
+                                },
+                            );
+                        },
+                    );
                     if resp.clicked {
                         self.active_screen = GalleryScreen::DesignTokensWcag;
                         self.selected_node = "W3C Design Tokens & WCAG Engine".to_string();
@@ -1312,29 +1350,42 @@ impl SidebarState {
 
                     // Screen 4: Layout Engines Playground
                     let sel_layout = self.active_screen == GalleryScreen::LayoutEngines;
-                    let resp = tree.row("node_screen_layout", 1, false, &mut false, sel_layout, |row| {
-                        let bg_style = theme.selected_control_background_style();
-                        row.thumbnail(|painter, rect| {
-                            let icon_color = if sel_layout {
-                                bg_style.primary_text_color(theme)
-                            } else {
-                                theme.traffic_light_minimize().0
-                            };
-                            painter.rect_stroke(
-                                Rect::from_min_size(pos2(rect.min.x + 2.0, rect.min.y + 3.0), vec2(5.0, 10.0)),
-                                CornerRadius::same(1),
-                                Stroke::new(1.0, icon_color),
-                                StrokeKind::Inside,
-                            );
-                            painter.rect_stroke(
-                                Rect::from_min_size(pos2(rect.min.x + 9.0, rect.min.y + 3.0), vec2(5.0, 10.0)),
-                                CornerRadius::same(1),
-                                Stroke::new(1.0, icon_color),
-                                StrokeKind::Inside,
-                            );
-                        });
-                        row.label("Layout Engines Playground");
-                    });
+                    let resp = tree.row(
+                        "node_screen_layout",
+                        1,
+                        false,
+                        &mut false,
+                        sel_layout,
+                        |row| {
+                            let bg_style = theme.selected_control_background_style();
+                            row.thumbnail(|painter, rect| {
+                                let icon_color = if sel_layout {
+                                    bg_style.primary_text_color(theme)
+                                } else {
+                                    theme.traffic_light_minimize().0
+                                };
+                                painter.rect_stroke(
+                                    Rect::from_min_size(
+                                        pos2(rect.min.x + 2.0, rect.min.y + 3.0),
+                                        vec2(5.0, 10.0),
+                                    ),
+                                    CornerRadius::same(1),
+                                    Stroke::new(1.0, icon_color),
+                                    StrokeKind::Inside,
+                                );
+                                painter.rect_stroke(
+                                    Rect::from_min_size(
+                                        pos2(rect.min.x + 9.0, rect.min.y + 3.0),
+                                        vec2(5.0, 10.0),
+                                    ),
+                                    CornerRadius::same(1),
+                                    Stroke::new(1.0, icon_color),
+                                    StrokeKind::Inside,
+                                );
+                            });
+                            row.label("Layout Engines Playground");
+                        },
+                    );
                     if resp.clicked {
                         self.active_screen = GalleryScreen::LayoutEngines;
                         self.selected_node = "Layout Engines Playground".to_string();
@@ -1475,10 +1526,18 @@ impl CenterState {
         );
 
         let placeholder = match *active_screen {
-            GalleryScreen::CanvasPhysics => "Search canvas geometry, transforms, CASpring physics...",
-            GalleryScreen::VectorAssets => "Filter 14 AppKit vector symbols (e.g. search, chevron, gear)...",
-            GalleryScreen::DesignTokensWcag => "Filter W3C design tokens (e.g. button, metric, motion)...",
-            GalleryScreen::LayoutEngines => "Filter layout engines (FixedView, MacRow auto-budgeting)...",
+            GalleryScreen::CanvasPhysics => {
+                "Search canvas geometry, transforms, CASpring physics..."
+            }
+            GalleryScreen::VectorAssets => {
+                "Filter 14 AppKit vector symbols (e.g. search, chevron, gear)..."
+            }
+            GalleryScreen::DesignTokensWcag => {
+                "Filter W3C design tokens (e.g. button, metric, motion)..."
+            }
+            GalleryScreen::LayoutEngines => {
+                "Filter layout engines (FixedView, MacRow auto-budgeting)..."
+            }
         };
 
         MacSearchField::new(&mut self.search_query)
@@ -1546,8 +1605,9 @@ impl CenterState {
             .horizontal(false)
             .max_height(scroll_rect.height())
             .max_width(scroll_rect.width())
-            .show(&mut scroll_container_ui, |content_ui| {
-                match *active_screen {
+            .show(
+                &mut scroll_container_ui,
+                |content_ui| match *active_screen {
                     GalleryScreen::CanvasPhysics => {
                         self.render_screen_canvas_physics(
                             content_ui,
@@ -1569,8 +1629,8 @@ impl CenterState {
                     GalleryScreen::LayoutEngines => {
                         self.render_screen_layout_engines(content_ui, theme);
                     }
-                }
-            });
+                },
+            );
     }
     /// Screen 1: Interactive Canvas & Physics
     /// Showcases 2D Affine Matrix live transforms, rotation, scale, grid snap with snapping_enabled,
@@ -1604,10 +1664,8 @@ impl CenterState {
         let padding = 16.0;
         let canvas_w = (content_ui.available_width() - padding * 2.0).max(340.0);
         let canvas_h = 240.0;
-        let (canvas_rect, canvas_resp) = content_ui.allocate_exact_size(
-            vec2(canvas_w, canvas_h),
-            Sense::click(),
-        );
+        let (canvas_rect, canvas_resp) =
+            content_ui.allocate_exact_size(vec2(canvas_w, canvas_h), Sense::click());
 
         let canvas_clicked = canvas_resp.clicked();
         if canvas_clicked {
@@ -1630,18 +1688,32 @@ impl CenterState {
         let grid_stroke = Stroke::new(0.5, theme.separator().gamma_multiply(0.4));
         let mut gx = canvas_rect.min.x + grid_step;
         while gx < canvas_rect.max.x {
-            cp.line_segment([pos2(gx, canvas_rect.min.y), pos2(gx, canvas_rect.max.y)], grid_stroke);
+            cp.line_segment(
+                [pos2(gx, canvas_rect.min.y), pos2(gx, canvas_rect.max.y)],
+                grid_stroke,
+            );
             gx += grid_step;
         }
         let mut gy = canvas_rect.min.y + grid_step;
         while gy < canvas_rect.max.y {
-            cp.line_segment([pos2(canvas_rect.min.x, gy), pos2(canvas_rect.max.x, gy)], grid_stroke);
+            cp.line_segment(
+                [pos2(canvas_rect.min.x, gy), pos2(canvas_rect.max.x, gy)],
+                grid_stroke,
+            );
             gy += grid_step;
         }
 
         // Calculate Live Card Geometry & Affine Transform
-        let raw_card_w: f32 = card.width.parse::<f32>().unwrap_or(240.0).clamp(60.0, 500.0);
-        let card_h: f32 = card.height.parse::<f32>().unwrap_or(140.0).clamp(40.0, 300.0);
+        let raw_card_w: f32 = card
+            .width
+            .parse::<f32>()
+            .unwrap_or(240.0)
+            .clamp(60.0, 500.0);
+        let card_h: f32 = card
+            .height
+            .parse::<f32>()
+            .unwrap_or(140.0)
+            .clamp(40.0, 300.0);
         let card_radius: f32 = card.radius.parse::<f32>().unwrap_or(10.0).clamp(0.0, 40.0);
 
         // Layout & Alignment Mask application: 0: Left, 1: Center, 2: Right, 3: Fill
@@ -1699,12 +1771,7 @@ impl CenterState {
 
         let hw = effective_card_w * 0.5;
         let hh = card_h * 0.5;
-        let corners_local = [
-            pos2(-hw, -hh),
-            pos2(hw, -hh),
-            pos2(hw, hh),
-            pos2(-hw, hh),
-        ];
+        let corners_local = [pos2(-hw, -hh), pos2(hw, -hh), pos2(hw, hh), pos2(-hw, hh)];
 
         let corners_world: Vec<Pos2> = corners_local
             .iter()
@@ -1757,7 +1824,10 @@ impl CenterState {
             card_p.text(
                 pos2(card_rect.center().x, card_rect.center().y + 12.0),
                 Align2::CENTER_CENTER,
-                format!("{:.0} × {:.0} pt | Scale: {:.0}%", card_w, card_h, effective_scale),
+                format!(
+                    "{:.0} × {:.0} pt | Scale: {:.0}%",
+                    card_w, card_h, effective_scale
+                ),
                 FontId::proportional(11.0),
                 text_secondary,
             );
@@ -1891,7 +1961,10 @@ impl CenterState {
         // Interactive Controls Bar below canvas
         content_ui.add_space(8.0);
         content_ui.horizontal(|h| {
-            let pulse_label = format!("{} Trigger CASpring Pulse", MacSymbol::ArrowClockwise.as_str());
+            let pulse_label = format!(
+                "{} Trigger CASpring Pulse",
+                MacSymbol::ArrowClockwise.as_str()
+            );
             let bounce_btn = h.add(
                 MacButtonCell::new(&pulse_label)
                     .theme(theme)
@@ -1901,7 +1974,10 @@ impl CenterState {
                 self.bounce_start_time = Some(h.input(|i| i.time));
             }
 
-            let reset_label = format!("{} Reset Identity", MacSymbol::ArrowCounterClockwise.as_str());
+            let reset_label = format!(
+                "{} Reset Identity",
+                MacSymbol::ArrowCounterClockwise.as_str()
+            );
             let reset_btn = h.add(MacButtonCell::new(&reset_label).theme(theme));
             if reset_btn.clicked() {
                 card.rotation_deg = 0.0;
@@ -1912,17 +1988,36 @@ impl CenterState {
 
             let (can_undo, can_redo, undo_n, redo_m) = {
                 let um = undo_manager.borrow();
-                (um.can_undo(), um.can_redo(), um.undo_count(), um.redo_count())
+                (
+                    um.can_undo(),
+                    um.can_redo(),
+                    um.undo_count(),
+                    um.redo_count(),
+                )
             };
-            let undo_label = format!("{} Undo ({})", MacSymbol::ArrowCounterClockwise.as_str(), undo_n);
-            if h.add(MacButtonCell::new(&undo_label).theme(theme).enabled(can_undo)).clicked()
+            let undo_label = format!(
+                "{} Undo ({})",
+                MacSymbol::ArrowCounterClockwise.as_str(),
+                undo_n
+            );
+            if h.add(
+                MacButtonCell::new(&undo_label)
+                    .theme(theme)
+                    .enabled(can_undo),
+            )
+            .clicked()
                 && undo_manager.borrow_mut().undo(card)
             {
                 *last_stable_card.borrow_mut() = card.clone();
                 toasts.borrow_mut().info("Undo applied");
             }
             let redo_label = format!("{} Redo ({})", MacSymbol::ArrowClockwise.as_str(), redo_m);
-            if h.add(MacButtonCell::new(&redo_label).theme(theme).enabled(can_redo)).clicked()
+            if h.add(
+                MacButtonCell::new(&redo_label)
+                    .theme(theme)
+                    .enabled(can_redo),
+            )
+            .clicked()
                 && undo_manager.borrow_mut().redo(card)
             {
                 *last_stable_card.borrow_mut() = card.clone();
@@ -1934,8 +2029,16 @@ impl CenterState {
             } else {
                 "Snap: Off"
             };
-            h.label(egui::RichText::new(snap_status).size(10.5).color(theme.secondary_label()));
-            h.label(egui::RichText::new("T₀=0.35s, ζ=0.65").size(10.5).color(theme.placeholder_text()));
+            h.label(
+                egui::RichText::new(snap_status)
+                    .size(10.5)
+                    .color(theme.secondary_label()),
+            );
+            h.label(
+                egui::RichText::new("T₀=0.35s, ζ=0.65")
+                    .size(10.5)
+                    .color(theme.placeholder_text()),
+            );
         });
 
         // Floating Compact HUD Palette (`MacFloatingInfoBox`, SPEC-006 §2.2)
@@ -1955,11 +2058,7 @@ impl CenterState {
                 .show(
                     content_ui.ctx(),
                     |row1_ui| {
-                        row1_ui.label(
-                            egui::RichText::new("W:")
-                                .size(font_pt)
-                                .color(label_col),
-                        );
+                        row1_ui.label(egui::RichText::new("W:").size(font_pt).color(label_col));
                         let hud_w_id = Id::NULL.with("hud_w");
                         let hud_h_id = Id::NULL.with("hud_h");
                         let hud_r_id = Id::NULL.with("hud_r");
@@ -1971,11 +2070,7 @@ impl CenterState {
                             .next_focus(hud_h_id)
                             .show(row1_ui);
                         row1_ui.add_space(4.0);
-                        row1_ui.label(
-                            egui::RichText::new("H:")
-                                .size(font_pt)
-                                .color(label_col),
-                        );
+                        row1_ui.label(egui::RichText::new("H:").size(font_pt).color(label_col));
                         MacInputCell::with_id(hud_h_id, &mut card.height)
                             .theme(theme)
                             .control_size(MacControlSize::CompactInfobox)
@@ -1988,11 +2083,7 @@ impl CenterState {
                         let hud_w_id = Id::NULL.with("hud_w");
                         let hud_h_id = Id::NULL.with("hud_h");
                         let hud_r_id = Id::NULL.with("hud_r");
-                        row2_ui.label(
-                            egui::RichText::new("R:")
-                                .size(font_pt)
-                                .color(label_col),
-                        );
+                        row2_ui.label(egui::RichText::new("R:").size(font_pt).color(label_col));
                         MacInputCell::with_id(hud_r_id, &mut card.radius)
                             .theme(theme)
                             .control_size(MacControlSize::CompactInfobox)
@@ -2001,11 +2092,7 @@ impl CenterState {
                             .next_focus(hud_w_id)
                             .show(row2_ui);
                         row2_ui.add_space(4.0);
-                        row2_ui.label(
-                            egui::RichText::new("θ:")
-                                .size(font_pt)
-                                .color(label_col),
-                        );
+                        row2_ui.label(egui::RichText::new("θ:").size(font_pt).color(label_col));
                         MacSlider::new(&mut card.rotation_deg, 0.0..=360.0)
                             .theme(theme)
                             .width(55.0)
@@ -2099,21 +2186,12 @@ impl CenterState {
                     );
 
                     pop_ui.add_space(4.0);
-                    let wave_rect = Rect::from_min_size(
-                        pop_ui.cursor().min,
-                        vec2(pop_w - 24.0, 48.0),
-                    );
-                    pop_ui.allocate_exact_size(
-                        vec2(pop_w - 24.0, 48.0),
-                        Sense::hover(),
-                    );
+                    let wave_rect =
+                        Rect::from_min_size(pop_ui.cursor().min, vec2(pop_w - 24.0, 48.0));
+                    pop_ui.allocate_exact_size(vec2(pop_w - 24.0, 48.0), Sense::hover());
 
                     let wp = pop_ui.painter_at(wave_rect);
-                    wp.rect_filled(
-                        wave_rect,
-                        CornerRadius::same(3),
-                        theme.control(),
-                    );
+                    wp.rect_filled(wave_rect, CornerRadius::same(3), theme.control());
 
                     let sample_count = 60;
                     let duration = self.spring.settling_duration().min(1.2);
@@ -2160,35 +2238,106 @@ impl CenterState {
 
         let q = self.search_query.trim().to_lowercase();
         let symbols_meta: [(MacSymbol, &'static str, &'static str, &'static str); 14] = [
-            (MacSymbol::Search, "Search", "Search fields, Spotlight", "U+F4A5"),
-            (MacSymbol::ChevronRight, "Chevron Right", "Navigation forward, disclosure", "U+F3D3"),
-            (MacSymbol::ChevronLeft, "Chevron Left", "Navigation back", "U+F3D2"),
-            (MacSymbol::ChevronDown, "Chevron Down", "Popup buttons, dropdown menus", "U+F5D5"),
-            (MacSymbol::ChevronUp, "Chevron Up", "Steppers, navigation up", "U+F5E5"),
-            (MacSymbol::SidebarLeading, "Sidebar Leading", "Sidebar toggle, window layout", "U+F7D6"),
-            (MacSymbol::Gear, "Gear", "Settings, preferences, metrics", "U+F43C"),
-            (MacSymbol::Sliders, "Sliders", "Filters, display adjustments", "U+F7DC"),
-            (MacSymbol::Checkmark, "Checkmark", "Menu checkmarks, verification", "U+F3FD"),
-            (MacSymbol::Xmark, "Xmark", "Close button, cancel, clear", "U+F404"),
-            (MacSymbol::Plus, "Plus", "Add layer, expand, zoom in", "U+F489"),
-            (MacSymbol::Minus, "Minus", "Remove layer, collapse, zoom out", "U+F70F"),
-            (MacSymbol::ArrowClockwise, "Arrow Clockwise", "Reload, refresh, repeat", "U+F49A"),
-            (MacSymbol::ArrowCounterClockwise, "Arrow Counter Clockwise", "Undo action, reset identity", "U+F21C"),
+            (
+                MacSymbol::Search,
+                "Search",
+                "Search fields, Spotlight",
+                "U+F4A5",
+            ),
+            (
+                MacSymbol::ChevronRight,
+                "Chevron Right",
+                "Navigation forward, disclosure",
+                "U+F3D3",
+            ),
+            (
+                MacSymbol::ChevronLeft,
+                "Chevron Left",
+                "Navigation back",
+                "U+F3D2",
+            ),
+            (
+                MacSymbol::ChevronDown,
+                "Chevron Down",
+                "Popup buttons, dropdown menus",
+                "U+F5D5",
+            ),
+            (
+                MacSymbol::ChevronUp,
+                "Chevron Up",
+                "Steppers, navigation up",
+                "U+F5E5",
+            ),
+            (
+                MacSymbol::SidebarLeading,
+                "Sidebar Leading",
+                "Sidebar toggle, window layout",
+                "U+F7D6",
+            ),
+            (
+                MacSymbol::Gear,
+                "Gear",
+                "Settings, preferences, metrics",
+                "U+F43C",
+            ),
+            (
+                MacSymbol::Sliders,
+                "Sliders",
+                "Filters, display adjustments",
+                "U+F7DC",
+            ),
+            (
+                MacSymbol::Checkmark,
+                "Checkmark",
+                "Menu checkmarks, verification",
+                "U+F3FD",
+            ),
+            (
+                MacSymbol::Xmark,
+                "Xmark",
+                "Close button, cancel, clear",
+                "U+F404",
+            ),
+            (
+                MacSymbol::Plus,
+                "Plus",
+                "Add layer, expand, zoom in",
+                "U+F489",
+            ),
+            (
+                MacSymbol::Minus,
+                "Minus",
+                "Remove layer, collapse, zoom out",
+                "U+F70F",
+            ),
+            (
+                MacSymbol::ArrowClockwise,
+                "Arrow Clockwise",
+                "Reload, refresh, repeat",
+                "U+F49A",
+            ),
+            (
+                MacSymbol::ArrowCounterClockwise,
+                "Arrow Counter Clockwise",
+                "Undo action, reset identity",
+                "U+F21C",
+            ),
         ];
 
-        let filtered_symbols: Vec<(MacSymbol, &'static str, &'static str, &'static str)> = symbols_meta
-            .iter()
-            .copied()
-            .filter(|(sym, name, usage, codepoint)| {
-                if q.is_empty() {
-                    return true;
-                }
-                name.to_lowercase().contains(&q)
-                    || usage.to_lowercase().contains(&q)
-                    || codepoint.to_lowercase().contains(&q)
-                    || format!("{:?}", sym).to_lowercase().contains(&q)
-            })
-            .collect();
+        let filtered_symbols: Vec<(MacSymbol, &'static str, &'static str, &'static str)> =
+            symbols_meta
+                .iter()
+                .copied()
+                .filter(|(sym, name, usage, codepoint)| {
+                    if q.is_empty() {
+                        return true;
+                    }
+                    name.to_lowercase().contains(&q)
+                        || usage.to_lowercase().contains(&q)
+                        || codepoint.to_lowercase().contains(&q)
+                        || format!("{:?}", sym).to_lowercase().contains(&q)
+                })
+                .collect();
 
         // Count readout
         content_ui.horizontal(|h| {
@@ -2222,7 +2371,8 @@ impl CenterState {
             .show(content_ui, |grid_ui| {
                 for (col_idx, (sym, name, _, _)) in filtered_symbols.iter().enumerate() {
                     let is_selected = *sym == self.selected_symbol;
-                    let (rect, resp) = grid_ui.allocate_exact_size(vec2(item_w, item_h), Sense::click());
+                    let (rect, resp) =
+                        grid_ui.allocate_exact_size(vec2(item_w, item_h), Sense::click());
 
                     if resp.clicked() {
                         self.selected_symbol = *sym;
@@ -2271,7 +2421,11 @@ impl CenterState {
                         Align2::CENTER_CENTER,
                         *name,
                         FontId::proportional(10.0),
-                        if is_selected { theme.label() } else { theme.secondary_label() },
+                        if is_selected {
+                            theme.label()
+                        } else {
+                            theme.secondary_label()
+                        },
                     );
 
                     if (col_idx + 1) % cols == 0 {
@@ -2298,7 +2452,8 @@ impl CenterState {
 
         let detail_card_w = (content_ui.available_width() - 32.0).max(300.0);
         let detail_card_h = 130.0;
-        let (detail_rect, _) = content_ui.allocate_exact_size(vec2(detail_card_w, detail_card_h), Sense::hover());
+        let (detail_rect, _) =
+            content_ui.allocate_exact_size(vec2(detail_card_w, detail_card_h), Sense::hover());
         let dp = content_ui.painter_at(detail_rect);
 
         dp.rect(
@@ -2314,11 +2469,19 @@ impl CenterState {
         let preview_rect = Rect::from_min_size(detail_rect.min, vec2(preview_box_w, detail_card_h));
         dp.rect_filled(
             preview_rect,
-            CornerRadius { nw: 8, sw: 8, ne: 0, se: 0 },
+            CornerRadius {
+                nw: 8,
+                sw: 8,
+                ne: 0,
+                se: 0,
+            },
             theme.control().gamma_multiply(0.4),
         );
         dp.line_segment(
-            [pos2(preview_rect.max.x, preview_rect.min.y), pos2(preview_rect.max.x, preview_rect.max.y)],
+            [
+                pos2(preview_rect.max.x, preview_rect.min.y),
+                pos2(preview_rect.max.x, preview_rect.max.y),
+            ],
             Stroke::new(1.0, theme.separator()),
         );
         dp.text(
@@ -2343,12 +2506,24 @@ impl CenterState {
         );
 
         let rows = [
-            ("Unicode Codepoint", format!("{} (hex) | Dec: {}", sel_cp, sel_sym.codepoint())),
+            (
+                "Unicode Codepoint",
+                format!("{} (hex) | Dec: {}", sel_cp, sel_sym.codepoint()),
+            ),
             ("Character Literal", format!("{:?}", sel_sym.as_char())),
-            ("Unicode Block", "Private Use Area (PUA) 0xE000..=0xF8FF".to_string()),
+            (
+                "Unicode Block",
+                "Private Use Area (PUA) 0xE000..=0xF8FF".to_string(),
+            ),
             ("AppKit Usage", sel_usage.to_string()),
-            ("Font Asset", "CupertinoIcons.ttf (251 KB embedded TrueType font)".to_string()),
-            ("Anti-Emoji Guard", "COMPLIANT — Monochrome vector glyph (zero host OS emoji bleed)".to_string()),
+            (
+                "Font Asset",
+                "CupertinoIcons.ttf (251 KB embedded TrueType font)".to_string(),
+            ),
+            (
+                "Anti-Emoji Guard",
+                "COMPLIANT — Monochrome vector glyph (zero host OS emoji bleed)".to_string(),
+            ),
         ];
 
         for (idx, (label, val)) in rows.iter().enumerate() {
@@ -2381,9 +2556,11 @@ impl CenterState {
     fn render_screen_tokens_wcag(&mut self, content_ui: &mut Ui, theme: &MacTheme) {
         let label_font = FontId::proportional(12.0);
         content_ui.label(
-            egui::RichText::new("3. W3C Design Tokens & WCAG Engine — Token Catalogue & Contrast Engine")
-                .font(label_font.clone())
-                .strong(),
+            egui::RichText::new(
+                "3. W3C Design Tokens & WCAG Engine — Token Catalogue & Contrast Engine",
+            )
+            .font(label_font.clone())
+            .strong(),
         );
         content_ui.label(
             egui::RichText::new(
@@ -2429,19 +2606,27 @@ impl CenterState {
             h.add_space(16.0);
 
             // Presets
-            if h.add(MacButtonCell::new("Label on Window").theme(theme)).clicked() {
+            if h.add(MacButtonCell::new("Label on Window").theme(theme))
+                .clicked()
+            {
                 self.wcag_fg = theme.label();
                 self.wcag_bg = theme.window_background();
             }
-            if h.add(MacButtonCell::new("White on Accent").theme(theme)).clicked() {
+            if h.add(MacButtonCell::new("White on Accent").theme(theme))
+                .clicked()
+            {
                 self.wcag_fg = Color32::WHITE;
                 self.wcag_bg = theme.control_accent();
             }
-            if h.add(MacButtonCell::new("Secondary on Control").theme(theme)).clicked() {
+            if h.add(MacButtonCell::new("Secondary on Control").theme(theme))
+                .clicked()
+            {
                 self.wcag_fg = theme.secondary_label();
                 self.wcag_bg = theme.control_background();
             }
-            if h.add(MacButtonCell::new("Dark on Accent").theme(theme)).clicked() {
+            if h.add(MacButtonCell::new("Dark on Accent").theme(theme))
+                .clicked()
+            {
                 self.wcag_fg = Color32::from_rgb(30, 30, 30);
                 self.wcag_bg = theme.control_accent();
             }
@@ -2481,15 +2666,33 @@ impl CenterState {
             let ui_pass = ratio >= 3.0;
 
             let badge = |ui: &mut Ui, label: &str, pass: bool| {
-                let text_color = if pass { Color32::from_rgb(40, 180, 80) } else { Color32::from_rgb(230, 60, 60) };
+                let text_color = if pass {
+                    Color32::from_rgb(40, 180, 80)
+                } else {
+                    Color32::from_rgb(230, 60, 60)
+                };
                 let bg_color = text_color.gamma_multiply(0.15);
                 let (rect, _) = ui.allocate_exact_size(vec2(140.0, 22.0), Sense::hover());
                 let p = ui.painter_at(rect);
-                p.rect(rect, CornerRadius::same(4), bg_color, Stroke::new(1.0, text_color.gamma_multiply(0.5)), StrokeKind::Inside);
+                p.rect(
+                    rect,
+                    CornerRadius::same(4),
+                    bg_color,
+                    Stroke::new(1.0, text_color.gamma_multiply(0.5)),
+                    StrokeKind::Inside,
+                );
                 p.text(
                     rect.center(),
                     Align2::CENTER_CENTER,
-                    format!("{}: {}", label, if pass { "PASS \u{2713}" } else { "FAIL \u{2717}" }),
+                    format!(
+                        "{}: {}",
+                        label,
+                        if pass {
+                            "PASS \u{2713}"
+                        } else {
+                            "FAIL \u{2717}"
+                        }
+                    ),
                     FontId::proportional(10.5),
                     text_color,
                 );
@@ -2504,7 +2707,8 @@ impl CenterState {
         eval_ui.add_space(8.0);
 
         // Live preview swatch
-        let (sample_rect, _) = eval_ui.allocate_exact_size(vec2(card_w - 24.0, 32.0), Sense::hover());
+        let (sample_rect, _) =
+            eval_ui.allocate_exact_size(vec2(card_w - 24.0, 32.0), Sense::hover());
         let sp = eval_ui.painter_at(sample_rect);
         sp.rect(
             sample_rect,
@@ -2550,29 +2754,81 @@ impl CenterState {
                 let tokens = [
                     ("button.height", "24.0 pt", "Standard push button height"),
                     ("button.corner_radius", "6.0 pt", "Rounded corner radius"),
-                    ("button.min_width", "68.0 pt", "Minimum button horizontal budget"),
+                    (
+                        "button.min_width",
+                        "68.0 pt",
+                        "Minimum button horizontal budget",
+                    ),
                     ("outline_view.row_height", "24.0 pt", "Sidebar row height"),
-                    ("outline_view.indent_step", "16.0 pt", "Hierarchy indentation step"),
+                    (
+                        "outline_view.indent_step",
+                        "16.0 pt",
+                        "Hierarchy indentation step",
+                    ),
                     ("toolbar.height", "52.0 pt", "Unified AppKit toolbar height"),
-                    ("toolbar.traffic_light_radius", "6.0 pt", "Close/Minimize/Zoom traffic lights"),
-                    ("toolbar.traffic_light_spacing", "8.0 pt", "Spacing between window controls"),
-                    ("slider.track_height", "4.0 pt", "Continuous slider track thickness"),
-                    ("slider.thumb_radius", "9.0 pt", "Slider draggable knob radius"),
+                    (
+                        "toolbar.traffic_light_radius",
+                        "6.0 pt",
+                        "Close/Minimize/Zoom traffic lights",
+                    ),
+                    (
+                        "toolbar.traffic_light_spacing",
+                        "8.0 pt",
+                        "Spacing between window controls",
+                    ),
+                    (
+                        "slider.track_height",
+                        "4.0 pt",
+                        "Continuous slider track thickness",
+                    ),
+                    (
+                        "slider.thumb_radius",
+                        "9.0 pt",
+                        "Slider draggable knob radius",
+                    ),
                     ("stepper.width", "16.0 pt", "Vertical stepper control width"),
-                    ("stepper.height", "24.0 pt", "Vertical stepper control height"),
-                    ("popover.corner_radius", "8.0 pt", "Popover rounded corner radius"),
-                    ("popover.arrow_size", "8.0 pt", "Popover arrow indicator height"),
-                    ("canvas_footer.height", "24.0 pt", "SPEC-007 Canvas footer deterministic height"),
+                    (
+                        "stepper.height",
+                        "24.0 pt",
+                        "Vertical stepper control height",
+                    ),
+                    (
+                        "popover.corner_radius",
+                        "8.0 pt",
+                        "Popover rounded corner radius",
+                    ),
+                    (
+                        "popover.arrow_size",
+                        "8.0 pt",
+                        "Popover arrow indicator height",
+                    ),
+                    (
+                        "canvas_footer.height",
+                        "24.0 pt",
+                        "SPEC-007 Canvas footer deterministic height",
+                    ),
                 ];
 
                 for (name, val, desc) in tokens.iter() {
-                    if !q.is_empty() && !name.to_lowercase().contains(&q) && !desc.to_lowercase().contains(&q) {
+                    if !q.is_empty()
+                        && !name.to_lowercase().contains(&q)
+                        && !desc.to_lowercase().contains(&q)
+                    {
                         continue;
                     }
                     content_ui.horizontal(|h| {
-                        h.label(egui::RichText::new(*name).size(11.0).monospace().color(theme.control_accent()));
+                        h.label(
+                            egui::RichText::new(*name)
+                                .size(11.0)
+                                .monospace()
+                                .color(theme.control_accent()),
+                        );
                         h.label(egui::RichText::new(*val).size(11.0).strong());
-                        h.label(egui::RichText::new(format!("— {}", desc)).size(10.5).color(theme.secondary_label()));
+                        h.label(
+                            egui::RichText::new(format!("— {}", desc))
+                                .size(10.5)
+                                .color(theme.secondary_label()),
+                        );
                     });
                 }
             }
@@ -2599,32 +2855,89 @@ impl CenterState {
                     content_ui.horizontal(|h| {
                         let (rect, _) = h.allocate_exact_size(vec2(16.0, 16.0), Sense::hover());
                         h.painter().rect_filled(rect, CornerRadius::same(3), *c);
-                        h.painter().rect_stroke(rect, CornerRadius::same(3), Stroke::new(1.0, theme.separator()), StrokeKind::Inside);
+                        h.painter().rect_stroke(
+                            rect,
+                            CornerRadius::same(3),
+                            Stroke::new(1.0, theme.separator()),
+                            StrokeKind::Inside,
+                        );
                         h.label(egui::RichText::new(*name).size(11.0).monospace());
-                        h.label(egui::RichText::new(format!("rgb({}, {}, {}) | #{:02X}{:02X}{:02X}", c.r(), c.g(), c.b(), c.r(), c.g(), c.b())).size(10.5).color(theme.secondary_label()));
+                        h.label(
+                            egui::RichText::new(format!(
+                                "rgb({}, {}, {}) | #{:02X}{:02X}{:02X}",
+                                c.r(),
+                                c.g(),
+                                c.b(),
+                                c.r(),
+                                c.g(),
+                                c.b()
+                            ))
+                            .size(10.5)
+                            .color(theme.secondary_label()),
+                        );
                     });
                 }
             }
             _ => {
                 // Motion Parameters
                 let motion = [
-                    ("motion.hud_panel_transition.response", "0.30 s", "CASpring response duration T₀"),
-                    ("motion.hud_panel_transition.damping_ratio", "0.70", "Damping ratio ζ (perceptual settling)"),
-                    ("motion.hud_panel_transition.settling_duration", "0.48 s", "Duration to settle within ε=1e-3"),
-                    ("motion.selection_spring.response", "0.20 s", "Quick selection indicator snap"),
-                    ("motion.selection_spring.damping_ratio", "0.85", "Critically damped selection motion"),
-                    ("motion.bounce_spring.response", "0.35 s", "Harmonic oscillator pulse response"),
-                    ("motion.bounce_spring.damping_ratio", "0.65", "Lightly damped harmonic pulse with overshoot"),
+                    (
+                        "motion.hud_panel_transition.response",
+                        "0.30 s",
+                        "CASpring response duration T₀",
+                    ),
+                    (
+                        "motion.hud_panel_transition.damping_ratio",
+                        "0.70",
+                        "Damping ratio ζ (perceptual settling)",
+                    ),
+                    (
+                        "motion.hud_panel_transition.settling_duration",
+                        "0.48 s",
+                        "Duration to settle within ε=1e-3",
+                    ),
+                    (
+                        "motion.selection_spring.response",
+                        "0.20 s",
+                        "Quick selection indicator snap",
+                    ),
+                    (
+                        "motion.selection_spring.damping_ratio",
+                        "0.85",
+                        "Critically damped selection motion",
+                    ),
+                    (
+                        "motion.bounce_spring.response",
+                        "0.35 s",
+                        "Harmonic oscillator pulse response",
+                    ),
+                    (
+                        "motion.bounce_spring.damping_ratio",
+                        "0.65",
+                        "Lightly damped harmonic pulse with overshoot",
+                    ),
                 ];
 
                 for (name, val, desc) in motion.iter() {
-                    if !q.is_empty() && !name.to_lowercase().contains(&q) && !desc.to_lowercase().contains(&q) {
+                    if !q.is_empty()
+                        && !name.to_lowercase().contains(&q)
+                        && !desc.to_lowercase().contains(&q)
+                    {
                         continue;
                     }
                     content_ui.horizontal(|h| {
-                        h.label(egui::RichText::new(*name).size(11.0).monospace().color(theme.control_accent()));
+                        h.label(
+                            egui::RichText::new(*name)
+                                .size(11.0)
+                                .monospace()
+                                .color(theme.control_accent()),
+                        );
                         h.label(egui::RichText::new(*val).size(11.0).strong());
-                        h.label(egui::RichText::new(format!("— {}", desc)).size(10.5).color(theme.secondary_label()));
+                        h.label(
+                            egui::RichText::new(format!("— {}", desc))
+                                .size(10.5)
+                                .color(theme.secondary_label()),
+                        );
                     });
                 }
             }
@@ -2673,7 +2986,8 @@ impl CenterState {
 
         let fixed_w = (content_ui.available_width() - 32.0).max(320.0);
         let fixed_h = 130.0;
-        let (fixed_container_rect, _) = content_ui.allocate_exact_size(vec2(fixed_w, fixed_h), Sense::hover());
+        let (fixed_container_rect, _) =
+            content_ui.allocate_exact_size(vec2(fixed_w, fixed_h), Sense::hover());
         let fp = content_ui.painter_at(fixed_container_rect);
 
         fp.rect(
@@ -2714,15 +3028,25 @@ impl CenterState {
                 let clip_margin_h = 24.0;
                 let clip_margin_v = 16.0;
                 let clip_rect = Rect::from_min_max(
-                    pos2(fixed_container_rect.min.x + clip_margin_h, fixed_container_rect.min.y + clip_margin_v),
-                    pos2(fixed_container_rect.max.x - clip_margin_h, fixed_container_rect.max.y - clip_margin_v),
+                    pos2(
+                        fixed_container_rect.min.x + clip_margin_h,
+                        fixed_container_rect.min.y + clip_margin_v,
+                    ),
+                    pos2(
+                        fixed_container_rect.max.x - clip_margin_h,
+                        fixed_container_rect.max.y - clip_margin_v,
+                    ),
                 );
 
                 // Hardware raster mask clipping via painter.with_clip_rect
                 let clipped_painter = content_ui.painter().with_clip_rect(clip_rect);
 
                 // Background inside mask
-                clipped_painter.rect_filled(clip_rect, CornerRadius::same(6), Color32::from_rgb(22, 24, 28));
+                clipped_painter.rect_filled(
+                    clip_rect,
+                    CornerRadius::same(6),
+                    Color32::from_rgb(22, 24, 28),
+                );
 
                 // Oversized diagonal stripes extending beyond clip bounds
                 let mut sx = clip_rect.min.x - 60.0;
@@ -2732,7 +3056,10 @@ impl CenterState {
 
                 while sx < clip_rect.max.x + 60.0 {
                     clipped_painter.line_segment(
-                        [pos2(sx, clip_rect.max.y + 20.0), pos2(sx + 50.0, clip_rect.min.y - 20.0)],
+                        [
+                            pos2(sx, clip_rect.max.y + 20.0),
+                            pos2(sx + 50.0, clip_rect.min.y - 20.0),
+                        ],
                         Stroke::new(stripe_w, stripe_color),
                     );
                     sx += stripe_gap + stripe_w;
@@ -2753,13 +3080,20 @@ impl CenterState {
                 );
 
                 // Outer border of clip rect to visually prove zero bleed
-                fp.rect_stroke(clip_rect, CornerRadius::same(6), Stroke::new(1.5, theme.control_accent()), StrokeKind::Inside);
+                fp.rect_stroke(
+                    clip_rect,
+                    CornerRadius::same(6),
+                    Stroke::new(1.5, theme.control_accent()),
+                    StrokeKind::Inside,
+                );
             }
             _ => {
                 // Mode 2: Core Animation Cascading Spring
                 let mut fixed_view = MacFixedView::new(content_ui, fixed_container_rect);
                 let clicked = fixed_view.subview(pos2(14.0, 14.0), vec2(240.0, 24.0), |btn_ui| {
-                    btn_ui.add(MacButtonCell::new("Trigger Cascading Spring").theme(theme)).clicked()
+                    btn_ui
+                        .add(MacButtonCell::new("Trigger Cascading Spring").theme(theme))
+                        .clicked()
                 });
                 if clicked {
                     self.cascade_start_time = Some(cur_time);
@@ -2835,12 +3169,19 @@ impl CenterState {
                 .theme(theme)
                 .width(200.0)
                 .show(h);
-            h.label(egui::RichText::new(format!("{:.0} pt", self.row_container_width)).size(11.0).strong());
+            h.label(
+                egui::RichText::new(format!("{:.0} pt", self.row_container_width))
+                    .size(11.0)
+                    .strong(),
+            );
         });
         content_ui.add_space(8.0);
 
         let row_container_h = 36.0;
-        let (row_alloc_rect, _) = content_ui.allocate_exact_size(vec2(self.row_container_width, row_container_h), Sense::hover());
+        let (row_alloc_rect, _) = content_ui.allocate_exact_size(
+            vec2(self.row_container_width, row_container_h),
+            Sense::hover(),
+        );
         let rp = content_ui.painter_at(row_alloc_rect);
 
         // Container bounding box
@@ -2852,7 +3193,12 @@ impl CenterState {
             StrokeKind::Inside,
         );
 
-        let mut row = MacRow::new(row_alloc_rect.min.y + 4.0, 28.0, self.row_container_width, 6.0);
+        let mut row = MacRow::new(
+            row_alloc_rect.min.y + 4.0,
+            28.0,
+            self.row_container_width,
+            6.0,
+        );
         let (x0, y0, w0, h0) = row.allocate_cell(90.0);
         let (x1, y1, w1, h1) = row.allocate_cell(120.0);
         let rem_w = row.remaining_width();
@@ -2863,16 +3209,46 @@ impl CenterState {
         let cell2_rect = Rect::from_min_size(pos2(row_alloc_rect.min.x + x2, y2), vec2(w2, h2));
 
         // Compartment 0: Fixed 90pt (Blue)
-        rp.rect_filled(cell0_rect, CornerRadius::same(4), Color32::from_rgb(30, 80, 160));
-        rp.text(cell0_rect.center(), Align2::CENTER_CENTER, "Fixed: 90pt", FontId::proportional(10.5), Color32::WHITE);
+        rp.rect_filled(
+            cell0_rect,
+            CornerRadius::same(4),
+            Color32::from_rgb(30, 80, 160),
+        );
+        rp.text(
+            cell0_rect.center(),
+            Align2::CENTER_CENTER,
+            "Fixed: 90pt",
+            FontId::proportional(10.5),
+            Color32::WHITE,
+        );
 
         // Compartment 1: Fixed 120pt (Purple)
-        rp.rect_filled(cell1_rect, CornerRadius::same(4), Color32::from_rgb(110, 50, 160));
-        rp.text(cell1_rect.center(), Align2::CENTER_CENTER, "Fixed: 120pt", FontId::proportional(10.5), Color32::WHITE);
+        rp.rect_filled(
+            cell1_rect,
+            CornerRadius::same(4),
+            Color32::from_rgb(110, 50, 160),
+        );
+        rp.text(
+            cell1_rect.center(),
+            Align2::CENTER_CENTER,
+            "Fixed: 120pt",
+            FontId::proportional(10.5),
+            Color32::WHITE,
+        );
 
         // Compartment 2: Dynamic Flex (Teal/Emerald)
-        rp.rect_filled(cell2_rect, CornerRadius::same(4), Color32::from_rgb(20, 140, 110));
-        rp.text(cell2_rect.center(), Align2::CENTER_CENTER, format!("Flex: {:.0}pt", w2), FontId::proportional(10.5), Color32::WHITE);
+        rp.rect_filled(
+            cell2_rect,
+            CornerRadius::same(4),
+            Color32::from_rgb(20, 140, 110),
+        );
+        rp.text(
+            cell2_rect.center(),
+            Align2::CENTER_CENTER,
+            format!("Flex: {:.0}pt", w2),
+            FontId::proportional(10.5),
+            Color32::WHITE,
+        );
 
         content_ui.add_space(6.0);
         content_ui.label(
@@ -2934,18 +3310,17 @@ impl CenterState {
         let is_en = self.showcase_controls_enabled;
 
         content_ui.horizontal(|h| {
-            MacInputCell::with_id(Id::NULL.with("showcase_input_cell"), &mut self.showcase_text)
-                .theme(theme)
-                .control_size(active_ctrl_size)
-                .width(120.0)
-                .enabled(is_en)
-                .show(h);
+            MacInputCell::with_id(
+                Id::NULL.with("showcase_input_cell"),
+                &mut self.showcase_text,
+            )
+            .theme(theme)
+            .control_size(active_ctrl_size)
+            .width(120.0)
+            .enabled(is_en)
+            .show(h);
 
-            let _ = h.add(
-                MacButtonCell::new("Action")
-                    .theme(theme)
-                    .enabled(is_en),
-            );
+            let _ = h.add(MacButtonCell::new("Action").theme(theme).enabled(is_en));
 
             MacStepper::new(&mut self.showcase_step_val, -1000.0..=1000.0, 1.0)
                 .theme(theme)
@@ -2975,9 +3350,11 @@ impl CenterState {
         content_ui.add_space(4.0);
         content_ui.horizontal(|h| {
             h.label(
-                egui::RichText::new("Stepper: Click=±1, Shift=±10, Cmd/Ctrl=±100, Hold=Auto-Repeat")
-                    .size(10.5)
-                    .color(theme.secondary_label()),
+                egui::RichText::new(
+                    "Stepper: Click=±1, Shift=±10, Cmd/Ctrl=±100, Hold=Auto-Repeat",
+                )
+                .size(10.5)
+                .color(theme.secondary_label()),
             );
             h.add_space(8.0);
             h.label(
@@ -3106,7 +3483,8 @@ impl InspectorState {
                                         .width(120.0)
                                         .show(ui);
                                     ui.label(
-                                        egui::RichText::new(format!("{:.0}%", card.opacity)).size(10.5),
+                                        egui::RichText::new(format!("{:.0}%", card.opacity))
+                                            .size(10.5),
                                     );
                                 });
                                 form.row_label(egui::RichText::new("Blend:").size(11.0), |ui| {
@@ -3122,15 +3500,23 @@ impl InspectorState {
                         MacForm::new("exp_color_styles_form")
                             .theme(theme)
                             .show(sec_ui, |form| {
-                                form.row_label(egui::RichText::new("Fill Color:").size(11.0), |ui| {
-                                    MacColorWell::new(&mut card.fill_color).theme(theme).show(ui);
-                                });
-                                form.row_label(egui::RichText::new("Alpha Well:").size(11.0), |ui| {
-                                    MacColorWell::new(&mut card.alpha_color)
-                                        .theme(theme)
-                                        .show_alpha(true)
-                                        .show(ui);
-                                });
+                                form.row_label(
+                                    egui::RichText::new("Fill Color:").size(11.0),
+                                    |ui| {
+                                        MacColorWell::new(&mut card.fill_color)
+                                            .theme(theme)
+                                            .show(ui);
+                                    },
+                                );
+                                form.row_label(
+                                    egui::RichText::new("Alpha Well:").size(11.0),
+                                    |ui| {
+                                        MacColorWell::new(&mut card.alpha_color)
+                                            .theme(theme)
+                                            .show_alpha(true)
+                                            .show(ui);
+                                    },
+                                );
                             });
                     });
 
@@ -3138,19 +3524,30 @@ impl InspectorState {
                         MacForm::new("exp_shadow_effects_form")
                             .theme(theme)
                             .show(sec_ui, |form| {
-                                form.row_label(egui::RichText::new("Drop Shadow:").size(11.0), |ui| {
-                                    ui.add(MacToggle::new(&mut card.shadow_enabled).theme(theme));
-                                });
-                                if card.shadow_enabled {
-                                    form.row_label(egui::RichText::new("Blur Radius:").size(11.0), |ui| {
-                                        MacStepper::new(&mut card.shadow_blur, 0.0..=24.0, 1.0)
-                                            .theme(theme)
-                                            .show(ui);
-                                        ui.label(
-                                            egui::RichText::new(format!("{:.0} pt", card.shadow_blur))
-                                                .size(10.5),
+                                form.row_label(
+                                    egui::RichText::new("Drop Shadow:").size(11.0),
+                                    |ui| {
+                                        ui.add(
+                                            MacToggle::new(&mut card.shadow_enabled).theme(theme),
                                         );
-                                    });
+                                    },
+                                );
+                                if card.shadow_enabled {
+                                    form.row_label(
+                                        egui::RichText::new("Blur Radius:").size(11.0),
+                                        |ui| {
+                                            MacStepper::new(&mut card.shadow_blur, 0.0..=24.0, 1.0)
+                                                .theme(theme)
+                                                .show(ui);
+                                            ui.label(
+                                                egui::RichText::new(format!(
+                                                    "{:.0} pt",
+                                                    card.shadow_blur
+                                                ))
+                                                .size(10.5),
+                                            );
+                                        },
+                                    );
                                 }
                             });
                     });
@@ -3164,22 +3561,28 @@ impl InspectorState {
                         MacForm::new("exp_dimensions_form")
                             .theme(theme)
                             .show(sec_ui, |form| {
-                                form.row_label(egui::RichText::new("Width (W):").size(11.0), |ui| {
-                                    MacInputCell::with_id(id_w, &mut card.width)
-                                        .theme(theme)
-                                        .width(64.0)
-                                        .next_focus(id_h)
-                                        .prev_focus(id_r)
-                                        .show(ui);
-                                });
-                                form.row_label(egui::RichText::new("Height (H):").size(11.0), |ui| {
-                                    MacInputCell::with_id(id_h, &mut card.height)
-                                        .theme(theme)
-                                        .width(64.0)
-                                        .next_focus(id_r)
-                                        .prev_focus(id_w)
-                                        .show(ui);
-                                });
+                                form.row_label(
+                                    egui::RichText::new("Width (W):").size(11.0),
+                                    |ui| {
+                                        MacInputCell::with_id(id_w, &mut card.width)
+                                            .theme(theme)
+                                            .width(64.0)
+                                            .next_focus(id_h)
+                                            .prev_focus(id_r)
+                                            .show(ui);
+                                    },
+                                );
+                                form.row_label(
+                                    egui::RichText::new("Height (H):").size(11.0),
+                                    |ui| {
+                                        MacInputCell::with_id(id_h, &mut card.height)
+                                            .theme(theme)
+                                            .width(64.0)
+                                            .next_focus(id_r)
+                                            .prev_focus(id_w)
+                                            .show(ui);
+                                    },
+                                );
                                 form.row_label(egui::RichText::new("Radius:").size(11.0), |ui| {
                                     MacInputCell::with_id(id_r, &mut card.radius)
                                         .theme(theme)
@@ -3188,9 +3591,15 @@ impl InspectorState {
                                         .prev_focus(id_h)
                                         .show(ui);
                                 });
-                                form.row_label(egui::RichText::new("Constrain Aspect:").size(11.0), |ui| {
-                                    ui.add(MacToggle::new(&mut card.constrain_proportions).theme(theme));
-                                });
+                                form.row_label(
+                                    egui::RichText::new("Constrain Aspect:").size(11.0),
+                                    |ui| {
+                                        ui.add(
+                                            MacToggle::new(&mut card.constrain_proportions)
+                                                .theme(theme),
+                                        );
+                                    },
+                                );
                             });
                     });
 
@@ -3257,9 +3666,9 @@ impl InspectorState {
 
                     stack.add_section(Some("Continuous Transformation Controls"), |sec_ui| {
                         let mut rot_f64 = card.rotation_deg as f64;
-                        MacForm::new("exp_matrix_controls_form")
-                            .theme(theme)
-                            .show(sec_ui, |form| {
+                        MacForm::new("exp_matrix_controls_form").theme(theme).show(
+                            sec_ui,
+                            |form| {
                                 form.row_label(egui::RichText::new("Rotation:").size(11.0), |ui| {
                                     MacSlider::new(&mut card.rotation_deg, 0.0..=360.0)
                                         .theme(theme)
@@ -3272,18 +3681,22 @@ impl InspectorState {
                                     );
                                 });
 
-                                form.row_label(egui::RichText::new("Fine Step:").size(11.0), |ui| {
-                                    if ui.add(
-                                        MacStepper::new(&mut rot_f64, 0.0..=360.0, 5.0)
-                                            .theme(theme)
-                                            .wraps(true),
-                                    )
-                                    .changed()
-                                    {
-                                        card.rotation_deg = rot_f64 as f32;
-                                    }
-                                    ui.label(egui::RichText::new("±5.0°").size(10.5));
-                                });
+                                form.row_label(
+                                    egui::RichText::new("Fine Step:").size(11.0),
+                                    |ui| {
+                                        if ui
+                                            .add(
+                                                MacStepper::new(&mut rot_f64, 0.0..=360.0, 5.0)
+                                                    .theme(theme)
+                                                    .wraps(true),
+                                            )
+                                            .changed()
+                                        {
+                                            card.rotation_deg = rot_f64 as f32;
+                                        }
+                                        ui.label(egui::RichText::new("±5.0°").size(10.5));
+                                    },
+                                );
 
                                 form.row_label(egui::RichText::new("Scale:").size(11.0), |ui| {
                                     MacSlider::new(&mut card.scale_pct, 50.0..=200.0)
@@ -3297,22 +3710,28 @@ impl InspectorState {
                                     );
                                 });
 
-                                form.row_label(egui::RichText::new("Skew / Shear:").size(11.0), |ui| {
-                                    MacSlider::new(&mut card.skew_deg, -45.0..=45.0)
-                                        .theme(theme)
-                                        .width(120.0)
-                                        .show(ui);
-                                    ui.label(
-                                        egui::RichText::new(format!("{:.0}°", card.skew_deg))
-                                            .size(10.5),
-                                    );
-                                });
-                            });
+                                form.row_label(
+                                    egui::RichText::new("Skew / Shear:").size(11.0),
+                                    |ui| {
+                                        MacSlider::new(&mut card.skew_deg, -45.0..=45.0)
+                                            .theme(theme)
+                                            .width(120.0)
+                                            .show(ui);
+                                        ui.label(
+                                            egui::RichText::new(format!("{:.0}°", card.skew_deg))
+                                                .size(10.5),
+                                        );
+                                    },
+                                );
+                            },
+                        );
 
                         sec_ui.add_space(6.0);
-                        let reset_label = format!("{} Reset to Identity Matrix", MacSymbol::ArrowCounterClockwise.as_str());
-                        let reset_btn =
-                            sec_ui.add(MacButtonCell::new(&reset_label).theme(theme));
+                        let reset_label = format!(
+                            "{} Reset to Identity Matrix",
+                            MacSymbol::ArrowCounterClockwise.as_str()
+                        );
+                        let reset_btn = sec_ui.add(MacButtonCell::new(&reset_label).theme(theme));
                         if reset_btn.clicked() {
                             card.rotation_deg = 0.0;
                             card.scale_pct = 100.0;
@@ -3353,7 +3772,11 @@ impl InspectorState {
                                     .theme(theme)
                                     .selected(true)
                                     .custom_draw(|painter, rect| {
-                                        painter.circle_filled(rect.center(), 7.0, theme.control_accent());
+                                        painter.circle_filled(
+                                            rect.center(),
+                                            7.0,
+                                            theme.control_accent(),
+                                        );
                                         painter.rect_filled(
                                             rect.shrink(5.0),
                                             CornerRadius::same(2),
@@ -3388,15 +3811,18 @@ impl InspectorState {
                                     .placeholder("Height")
                                     .show(ui);
                             });
-                            form.row_label(egui::RichText::new("Corner Radius:").size(11.0), |ui| {
-                                MacInputCell::with_id(input_id_r, &mut card.radius)
-                                    .theme(theme)
-                                    .width(64.0)
-                                    .next_focus(input_id_w)
-                                    .prev_focus(input_id_h)
-                                    .placeholder("Radius")
-                                    .show(ui);
-                            });
+                            form.row_label(
+                                egui::RichText::new("Corner Radius:").size(11.0),
+                                |ui| {
+                                    MacInputCell::with_id(input_id_r, &mut card.radius)
+                                        .theme(theme)
+                                        .width(64.0)
+                                        .next_focus(input_id_w)
+                                        .prev_focus(input_id_h)
+                                        .placeholder("Radius")
+                                        .show(ui);
+                                },
+                            );
                         });
                 });
 
@@ -3412,28 +3838,33 @@ impl InspectorState {
                                     .width(110.0)
                                     .show(ui);
                                 ui.label(
-                                    egui::RichText::new(format!("{:.0}%", card.scale_pct)).size(10.5),
+                                    egui::RichText::new(format!("{:.0}%", card.scale_pct))
+                                        .size(10.5),
                                 );
                             });
-                            form.row_label(egui::RichText::new("Corner Radius:").size(11.0), |ui| {
-                                let mut r = card.radius.parse::<f64>().unwrap_or(10.0);
-                                let prev_r = r;
-                                MacStepper::new(&mut r, 0.0..=40.0, 1.0)
-                                    .theme(theme)
-                                    .wraps(false)
-                                    .show(ui);
-                                if (r - prev_r).abs() > 0.01 {
-                                    card.radius = format!("{:.0}", r);
-                                }
-                                let unit_str = match self.unit_segmented_idx {
-                                    1 => "px",
-                                    2 => "%",
-                                    _ => "pt",
-                                };
-                                ui.label(
-                                    egui::RichText::new(format!("{:.0} {}", r, unit_str)).size(10.5),
-                                );
-                            });
+                            form.row_label(
+                                egui::RichText::new("Corner Radius:").size(11.0),
+                                |ui| {
+                                    let mut r = card.radius.parse::<f64>().unwrap_or(10.0);
+                                    let prev_r = r;
+                                    MacStepper::new(&mut r, 0.0..=40.0, 1.0)
+                                        .theme(theme)
+                                        .wraps(false)
+                                        .show(ui);
+                                    if (r - prev_r).abs() > 0.01 {
+                                        card.radius = format!("{:.0}", r);
+                                    }
+                                    let unit_str = match self.unit_segmented_idx {
+                                        1 => "px",
+                                        2 => "%",
+                                        _ => "pt",
+                                    };
+                                    ui.label(
+                                        egui::RichText::new(format!("{:.0} {}", r, unit_str))
+                                            .size(10.5),
+                                    );
+                                },
+                            );
                         });
                 });
 
@@ -3481,12 +3912,20 @@ impl InspectorState {
                     MacForm::new("nib_state_color_form")
                         .theme(theme)
                         .show(sec_ui, |form| {
-                            form.row_label(egui::RichText::new("Subpixel Snap:").size(11.0), |ui| {
-                                ui.add(MacToggle::new(&mut self.snapping_enabled).theme(theme));
-                            });
-                            form.row_label(egui::RichText::new("Accent Swatch:").size(11.0), |ui| {
-                                MacColorWell::new(&mut card.fill_color).theme(theme).show(ui);
-                            });
+                            form.row_label(
+                                egui::RichText::new("Subpixel Snap:").size(11.0),
+                                |ui| {
+                                    ui.add(MacToggle::new(&mut self.snapping_enabled).theme(theme));
+                                },
+                            );
+                            form.row_label(
+                                egui::RichText::new("Accent Swatch:").size(11.0),
+                                |ui| {
+                                    MacColorWell::new(&mut card.fill_color)
+                                        .theme(theme)
+                                        .show(ui);
+                                },
+                            );
                             form.row_label(egui::RichText::new("Alpha Well:").size(11.0), |ui| {
                                 MacColorWell::new(&mut card.alpha_color)
                                     .theme(theme)

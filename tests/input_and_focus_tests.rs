@@ -20,7 +20,14 @@ fn find_shape_indices(
     let mut first_text_idx = None;
 
     for (idx, clipped) in shapes.iter().enumerate() {
-        inspect_shape(&clipped.shape, idx, target_text, search_rect, &mut last_bg_rect_idx, &mut first_text_idx);
+        inspect_shape(
+            &clipped.shape,
+            idx,
+            target_text,
+            search_rect,
+            &mut last_bg_rect_idx,
+            &mut first_text_idx,
+        );
     }
 
     (last_bg_rect_idx, first_text_idx)
@@ -49,7 +56,14 @@ fn inspect_shape(
         }
         egui::epaint::Shape::Vec(vec) => {
             for s in vec {
-                inspect_shape(s, top_idx, target_text, search_rect, last_bg_rect_idx, first_text_idx);
+                inspect_shape(
+                    s,
+                    top_idx,
+                    target_text,
+                    search_rect,
+                    last_bg_rect_idx,
+                    first_text_idx,
+                );
             }
         }
         _ => {}
@@ -125,7 +139,10 @@ fn test_search_field_click_and_escape_consumes_key() {
     });
     out2.textures_delta.clear();
     assert!(query.is_empty(), "Escape must clear text in search field");
-    assert!(!escape_leaked, "MacSearchField must consume Key::Escape so parent modals do not close");
+    assert!(
+        !escape_leaked,
+        "MacSearchField must consume Key::Escape so parent modals do not close"
+    );
 }
 
 #[test]
@@ -253,17 +270,27 @@ fn test_input_cell_consumes_single_char_keys_and_commits_on_outside_popup_click(
 
     // Frame 1: Request focus on MacInputCell
     let mut out1 = ctx.run_ui(RawInput::default(), |ui| {
-        let r = MacInputCell::new("cell_edit", &mut val).theme(&theme).show(ui);
+        let r = MacInputCell::new("cell_edit", &mut val)
+            .theme(&theme)
+            .show(ui);
         r.request_focus();
-        let p = MacPopUpButton::new(&mut unit_idx, &items).id("unit_pop").theme(&theme).show(ui);
+        let p = MacPopUpButton::new(&mut unit_idx, &items)
+            .id("unit_pop")
+            .theme(&theme)
+            .show(ui);
         popup_pos = p.rect.center();
     });
     out1.textures_delta.clear();
 
     // Frame 2: Steady focus frame
     let mut out2 = ctx.run_ui(RawInput::default(), |ui| {
-        MacInputCell::new("cell_edit", &mut val).theme(&theme).show(ui);
-        MacPopUpButton::new(&mut unit_idx, &items).id("unit_pop").theme(&theme).show(ui);
+        MacInputCell::new("cell_edit", &mut val)
+            .theme(&theme)
+            .show(ui);
+        MacPopUpButton::new(&mut unit_idx, &items)
+            .id("unit_pop")
+            .theme(&theme)
+            .show(ui);
     });
     out2.textures_delta.clear();
 
@@ -279,12 +306,20 @@ fn test_input_cell_consumes_single_char_keys_and_commits_on_outside_popup_click(
     });
     let mut v_key_leaked = false;
     let mut out3 = ctx.run_ui(type_input, |ui| {
-        MacInputCell::new("cell_edit", &mut val).theme(&theme).show(ui);
-        MacPopUpButton::new(&mut unit_idx, &items).id("unit_pop").theme(&theme).show(ui);
+        MacInputCell::new("cell_edit", &mut val)
+            .theme(&theme)
+            .show(ui);
+        MacPopUpButton::new(&mut unit_idx, &items)
+            .id("unit_pop")
+            .theme(&theme)
+            .show(ui);
         v_key_leaked = ui.input(|i| i.key_pressed(Key::V));
     });
     out3.textures_delta.clear();
-    assert!(!v_key_leaked, "Single-character canvas key Key::V must be consumed while MacInputCell has focus!");
+    assert!(
+        !v_key_leaked,
+        "Single-character canvas key Key::V must be consumed while MacInputCell has focus!"
+    );
     assert_eq!(val, "128.5");
 
     // Frame 4 & 5: Click MacPopUpButton outside MacInputCell -> MacInputCell commits on blur & popup opens
@@ -297,8 +332,13 @@ fn test_input_cell_consumes_single_char_keys_and_commits_on_outside_popup_click(
         modifiers: Modifiers::NONE,
     });
     let mut out4 = ctx.run_ui(press_pop, |ui| {
-        MacInputCell::new("cell_edit", &mut val).theme(&theme).show(ui);
-        MacPopUpButton::new(&mut unit_idx, &items).id("unit_pop").theme(&theme).show(ui);
+        MacInputCell::new("cell_edit", &mut val)
+            .theme(&theme)
+            .show(ui);
+        MacPopUpButton::new(&mut unit_idx, &items)
+            .id("unit_pop")
+            .theme(&theme)
+            .show(ui);
     });
     out4.textures_delta.clear();
 
@@ -313,15 +353,29 @@ fn test_input_cell_consumes_single_char_keys_and_commits_on_outside_popup_click(
     let mut lost_focus_on_click = false;
     let mut popup_is_open = false;
     let mut out5 = ctx.run_ui(release_pop, |ui| {
-        let cell_resp = MacInputCell::new("cell_edit", &mut val).theme(&theme).show(ui);
+        let cell_resp = MacInputCell::new("cell_edit", &mut val)
+            .theme(&theme)
+            .show(ui);
         lost_focus_on_click = cell_resp.lost_focus() || !cell_resp.has_focus();
-        MacPopUpButton::new(&mut unit_idx, &items).id("unit_pop").theme(&theme).show(ui);
+        MacPopUpButton::new(&mut unit_idx, &items)
+            .id("unit_pop")
+            .theme(&theme)
+            .show(ui);
         let is_open_id = Id::NULL.with("unit_pop").with("mac_popup_is_open");
         popup_is_open = ui.data_mut(|d| d.get_temp::<bool>(is_open_id).unwrap_or(false));
     });
     out5.textures_delta.clear();
 
-    assert_eq!(val, "128.5", "Edited value must remain committed when blurring via outside click");
-    assert!(lost_focus_on_click, "MacInputCell must surrender focus on outside click");
-    assert!(popup_is_open, "Clicking MacPopUpButton while MacInputCell was focused must open the popup immediately");
+    assert_eq!(
+        val, "128.5",
+        "Edited value must remain committed when blurring via outside click"
+    );
+    assert!(
+        lost_focus_on_click,
+        "MacInputCell must surrender focus on outside click"
+    );
+    assert!(
+        popup_is_open,
+        "Clicking MacPopUpButton while MacInputCell was focused must open the popup immediately"
+    );
 }

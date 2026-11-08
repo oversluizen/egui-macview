@@ -24,8 +24,8 @@ fn test_token_catalog_deserialization() {
 
     // Verify metadata
     assert_eq!(tokens.name, "egui-macview Design Tokens");
-    assert_eq!(tokens.version, "0.4.1");
-    assert_eq!(egui_macview::VERSION, "0.4.1");
+    assert_eq!(tokens.version, "0.5.0");
+    assert_eq!(egui_macview::VERSION, "0.5.0");
     assert!(!tokens.description.is_empty());
 
     // Verify Control Metrics
@@ -335,20 +335,24 @@ fn test_version_synchronization_invariants() {
     // 1. Cargo.toml version
     let cargo_toml = fs::read_to_string(manifest_dir.join("Cargo.toml")).expect("read Cargo.toml");
     assert!(
-        cargo_toml.contains("version = \"0.4.1\""),
-        "Cargo.toml must have version = \"0.4.1\""
+        cargo_toml.contains("version = \"0.5.0\""),
+        "Cargo.toml must have version = \"0.5.0\""
     );
 
     // 2. Exported crate version constant
-    assert_eq!(egui_macview::VERSION, "0.4.1");
+    assert_eq!(egui_macview::VERSION, "0.5.0");
 
     // 3. Design tokens version
     let tokens = MacDesignTokens::load_default();
-    assert_eq!(tokens.version, "0.4.1");
+    assert_eq!(tokens.version, "0.5.0");
 
-    // 4. CHANGELOG.md strictly documents [0.4.1] - 2026-11-08, [0.4.0] - 2026-11-07, [0.3.1] - 2026-11-06, [0.2.0] - 2026-11-06 and [0.1.0] - 2026-11-05
+    // 4. CHANGELOG.md strictly documents [0.5.0] - 2026-11-08, [0.4.1] - 2026-11-08, [0.4.0] - 2026-11-07, [0.3.1] - 2026-11-06, [0.2.0] - 2026-11-06 and [0.1.0] - 2026-11-05
     let changelog =
         fs::read_to_string(manifest_dir.join("CHANGELOG.md")).expect("read CHANGELOG.md");
+    assert!(
+        changelog.contains("## [0.5.0] - 2026-11-08"),
+        "CHANGELOG.md must contain header '## [0.5.0] - 2026-11-08'"
+    );
     assert!(
         changelog.contains("## [0.4.1] - 2026-11-08"),
         "CHANGELOG.md must contain header '## [0.4.1] - 2026-11-08'"
@@ -374,7 +378,7 @@ fn test_version_synchronization_invariants() {
     // - SPEC-001..SPEC-006 have Document Version 0.2.0
     // - SPEC-007 has Document Version 0.3.0 (Milestone 0.3.0 Released)
     // - SPEC-008 has Document Version 0.4.0 (Milestone 0.4.0 Released)
-    // - SPEC-INDEX has Document Version 0.4.1 (Milestone 0.4.1 Released)
+    // - SPEC-011 and SPEC-INDEX have Document Version 0.5.0 (Milestone 0.5.0 Released)
     let specs_dir = manifest_dir.join("specs");
     let entries = fs::read_dir(&specs_dir).expect("read specs dir");
     let mut spec_count = 0;
@@ -412,14 +416,14 @@ fn test_version_synchronization_invariants() {
                     content.contains("Milestone 0.4.0"),
                     "{file_name} missing Target Milestone `Milestone 0.4.0`"
                 );
-            } else if file_name.starts_with("SPEC-INDEX") {
+            } else if file_name.starts_with("SPEC-011") || file_name.starts_with("SPEC-INDEX") {
                 assert!(
-                    content.contains("**Document Version** | `0.4.1`"),
-                    "{file_name} missing Document Version `0.4.1`"
+                    content.contains("**Document Version** | `0.5.0`"),
+                    "{file_name} missing Document Version `0.5.0`"
                 );
                 assert!(
-                    content.contains("Milestone 0.4.1"),
-                    "{file_name} missing Target Milestone `Milestone 0.4.1`"
+                    content.contains("Milestone 0.5.0"),
+                    "{file_name} missing Target Milestone `Milestone 0.5.0`"
                 );
             } else {
                 assert!(
@@ -463,9 +467,8 @@ fn test_mac_form_cots_zoom_alignment_and_no_overlap() {
                 MacForm::new("test_cots_form")
                     .theme(&theme)
                     .show(ui, |form| {
-                        let (l1, c1) = form.row_label("Short:", |ui| {
-                            ui.text_edit_singleline(&mut field1)
-                        });
+                        let (l1, c1) =
+                            form.row_label("Short:", |ui| ui.text_edit_singleline(&mut field1));
                         let (l2, c2) = form.row_label("A Much Longer Form Label:", |ui| {
                             ui.text_edit_singleline(&mut field2)
                         });
@@ -474,18 +477,21 @@ fn test_mac_form_cots_zoom_alignment_and_no_overlap() {
                         });
 
                         if frame == 1 {
-                            row_rects = vec![
-                                (l1.rect, c1.rect),
-                                (l2.rect, c2.rect),
-                                (l3.rect, c3.rect),
-                            ];
+                            row_rects =
+                                vec![(l1.rect, c1.rect), (l2.rect, c2.rect), (l3.rect, c3.rect)];
                         }
                     });
             });
             out.textures_delta.clear();
         }
 
-        assert_eq!(row_rects.len(), 3, "All 3 rows must be recorded at zoom {zoom}");
+        assert_eq!(
+            row_rects.len(),
+            3,
+            "All 3 rows must be recorded at zoom {zoom}"
+        );
+
+        // 1. Column 0 (trailing labels): All labels should align on their right (trailing) edge
         let right_edge_0 = row_rects[0].0.max.x;
         let left_edge_1 = row_rects[0].1.min.x;
         for (idx, (label_rect, control_rect)) in row_rects.iter().enumerate() {
@@ -500,4 +506,3 @@ fn test_mac_form_cots_zoom_alignment_and_no_overlap() {
         }
     }
 }
-

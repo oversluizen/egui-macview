@@ -1,6 +1,6 @@
 [package]
 name = "egui-macview"
-version = "0.4.1"
+version = "0.5.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 authors = ["Jaco Oversluizen", "egui-macview contributors"]
@@ -89,4 +89,8 @@ path = "tests/undo_and_feedback_tests.rs"
 [[test]]
 name = "symbol_tests"
 path = "tests/symbol_tests.rs"
+
+[[test]]
+name = "studio_controls_v05_tests"
+path = "tests/studio_controls_v05_tests.rs"
 

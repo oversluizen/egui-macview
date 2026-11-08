@@ -3,11 +3,12 @@
 use crate::theme::{MacBackgroundStyle, MacTheme};
 use crate::tokens::{
     ButtonMetrics, ColorWellMetrics, ContextMenuMetrics, FocusRingMetrics, FooterMetrics,
-    LayoutMetrics, MacControlMetrics, MacMotionTokens, MacTypographyTokens, MenuBarMetrics,
-    NavigationMetrics, OutlineViewMetrics, PaletteMetrics, PopUpButtonMetrics, PopoverMetrics,
-    ScrollViewMetrics, SearchFieldMetrics, SegmentedMetrics, SliderMetrics, SplitViewMetrics,
-    StackViewMetrics, StepperMetrics, TextFieldMetrics, ThumbnailCellMetrics, ToastMetrics,
-    ToggleMetrics, ToolbarMetrics,
+    LayoutMetrics, LevelIndicatorMetrics, MacControlMetrics, MacMotionTokens, MacTypographyTokens,
+    MenuBarMetrics, NavigationMetrics, OutlineViewMetrics, PaletteMetrics, PathControlMetrics,
+    PopUpButtonMetrics, PopoverMetrics, ProgressIndicatorMetrics, ScrollViewMetrics,
+    SearchFieldMetrics, SegmentedMetrics, SliderMetrics, SplitViewMetrics, StackViewMetrics,
+    StepperMetrics, TableViewMetrics, TextFieldMetrics, ThumbnailCellMetrics, ToastMetrics,
+    ToggleMetrics, TokenFieldMetrics, ToolbarMetrics, TrimScrubberMetrics,
 };
 use egui::Color32;
 
@@ -105,6 +106,36 @@ impl MacTheme {
     /// Resolves toggle switch control geometry metrics.
     pub fn toggle(&self) -> &ToggleMetrics {
         self.tokens().toggle_metrics()
+    }
+
+    /// Resolves progress indicator control geometry metrics.
+    pub fn progress_indicator(&self) -> &ProgressIndicatorMetrics {
+        self.tokens().progress_indicator_metrics()
+    }
+
+    /// Resolves table view and header geometry metrics.
+    pub fn table_view(&self) -> &TableViewMetrics {
+        self.tokens().table_view_metrics()
+    }
+
+    /// Resolves token field pill input geometry metrics.
+    pub fn token_field(&self) -> &TokenFieldMetrics {
+        self.tokens().token_field_metrics()
+    }
+
+    /// Resolves level indicator meter geometry metrics.
+    pub fn level_indicator(&self) -> &LevelIndicatorMetrics {
+        self.tokens().level_indicator_metrics()
+    }
+
+    /// Resolves trim scrubber timeline geometry metrics.
+    pub fn trim_scrubber(&self) -> &TrimScrubberMetrics {
+        self.tokens().trim_scrubber_metrics()
+    }
+
+    /// Resolves path control breadcrumb geometry metrics.
+    pub fn path_control(&self) -> &PathControlMetrics {
+        self.tokens().path_control_metrics()
     }
 
     /// Resolves navigation and feedback metrics collection.

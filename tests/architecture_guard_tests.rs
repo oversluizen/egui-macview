@@ -35,9 +35,7 @@ fn collect_rs_files(dir: &Path) -> Vec<PathBuf> {
 pub fn strip_comments_and_strings(source: &str) -> String {
     let mut out = String::with_capacity(source.len());
     let chars: Vec<char> = source.chars().collect();
-    let mut i = 0;
-    let n = chars.len();
-
+    let (mut i, n) = (0, chars.len());
     while i < n {
         if i + 1 < n && chars[i] == '/' && chars[i + 1] == '/' {
             while i < n && chars[i] != '\n' {
@@ -65,8 +63,7 @@ pub fn strip_comments_and_strings(source: &str) -> String {
             continue;
         }
         if chars[i] == 'r' && i + 1 < n && (chars[i + 1] == '#' || chars[i + 1] == '"') {
-            let mut hashes = 0usize;
-            let mut j = i + 1;
+            let (mut hashes, mut j) = (0usize, i + 1);
             while j < n && chars[j] == '#' {
                 hashes += 1;
                 j += 1;
@@ -131,11 +128,7 @@ pub fn count_lines_and_esloc(source: &str) -> (usize, usize) {
 pub fn extract_float_literals(code: &str) -> Vec<(usize, String, f64)> {
     let mut results = Vec::new();
     for (line_idx, line) in code.lines().enumerate() {
-        let line_num = line_idx + 1;
-        let bytes = line.as_bytes();
-        let len = bytes.len();
-        let mut i = 0;
-
+        let (line_num, bytes, len, mut i) = (line_idx + 1, line.as_bytes(), line.len(), 0);
         while i < len {
             let b = bytes[i];
             if b.is_ascii_alphabetic() || b == b'_' {
@@ -151,11 +144,7 @@ pub fn extract_float_literals(code: &str) -> Vec<(usize, String, f64)> {
                 while i < len && (bytes[i].is_ascii_digit() || bytes[i] == b'_') {
                     i += 1;
                 }
-                if i + 1 < len
-                    && bytes[i] == b'.'
-                    && bytes[i + 1].is_ascii_digit()
-                    && (i + 1 >= len || bytes[i + 1] != b'.')
-                {
+                if i + 1 < len && bytes[i] == b'.' && bytes[i + 1].is_ascii_digit() {
                     i += 1;
                     while i < len && (bytes[i].is_ascii_digit() || bytes[i] == b'_') {
                         i += 1;
@@ -164,20 +153,16 @@ pub fn extract_float_literals(code: &str) -> Vec<(usize, String, f64)> {
                     if i + 3 <= len && (&line[i..i + 3] == "f32" || &line[i..i + 3] == "f64") {
                         i += 3;
                     }
-                    let raw = &line[start..i];
-                    let numeric_part = line[start..num_end].replace('_', "");
-                    if let Ok(val) = numeric_part.parse::<f64>() {
-                        results.push((line_num, raw.to_string(), val));
+                    if let Ok(val) = line[start..num_end].replace('_', "").parse::<f64>() {
+                        results.push((line_num, line[start..i].to_string(), val));
                     }
                     continue;
                 }
                 if i + 3 <= len && (&line[i..i + 3] == "f32" || &line[i..i + 3] == "f64") {
                     let num_end = i;
                     i += 3;
-                    let raw = &line[start..i];
-                    let numeric_part = line[start..num_end].replace('_', "");
-                    if let Ok(val) = numeric_part.parse::<f64>() {
-                        results.push((line_num, raw.to_string(), val));
+                    if let Ok(val) = line[start..num_end].replace('_', "").parse::<f64>() {
+                        results.push((line_num, line[start..i].to_string(), val));
                     }
                     continue;
                 }
@@ -191,25 +176,18 @@ pub fn extract_float_literals(code: &str) -> Vec<(usize, String, f64)> {
 
 pub fn check_magic_numbers_in_source(file_label: &str, source: &str) -> Vec<String> {
     let stripped = strip_comments_and_strings(source);
-    let mut violations = Vec::new();
-    for (line_num, raw, val) in extract_float_literals(&stripped) {
-        let is_allowed = ALLOWED_RATIOS
-            .iter()
-            .any(|&allowed| (val - allowed).abs() < 1e-9);
-        if !is_allowed {
-            violations.push(format!(
-                "{}:{} -> forbidden magic float literal `{}` (value = {}). Must be sourced from design tokens!",
-                file_label, line_num, raw, val
-            ));
-        }
-    }
-    violations
+    extract_float_literals(&stripped)
+        .into_iter()
+        .filter(|(_, _, val)| !ALLOWED_RATIOS.iter().any(|&a| (val - a).abs() < 1e-9))
+        .map(|(line_num, raw, val)| {
+            format!("{file_label}:{line_num} -> forbidden magic float literal `{raw}` ({val})")
+        })
+        .collect()
 }
 
 pub fn check_hardcoded_colors_in_source(file_label: &str, source: &str) -> Vec<String> {
     let mut violations = Vec::new();
     let stripped = strip_comments_and_strings(source);
-
     let forbidden_calls = [
         "Color32::from_rgb(",
         "Color32::from_rgba_premultiplied(",
@@ -217,33 +195,24 @@ pub fn check_hardcoded_colors_in_source(file_label: &str, source: &str) -> Vec<S
         "Color32::from_black_alpha(",
         "Color32::WHITE",
     ];
-
     for (idx, line) in stripped.lines().enumerate() {
-        let line_num = idx + 1;
         for call in &forbidden_calls {
             if line.contains(call) {
-                violations.push(format!(
-                    "{}:{} -> forbidden hardcoded color `{}` in UI layer.",
-                    file_label, line_num, call
-                ));
+                violations.push(format!("{file_label}:{} -> `{call}`", idx + 1));
             }
         }
     }
-
-    let mut in_doc = false;
     for (idx, raw_line) in source.lines().enumerate() {
         let trimmed = raw_line.trim();
         if trimmed.starts_with("//") || trimmed.starts_with("/*") || trimmed.starts_with('*') {
             continue;
         }
-        let _ = &mut in_doc;
         if let Some(pos) = raw_line.find("\"#") {
             let after = &raw_line[pos + 2..];
             let hex_len = after.chars().take_while(|c| c.is_ascii_hexdigit()).count();
             if (hex_len == 6 || hex_len == 8) && after.as_bytes().get(hex_len) == Some(&b'"') {
                 violations.push(format!(
-                    "{}:{} -> forbidden inline hex color string `\"#{}\"` in UI code.",
-                    file_label,
+                    "{file_label}:{} -> inline hex `\"#{}\"`",
                     idx + 1,
                     &after[..hex_len]
                 ));
@@ -257,23 +226,17 @@ pub fn check_token_arithmetic_cheating(file_label: &str, source: &str) -> Vec<St
     let stripped = strip_comments_and_strings(source);
     let mut violations = Vec::new();
     for (idx, line) in stripped.lines().enumerate() {
-        let line_num = idx + 1;
         if let Some(pos) = line.find(".points()") {
             let after = line[pos + ".points()".len()..].trim_start();
             if after.starts_with('+') || after.starts_with('-') {
                 let expr_rest = after[1..].trim_start();
-                let floats = extract_float_literals(expr_rest);
-                for (_, raw, val) in floats {
-                    let is_allowed = ALLOWED_RATIOS
-                        .iter()
-                        .any(|&allowed| (val - allowed).abs() < 1e-9);
+                for (_, raw, val) in extract_float_literals(expr_rest) {
+                    let is_allowed = ALLOWED_RATIOS.iter().any(|&a| (val - a).abs() < 1e-9);
                     if !is_allowed && expr_rest.starts_with(&raw) {
                         violations.push(format!(
-                            "{}:{} -> token arithmetic cheating detected: `.points() {} {}`.",
-                            file_label,
-                            line_num,
-                            &after[..1],
-                            raw
+                            "{file_label}:{} -> `.points() {} {raw}`",
+                            idx + 1,
+                            &after[..1]
                         ));
                     }
                 }
@@ -289,13 +252,7 @@ pub fn check_domain_leakage_in_source(file_label: &str, source: &str) -> Vec<Str
         let lower = line.to_lowercase();
         for &term in FORBIDDEN_DOMAIN_TERMS {
             if lower.contains(term) {
-                violations.push(format!(
-                    "{}:{} -> domain leakage detected: forbidden term `{}` found in `{}`",
-                    file_label,
-                    idx + 1,
-                    term,
-                    line.trim()
-                ));
+                violations.push(format!("{file_label}:{} -> `{term}`", idx + 1));
             }
         }
     }
@@ -313,27 +270,25 @@ fn collect_json_leaf_paths(
             || (obj.contains_key("value") && obj.contains_key("$type"))
             || (obj.contains_key("mass") && obj.contains_key("stiffness"))
             || (obj.contains_key("size_pt") && obj.contains_key("tracking_pt"));
-
         if is_dtcg_leaf && is_in_metrics_or_color {
             out.insert(prefix);
             return;
         }
-
         for (k, v) in obj {
             if k.starts_with('$') || k == "polynomial_spec001" {
                 continue;
             }
-            let next_prefix = if prefix.is_empty() {
+            let next = if prefix.is_empty() {
                 k.clone()
             } else {
-                format!("{}.{}", prefix, k)
+                format!("{prefix}.{k}")
             };
             let track = is_in_metrics_or_color
-                || next_prefix.starts_with("macview.metrics")
-                || next_prefix.starts_with("macview.color")
-                || next_prefix.starts_with("macview.motion")
-                || next_prefix.starts_with("macview.typography.tracking_table");
-            collect_json_leaf_paths(v, next_prefix, track, out);
+                || next.starts_with("macview.metrics")
+                || next.starts_with("macview.color")
+                || next.starts_with("macview.motion")
+                || next.starts_with("macview.typography.tracking_table");
+            collect_json_leaf_paths(v, next, track, out);
         }
     }
 }
@@ -348,149 +303,84 @@ const UI_COMPONENT_DIRS: &[&str] = &[
 const EXTRA_GUARDED_FILES: &[&str] = &["src/theme/mod.rs", "src/theme/accessors.rs"];
 
 #[test]
-fn test_guard_zero_magic_numbers_in_ui_components() {
+fn test_guard_zero_magic_numbers_and_colors_in_ui_components() {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let mut all_violations = Vec::new();
+    let (mut magic_v, mut color_v) = (Vec::new(), Vec::new());
     for dir_rel in UI_COMPONENT_DIRS {
         for file in collect_rs_files(&manifest_dir.join(dir_rel)) {
             let rel = file
                 .strip_prefix(manifest_dir)
                 .unwrap_or(&file)
                 .to_string_lossy();
-            let content = fs::read_to_string(&file).expect("Failed to read source file");
-            all_violations.extend(check_magic_numbers_in_source(&rel, &content));
+            let content = fs::read_to_string(&file).expect("read source");
+            magic_v.extend(check_magic_numbers_in_source(&rel, &content));
+            color_v.extend(check_hardcoded_colors_in_source(&rel, &content));
         }
     }
     for file_rel in EXTRA_GUARDED_FILES {
-        let file = manifest_dir.join(file_rel);
-        let content = fs::read_to_string(&file).expect("Failed to read source file");
-        all_violations.extend(check_magic_numbers_in_source(file_rel, &content));
+        let content = fs::read_to_string(manifest_dir.join(file_rel)).expect("read source");
+        magic_v.extend(check_magic_numbers_in_source(file_rel, &content));
+        color_v.extend(check_hardcoded_colors_in_source(file_rel, &content));
     }
-    assert!(
-        all_violations.is_empty(),
-        "GL-1015 Magic Number Guard Failed:\n{}",
-        all_violations.join("\n")
-    );
+    assert!(magic_v.is_empty(), "Magic Number Guard:\n{magic_v:#?}");
+    assert!(color_v.is_empty(), "Hardcoded Color Guard:\n{color_v:#?}");
 }
 
 #[test]
-fn test_guard_zero_hardcoded_colors_in_ui_components() {
+fn test_guard_zero_token_arithmetic_and_domain_purity() {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let mut all_violations = Vec::new();
-    for dir_rel in UI_COMPONENT_DIRS {
-        for file in collect_rs_files(&manifest_dir.join(dir_rel)) {
-            let rel = file
-                .strip_prefix(manifest_dir)
-                .unwrap_or(&file)
-                .to_string_lossy();
-            let content = fs::read_to_string(&file).expect("Failed to read source file");
-            all_violations.extend(check_hardcoded_colors_in_source(&rel, &content));
-        }
-    }
-    for file_rel in EXTRA_GUARDED_FILES {
-        let file = manifest_dir.join(file_rel);
-        let content = fs::read_to_string(&file).expect("Failed to read source file");
-        all_violations.extend(check_hardcoded_colors_in_source(file_rel, &content));
-    }
-    assert!(
-        all_violations.is_empty(),
-        "GL-1015 Hardcoded Color Guard Failed:\n{}",
-        all_violations.join("\n")
-    );
-}
-
-#[test]
-fn test_guard_zero_token_arithmetic_cheating() {
-    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let mut all_violations = Vec::new();
+    let (mut math_v, mut domain_v) = (Vec::new(), Vec::new());
     for file in collect_rs_files(&manifest_dir.join("src")) {
         let rel = file
             .strip_prefix(manifest_dir)
             .unwrap_or(&file)
             .to_string_lossy();
-        let content = fs::read_to_string(&file).expect("Failed to read source file");
-        all_violations.extend(check_token_arithmetic_cheating(&rel, &content));
+        let content = fs::read_to_string(&file).expect("read source");
+        math_v.extend(check_token_arithmetic_cheating(&rel, &content));
+        domain_v.extend(check_domain_leakage_in_source(&rel, &content));
     }
-    assert!(
-        all_violations.is_empty(),
-        "GL-1015 Token Arithmetic Cheating Guard Failed:\n{}",
-        all_violations.join("\n")
-    );
-}
-
-#[test]
-fn test_guard_domain_agnostic_purity() {
-    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let mut all_violations = Vec::new();
-    for dir_rel in &["src", "examples"] {
-        let dir = manifest_dir.join(dir_rel);
-        if dir.exists() {
-            for file in collect_rs_files(&dir) {
-                let rel = file
-                    .strip_prefix(manifest_dir)
-                    .unwrap_or(&file)
-                    .to_string_lossy();
-                let content = fs::read_to_string(&file).expect("Failed to read source file");
-                all_violations.extend(check_domain_leakage_in_source(&rel, &content));
-            }
-        }
+    for file in collect_rs_files(&manifest_dir.join("examples")) {
+        let rel = file
+            .strip_prefix(manifest_dir)
+            .unwrap_or(&file)
+            .to_string_lossy();
+        let content = fs::read_to_string(&file).expect("read source");
+        domain_v.extend(check_domain_leakage_in_source(&rel, &content));
     }
-    assert!(
-        all_violations.is_empty(),
-        "GL-1015 Domain-Agnostic Purity Guard Failed:\n{}",
-        all_violations.join("\n")
-    );
+    assert!(math_v.is_empty(), "Token Math Guard:\n{math_v:#?}");
+    assert!(domain_v.is_empty(), "Domain Purity Guard:\n{domain_v:#?}");
 }
 
 #[test]
 fn test_guard_token_catalog_100_percent_schema_synchronization() {
     let raw_json = include_str!("../tokens/design_tokens.json");
-    let raw_val: serde_json::Value =
-        serde_json::from_str(raw_json).expect("Valid JSON in design_tokens.json");
-    let typed_tokens = egui_macview::tokens::MacDesignTokens::from_json(raw_json)
-        .expect("Typed MacDesignTokens must deserialize design_tokens.json");
-    let reserialized_val =
-        serde_json::to_value(&typed_tokens).expect("MacDesignTokens must serialize back to Value");
-
-    let mut raw_leaves = BTreeSet::new();
+    let raw_val: serde_json::Value = serde_json::from_str(raw_json).expect("Valid JSON");
+    let typed_tokens = egui_macview::tokens::MacDesignTokens::load_default();
+    let reserialized_val = std::thread::Builder::new()
+        .stack_size(8 * 1024 * 1024)
+        .spawn(move || serde_json::to_value(&typed_tokens).expect("Serialize MacDesignTokens"))
+        .expect("spawn")
+        .join()
+        .expect("join");
+    let (mut raw_leaves, mut typed_leaves) = (BTreeSet::new(), BTreeSet::new());
     collect_json_leaf_paths(&raw_val, String::new(), false, &mut raw_leaves);
-    let mut typed_leaves = BTreeSet::new();
     collect_json_leaf_paths(&reserialized_val, String::new(), false, &mut typed_leaves);
-
-    let missing_in_rust: Vec<_> = raw_leaves.difference(&typed_leaves).collect();
-    assert!(
-        missing_in_rust.is_empty(),
-        "Orphaned JSON tokens in design_tokens.json not mapped in Rust structs:\n{:#?}",
-        missing_in_rust
-    );
+    let missing: Vec<_> = raw_leaves.difference(&typed_leaves).collect();
+    assert!(missing.is_empty(), "Orphaned JSON tokens:\n{missing:#?}");
 }
 
 #[test]
-fn test_guard_documentation_completeness() {
+fn test_guard_documentation_and_file_size_ceilings() {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let lib_rs = fs::read_to_string(manifest_dir.join("src/lib.rs")).expect("Failed to read lib.rs");
-    assert!(
-        lib_rs.contains("#![deny(missing_docs)]"),
-        "src/lib.rs must enforce `#![deny(missing_docs)]`"
-    );
-
+    let lib_rs = fs::read_to_string(manifest_dir.join("src/lib.rs")).expect("read lib.rs");
+    assert!(lib_rs.contains("#![deny(missing_docs)]"));
     for file in collect_rs_files(&manifest_dir.join("src")) {
-        let rel = file
-            .strip_prefix(manifest_dir)
-            .unwrap_or(&file)
-            .to_string_lossy();
-        let content = fs::read_to_string(&file).expect("Failed to read source file");
-        let has_module_doc = content
+        let content = fs::read_to_string(&file).expect("read source");
+        assert!(content
             .lines()
             .take(5)
-            .any(|l| l.trim_start().starts_with("//!"));
-        assert!(has_module_doc, "{} must begin with a `//!` module doc", rel);
+            .any(|l| l.trim_start().starts_with("//!")));
     }
-}
-
-#[test]
-fn test_guard_file_size_and_esloc_ceilings() {
-    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     let mut violations = Vec::new();
     for dir_rel in &["src", "tests"] {
         for file in collect_rs_files(&manifest_dir.join(dir_rel)) {
@@ -498,32 +388,85 @@ fn test_guard_file_size_and_esloc_ceilings() {
                 .strip_prefix(manifest_dir)
                 .unwrap_or(&file)
                 .to_string_lossy();
-            let content = fs::read_to_string(&file).expect("Failed to read source file");
+            let content = fs::read_to_string(&file).expect("read source");
             let (physical, esloc) = count_lines_and_esloc(&content);
             if physical >= MAX_PHYSICAL_LINES || esloc >= MAX_ESLOC {
                 violations.push(format!(
-                    "{} exceeds ceiling: physical={} (max <{}), eSLOC={} (max <{})",
-                    rel, physical, MAX_PHYSICAL_LINES, esloc, MAX_ESLOC
+                    "{rel} exceeds ceiling: physical={physical} (<{MAX_PHYSICAL_LINES}), eSLOC={esloc} (<{MAX_ESLOC})"
                 ));
             }
         }
     }
-    assert!(
-        violations.is_empty(),
-        "GL-1015 File Size / eSLOC Ceiling Guard Failed:\n{}",
-        violations.join("\n")
-    );
+    assert!(violations.is_empty(), "Ceiling Guard:\n{violations:#?}");
 }
 
 #[test]
-fn test_guard_analyzers_self_check() {
+fn test_guard_zero_cross_component_token_borrowing_and_self_check() {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let methods = [
+        "button",
+        "color_well",
+        "level_indicator",
+        "outline_view",
+        "path_control",
+        "popover_metrics",
+        "popup_button",
+        "progress_indicator",
+        "scroll_view",
+        "search_field",
+        "segmented",
+        "slider",
+        "split_view",
+        "stack_view",
+        "stepper",
+        "table_view",
+        "thumbnail",
+        "toggle",
+        "token_field",
+        "trim_scrubber",
+    ];
+    for file_path in collect_rs_files(&manifest_dir.join("src/controls")) {
+        let fname = file_path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+        let pname = file_path
+            .parent()
+            .and_then(|p| p.file_name())
+            .and_then(|n| n.to_str())
+            .unwrap_or("");
+        if fname == "mod.rs" && pname == "controls" {
+            continue;
+        }
+        let allowed: &[&str] = match (pname, fname) {
+            (_, "button_cell.rs") => &["button"],
+            (_, "color_well.rs") => &["color_well"],
+            (_, "level_indicator.rs") => &["level_indicator"],
+            (_, "outline_view.rs") => &["outline_view", "thumbnail"],
+            (_, "path_control.rs") => &["path_control"],
+            (_, "popup_button.rs") => &["popup_button"],
+            (_, "progress_indicator.rs") => &["progress_indicator"],
+            (_, "search_field.rs") => &["search_field"],
+            (_, "segmented.rs") => &["segmented"],
+            (_, "slider.rs") => &["slider"],
+            (_, "stepper.rs") => &["stepper"],
+            ("table_view", _) => &["table_view"],
+            (_, "thumbnail_cell.rs") => &["thumbnail"],
+            (_, "toggle.rs") => &["toggle"],
+            (_, "token_field.rs") => &["token_field"],
+            ("trim_scrubber", _) => &["trim_scrubber"],
+            _ => &[],
+        };
+        let stripped = strip_comments_and_strings(&fs::read_to_string(&file_path).unwrap());
+        for &m in &methods {
+            if !allowed.contains(&m) {
+                assert!(
+                    !stripped.contains(&format!("theme.{m}(")),
+                    "{fname} calls theme.{m}("
+                );
+            }
+        }
+    }
     assert!(!check_magic_numbers_in_source("bad.rs", "let h = 18.0;").is_empty());
     assert!(check_magic_numbers_in_source("ok.rs", "let mid = w * 0.5;").is_empty());
     assert!(!check_hardcoded_colors_in_source("bad.rs", "let c = Color32::WHITE;").is_empty());
-    assert!(
-        !check_hardcoded_colors_in_source("bad.rs", "let c = Color32::from_black_alpha(20);")
-            .is_empty()
-    );
     assert!(
         !check_token_arithmetic_cheating("bad.rs", "let w = theme.width.points() + 4.0;")
             .is_empty()

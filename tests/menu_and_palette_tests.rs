@@ -52,7 +52,10 @@ fn test_menu_bar_keyboard_navigation_and_action() {
     out1.textures_delta.clear();
     assert_eq!(open_menu_idx, Some(0));
     assert_eq!(highlighted_item_idx, Some(1));
-    assert!(!down_leaked, "Open MacMenuBar must consume ArrowDown navigation key");
+    assert!(
+        !down_leaked,
+        "Open MacMenuBar must consume ArrowDown navigation key"
+    );
 
     let mut raw_right = RawInput::default();
     raw_right.events.push(Event::Key {
@@ -139,20 +142,27 @@ fn test_menu_global_keyboard_shortcut_and_text_focus_guard() {
     });
     out.textures_delta.clear();
     assert_eq!(triggered, Some("file.save".to_string()));
-    assert!(!shortcut_leaked, "Matched menu shortcut Cmd+S must be consumed by MacMenuBar");
+    assert!(
+        !shortcut_leaked,
+        "Matched menu shortcut Cmd+S must be consumed by MacMenuBar"
+    );
 
     // 2. When a MacInputCell has keyboard focus (`wants_keyboard_input() == true`),
     // MacMenuBar::handle_shortcuts must NOT intercept shortcuts!
     let mut text = "Editing".to_string();
     let mut out_focus = ctx.run_ui(RawInput::default(), |ui| {
-        let resp = MacInputCell::new("focused_editor", &mut text).theme(&theme).show(ui);
+        let resp = MacInputCell::new("focused_editor", &mut text)
+            .theme(&theme)
+            .show(ui);
         resp.request_focus();
     });
     out_focus.textures_delta.clear();
 
     // Steady frame so TextEdit registers keyboard focus
     let mut out_steady = ctx.run_ui(RawInput::default(), |ui| {
-        MacInputCell::new("focused_editor", &mut text).theme(&theme).show(ui);
+        MacInputCell::new("focused_editor", &mut text)
+            .theme(&theme)
+            .show(ui);
     });
     out_steady.textures_delta.clear();
 
@@ -169,10 +179,13 @@ fn test_menu_global_keyboard_shortcut_and_text_focus_guard() {
     });
     let mut triggered_while_editing = None;
     let mut out_guard = ctx.run_ui(raw_while_editing, |ui| {
-        MacInputCell::new("focused_editor", &mut text).theme(&theme).show(ui);
-        triggered_while_editing = MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx)
+        MacInputCell::new("focused_editor", &mut text)
             .theme(&theme)
             .show(ui);
+        triggered_while_editing =
+            MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx)
+                .theme(&theme)
+                .show(ui);
     });
     out_guard.textures_delta.clear();
 
@@ -222,7 +235,9 @@ fn test_menu_bar_outside_click_dismissal_and_checked_item() {
     out2.textures_delta.clear();
 
     let mut release_outside = RawInput::default();
-    release_outside.events.push(Event::PointerMoved(outside_pos));
+    release_outside
+        .events
+        .push(Event::PointerMoved(outside_pos));
     release_outside.events.push(Event::PointerButton {
         pos: outside_pos,
         button: PointerButton::Primary,
@@ -332,19 +347,20 @@ fn test_standard_menu_bar_presets_and_accelerator_clearance() {
 
     let ctx = Context::default();
     let theme = MacTheme::new(MacAppearance::DarkAqua);
-    let items = vec![
-        NSMenuItem::action_with_shortcut(
-            "Export Compressed Keyframe Archive...",
-            "file.export_long",
-            MacKeyboardShortcut::cmd_shift(Key::E),
-        ),
-    ];
+    let items = vec![NSMenuItem::action_with_shortcut(
+        "Export Compressed Keyframe Archive...",
+        "file.export_long",
+        MacKeyboardShortcut::cmd_shift(Key::E),
+    )];
     let menus = vec![NSMenu::with_items("File", items)];
     let mut open_menu_idx = Some(0);
     let mut highlighted_item_idx = Some(0);
 
     let raw_input = RawInput {
-        screen_rect: Some(egui::Rect::from_min_size(Pos2::ZERO, egui::vec2(1024.0, 768.0))),
+        screen_rect: Some(egui::Rect::from_min_size(
+            Pos2::ZERO,
+            egui::vec2(1024.0, 768.0),
+        )),
         ..Default::default()
     };
 

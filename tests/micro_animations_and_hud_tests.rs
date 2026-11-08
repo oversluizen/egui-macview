@@ -234,7 +234,10 @@ fn test_mac_toolbar_widget_traffic_lights_and_windows_caption_interactions() {
         assert_eq!(resp.response.rect.height(), 44.0);
         assert!(!resp.close_clicked);
         let r = apple_theme.toolbar_metrics().traffic_light_radius.points();
-        close_pos = Pos2::new(resp.response.rect.left() + r * 4.0, resp.response.rect.center().y);
+        close_pos = Pos2::new(
+            resp.response.rect.left() + r * 4.0,
+            resp.response.rect.center().y,
+        );
     });
     out1.textures_delta.clear();
 
@@ -274,7 +277,10 @@ fn test_mac_toolbar_widget_traffic_lights_and_windows_caption_interactions() {
         close_fired = resp.close_clicked;
     });
     out3.textures_delta.clear();
-    assert!(close_fired, "Clicking Apple close traffic light must set close_clicked = true");
+    assert!(
+        close_fired,
+        "Clicking Apple close traffic light must set close_clicked = true"
+    );
 
     // 3. Render MacToolbar with WindowsCaptionButtons
     let win_theme = MacTheme::new(MacAppearance::DarkAqua)
@@ -310,4 +316,3 @@ fn test_mac_floating_infobox_widget_rendering_oracle() {
     });
     out.textures_delta.clear();
 }
-

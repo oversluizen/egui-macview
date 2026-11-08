@@ -150,14 +150,18 @@ pub fn render_submenu_popover(
                 let trailing_w = match &item.kind {
                     MacMenuItemKind::Action {
                         shortcut: Some(sc), ..
-                    } => painter
-                        .layout_no_wrap(sc.format_text(), font_id.clone(), on_accent)
-                        .size()
-                        .x,
-                    MacMenuItemKind::Submenu { .. } => painter
-                        .layout_no_wrap("›".to_string(), font_id.clone(), on_accent)
-                        .size()
-                        .x,
+                    } => {
+                        painter
+                            .layout_no_wrap(sc.format_text(), font_id.clone(), on_accent)
+                            .size()
+                            .x
+                    }
+                    MacMenuItemKind::Submenu { .. } => {
+                        painter
+                            .layout_no_wrap("›".to_string(), font_id.clone(), on_accent)
+                            .size()
+                            .x
+                    }
                     _ => 0.0,
                 };
 

@@ -485,14 +485,12 @@ fn test_context_menu_click_outside_dismissal() {
     });
     out1.textures_delta.clear();
 
-    assert!(!is_open, "Primary click outside context menu bounds must dismiss the menu");
-    assert_eq!(triggered, None, "Dismissal must not trigger any action");
+    assert!(!is_open, "Primary click outside context menu must dismiss");
+    assert_eq!(triggered, None);
 
     // 2. Secondary (right) click outside menu bounds also dismisses menu without action
-    let mut is_open_sec = true;
-    let mut spawn_pos_sec = Pos2::new(100.0, 100.0);
-    let mut selected_idx_sec = None;
-
+    let (mut is_open_sec, mut spawn_pos_sec, mut selected_idx_sec) =
+        (true, Pos2::new(100.0, 100.0), None);
     let mut raw_sec = RawInput::default();
     raw_sec.events.push(Event::PointerButton {
         pos: click_outside_pos,
@@ -514,9 +512,6 @@ fn test_context_menu_click_outside_dismissal() {
     });
     out2.textures_delta.clear();
 
-    assert!(
-        !is_open_sec,
-        "Secondary click outside context menu bounds must dismiss the menu"
-    );
+    assert!(!is_open_sec);
     assert_eq!(triggered_sec, None);
 }

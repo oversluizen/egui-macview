@@ -3,6 +3,7 @@
 pub mod basic;
 pub mod extended;
 pub mod selection_and_value;
+pub mod studio;
 
 pub use basic::{
     default_border_width, ButtonMetrics, ButtonSizeMetrics, FocusRingMetrics, SegmentedMetrics,
@@ -11,6 +12,10 @@ pub use basic::{
 pub use extended::{
     ColorWellMetrics, OutlineViewMetrics, PopUpButtonMetrics, SearchFieldMetrics, SliderMetrics,
     StepperMetrics, ThumbnailCellMetrics, ToggleMetrics,
+};
+pub use studio::{
+    LevelIndicatorMetrics, PathControlMetrics, ProgressIndicatorMetrics, ProgressSizeMetrics,
+    TableViewMetrics, TokenFieldMetrics, TrimScrubberMetrics,
 };
 
 use crate::tokens::dtcg::DimensionValue;
@@ -58,4 +63,22 @@ pub struct MacControlMetrics {
     /// Opacity multiplier for disabled controls.
     #[serde(default = "default_disabled_opacity")]
     pub disabled_opacity: DimensionValue,
+    /// Progress indicator metrics.
+    #[serde(default)]
+    pub progress_indicator: ProgressIndicatorMetrics,
+    /// Table view and header metrics.
+    #[serde(default)]
+    pub table_view: TableViewMetrics,
+    /// Token field pill input metrics.
+    #[serde(default)]
+    pub token_field: TokenFieldMetrics,
+    /// Level indicator meter metrics.
+    #[serde(default)]
+    pub level_indicator: LevelIndicatorMetrics,
+    /// Trim scrubber timeline metrics.
+    #[serde(default)]
+    pub trim_scrubber: TrimScrubberMetrics,
+    /// Path control breadcrumb metrics.
+    #[serde(default)]
+    pub path_control: PathControlMetrics,
 }

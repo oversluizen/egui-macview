@@ -132,7 +132,9 @@ fn test_scroll_view_offset_and_simulated_drag() {
     out2.textures_delta.clear();
 
     let mut input_move = RawInput::default();
-    input_move.events.push(Event::PointerMoved(Pos2::new(113.5, 33.0)));
+    input_move
+        .events
+        .push(Event::PointerMoved(Pos2::new(113.5, 33.0)));
     let mut dragged_offset = Vec2::ZERO;
     let mut out3 = ctx.run_ui(input_move, |ui| {
         let output = MacScrollView::new("test_scroll_drag")
@@ -174,7 +176,8 @@ fn test_stack_view_and_fixed_view_clip_rect() {
 
         let sub_rect = Rect::from_min_size(Pos2::new(10.0, 10.0), Vec2::new(50.0, 30.0));
         let mut child_clip = Rect::NOTHING;
-        let mut fixed = MacFixedView::new(ui, Rect::from_min_size(Pos2::ZERO, Vec2::new(200.0, 200.0)));
+        let mut fixed =
+            MacFixedView::new(ui, Rect::from_min_size(Pos2::ZERO, Vec2::new(200.0, 200.0)));
         fixed.subview(Pos2::new(10.0, 10.0), Vec2::new(50.0, 30.0), |child| {
             child_clip = child.clip_rect();
         });
@@ -207,7 +210,10 @@ fn test_mac_form_inspector_alignment_and_trailing_labels() {
                 .theme(&theme)
                 .show(ui, |form| {
                     let (l1, c1) = form.row_label("Rotation:", |ui| {
-                        MacSlider::new(&mut rotation, 0.0..=360.0).theme(&theme).width(120.0).show(ui)
+                        MacSlider::new(&mut rotation, 0.0..=360.0)
+                            .theme(&theme)
+                            .width(120.0)
+                            .show(ui)
                     });
                     let (l2, c2) = form.row_label("Fine Step:", |ui| {
                         ui.add(MacStepper::new(&mut fine_step, 0.0..=360.0, 5.0).theme(&theme))
@@ -216,7 +222,10 @@ fn test_mac_form_inspector_alignment_and_trailing_labels() {
                         ui.add(MacToggle::new(&mut toggle).theme(&theme))
                     });
                     let (l4, c4) = form.row_label("Name:", |ui| {
-                        MacInputCell::new("test_input_name", &mut text).theme(&theme).width(180.0).show(ui)
+                        MacInputCell::new("test_input_name", &mut text)
+                            .theme(&theme)
+                            .width(180.0)
+                            .show(ui)
                     });
                     let (l5, c5) = form.row_label("Fill Color:", |ui| {
                         MacColorWell::new(&mut color).theme(&theme).show(ui)

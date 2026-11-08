@@ -4,7 +4,9 @@
 //! Fully data-driven: zero hardcoded metrics.
 
 use crate::theme::MacTheme;
-use egui::{CornerRadius, Key, Modifiers, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2};
+use egui::{
+    CornerRadius, Key, Modifiers, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2,
+};
 
 /// Authentic macOS segmented pill selector (`NSSegmentedControl` equivalent).
 ///
@@ -93,9 +95,9 @@ impl<'a> MacSegmentedControl<'a> {
 
         let mut max_content_w = min_item_w;
         for opt in self.options.iter() {
-            let galley = ui
-                .painter()
-                .layout_no_wrap((*opt).to_string(), font_id.clone(), theme.label());
+            let galley =
+                ui.painter()
+                    .layout_no_wrap((*opt).to_string(), font_id.clone(), theme.label());
             let padded_w = galley.size().x + padding_h * 2.0;
             if padded_w > max_content_w {
                 max_content_w = padded_w;

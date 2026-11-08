@@ -305,8 +305,10 @@ impl<'a> Widget for MacPopUpButton<'a> {
                 .sense(Sense::click())
                 .fixed_pos(popup_pos)
                 .show(ui.ctx(), |menu_ui| {
-                    let (menu_rect, _bg_resp) = menu_ui
-                        .allocate_exact_size(Vec2::new(menu_width, total_menu_height), Sense::click());
+                    let (menu_rect, _bg_resp) = menu_ui.allocate_exact_size(
+                        Vec2::new(menu_width, total_menu_height),
+                        Sense::click(),
+                    );
                     if menu_ui.rect_contains_pointer(menu_rect) {
                         menu_ui.input_mut(|i| {
                             i.smooth_scroll_delta = Vec2::ZERO;

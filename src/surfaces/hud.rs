@@ -104,8 +104,7 @@ impl<'a> MacFloatingInfoBox<'a> {
                     });
                 }
 
-                let header_rect =
-                    Rect::from_min_size(hud_rect.min, Vec2::new(hud_w, header_h));
+                let header_rect = Rect::from_min_size(hud_rect.min, Vec2::new(hud_w, header_h));
                 let header_resp = ui.interact(
                     header_rect,
                     self.id.with("hud_header_drag"),
@@ -208,7 +207,11 @@ impl<'a> MacFloatingInfoBox<'a> {
         };
         let theme_clone = theme_ref.clone();
         let hud_id = self.id;
-        let cell_w = theme_clone.text_field().compact_infobox.default_width.points();
+        let cell_w = theme_clone
+            .text_field()
+            .compact_infobox
+            .default_width
+            .points();
         let font_pt = theme_clone.text_field().compact_infobox.font_size.points();
         let label_col = theme_clone.hud_secondary_text();
 
@@ -220,7 +223,11 @@ impl<'a> MacFloatingInfoBox<'a> {
         self.show(
             ctx,
             |r1| {
-                r1.label(RichText::new("X").font(FontId::proportional(font_pt)).color(label_col));
+                r1.label(
+                    RichText::new("X")
+                        .font(FontId::proportional(font_pt))
+                        .color(label_col),
+                );
                 MacInputCell::new(id_x, x_val)
                     .theme(&theme_clone)
                     .control_size(MacControlSize::CompactInfobox)
@@ -228,7 +235,11 @@ impl<'a> MacFloatingInfoBox<'a> {
                     .prev_focus(id_h)
                     .next_focus(id_y)
                     .show(r1);
-                r1.label(RichText::new("Y").font(FontId::proportional(font_pt)).color(label_col));
+                r1.label(
+                    RichText::new("Y")
+                        .font(FontId::proportional(font_pt))
+                        .color(label_col),
+                );
                 MacInputCell::new(id_y, y_val)
                     .theme(&theme_clone)
                     .control_size(MacControlSize::CompactInfobox)
@@ -238,7 +249,11 @@ impl<'a> MacFloatingInfoBox<'a> {
                     .show(r1);
             },
             |r2| {
-                r2.label(RichText::new("W").font(FontId::proportional(font_pt)).color(label_col));
+                r2.label(
+                    RichText::new("W")
+                        .font(FontId::proportional(font_pt))
+                        .color(label_col),
+                );
                 MacInputCell::new(id_w, w_val)
                     .theme(&theme_clone)
                     .control_size(MacControlSize::CompactInfobox)
@@ -246,7 +261,11 @@ impl<'a> MacFloatingInfoBox<'a> {
                     .prev_focus(id_y)
                     .next_focus(id_h)
                     .show(r2);
-                r2.label(RichText::new("H").font(FontId::proportional(font_pt)).color(label_col));
+                r2.label(
+                    RichText::new("H")
+                        .font(FontId::proportional(font_pt))
+                        .color(label_col),
+                );
                 MacInputCell::new(id_h, h_val)
                     .theme(&theme_clone)
                     .control_size(MacControlSize::CompactInfobox)

@@ -285,8 +285,11 @@ impl<'a> Widget for MacSlider<'a> {
         let now = ui.input(|i| i.time);
         let spring_key = response.id.with("press_scale");
         let (prev_target, start_val, start_time) = ui.data(|d| {
-            d.get_temp::<(f32, f32, f64)>(spring_key)
-                .unwrap_or((press_scale_target, press_scale_target, now))
+            d.get_temp::<(f32, f32, f64)>(spring_key).unwrap_or((
+                press_scale_target,
+                press_scale_target,
+                now,
+            ))
         });
         let anim_scale = if (prev_target - press_scale_target).abs() > f32::EPSILON {
             let elapsed = (now - start_time).max(0.0) as f32;

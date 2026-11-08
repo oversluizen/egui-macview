@@ -80,9 +80,13 @@ pub use theme::{
 };
 
 pub use controls::{
-    MacButtonCell, MacColorWell, MacControlSize, MacInputCell, MacOutlineRow,
-    MacOutlineRowResponse, MacOutlineTree, MacOutlineView, MacPopUpButton, MacSearchField,
-    MacSegmentedControl, MacSlider, MacStepper, MacThumbnailCell, MacToggle,
+    MacButtonCell, MacColorWell, MacControlSize, MacInputCell, MacLevelIndicator,
+    MacLevelIndicatorStyle, MacLevelOrientation, MacOutlineRow, MacOutlineRowResponse,
+    MacOutlineTree, MacOutlineView, MacPathComponent, MacPathControl, MacPathControlResponse,
+    MacPopUpButton, MacProgressControlSize, MacProgressIndicator, MacProgressStyle, MacSearchField,
+    MacSegmentedControl, MacSlider, MacSortDirection, MacStepper, MacTableColumn, MacTableView,
+    MacTableViewResponse, MacThumbnailCell, MacTimelineZone, MacToggle, MacTokenField,
+    MacTrimScrubber, MacTrimScrubberResponse,
 };
 pub use feedback::{clamp_menu_rect, MacContextMenu, MacToast, MacToastManager, ToastLevel};
 pub use layout::{
@@ -99,8 +103,10 @@ pub use navigation::{
 pub use state::{NSUndoManager, DEFAULT_UNDO_CAPACITY};
 pub use surfaces::{MacCard, MacFloatingInfoBox, MacPanel, MacPopover, MacPopoverArrowEdge};
 pub use tokens::{
-    sf_pro_tracking, ColorWellMetrics, LayoutMetrics, MacColorTokens, MacControlMetrics,
-    MacDesignTokens, MacMotionTokens, MacTypographyTokens, OutlineViewMetrics, PopUpButtonMetrics,
+    sf_pro_tracking, ColorWellMetrics, LayoutMetrics, LevelIndicatorMetrics, MacColorTokens,
+    MacControlMetrics, MacDesignTokens, MacMotionTokens, MacTypographyTokens, OutlineViewMetrics,
+    PathControlMetrics, PopUpButtonMetrics, ProgressIndicatorMetrics, ProgressSizeMetrics,
     ScrollViewMetrics, SearchFieldMetrics, SliderMetrics, SplitViewMetrics, StackViewMetrics,
-    StepperMetrics, ThumbnailCellMetrics,
+    StepperMetrics, TableViewMetrics, ThumbnailCellMetrics, ToggleMetrics, TokenFieldMetrics,
+    TrimScrubberMetrics,
 };

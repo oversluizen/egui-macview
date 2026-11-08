@@ -31,7 +31,12 @@ impl<'a> MacMenuBar<'a> {
         open_menu_idx: &'a mut Option<usize>,
         highlighted_item_idx: &'a mut Option<usize>,
     ) -> Self {
-        Self { menus, theme: None, open_menu_idx, highlighted_item_idx }
+        Self {
+            menus,
+            theme: None,
+            open_menu_idx,
+            highlighted_item_idx,
+        }
     }
 
     /// Sets the dynamic theme.
@@ -55,8 +60,16 @@ impl<'a> MacMenuBar<'a> {
         }
         let curr = self.highlighted_item_idx.unwrap_or(0);
         for step in 1..=len {
-            let next = if forward { (curr + step) % len } else { (curr + len - (step % len)) % len };
-            if menu.items.get(next).is_some_and(|it| it.enabled && !matches!(it.kind, MacMenuItemKind::Separator)) {
+            let next = if forward {
+                (curr + step) % len
+            } else {
+                (curr + len - (step % len)) % len
+            };
+            if menu
+                .items
+                .get(next)
+                .is_some_and(|it| it.enabled && !matches!(it.kind, MacMenuItemKind::Separator))
+            {
                 *self.highlighted_item_idx = Some(next);
                 break;
             }
@@ -97,7 +110,11 @@ impl<'a> MacMenuBar<'a> {
     pub fn handle_navigation_input(&mut self, input: &egui::InputState) -> Option<String> {
         let mut sub = None;
         super::submenu::handle_menu_bar_navigation(
-            self.menus, self.open_menu_idx, self.highlighted_item_idx, &mut sub, input,
+            self.menus,
+            self.open_menu_idx,
+            self.highlighted_item_idx,
+            &mut sub,
+            input,
         )
     }
 
@@ -196,14 +213,25 @@ impl<'a> MacMenuBar<'a> {
                 bar_union_rect = bar_union_rect.union(rect);
 
                 if is_open {
-                    ui.painter().rect_filled(rect, CornerRadius::same(item_corner_r), theme.control_accent());
+                    ui.painter().rect_filled(
+                        rect,
+                        CornerRadius::same(item_corner_r),
+                        theme.control_accent(),
+                    );
                     open_rect = Some(rect);
                 } else if resp.hovered() {
-                    ui.painter().rect_filled(rect, CornerRadius::same(item_corner_r), theme.control());
+                    ui.painter().rect_filled(
+                        rect,
+                        CornerRadius::same(item_corner_r),
+                        theme.control(),
+                    );
                 }
 
                 ui.painter().galley(
-                    Pos2::new(rect.min.x + padding_h, rect.center().y - galley.size().y * 0.5),
+                    Pos2::new(
+                        rect.min.x + padding_h,
+                        rect.center().y - galley.size().y * 0.5,
+                    ),
                     galley,
                     text_color,
                 );
@@ -245,21 +273,19 @@ impl<'a> MacMenuBar<'a> {
                         .layout_no_wrap(item.title.clone(), font_id.clone(), on_accent)
                         .size()
                         .x;
-                    let trailing_w = match &item.kind {
+                    let trailing_str = match &item.kind {
                         MacMenuItemKind::Action {
                             shortcut: Some(sc), ..
-                        } => ui
-                            .painter()
-                            .layout_no_wrap(sc.format_text(), font_id.clone(), on_accent)
-                            .size()
-                            .x,
-                        MacMenuItemKind::Submenu { .. } => ui
-                            .painter()
-                            .layout_no_wrap("›".to_string(), font_id.clone(), on_accent)
-                            .size()
-                            .x,
-                        _ => 0.0,
+                        } => Some(sc.format_text()),
+                        MacMenuItemKind::Submenu { .. } => Some("›".to_string()),
+                        _ => None,
                     };
+                    let trailing_w = trailing_str.map_or(0.0, |s| {
+                        ui.painter()
+                            .layout_no_wrap(s, font_id.clone(), on_accent)
+                            .size()
+                            .x
+                    });
 
                     let item_w = if trailing_w > 0.0 {
                         lead_offset + padding_h + title_w + min_clearance + trailing_w * 2.0
@@ -271,8 +297,7 @@ impl<'a> MacMenuBar<'a> {
 
                 let menu_width = base_min_width.max(max_item_w + menu_padding * 2.0);
                 let popup_pos = Pos2::new(anchor.left(), anchor.bottom());
-                let menu_rect =
-                    Rect::from_min_size(popup_pos, Vec2::new(menu_width, total_height));
+                let menu_rect = Rect::from_min_size(popup_pos, Vec2::new(menu_width, total_height));
                 let area_id = ui.scope_id().with("menu_dropdown_area").with(m_idx);
                 let mut active_sub_rect: Option<Rect> = None;
 
@@ -357,34 +382,23 @@ impl<'a> MacMenuBar<'a> {
                                 item_text_color,
                             );
 
-                            match &item.kind {
+                            let right_str = match &item.kind {
                                 MacMenuItemKind::Action {
                                     shortcut: Some(sc), ..
-                                } => {
-                                    painter.text(
-                                        Pos2::new(
-                                            item_rect.right() - padding_h,
-                                            item_rect.center().y,
-                                        ),
-                                        Align2::RIGHT_CENTER,
-                                        sc.format_text(),
-                                        font_id.clone(),
-                                        item_text_color,
-                                    );
-                                }
-                                MacMenuItemKind::Submenu { .. } => {
-                                    painter.text(
-                                        Pos2::new(
-                                            item_rect.right() - padding_h,
-                                            item_rect.center().y,
-                                        ),
-                                        Align2::RIGHT_CENTER,
-                                        "›",
-                                        font_id.clone(),
-                                        item_text_color,
-                                    );
-                                }
-                                _ => {}
+                                } => Some(sc.format_text()),
+                                MacMenuItemKind::Submenu { .. } => Some("›".to_string()),
+                                _ => None,
+                            };
+                            if let Some(txt) = right_str {
+                                let pos =
+                                    Pos2::new(item_rect.right() - padding_h, item_rect.center().y);
+                                painter.text(
+                                    pos,
+                                    Align2::RIGHT_CENTER,
+                                    txt,
+                                    font_id.clone(),
+                                    item_text_color,
+                                );
                             }
 
                             if resp.clicked() && item.enabled {
