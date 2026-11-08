@@ -69,6 +69,8 @@ pub(crate) struct GalleryApp {
     pub(crate) appearance: MacAppearance,
     pub(crate) window_controls_style: WindowControlsStyle,
     pub(crate) last_window_controls_style: Option<WindowControlsStyle>,
+    pub(crate) pending_decoration_resync_frames: u8,
+    pub(crate) pending_target_inner_size: Option<egui::Vec2>,
     pub(crate) inspector_mode: InspectorMode,
     pub(crate) last_inspector_mode: InspectorMode,
     pub(crate) active_screen: GalleryScreen,
@@ -131,6 +133,8 @@ impl GalleryApp {
             appearance: MacAppearance::Aqua,
             window_controls_style: WindowControlsStyle::AppleTrafficLights,
             last_window_controls_style: Some(WindowControlsStyle::AppleTrafficLights),
+            pending_decoration_resync_frames: 0,
+            pending_target_inner_size: None,
             inspector_mode: InspectorMode::ExpandedPro,
             last_inspector_mode: InspectorMode::ExpandedPro,
             active_screen: GalleryScreen::CanvasPhysics,
@@ -164,6 +168,9 @@ impl eframe::App for GalleryApp {
 
 impl GalleryApp {
     pub(crate) fn render_ui(&mut self, ui: &mut egui::Ui) {
+        if let Some(host_maximized) = ui.input(|i| i.viewport().maximized) {
+            self.is_maximized = host_maximized;
+        }
         let focused_id = ui.memory(|m| m.focused());
         let prev_focused = self.active_text_focus.get();
         if prev_focused.is_some() && prev_focused != focused_id {
@@ -204,14 +211,9 @@ impl GalleryApp {
         let full_rect = ui.available_rect_before_wrap();
         let on_resize_border = self.handle_frameless_resize(ui, full_rect, &theme);
 
-        let rounding = if self.window_controls_style == WindowControlsStyle::NativeHost {
-            CornerRadius::ZERO
-        } else {
-            CornerRadius::same(10)
-        };
         ui.painter_at(full_rect).rect(
             full_rect,
-            rounding,
+            CornerRadius::ZERO,
             theme.window_background(),
             Stroke::new(1.0, theme.separator()),
             StrokeKind::Inside,

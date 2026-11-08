@@ -298,11 +298,63 @@ impl GalleryApp {
         self.is_maximized = is_max;
 
         if self.last_window_controls_style != Some(self.window_controls_style) {
+            let prev_was_native =
+                self.last_window_controls_style == Some(WindowControlsStyle::NativeHost);
             self.last_window_controls_style = Some(self.window_controls_style);
             let native_decorations = self.window_controls_style == WindowControlsStyle::NativeHost;
-            ui.ctx()
-                .send_viewport_cmd(ViewportCommand::Decorations(native_decorations));
-            ui.ctx().send_viewport_cmd(ViewportCommand::Focus);
+            if prev_was_native != native_decorations || self.pending_decoration_resync_frames > 0 {
+                let target_size = if self.pending_decoration_resync_frames == 0 {
+                    let cur = ui
+                        .input(|i| i.viewport().inner_rect.map(|r| r.size()))
+                        .unwrap_or_else(|| ui.ctx().content_rect().size());
+                    egui::vec2(cur.x.max(900.0), cur.y.max(540.0))
+                } else {
+                    self.pending_target_inner_size
+                        .unwrap_or_else(|| egui::vec2(1160.0, 740.0))
+                };
+                self.pending_target_inner_size = Some(target_size);
+                self.pending_decoration_resync_frames = 2;
+                ui.ctx()
+                    .send_viewport_cmd(ViewportCommand::Decorations(native_decorations));
+                if self.is_maximized {
+                    ui.ctx()
+                        .send_viewport_cmd(ViewportCommand::Maximized(false));
+                    ui.ctx().send_viewport_cmd(ViewportCommand::Maximized(true));
+                } else {
+                    ui.ctx()
+                        .send_viewport_cmd(ViewportCommand::InnerSize(egui::vec2(
+                            target_size.x + 1.0,
+                            target_size.y + 1.0,
+                        )));
+                }
+                ui.ctx().send_viewport_cmd(ViewportCommand::Focus);
+                ui.ctx().request_repaint();
+            } else {
+                ui.ctx()
+                    .send_viewport_cmd(ViewportCommand::Decorations(native_decorations));
+                ui.ctx().send_viewport_cmd(ViewportCommand::Focus);
+            }
+        } else if self.pending_decoration_resync_frames > 0 {
+            self.pending_decoration_resync_frames -= 1;
+            if let Some(target_size) = self.pending_target_inner_size {
+                if self.is_maximized {
+                    ui.ctx().send_viewport_cmd(ViewportCommand::Maximized(true));
+                } else if self.pending_decoration_resync_frames == 1 {
+                    ui.ctx()
+                        .send_viewport_cmd(ViewportCommand::InnerSize(egui::vec2(
+                            target_size.x + 1.0,
+                            target_size.y,
+                        )));
+                } else {
+                    ui.ctx()
+                        .send_viewport_cmd(ViewportCommand::InnerSize(target_size));
+                }
+            }
+            if self.pending_decoration_resync_frames == 0 {
+                self.pending_target_inner_size = None;
+                ui.ctx().send_viewport_cmd(ViewportCommand::Focus);
+            }
+            ui.ctx().request_repaint();
         }
         if toggle_palette {
             self.palette.toggle();

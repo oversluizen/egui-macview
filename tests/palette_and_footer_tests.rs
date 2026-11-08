@@ -358,44 +358,90 @@ fn test_caspring_controls_do_not_request_repaint_at_rest() {
 fn test_inspector_convert_card_units_and_scale() {
     let mut card = gallery_app::CardModel::default();
     assert_eq!(
-        (
-            card.width.as_str(),
-            card.height.as_str(),
-            card.radius.as_str()
-        ),
+        (&*card.width, &*card.height, &*card.radius),
         ("260.0", "150.0", "10.0")
     );
-
-    // Points (0) -> Pixels (1) (2x Retina scale)
     gallery_app::convert_card_units(&mut card, 0, 1);
     assert_eq!(
-        (
-            card.width.as_str(),
-            card.height.as_str(),
-            card.radius.as_str()
-        ),
+        (&*card.width, &*card.height, &*card.radius),
         ("520.0", "300.0", "20.0")
     );
-
-    // Pixels (1) -> Percent (2) (260pt = 100%, 150pt = 100%, 10pt / 40pt = 25%)
     gallery_app::convert_card_units(&mut card, 1, 2);
     assert_eq!(
-        (
-            card.width.as_str(),
-            card.height.as_str(),
-            card.radius.as_str()
-        ),
+        (&*card.width, &*card.height, &*card.radius),
         ("100.0", "100.0", "25.0")
     );
-
-    // Percent (2) -> Points (0) round-trip
     gallery_app::convert_card_units(&mut card, 2, 0);
     assert_eq!(
-        (
-            card.width.as_str(),
-            card.height.as_str(),
-            card.radius.as_str()
-        ),
+        (&*card.width, &*card.height, &*card.radius),
         ("260.0", "150.0", "10.0")
     );
+}
+
+#[test]
+fn test_gallery_native_to_custom_chrome_resize_and_hitbox_resync() {
+    use egui::ViewportCommand as VC;
+    use egui_macview::theme::WindowControlsStyle as WCS;
+    let (ctx, mut app) = (Context::default(), gallery_app::GalleryApp::new());
+    let run_frame = |app: &mut gallery_app::GalleryApp, sz: egui::Vec2, maximized: Option<bool>| {
+        let rect = egui::Rect::from_min_size(Pos2::ZERO, sz);
+        let mut raw = RawInput {
+            screen_rect: Some(rect),
+            ..Default::default()
+        };
+        let vp = raw.viewports.entry(egui::ViewportId::ROOT).or_default();
+        (vp.inner_rect, vp.maximized) = (Some(rect), maximized);
+        let mut out = ctx.run_ui(raw, |ui| app.render_ui(ui));
+        out.textures_delta.clear();
+        let vp_out = out.viewport_output.remove(&egui::ViewportId::ROOT).unwrap();
+        (vp_out.commands, vp_out.repaint_delay)
+    };
+
+    let init_sz = egui::vec2(1160.0, 740.0);
+    let _ = run_frame(&mut app, init_sz, Some(false));
+    let (cmds_idle, _) = run_frame(&mut app, init_sz, Some(false));
+    assert!(!cmds_idle
+        .iter()
+        .any(|c| matches!(c, VC::Decorations(_) | VC::InnerSize(_))));
+
+    // 1. AppleTrafficLights -> NativeHost: Decorations(true) + InnerSize nudge/restore + repaint
+    app.window_controls_style = WCS::NativeHost;
+    let (c0, d0) = run_frame(&mut app, init_sz, Some(false));
+    assert!(c0.contains(&VC::Decorations(true)) && d0.is_zero());
+    assert!(c0.contains(&VC::InnerSize(egui::vec2(1161.0, 741.0))));
+    let (c1, d1) = run_frame(&mut app, init_sz, Some(false));
+    assert!(c1.contains(&VC::InnerSize(egui::vec2(1161.0, 740.0))) && d1.is_zero());
+    let (c2, d2) = run_frame(&mut app, init_sz, Some(false));
+    assert!(c2.contains(&VC::InnerSize(init_sz)) && d2.is_zero());
+
+    // 2. Resize in NativeHost to 1320x840, then switch back to WindowsCaptionButtons
+    let new_sz = egui::vec2(1320.0, 840.0);
+    let _ = run_frame(&mut app, new_sz, Some(false));
+    app.window_controls_style = WCS::WindowsCaptionButtons;
+    let (cw0, _) = run_frame(&mut app, new_sz, Some(false));
+    assert!(cw0.contains(&VC::Decorations(false)));
+    assert!(cw0.contains(&VC::InnerSize(egui::vec2(1321.0, 841.0))));
+    let _ = run_frame(&mut app, new_sz, Some(false));
+    let (cw2, dw2) = run_frame(&mut app, new_sz, Some(false));
+    assert!(cw2.contains(&VC::InnerSize(new_sz)) && dw2.is_zero());
+
+    // 3. Maximize in NativeHost, then switch to AppleTrafficLights: toggles Maximized(false)->Maximized(true)
+    app.window_controls_style = WCS::NativeHost;
+    let _ = run_frame(&mut app, new_sz, Some(true));
+    assert!(app.is_maximized);
+    app.window_controls_style = WCS::AppleTrafficLights;
+    let (cmds_max, _) = run_frame(&mut app, new_sz, Some(true));
+    assert!(cmds_max.contains(&VC::Maximized(false)) && cmds_max.contains(&VC::Maximized(true)));
+    let _ = run_frame(&mut app, new_sz, Some(false));
+    let _ = run_frame(&mut app, new_sz, Some(false));
+    assert!(!app.is_maximized);
+
+    // 4. Rapid consecutive toggle mid-resync preserves target_size without +1pt drift
+    app.window_controls_style = WCS::NativeHost;
+    let _ = run_frame(&mut app, new_sz, Some(false));
+    app.window_controls_style = WCS::WindowsCaptionButtons;
+    let _ = run_frame(&mut app, new_sz, Some(false));
+    let _ = run_frame(&mut app, new_sz, Some(false));
+    let (cmds_rapid, _) = run_frame(&mut app, new_sz, Some(false));
+    assert!(cmds_rapid.contains(&VC::InnerSize(new_sz)));
 }
