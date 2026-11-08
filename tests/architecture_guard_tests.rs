@@ -259,6 +259,28 @@ pub fn check_domain_leakage_in_source(file_label: &str, source: &str) -> Vec<Str
     violations
 }
 
+pub fn check_uibuilder_id_salt_in_source(file_label: &str, source: &str) -> Vec<String> {
+    let stripped = strip_comments_and_strings(source);
+    let (mut violations, needle, mut from) = (Vec::new(), "UiBuilder::new()", 0);
+    while let Some(rel) = stripped[from..].find(needle) {
+        let abs = from + rel;
+        let line_num = stripped[..abs].lines().count().max(1);
+        let after = &stripped[abs + needle.len()..];
+        let span = after
+            .find(';')
+            .unwrap_or(after.len())
+            .min(after.find(needle).unwrap_or(after.len()))
+            .min(300);
+        if !after[..span].contains(".id_salt(") {
+            violations.push(format!(
+                "{file_label}:{line_num} -> `UiBuilder::new()` missing `.id_salt(...)`"
+            ));
+        }
+        from = abs + needle.len();
+    }
+    violations
+}
+
 fn collect_json_leaf_paths(
     val: &serde_json::Value,
     prefix: String,
@@ -329,7 +351,7 @@ fn test_guard_zero_magic_numbers_and_colors_in_ui_components() {
 #[test]
 fn test_guard_zero_token_arithmetic_and_domain_purity() {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let (mut math_v, mut domain_v) = (Vec::new(), Vec::new());
+    let (mut math_v, mut domain_v, mut salt_v) = (Vec::new(), Vec::new(), Vec::new());
     for file in collect_rs_files(&manifest_dir.join("src")) {
         let rel = file
             .strip_prefix(manifest_dir)
@@ -338,6 +360,7 @@ fn test_guard_zero_token_arithmetic_and_domain_purity() {
         let content = fs::read_to_string(&file).expect("read source");
         math_v.extend(check_token_arithmetic_cheating(&rel, &content));
         domain_v.extend(check_domain_leakage_in_source(&rel, &content));
+        salt_v.extend(check_uibuilder_id_salt_in_source(&rel, &content));
     }
     for file in collect_rs_files(&manifest_dir.join("examples")) {
         let rel = file
@@ -346,9 +369,14 @@ fn test_guard_zero_token_arithmetic_and_domain_purity() {
             .to_string_lossy();
         let content = fs::read_to_string(&file).expect("read source");
         domain_v.extend(check_domain_leakage_in_source(&rel, &content));
+        salt_v.extend(check_uibuilder_id_salt_in_source(&rel, &content));
     }
     assert!(math_v.is_empty(), "Token Math Guard:\n{math_v:#?}");
     assert!(domain_v.is_empty(), "Domain Purity Guard:\n{domain_v:#?}");
+    assert!(
+        salt_v.is_empty(),
+        "UiBuilder id_salt Guard (GL-1015 §3.4):\n{salt_v:#?}"
+    );
 }
 
 #[test]
@@ -472,4 +500,14 @@ fn test_guard_zero_cross_component_token_borrowing_and_self_check() {
             .is_empty()
     );
     assert!(!check_domain_leakage_in_source("bad.rs", "struct PedigreeNode;").is_empty());
+    assert!(!check_uibuilder_id_salt_in_source(
+        "bad.rs",
+        "ui.new_child(UiBuilder::new().max_rect(r));"
+    )
+    .is_empty());
+    assert!(check_uibuilder_id_salt_in_source(
+        "ok.rs",
+        "ui.new_child(UiBuilder::new().id_salt(\"s\").max_rect(r));"
+    )
+    .is_empty());
 }

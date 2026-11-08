@@ -178,7 +178,7 @@ pub fn render_submenu_popover(
 
             let sub_menu_w = base_sub_min_w.max(max_item_w + menu_padding * 2.0);
             let sub_rect = Rect::from_min_size(sub_pos, Vec2::new(sub_menu_w, sub_total_h));
-            let _ = sub_ui.allocate_rect(sub_rect, Sense::click());
+            let _ = sub_ui.allocate_rect(sub_rect, Sense::hover());
             let painter = sub_ui.painter();
             painter.rect(
                 sub_rect,

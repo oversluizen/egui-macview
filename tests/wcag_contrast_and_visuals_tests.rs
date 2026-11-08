@@ -105,6 +105,50 @@ fn test_egui_visuals_synchronization_dark_mode() {
 }
 
 #[test]
+fn test_wcag_contrast_anthracite_mode() {
+    let anthracite = MacTheme::new(MacAppearance::Anthracite);
+
+    let label_contrast = contrast_ratio(anthracite.label(), anthracite.window_background());
+    assert!(
+        label_contrast >= 4.5,
+        "WCAG 2.1 AA Violation in Anthracite: label contrast {label_contrast:.2}:1 is below 4.5:1"
+    );
+
+    let sec_contrast = contrast_ratio(anthracite.secondary_label(), anthracite.window_background());
+    assert!(
+        sec_contrast >= 4.5,
+        "WCAG 2.1 AA Violation in Anthracite: secondary label contrast {sec_contrast:.2}:1 is below 4.5:1"
+    );
+
+    // Verify calm intermediate studio anthracite surface colors
+    assert_eq!(
+        anthracite.window_background(),
+        Color32::from_rgb(50, 54, 62)
+    );
+    assert_eq!(
+        anthracite.control_background(),
+        Color32::from_rgb(60, 64, 73)
+    );
+    assert_eq!(anthracite.separator(), Color32::from_rgb(72, 77, 87));
+}
+
+#[test]
+fn test_egui_visuals_synchronization_anthracite_mode() {
+    let anthracite = MacTheme::new(MacAppearance::Anthracite);
+    let ctx = Context::default();
+
+    anthracite.apply_to_egui(&ctx);
+
+    let visuals = ctx.style_of(ctx.theme()).visuals.clone();
+    assert!(
+        visuals.dark_mode,
+        "egui Visuals was not set to dark mode for Anthracite appearance!"
+    );
+    assert_eq!(visuals.panel_fill, anthracite.window_background());
+    assert_eq!(visuals.window_fill, anthracite.window_background());
+}
+
+#[test]
 fn test_mac_background_style_relative_luminance_and_contrast_formula() {
     // Pure black has 0.0 relative luminance
     let black = Color32::from_rgb(0, 0, 0);

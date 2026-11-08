@@ -323,6 +323,7 @@ impl MacCommandPalette {
                 let search_box_rect = header_rect.shrink(search_margin);
                 let mut search_ui = ui.new_child(
                     UiBuilder::new()
+                        .id_salt("palette_search_ui")
                         .max_rect(search_box_rect)
                         .layout(Layout::left_to_right(Align::Center)),
                 );
@@ -350,6 +351,7 @@ impl MacCommandPalette {
 
                 let mut list_ui = ui.new_child(
                     UiBuilder::new()
+                        .id_salt("palette_list_ui")
                         .max_rect(results_rect)
                         .layout(Layout::top_down(Align::Min)),
                 );

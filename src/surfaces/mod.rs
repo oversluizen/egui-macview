@@ -147,6 +147,7 @@ impl<'a> MacPanel<'a> {
 
         let mut child_ui = ui.new_child(
             egui::UiBuilder::new()
+                .id_salt((panel_id, "mac_panel_content"))
                 .max_rect(content_rect)
                 .layout(egui::Layout::top_down(egui::Align::Min)),
         );
@@ -374,6 +375,7 @@ impl<'a> MacPopover<'a> {
 
         let mut child_ui = ui.new_child(
             egui::UiBuilder::new()
+                .id_salt((popover_id, "mac_popover_content"))
                 .max_rect(active_rect.shrink(corner_radius.min(metrics.inner_padding.points())))
                 .layout(egui::Layout::top_down(egui::Align::Min)),
         );

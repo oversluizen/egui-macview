@@ -156,6 +156,7 @@ impl<'a> MacCard<'a> {
 
         let mut child_ui = ui.new_child(
             egui::UiBuilder::new()
+                .id_salt((resp.id, "mac_card_content"))
                 .max_rect(content_rect)
                 .layout(egui::Layout::top_down(egui::Align::Min)),
         );

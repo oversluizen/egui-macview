@@ -99,7 +99,9 @@ impl<'a> Widget for MacToggle<'a> {
             cur.clamp(0.0, 1.0)
         } else {
             let elapsed = (now - start_time).max(0.0) as f32;
-            if elapsed < spring.settling_duration() {
+            if (target_val - start_val).abs() > f32::EPSILON
+                && elapsed < spring.settling_duration()
+            {
                 ui.ctx().request_repaint();
                 (start_val + (target_val - start_val) * spring.position_at(elapsed)).clamp(0.0, 1.0)
             } else {

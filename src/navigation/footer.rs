@@ -107,6 +107,7 @@ impl<'a> MacCanvasFooter<'a> {
         if zoom_area.width() >= zoom_cluster_width - border_w {
             let mut zoom_ui = ui.new_child(
                 UiBuilder::new()
+                    .id_salt("footer_zoom_ui")
                     .max_rect(zoom_area)
                     .layout(Layout::right_to_left(Align::Center)),
             );
@@ -177,6 +178,7 @@ impl<'a> MacCanvasFooter<'a> {
                 );
                 let mut crumb_ui = ui.new_child(
                     UiBuilder::new()
+                        .id_salt("footer_crumb_ui")
                         .max_rect(crumb_rect)
                         .layout(Layout::left_to_right(Align::Center)),
                 );

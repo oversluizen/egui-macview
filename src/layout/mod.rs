@@ -105,12 +105,17 @@ pub struct MacFixedView<'a> {
     pub ui: &'a mut Ui,
     /// Absolute bounding rectangle of the fixed container.
     pub container_rect: Rect,
+    subview_count: usize,
 }
 
 impl<'a> MacFixedView<'a> {
     /// Creates a new `MacFixedView` wrapping `ui` and bounded by `container_rect`.
     pub fn new(ui: &'a mut Ui, container_rect: Rect) -> Self {
-        Self { ui, container_rect }
+        Self {
+            ui,
+            container_rect,
+            subview_count: 0,
+        }
     }
 
     /// Allocates an exact subview at relative NIB coordinates (dx, dy, w, h).
@@ -131,8 +136,14 @@ impl<'a> MacFixedView<'a> {
         size: Vec2,
         add_contents: impl FnOnce(&mut Ui) -> R,
     ) -> R {
+        let idx = self.subview_count;
+        self.subview_count += 1;
         let rect = self.subview_rect(rel_origin, size);
-        let mut child = self.ui.new_child(egui::UiBuilder::new().max_rect(rect));
+        let mut child = self.ui.new_child(
+            egui::UiBuilder::new()
+                .id_salt(("fixed_subview", idx))
+                .max_rect(rect),
+        );
         child.set_clip_rect(rect.intersect(self.ui.clip_rect()));
         add_contents(&mut child)
     }

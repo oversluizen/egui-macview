@@ -351,7 +351,11 @@ impl eframe::App for PreferencesApp {
             ),
             vec2(76.0, 20.0),
         );
-        let mut toggle_ui = ui.new_child(egui::UiBuilder::new().max_rect(toggle_rect));
+        let mut toggle_ui = ui.new_child(
+            egui::UiBuilder::new()
+                .id_salt("prefs_dark_toggle")
+                .max_rect(toggle_rect),
+        );
         toggle_ui.horizontal(|h| {
             let mut dark_mode = is_dark;
             if h.add(MacToggle::new(&mut dark_mode).theme(&self.theme))
@@ -380,7 +384,11 @@ impl eframe::App for PreferencesApp {
             pos2(full_rect.left() + 24.0, titlebar_rect.bottom() + 10.0),
             vec2(full_rect.width() - 48.0, 28.0),
         );
-        let mut tab_ui = ui.new_child(egui::UiBuilder::new().max_rect(toolbar_rect));
+        let mut tab_ui = ui.new_child(
+            egui::UiBuilder::new()
+                .id_salt("prefs_tab_bar")
+                .max_rect(toolbar_rect),
+        );
         tab_ui.centered_and_justified(|c| {
             MacSegmentedControl::new(
                 &["Appearance (GSAppearance)", "Stroke Settings (PanelView)"],
@@ -395,7 +403,11 @@ impl eframe::App for PreferencesApp {
             pos2(full_rect.left() + 20.0, toolbar_rect.bottom() + 12.0),
             pos2(full_rect.right() - 20.0, full_rect.bottom() - 16.0),
         );
-        let mut content_ui = ui.new_child(egui::UiBuilder::new().max_rect(content_rect));
+        let mut content_ui = ui.new_child(
+            egui::UiBuilder::new()
+                .id_salt("prefs_content")
+                .max_rect(content_rect),
+        );
 
         if self.selected_tab == 0 {
             self.appearance_state.render(&mut content_ui, &self.theme);

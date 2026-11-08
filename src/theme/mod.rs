@@ -28,6 +28,8 @@ pub enum MacAppearance {
     /// Authentic Apple macOS light appearance (`NSAppearanceNameAqua`).
     #[default]
     Aqua,
+    /// Anthracite calm intermediate studio appearance mode.
+    Anthracite,
     /// Authentic Apple macOS dark appearance (`NSAppearanceNameDarkAqua`).
     DarkAqua,
 }
@@ -139,6 +141,7 @@ impl MacTheme {
     pub fn colors(&self) -> &MacAppearanceColors {
         match self.appearance {
             MacAppearance::Aqua => &self.tokens.colors().aqua,
+            MacAppearance::Anthracite => &self.tokens.colors().anthracite,
             MacAppearance::DarkAqua => &self.tokens.colors().dark_aqua,
         }
     }
@@ -364,13 +367,13 @@ impl MacTheme {
 
         let egui_theme = match self.appearance {
             MacAppearance::Aqua => egui::Theme::Light,
-            MacAppearance::DarkAqua => egui::Theme::Dark,
+            MacAppearance::Anthracite | MacAppearance::DarkAqua => egui::Theme::Dark,
         };
         ctx.set_theme(egui_theme);
 
         let mut visuals = match self.appearance {
             MacAppearance::Aqua => egui::Visuals::light(),
-            MacAppearance::DarkAqua => egui::Visuals::dark(),
+            MacAppearance::Anthracite | MacAppearance::DarkAqua => egui::Visuals::dark(),
         };
 
         let border_w = self.button().regular.border_width.points();

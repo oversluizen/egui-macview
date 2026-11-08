@@ -73,7 +73,8 @@ impl GalleryApp {
         };
         ui.ctx().set_cursor_icon(cursor);
         if ui.input(|i| i.pointer.button_pressed(PointerButton::Primary)) {
-            ui.ctx().send_viewport_cmd(ViewportCommand::BeginResize(dir));
+            ui.ctx()
+                .send_viewport_cmd(ViewportCommand::BeginResize(dir));
         }
         true
     }
@@ -109,13 +110,73 @@ impl GalleryApp {
                 (c.rotation_deg, c.scale_pct, c.skew_deg) = (0.0, 100.0, 0.0);
                 self.toasts.borrow_mut().info("Transform reset");
             }
+            "view.zoom_in" => {
+                let mut c = self.card.borrow_mut();
+                c.scale_pct = (c.scale_pct + 25.0).clamp(25.0, 200.0);
+                self.toasts
+                    .borrow_mut()
+                    .info(format!("Zoom: {:.0}%", c.scale_pct));
+            }
+            "view.zoom_out" => {
+                let mut c = self.card.borrow_mut();
+                c.scale_pct = (c.scale_pct - 25.0).clamp(25.0, 200.0);
+                self.toasts
+                    .borrow_mut()
+                    .info(format!("Zoom: {:.0}%", c.scale_pct));
+            }
+            "view.zoom_reset" => {
+                self.card.borrow_mut().scale_pct = 100.0;
+                self.toasts.borrow_mut().info("Zoom: 100%");
+            }
+            "view.toggle_inspector" => {
+                self.inspector_mode = match self.inspector_mode {
+                    InspectorMode::DefaultNib => InspectorMode::CompactHud,
+                    InspectorMode::CompactHud => InspectorMode::ExpandedPro,
+                    InspectorMode::ExpandedPro => InspectorMode::DefaultNib,
+                };
+                self.toasts.borrow_mut().info("Inspector preset cycled");
+            }
             "view.fullscreen" | "window.zoom" => {
                 self.is_maximized = !self.is_maximized;
                 ctx.send_viewport_cmd(ViewportCommand::Maximized(self.is_maximized));
             }
+            "window.bring_all_to_front" => {
+                ctx.send_viewport_cmd(ViewportCommand::Focus);
+                self.toasts.borrow_mut().info("Brought window to front");
+            }
+            "file.new" => {
+                *self.card.borrow_mut() = crate::CardModel::default();
+                self.toasts.borrow_mut().info("Reset card to defaults");
+            }
+            "file.open" => {
+                self.active_screen = GalleryScreen::FinderDataBrowser;
+                self.toasts.borrow_mut().info("Opened Finder Browser");
+            }
+            "file.save" => self.toasts.borrow_mut().success("Document saved"),
+            "file.export" => {
+                self.active_screen = GalleryScreen::FinderDataBrowser;
+                self.center.is_publishing = true;
+                self.center.publish_progress = 0.0;
+                self.toasts.borrow_mut().info("Publishing started...");
+            }
+            "edit.cut" | "edit.copy" => {
+                let c = self.card.borrow();
+                ctx.copy_text(format!(
+                    "width: {}; height: {}; radius: {};",
+                    c.width, c.height, c.radius
+                ));
+                self.toasts.borrow_mut().info("Copied card style");
+            }
+            "edit.paste" => self.toasts.borrow_mut().info("Pasted style"),
+            "edit.select_all" => self.toasts.borrow_mut().info("Selected canvas layer"),
             "file.close" => ctx.send_viewport_cmd(ViewportCommand::Close),
             "window.minimize" => ctx.send_viewport_cmd(ViewportCommand::Minimized(true)),
             "help.shortcuts" => self.palette.open = true,
+            "help.documentation" | "help.about" => {
+                self.toasts
+                    .borrow_mut()
+                    .info(format!("egui-macview v{}", egui_macview::VERSION));
+            }
             _ => {}
         }
     }
@@ -145,6 +206,7 @@ impl GalleryApp {
                 if right_area.width() > 0.0 {
                     let mut right_ui = tb_ui.new_child(
                         egui::UiBuilder::new()
+                            .id_salt("gallery_toolbar_right_ui")
                             .max_rect(right_area)
                             .layout(Layout::right_to_left(Align::Center)),
                     );

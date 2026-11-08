@@ -299,7 +299,9 @@ impl<'a> Widget for MacSlider<'a> {
             cur
         } else {
             let elapsed = (now - start_time).max(0.0) as f32;
-            if elapsed < spring.settling_duration() {
+            if (press_scale_target - start_val).abs() > f32::EPSILON
+                && elapsed < spring.settling_duration()
+            {
                 ui.ctx().request_repaint();
                 start_val + (press_scale_target - start_val) * spring.position_at(elapsed)
             } else {

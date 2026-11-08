@@ -10,19 +10,25 @@
             "$type": "dimension",
             "$value": "3.0pt",
             "$description": "Focus ring halo thickness.",
-            "$extensions": { "apple_citation": "AppKit NSFocusRingPlacementOutside standard stroke width" }
+            "$extensions": {
+              "apple_citation": "AppKit NSFocusRingPlacementOutside standard stroke width"
+            }
           },
           "offset": {
             "$type": "dimension",
             "$value": "1.0pt",
             "$description": "Distance between control outer edge and focus ring halo inner edge.",
-            "$extensions": { "apple_citation": "AppKit NSFocusRingPlacementOutside standard margin" }
+            "$extensions": {
+              "apple_citation": "AppKit NSFocusRingPlacementOutside standard margin"
+            }
           },
           "corner_radius_delta": {
             "$type": "dimension",
             "$value": "2.0pt",
             "$description": "Added radius for the outer focus halo to maintain concentricity with control squircle.",
-            "$extensions": { "apple_citation": "macOS HIG Focus Ring Concentricity" }
+            "$extensions": {
+              "apple_citation": "macOS HIG Focus Ring Concentricity"
+            }
           }
         },
         "text_field": {
@@ -31,31 +37,41 @@
               "$type": "dimension",
               "$value": "22.0pt",
               "$description": "Standard intrinsic height for single-line NSTextField with NSControlSize.regular.",
-              "$extensions": { "apple_citation": "Apple AppKit NSTextField / HIG Component Metrics (macOS 11-15)" }
+              "$extensions": {
+                "apple_citation": "Apple AppKit NSTextField / HIG Component Metrics (macOS 11-15)"
+              }
             },
             "font_size": {
               "$type": "dimension",
               "$value": "13.0pt",
               "$description": "Standard system font size for NSControlSize.regular.",
-              "$extensions": { "apple_citation": "NSFont.systemFontSize(for: .regular)" }
+              "$extensions": {
+                "apple_citation": "NSFont.systemFontSize(for: .regular)"
+              }
             },
             "corner_radius": {
               "$type": "dimension",
               "$value": "6.0pt",
               "$description": "Continuous curvature squircle corner radius for regular rounded text fields.",
-              "$extensions": { "apple_citation": "macOS Human Interface Guidelines - Text Fields (Big Sur+)" }
+              "$extensions": {
+                "apple_citation": "macOS Human Interface Guidelines - Text Fields (Big Sur+)"
+              }
             },
             "padding_horizontal": {
               "$type": "dimension",
               "$value": "7.0pt",
               "$description": "Horizontal text container inset from bezel to text origin.",
-              "$extensions": { "apple_citation": "NSTextFieldCell titleRect(forBounds:) default inset" }
+              "$extensions": {
+                "apple_citation": "NSTextFieldCell titleRect(forBounds:) default inset"
+              }
             },
             "padding_vertical": {
               "$type": "dimension",
               "$value": "2.0pt",
               "$description": "Vertical text margin within the 22pt cell bounding box.",
-              "$extensions": { "apple_citation": "WebKit RenderThemeMac.mm NSTextFieldCell metrics" }
+              "$extensions": {
+                "apple_citation": "WebKit RenderThemeMac.mm NSTextFieldCell metrics"
+              }
             }
           },
           "small": {
@@ -63,31 +79,41 @@
               "$type": "dimension",
               "$value": "19.0pt",
               "$description": "Compact intrinsic height for single-line NSTextField with NSControlSize.small.",
-              "$extensions": { "apple_citation": "Apple AppKit NSTextField / HIG Component Metrics (macOS 11-15)" }
+              "$extensions": {
+                "apple_citation": "Apple AppKit NSTextField / HIG Component Metrics (macOS 11-15)"
+              }
             },
             "font_size": {
               "$type": "dimension",
               "$value": "11.0pt",
               "$description": "Standard system font size for NSControlSize.small.",
-              "$extensions": { "apple_citation": "NSFont.systemFontSize(for: .small)" }
+              "$extensions": {
+                "apple_citation": "NSFont.systemFontSize(for: .small)"
+              }
             },
             "corner_radius": {
               "$type": "dimension",
               "$value": "4.0pt",
               "$description": "Continuous curvature squircle corner radius for small rounded text fields.",
-              "$extensions": { "apple_citation": "macOS Human Interface Guidelines - Text Fields (Compact/Small)" }
+              "$extensions": {
+                "apple_citation": "macOS Human Interface Guidelines - Text Fields (Compact/Small)"
+              }
             },
             "padding_horizontal": {
               "$type": "dimension",
               "$value": "4.0pt",
               "$description": "Compact horizontal text container inset.",
-              "$extensions": { "apple_citation": "NSTextFieldCell small control size drawing bounds" }
+              "$extensions": {
+                "apple_citation": "NSTextFieldCell small control size drawing bounds"
+              }
             },
             "padding_vertical": {
               "$type": "dimension",
               "$value": "1.5pt",
               "$description": "Vertical padding for small text field cells.",
-              "$extensions": { "apple_citation": "WebKit RenderThemeMac.mm small text field metrics" }
+              "$extensions": {
+                "apple_citation": "WebKit RenderThemeMac.mm small text field metrics"
+              }
             }
           },
           "compact_infobox": {
@@ -95,43 +121,57 @@
               "$type": "dimension",
               "$value": "18.0pt",
               "$description": "Exact input cell height for dense inspector panels and infoboxes.",
-              "$extensions": { "apple_citation": "SPEC-001 Section 4.1 / AppKit Dense Inspector Cells" }
+              "$extensions": {
+                "apple_citation": "SPEC-001 Section 4.1 / AppKit Dense Inspector Cells"
+              }
             },
             "font_size": {
               "$type": "dimension",
               "$value": "11.0pt",
               "$description": "Compact numeric typographic scale matching SF Pro Text 11pt.",
-              "$extensions": { "apple_citation": "SPEC-001 Section 2.1 B & 4.1" }
+              "$extensions": {
+                "apple_citation": "SPEC-001 Section 2.1 B & 4.1"
+              }
             },
             "corner_radius": {
               "$type": "dimension",
               "$value": "3.0pt",
               "$description": "Tight corner radius for 18pt floating infobox cells.",
-              "$extensions": { "apple_citation": "SPEC-001 Section 4.1" }
+              "$extensions": {
+                "apple_citation": "SPEC-001 Section 4.1"
+              }
             },
             "padding_horizontal": {
               "$type": "dimension",
               "$value": "4.0pt",
               "$description": "Horizontal margin for numeric cell content.",
-              "$extensions": { "apple_citation": "SPEC-001 Section 4.1" }
+              "$extensions": {
+                "apple_citation": "SPEC-001 Section 4.1"
+              }
             },
             "padding_vertical": {
               "$type": "dimension",
               "$value": "1.0pt",
               "$description": "Vertical margin ensuring zero clipping guarantee.",
-              "$extensions": { "apple_citation": "SPEC-001 Section 4.1 Zero-Clipping Guarantee" }
+              "$extensions": {
+                "apple_citation": "SPEC-001 Section 4.1 Zero-Clipping Guarantee"
+              }
             },
             "default_width": {
               "$type": "dimension",
               "$value": "44.0pt",
               "$description": "Standard width for compact inspector input cells.",
-              "$extensions": { "apple_citation": "SPEC-001 Section 4.1" }
+              "$extensions": {
+                "apple_citation": "SPEC-001 Section 4.1"
+              }
             },
             "border_width": {
               "$type": "dimension",
               "$value": "1.0pt",
               "$description": "Border stroke width for compact text fields.",
-              "$extensions": { "apple_citation": "macOS HIG Text Field border" }
+              "$extensions": {
+                "apple_citation": "macOS HIG Text Field border"
+              }
             }
           },
           "mini": {
@@ -139,19 +179,25 @@
               "$type": "dimension",
               "$value": "15.0pt",
               "$description": "Miniature intrinsic height for single-line NSTextField with NSControlSize.mini.",
-              "$extensions": { "apple_citation": "Apple AppKit NSControlSizeMini" }
+              "$extensions": {
+                "apple_citation": "Apple AppKit NSControlSizeMini"
+              }
             },
             "font_size": {
               "$type": "dimension",
               "$value": "9.0pt",
               "$description": "Standard system font size for NSControlSize.mini.",
-              "$extensions": { "apple_citation": "NSFont.systemFontSize(for: .mini)" }
+              "$extensions": {
+                "apple_citation": "NSFont.systemFontSize(for: .mini)"
+              }
             },
             "corner_radius": {
               "$type": "dimension",
               "$value": "3.0pt",
               "$description": "Mini control corner radius.",
-              "$extensions": { "apple_citation": "AppKit NSControlSizeMini Bezel Style" }
+              "$extensions": {
+                "apple_citation": "AppKit NSControlSizeMini Bezel Style"
+              }
             }
           },
           "large": {
@@ -159,19 +205,25 @@
               "$type": "dimension",
               "$value": "28.0pt",
               "$description": "Large intrinsic height for single-line NSTextField with NSControlSize.large.",
-              "$extensions": { "apple_citation": "Apple AppKit NSControlSizeLarge" }
+              "$extensions": {
+                "apple_citation": "Apple AppKit NSControlSizeLarge"
+              }
             },
             "font_size": {
               "$type": "dimension",
               "$value": "16.0pt",
               "$description": "Standard system font size for NSControlSize.large.",
-              "$extensions": { "apple_citation": "NSFont.systemFontSize(for: .large)" }
+              "$extensions": {
+                "apple_citation": "NSFont.systemFontSize(for: .large)"
+              }
             },
             "corner_radius": {
               "$type": "dimension",
               "$value": "8.0pt",
               "$description": "Prominent corner radius for large text fields.",
-              "$extensions": { "apple_citation": "macOS HIG Large Control Styling" }
+              "$extensions": {
+                "apple_citation": "macOS HIG Large Control Styling"
+              }
             }
           }
         },
@@ -181,31 +233,41 @@
               "$type": "dimension",
               "$value": "22.0pt",
               "$description": "Standard macOS push button height.",
-              "$extensions": { "apple_citation": "Apple AppKit NSButton BezelStyleRounded" }
+              "$extensions": {
+                "apple_citation": "Apple AppKit NSButton BezelStyleRounded"
+              }
             },
             "corner_radius": {
               "$type": "dimension",
               "$value": "6.0pt",
               "$description": "Standard macOS push button corner radius in Big Sur+.",
-              "$extensions": { "apple_citation": "macOS Human Interface Guidelines - Buttons" }
+              "$extensions": {
+                "apple_citation": "macOS Human Interface Guidelines - Buttons"
+              }
             },
             "padding_horizontal": {
               "$type": "dimension",
               "$value": "12.0pt",
               "$description": "Horizontal button label margin.",
-              "$extensions": { "apple_citation": "AppKit NSButtonCell horizontal inset" }
+              "$extensions": {
+                "apple_citation": "AppKit NSButtonCell horizontal inset"
+              }
             },
             "font_size": {
               "$type": "dimension",
               "$value": "13.0pt",
               "$description": "Standard system font size for NSButton regular size.",
-              "$extensions": { "apple_citation": "NSFont.systemFontSize(for: .regular)" }
+              "$extensions": {
+                "apple_citation": "NSFont.systemFontSize(for: .regular)"
+              }
             },
             "border_width": {
               "$type": "dimension",
               "$value": "1.0pt",
               "$description": "Bezel stroke border width for push button.",
-              "$extensions": { "apple_citation": "AppKit NSButton bezel border" }
+              "$extensions": {
+                "apple_citation": "AppKit NSButton bezel border"
+              }
             }
           },
           "small": {
@@ -213,31 +275,41 @@
               "$type": "dimension",
               "$value": "18.0pt",
               "$description": "Compact macOS push button height.",
-              "$extensions": { "apple_citation": "Apple AppKit NSButton NSControlSizeSmall" }
+              "$extensions": {
+                "apple_citation": "Apple AppKit NSButton NSControlSizeSmall"
+              }
             },
             "corner_radius": {
               "$type": "dimension",
               "$value": "4.0pt",
               "$description": "Corner radius for small push buttons.",
-              "$extensions": { "apple_citation": "macOS HIG Buttons (Small)" }
+              "$extensions": {
+                "apple_citation": "macOS HIG Buttons (Small)"
+              }
             },
             "padding_horizontal": {
               "$type": "dimension",
               "$value": "8.0pt",
               "$description": "Compact horizontal button label margin.",
-              "$extensions": { "apple_citation": "AppKit NSButtonCell small control size" }
+              "$extensions": {
+                "apple_citation": "AppKit NSButtonCell small control size"
+              }
             },
             "font_size": {
               "$type": "dimension",
               "$value": "11.0pt",
               "$description": "Standard system font size for NSButton small size.",
-              "$extensions": { "apple_citation": "NSFont.systemFontSize(for: .small)" }
+              "$extensions": {
+                "apple_citation": "NSFont.systemFontSize(for: .small)"
+              }
             },
             "border_width": {
               "$type": "dimension",
               "$value": "1.0pt",
               "$description": "Bezel stroke border width for small push button.",
-              "$extensions": { "apple_citation": "AppKit NSButton bezel border" }
+              "$extensions": {
+                "apple_citation": "AppKit NSButton bezel border"
+              }
             }
           }
         },
@@ -246,50 +318,66 @@
             "$type": "dimension",
             "$value": "36.0pt",
             "$description": "Standard minimum width per segment in NSSegmentedControl.",
-            "$extensions": { "apple_citation": "Apple AppKit NSSegmentedControl item width" }
+            "$extensions": {
+              "apple_citation": "Apple AppKit NSSegmentedControl item width"
+            }
           },
           "padding_horizontal": {
             "$type": "dimension",
             "$value": "10.0pt",
             "$description": "Horizontal interior text padding on each side of a segment label in NSSegmentedControl.",
-            "$extensions": { "apple_citation": "macOS HIG Segmented Controls segment label padding" }
+            "$extensions": {
+              "apple_citation": "macOS HIG Segmented Controls segment label padding"
+            }
           },
           "indicator_inset": {
             "$type": "dimension",
             "$value": "2.0pt",
             "$description": "Inset margin for the active selection pill within a segment frame.",
-            "$extensions": { "apple_citation": "macOS HIG Segmented Controls pill inset" }
+            "$extensions": {
+              "apple_citation": "macOS HIG Segmented Controls pill inset"
+            }
           },
           "border_width": {
             "$type": "dimension",
             "$value": "1.0pt",
             "$description": "Bezel stroke border width for segmented control container and indicator pill.",
-            "$extensions": { "apple_citation": "macOS HIG Segmented Controls border" }
+            "$extensions": {
+              "apple_citation": "macOS HIG Segmented Controls border"
+            }
           },
           "font_size": {
             "$type": "dimension",
             "$value": "11.0pt",
             "$description": "Standard label typography font size for segmented control.",
-            "$extensions": { "apple_citation": "AppKit NSSegmentedControl label font size" }
+            "$extensions": {
+              "apple_citation": "AppKit NSSegmentedControl label font size"
+            }
           },
           "regular": {
             "height": {
               "$type": "dimension",
               "$value": "22.0pt",
               "$description": "Standard NSSegmentedControl height.",
-              "$extensions": { "apple_citation": "Apple AppKit NSSegmentedControl" }
+              "$extensions": {
+                "apple_citation": "Apple AppKit NSSegmentedControl"
+              }
             },
             "corner_radius": {
               "$type": "dimension",
               "$value": "6.0pt",
               "$description": "Container outer corner radius.",
-              "$extensions": { "apple_citation": "macOS HIG Segmented Controls" }
+              "$extensions": {
+                "apple_citation": "macOS HIG Segmented Controls"
+              }
             },
             "indicator_radius": {
               "$type": "dimension",
               "$value": "5.0pt",
               "$description": "Active selection pill corner radius.",
-              "$extensions": { "apple_citation": "macOS HIG Segmented Controls Active Pill" }
+              "$extensions": {
+                "apple_citation": "macOS HIG Segmented Controls Active Pill"
+              }
             }
           },
           "small": {
@@ -297,19 +385,25 @@
               "$type": "dimension",
               "$value": "18.0pt",
               "$description": "Compact NSSegmentedControl height.",
-              "$extensions": { "apple_citation": "Apple AppKit NSSegmentedControl NSControlSizeSmall" }
+              "$extensions": {
+                "apple_citation": "Apple AppKit NSSegmentedControl NSControlSizeSmall"
+              }
             },
             "corner_radius": {
               "$type": "dimension",
               "$value": "4.0pt",
               "$description": "Container outer corner radius for small segmented controls.",
-              "$extensions": { "apple_citation": "macOS HIG Segmented Controls (Small)" }
+              "$extensions": {
+                "apple_citation": "macOS HIG Segmented Controls (Small)"
+              }
             },
             "indicator_radius": {
               "$type": "dimension",
               "$value": "3.5pt",
               "$description": "Active selection pill corner radius for small segmented controls.",
-              "$extensions": { "apple_citation": "macOS HIG Segmented Controls (Small)" }
+              "$extensions": {
+                "apple_citation": "macOS HIG Segmented Controls (Small)"
+              }
             }
           }
         },
@@ -318,55 +412,73 @@
             "$type": "dimension",
             "$value": "3.0pt",
             "$description": "Standard thickness of NSSlider groove track.",
-            "$extensions": { "apple_citation": "AppKit NSSlider track thickness" }
+            "$extensions": {
+              "apple_citation": "AppKit NSSlider track thickness"
+            }
           },
           "thumb_size": {
             "$type": "dimension",
             "$value": "16.0pt",
             "$description": "Diameter of circular NSSlider thumb knob.",
-            "$extensions": { "apple_citation": "AppKit NSSlider regular knob diameter" }
+            "$extensions": {
+              "apple_citation": "AppKit NSSlider regular knob diameter"
+            }
           },
           "thumb_stroke_width": {
             "$type": "dimension",
             "$value": "1.0pt",
             "$description": "Border stroke width of circular NSSlider thumb knob.",
-            "$extensions": { "apple_citation": "AppKit NSSlider thumb stroke" }
+            "$extensions": {
+              "apple_citation": "AppKit NSSlider thumb stroke"
+            }
           },
           "tick_height": {
             "$type": "dimension",
             "$value": "4.0pt",
             "$description": "Height of tick marks positioned along slider track.",
-            "$extensions": { "apple_citation": "AppKit NSSlider tick mark height" }
+            "$extensions": {
+              "apple_citation": "AppKit NSSlider tick mark height"
+            }
           },
           "tick_width": {
             "$type": "dimension",
             "$value": "1.0pt",
             "$description": "Hairline thickness of tick marks.",
-            "$extensions": { "apple_citation": "AppKit NSSlider tick mark stroke" }
+            "$extensions": {
+              "apple_citation": "AppKit NSSlider tick mark stroke"
+            }
           },
           "tick_offset": {
             "$type": "dimension",
             "$value": "3.0pt",
             "$description": "Spacing gap between track edge and tick marks.",
-            "$extensions": { "apple_citation": "AppKit NSSlider tick mark offset" }
+            "$extensions": {
+              "apple_citation": "AppKit NSSlider tick mark offset"
+            }
           },
           "default_width": {
             "$type": "dimension",
             "$value": "120.0pt",
             "$description": "Default width for NSSlider controls.",
-            "$extensions": { "apple_citation": "AppKit NSSlider standard width" }
+            "$extensions": {
+              "apple_citation": "AppKit NSSlider standard width"
+            }
           },
           "key_step_fraction": {
             "$type": "dimension",
             "$value": "0.05pt",
             "$description": "Keyboard arrow navigation step increment fraction (5% of span).",
-            "$extensions": { "apple_citation": "AppKit NSSlider keyboard step fraction" }
+            "$extensions": {
+              "apple_citation": "AppKit NSSlider keyboard step fraction"
+            }
           },
           "thumb_press_scale": {
             "$type": "dimension",
             "$value": "1.15pt",
             "$description": "Scale multiplier for circular NSSlider thumb knob when pressed or dragged (SPEC-002 §2.5).",
-            "$extensions": { "apple_citation": "SPEC-002 §2.5 / AppKit NSSlider active knob scale" }
+            "$extensions": {
+              "apple_citation": "SPEC-002 §2.5 / AppKit NSSlider active knob scale"
+            }
           }
         },
         "thumbnail": {
@@ -374,19 +486,25 @@
             "$type": "dimension",
             "$value": "24.0pt",
             "$description": "Standard square dimension for NSImageCell preview canvas (24x24pt).",
-            "$extensions": { "apple_citation": "macOS HIG Inspector thumbnail cell (24x24pt)" }
+            "$extensions": {
+              "apple_citation": "macOS HIG Inspector thumbnail cell (24x24pt)"
+            }
           },
           "corner_radius": {
             "$type": "dimension",
             "$value": "4.0pt",
             "$description": "Corner radius for thumbnail cell border bezel.",
-            "$extensions": { "apple_citation": "macOS HIG preview tile radius" }
+            "$extensions": {
+              "apple_citation": "macOS HIG preview tile radius"
+            }
           },
           "border_width": {
             "$type": "dimension",
             "$value": "1.0pt",
             "$description": "Border stroke width for thumbnail preview boundary.",
-            "$extensions": { "apple_citation": "AppKit NSImageCell border stroke" }
+            "$extensions": {
+              "apple_citation": "AppKit NSImageCell border stroke"
+            }
           }
         },
         "outline_view": {
@@ -394,91 +512,121 @@
             "$type": "dimension",
             "$value": "24.0pt",
             "$description": "Standard row height for NSOutlineView items.",
-            "$extensions": { "apple_citation": "AppKit NSOutlineView standard row height" }
+            "$extensions": {
+              "apple_citation": "AppKit NSOutlineView standard row height"
+            }
           },
           "indent_step": {
             "$type": "dimension",
             "$value": "16.0pt",
             "$description": "Horizontal indentation per hierarchy nesting level in NSOutlineView.",
-            "$extensions": { "apple_citation": "AppKit NSOutlineView indentationPerLevel" }
+            "$extensions": {
+              "apple_citation": "AppKit NSOutlineView indentationPerLevel"
+            }
           },
           "disclosure_size": {
             "$type": "dimension",
             "$value": "10.0pt",
             "$description": "Bounding box size of disclosure chevron triangle.",
-            "$extensions": { "apple_citation": "AppKit NSOutlineView disclosure button size" }
+            "$extensions": {
+              "apple_citation": "AppKit NSOutlineView disclosure button size"
+            }
           },
           "disclosure_margin": {
             "$type": "dimension",
             "$value": "4.0pt",
             "$description": "Leading margin offset for disclosure chevron in NSOutlineView.",
-            "$extensions": { "apple_citation": "AppKit NSOutlineView disclosure button margin" }
+            "$extensions": {
+              "apple_citation": "AppKit NSOutlineView disclosure button margin"
+            }
           },
           "content_spacing": {
             "$type": "dimension",
             "$value": "6.0pt",
             "$description": "Horizontal spacing between chevron, thumbnail, and label elements.",
-            "$extensions": { "apple_citation": "AppKit NSOutlineView content spacing" }
+            "$extensions": {
+              "apple_citation": "AppKit NSOutlineView content spacing"
+            }
           },
           "accessory_size": {
             "$type": "dimension",
             "$value": "16.0pt",
             "$description": "Standard hit target size for trailing accessory action buttons.",
-            "$extensions": { "apple_citation": "AppKit accessory view button bounds" }
+            "$extensions": {
+              "apple_citation": "AppKit accessory view button bounds"
+            }
           },
           "accessory_spacing": {
             "$type": "dimension",
             "$value": "4.0pt",
             "$description": "Horizontal spacing between trailing accessory action buttons.",
-            "$extensions": { "apple_citation": "AppKit accessory view layout spacing" }
+            "$extensions": {
+              "apple_citation": "AppKit accessory view layout spacing"
+            }
           },
           "corner_radius": {
             "$type": "dimension",
             "$value": "4.0pt",
             "$description": "Selection highlight rounded corner radius.",
-            "$extensions": { "apple_citation": "AppKit NSOutlineView selection highlight style" }
+            "$extensions": {
+              "apple_citation": "AppKit NSOutlineView selection highlight style"
+            }
           },
           "font_size": {
             "$type": "dimension",
             "$value": "12.0pt",
             "$description": "Standard font size for NSOutlineView row item text.",
-            "$extensions": { "apple_citation": "AppKit NSOutlineView standard text font size" }
+            "$extensions": {
+              "apple_citation": "AppKit NSOutlineView standard text font size"
+            }
           },
           "chevron_stroke_width": {
             "$type": "dimension",
             "$value": "1.2pt",
             "$description": "Stroke width of disclosure chevron line.",
-            "$extensions": { "apple_citation": "AppKit NSOutlineView disclosure chevron stroke" }
+            "$extensions": {
+              "apple_citation": "AppKit NSOutlineView disclosure chevron stroke"
+            }
           },
           "chevron_size": {
             "$type": "dimension",
             "$value": "7.0pt",
             "$description": "Visual width/height span of disclosure chevron.",
-            "$extensions": { "apple_citation": "AppKit NSOutlineView disclosure chevron size" }
+            "$extensions": {
+              "apple_citation": "AppKit NSOutlineView disclosure chevron size"
+            }
           },
           "item_spacing": {
             "$type": "dimension",
             "$value": "6.0pt",
             "$description": "Horizontal spacing between chevron, thumbnail, label, and accessories.",
-            "$extensions": { "apple_citation": "AppKit NSOutlineView cell spacing" }
+            "$extensions": {
+              "apple_citation": "AppKit NSOutlineView cell spacing"
+            }
           },
           "edge_padding": {
             "$type": "dimension",
             "$value": "4.0pt",
             "$description": "Horizontal margin padding at row leading and trailing edges.",
-            "$extensions": { "apple_citation": "AppKit NSOutlineView row margins" }
+            "$extensions": {
+              "apple_citation": "AppKit NSOutlineView row margins"
+            }
           },
           "chevron_depth": {
             "$type": "dimension",
             "$value": "1.75pt",
             "$description": "Visual depth offset for disclosure chevron triangle.",
-            "$extensions": { "apple_citation": "AppKit NSOutlineView disclosure chevron geometry" }
+            "$extensions": {
+              "apple_citation": "AppKit NSOutlineView disclosure chevron geometry"
+            }
           },
           "header_font_size": {
             "$type": "dimension",
             "$value": "11.0pt",
             "$description": "Font size for section headers (AppKit Small Caps).",
-            "$extensions": { "apple_citation": "AppKit NSOutlineView section header font size" }
+            "$extensions": {
+              "apple_citation": "AppKit NSOutlineView section header font size"
+            }
           }
         },
         "popup_button": {
@@ -486,79 +634,105 @@
             "$type": "dimension",
             "$value": "22.0pt",
             "$description": "Standard intrinsic height for NSPopUpButton dropdown control.",
-            "$extensions": { "apple_citation": "Apple AppKit NSPopUpButton regular size" }
+            "$extensions": {
+              "apple_citation": "Apple AppKit NSPopUpButton regular size"
+            }
           },
           "corner_radius": {
             "$type": "dimension",
             "$value": "5.0pt",
             "$description": "Continuous curvature squircle corner radius for popup buttons.",
-            "$extensions": { "apple_citation": "macOS HIG Pop-Up Buttons" }
+            "$extensions": {
+              "apple_citation": "macOS HIG Pop-Up Buttons"
+            }
           },
           "padding_horizontal": {
             "$type": "dimension",
             "$value": "8.0pt",
             "$description": "Horizontal container inset from bezel to content.",
-            "$extensions": { "apple_citation": "AppKit NSPopUpButtonCell horizontal inset" }
+            "$extensions": {
+              "apple_citation": "AppKit NSPopUpButtonCell horizontal inset"
+            }
           },
           "chevron_size": {
             "$type": "dimension",
             "$value": "8.0pt",
             "$description": "Visual span of double chevron indicator.",
-            "$extensions": { "apple_citation": "AppKit NSPopUpButton indicator size" }
+            "$extensions": {
+              "apple_citation": "AppKit NSPopUpButton indicator size"
+            }
           },
           "chevron_stroke_width": {
             "$type": "dimension",
             "$value": "1.2pt",
             "$description": "Stroke width of indicator chevrons.",
-            "$extensions": { "apple_citation": "AppKit NSPopUpButton indicator stroke" }
+            "$extensions": {
+              "apple_citation": "AppKit NSPopUpButton indicator stroke"
+            }
           },
           "chevron_spacing": {
             "$type": "dimension",
             "$value": "6.0pt",
             "$description": "Spacing between label and trailing double chevron.",
-            "$extensions": { "apple_citation": "AppKit NSPopUpButton chevron spacing" }
+            "$extensions": {
+              "apple_citation": "AppKit NSPopUpButton chevron spacing"
+            }
           },
           "font_size": {
             "$type": "dimension",
             "$value": "13.0pt",
             "$description": "Standard typography font size for popup button label.",
-            "$extensions": { "apple_citation": "NSFont.systemFontSize(for: .regular)" }
+            "$extensions": {
+              "apple_citation": "NSFont.systemFontSize(for: .regular)"
+            }
           },
           "border_width": {
             "$type": "dimension",
             "$value": "1.0pt",
             "$description": "Bezel stroke border width for popup button.",
-            "$extensions": { "apple_citation": "AppKit NSPopUpButton border" }
+            "$extensions": {
+              "apple_citation": "AppKit NSPopUpButton border"
+            }
           },
           "chevron_offset_y": {
             "$type": "dimension",
             "$value": "2.0pt",
             "$description": "Vertical displacement for up/down double chevron indicators.",
-            "$extensions": { "apple_citation": "AppKit NSPopUpButton chevron geometry" }
+            "$extensions": {
+              "apple_citation": "AppKit NSPopUpButton chevron geometry"
+            }
           },
           "menu_item_height": {
             "$type": "dimension",
             "$value": "20.0pt",
             "$description": "Height per menu item in dropdown popup menu.",
-            "$extensions": { "apple_citation": "macOS HIG Pop-Up Button menu item height" }
+            "$extensions": {
+              "apple_citation": "macOS HIG Pop-Up Button menu item height"
+            }
           },
           "menu_item_padding": {
             "$type": "dimension",
             "$value": "6.0pt",
             "$description": "Horizontal and vertical inset padding for dropdown menu items.",
-            "$extensions": { "apple_citation": "macOS HIG Pop-Up Button menu padding" }
+            "$extensions": {
+              "apple_citation": "macOS HIG Pop-Up Button menu padding"
+            }
           },
           "menu_min_width": {
             "$type": "dimension",
             "$value": "120.0pt",
             "$description": "Minimum width for dropdown menu overlay panel.",
-            "$extensions": { "apple_citation": "macOS HIG Pop-Up Button menu width" }
+            "$extensions": {
+              "apple_citation": "macOS HIG Pop-Up Button menu width"
+            }
           },
           "popup_gap": {
             "$type": "dimension",
             "$value": "2.0pt",
             "$description": "Spacing between popup button bezel and floating menu.",
-            "$extensions": { "apple_citation": "macOS HIG Pop-Up Button menu offset" }
+            "$extensions": {
+              "apple_citation": "macOS HIG Pop-Up Button menu offset"
+            }
           }
         },
         "search_field": {
@@ -566,73 +740,97 @@
             "$type": "dimension",
             "$value": "22.0pt",
             "$description": "Standard intrinsic height for NSSearchField.",
-            "$extensions": { "apple_citation": "Apple AppKit NSSearchField regular size" }
+            "$extensions": {
+              "apple_citation": "Apple AppKit NSSearchField regular size"
+            }
           },
           "corner_radius": {
             "$type": "dimension",
             "$value": "6.0pt",
             "$description": "Rounded squircle corner radius for search fields (macOS Big Sur+).",
-            "$extensions": { "apple_citation": "macOS HIG Search Fields rounded squircle" }
+            "$extensions": {
+              "apple_citation": "macOS HIG Search Fields rounded squircle"
+            }
           },
           "icon_size": {
             "$type": "dimension",
             "$value": "12.0pt",
             "$description": "Optical bounding box of leading magnifying glass search icon.",
-            "$extensions": { "apple_citation": "macOS HIG Search Fields search icon" }
+            "$extensions": {
+              "apple_citation": "macOS HIG Search Fields search icon"
+            }
           },
           "icon_stroke_width": {
             "$type": "dimension",
             "$value": "1.2pt",
             "$description": "Stroke width for magnifying glass vector geometry.",
-            "$extensions": { "apple_citation": "macOS HIG Search Fields icon stroke" }
+            "$extensions": {
+              "apple_citation": "macOS HIG Search Fields icon stroke"
+            }
           },
           "padding_horizontal": {
             "$type": "dimension",
             "$value": "8.0pt",
             "$description": "Leading and trailing horizontal padding inside search bezel.",
-            "$extensions": { "apple_citation": "AppKit NSSearchFieldCell margins" }
+            "$extensions": {
+              "apple_citation": "AppKit NSSearchFieldCell margins"
+            }
           },
           "clear_button_size": {
             "$type": "dimension",
             "$value": "14.0pt",
             "$description": "Diameter of trailing cancel/clear circular button.",
-            "$extensions": { "apple_citation": "AppKit NSSearchFieldCell cancel button" }
+            "$extensions": {
+              "apple_citation": "AppKit NSSearchFieldCell cancel button"
+            }
           },
           "clear_button_icon_padding": {
             "$type": "dimension",
             "$value": "3.5pt",
             "$description": "Inset padding from clear button circle bounds to cross mark ends.",
-            "$extensions": { "apple_citation": "AppKit NSSearchFieldCell clear cancel icon inset" }
+            "$extensions": {
+              "apple_citation": "AppKit NSSearchFieldCell clear cancel icon inset"
+            }
           },
           "content_spacing": {
             "$type": "dimension",
             "$value": "4.0pt",
             "$description": "Horizontal gap between leading icon, text edit, and clear button.",
-            "$extensions": { "apple_citation": "AppKit NSSearchFieldCell content spacing" }
+            "$extensions": {
+              "apple_citation": "AppKit NSSearchFieldCell content spacing"
+            }
           },
           "padding_vertical": {
             "$type": "dimension",
             "$value": "2.0pt",
             "$description": "Vertical text margin inside search field bezel.",
-            "$extensions": { "apple_citation": "AppKit NSSearchFieldCell vertical margin" }
+            "$extensions": {
+              "apple_citation": "AppKit NSSearchFieldCell vertical margin"
+            }
           },
           "border_width": {
             "$type": "dimension",
             "$value": "1.0pt",
             "$description": "Outer bezel border thickness for search field.",
-            "$extensions": { "apple_citation": "macOS HIG Search Field border" }
+            "$extensions": {
+              "apple_citation": "macOS HIG Search Field border"
+            }
           },
           "glass_radius": {
             "$type": "dimension",
             "$value": "3.0pt",
             "$description": "Radius of the magnifying glass search circle.",
-            "$extensions": { "apple_citation": "macOS HIG Search Field search glass radius" }
+            "$extensions": {
+              "apple_citation": "macOS HIG Search Field search glass radius"
+            }
           },
           "font_size": {
             "$type": "dimension",
             "$value": "12.0pt",
             "$description": "Typography scale for search input text matching macOS standard.",
-            "$extensions": { "apple_citation": "NSFont.systemFontSize(for: .regular) compact" }
+            "$extensions": {
+              "apple_citation": "NSFont.systemFontSize(for: .regular) compact"
+            }
           }
         },
         "stepper": {
@@ -640,73 +838,97 @@
             "$type": "dimension",
             "$value": "14.0pt",
             "$description": "Standard width for vertical NSStepper.",
-            "$extensions": { "apple_citation": "Apple AppKit NSStepper standard width" }
+            "$extensions": {
+              "apple_citation": "Apple AppKit NSStepper standard width"
+            }
           },
           "height": {
             "$type": "dimension",
             "$value": "22.0pt",
             "$description": "Standard height for NSStepper matching adjacent text fields.",
-            "$extensions": { "apple_citation": "Apple AppKit NSStepper standard height" }
+            "$extensions": {
+              "apple_citation": "Apple AppKit NSStepper standard height"
+            }
           },
           "corner_radius": {
             "$type": "dimension",
             "$value": "4.0pt",
             "$description": "Outer bezel corner radius for stepper button.",
-            "$extensions": { "apple_citation": "macOS HIG Steppers" }
+            "$extensions": {
+              "apple_citation": "macOS HIG Steppers"
+            }
           },
           "divider_thickness": {
             "$type": "dimension",
             "$value": "1.0pt",
             "$description": "Hairline separator thickness between up and down segments.",
-            "$extensions": { "apple_citation": "AppKit NSStepper divider" }
+            "$extensions": {
+              "apple_citation": "AppKit NSStepper divider"
+            }
           },
           "arrow_size": {
             "$type": "dimension",
             "$value": "6.0pt",
             "$description": "Visual span of up/down stepper arrows.",
-            "$extensions": { "apple_citation": "AppKit NSStepper arrow size" }
+            "$extensions": {
+              "apple_citation": "AppKit NSStepper arrow size"
+            }
           },
           "arrow_stroke_width": {
             "$type": "dimension",
             "$value": "1.2pt",
             "$description": "Stroke width for stepper arrow chevrons.",
-            "$extensions": { "apple_citation": "AppKit NSStepper arrow stroke" }
+            "$extensions": {
+              "apple_citation": "AppKit NSStepper arrow stroke"
+            }
           },
           "arrow_delta": {
             "$type": "dimension",
             "$value": "1.5pt",
             "$description": "Vertical offset from center for up/down stepper arrow tips and tails.",
-            "$extensions": { "apple_citation": "AppKit NSStepper arrow geometry" }
+            "$extensions": {
+              "apple_citation": "AppKit NSStepper arrow geometry"
+            }
           },
           "border_width": {
             "$type": "dimension",
             "$value": "1.0pt",
             "$description": "Outer bezel border thickness for stepper control.",
-            "$extensions": { "apple_citation": "AppKit NSStepper border" }
+            "$extensions": {
+              "apple_citation": "AppKit NSStepper border"
+            }
           },
           "auto_repeat_delay": {
             "$type": "dimension",
             "$value": "0.4pt",
             "$description": "Initial hold delay in seconds before NSStepper continuous auto-repeat starts.",
-            "$extensions": { "apple_citation": "AppKit NSButtonCell periodic delay default (0.4s)" }
+            "$extensions": {
+              "apple_citation": "AppKit NSButtonCell periodic delay default (0.4s)"
+            }
           },
           "auto_repeat_interval": {
             "$type": "dimension",
             "$value": "0.075pt",
             "$description": "Periodic repeat interval in seconds while NSStepper button is held down.",
-            "$extensions": { "apple_citation": "AppKit NSButtonCell periodic interval default (0.075s)" }
+            "$extensions": {
+              "apple_citation": "AppKit NSButtonCell periodic interval default (0.075s)"
+            }
           },
           "shift_multiplier": {
             "$type": "dimension",
             "$value": "10.0pt",
             "$description": "Step multiplier when Shift modifier key is held.",
-            "$extensions": { "apple_citation": "macOS Pro Inspector numeric stepping convention (10x)" }
+            "$extensions": {
+              "apple_citation": "macOS Pro Inspector numeric stepping convention (10x)"
+            }
           },
           "cmd_multiplier": {
             "$type": "dimension",
             "$value": "100.0pt",
             "$description": "Step multiplier when Command or Control modifier key is held.",
-            "$extensions": { "apple_citation": "macOS Pro Inspector numeric stepping convention (100x)" }
+            "$extensions": {
+              "apple_citation": "macOS Pro Inspector numeric stepping convention (100x)"
+            }
           }
         },
         "color_well": {
@@ -714,55 +936,73 @@
             "$type": "dimension",
             "$value": "44.0pt",
             "$description": "Standard width for NSColorWell preview box.",
-            "$extensions": { "apple_citation": "Apple AppKit NSColorWell standard width" }
+            "$extensions": {
+              "apple_citation": "Apple AppKit NSColorWell standard width"
+            }
           },
           "height": {
             "$type": "dimension",
             "$value": "23.0pt",
             "$description": "Standard height for NSColorWell preview box.",
-            "$extensions": { "apple_citation": "Apple AppKit NSColorWell standard height" }
+            "$extensions": {
+              "apple_citation": "Apple AppKit NSColorWell standard height"
+            }
           },
           "corner_radius": {
             "$type": "dimension",
             "$value": "5.0pt",
             "$description": "Outer bezel corner radius for color well.",
-            "$extensions": { "apple_citation": "macOS HIG Color Wells" }
+            "$extensions": {
+              "apple_citation": "macOS HIG Color Wells"
+            }
           },
           "border_width": {
             "$type": "dimension",
             "$value": "1.0pt",
             "$description": "Perimeter border stroke width for color well bezel.",
-            "$extensions": { "apple_citation": "AppKit NSColorWell border stroke" }
+            "$extensions": {
+              "apple_citation": "AppKit NSColorWell border stroke"
+            }
           },
           "swatch_inset": {
             "$type": "dimension",
             "$value": "3.0pt",
             "$description": "Inset margin between outer bezel and internal color swatch.",
-            "$extensions": { "apple_citation": "AppKit NSColorWell swatch inset" }
+            "$extensions": {
+              "apple_citation": "AppKit NSColorWell swatch inset"
+            }
           },
           "swatch_radius": {
             "$type": "dimension",
             "$value": "3.0pt",
             "$description": "Corner radius for internal color swatch rectangle.",
-            "$extensions": { "apple_citation": "AppKit NSColorWell swatch radius" }
+            "$extensions": {
+              "apple_citation": "AppKit NSColorWell swatch radius"
+            }
           },
           "checker_grid_size": {
             "$type": "dimension",
             "$value": "4.0pt",
             "$description": "Grid cell size for translucent alpha preview underlay.",
-            "$extensions": { "apple_citation": "macOS HIG Color Well alpha checkerboard" }
+            "$extensions": {
+              "apple_citation": "macOS HIG Color Well alpha checkerboard"
+            }
           },
           "popup_gap": {
             "$type": "dimension",
             "$value": "4.0pt",
             "$description": "Spacing between color well and floating color picker panel.",
-            "$extensions": { "apple_citation": "AppKit NSColorWell popup spacing" }
+            "$extensions": {
+              "apple_citation": "AppKit NSColorWell popup spacing"
+            }
           },
           "popup_corner_radius": {
             "$type": "dimension",
             "$value": "8.0pt",
             "$description": "Corner radius for color picker popup window frame.",
-            "$extensions": { "apple_citation": "macOS NSColorPanel popup squircle" }
+            "$extensions": {
+              "apple_citation": "macOS NSColorPanel popup squircle"
+            }
           }
         },
         "toggle": {
@@ -770,43 +1010,57 @@
             "$type": "dimension",
             "$value": "26.0pt",
             "$description": "Standard width for NSSwitch.",
-            "$extensions": { "apple_citation": "Apple AppKit NSSwitch standard width" }
+            "$extensions": {
+              "apple_citation": "Apple AppKit NSSwitch standard width"
+            }
           },
           "height": {
             "$type": "dimension",
             "$value": "15.0pt",
             "$description": "Standard height for NSSwitch.",
-            "$extensions": { "apple_citation": "Apple AppKit NSSwitch standard height" }
+            "$extensions": {
+              "apple_citation": "Apple AppKit NSSwitch standard height"
+            }
           },
           "corner_radius": {
             "$type": "dimension",
             "$value": "7.5pt",
             "$description": "Fully rounded pill corner radius.",
-            "$extensions": { "apple_citation": "macOS HIG Switches" }
+            "$extensions": {
+              "apple_citation": "macOS HIG Switches"
+            }
           },
           "knob_size": {
             "$type": "dimension",
             "$value": "13.0pt",
             "$description": "Diameter of circular switch knob.",
-            "$extensions": { "apple_citation": "macOS HIG Switches knob" }
+            "$extensions": {
+              "apple_citation": "macOS HIG Switches knob"
+            }
           },
           "knob_offset_off": {
             "$type": "dimension",
             "$value": "1.0pt",
             "$description": "Knob inset from left edge when disabled.",
-            "$extensions": { "apple_citation": "macOS HIG Switches knob offset" }
+            "$extensions": {
+              "apple_citation": "macOS HIG Switches knob offset"
+            }
           },
           "knob_offset_on": {
             "$type": "dimension",
             "$value": "12.0pt",
             "$description": "Knob inset from left edge when enabled.",
-            "$extensions": { "apple_citation": "macOS HIG Switches knob offset" }
+            "$extensions": {
+              "apple_citation": "macOS HIG Switches knob offset"
+            }
           },
           "border_width": {
             "$type": "dimension",
             "$value": "1.0pt",
             "$description": "Hairline border width for switch bezel.",
-            "$extensions": { "apple_citation": "macOS HIG Switches border" }
+            "$extensions": {
+              "apple_citation": "macOS HIG Switches border"
+            }
           }
         },
         "progress_indicator": {
@@ -815,31 +1069,41 @@
               "$type": "dimension",
               "$value": "6.0pt",
               "$description": "Standard track height for NSProgressIndicator bar in regular size.",
-              "$extensions": { "apple_citation": "Apple AppKit NSProgressIndicator regular bar height" }
+              "$extensions": {
+                "apple_citation": "Apple AppKit NSProgressIndicator regular bar height"
+              }
             },
             "bar_corner_radius": {
               "$type": "dimension",
               "$value": "3.0pt",
               "$description": "Capsule corner radius for regular progress bar.",
-              "$extensions": { "apple_citation": "macOS HIG Progress Indicators" }
+              "$extensions": {
+                "apple_citation": "macOS HIG Progress Indicators"
+              }
             },
             "spinner_size": {
               "$type": "dimension",
               "$value": "32.0pt",
               "$description": "Diameter of spinning progress indicator in regular size.",
-              "$extensions": { "apple_citation": "Apple AppKit NSProgressIndicatorSpinningStyle regular" }
+              "$extensions": {
+                "apple_citation": "Apple AppKit NSProgressIndicatorSpinningStyle regular"
+              }
             },
             "spoke_width": {
               "$type": "dimension",
               "$value": "2.5pt",
               "$description": "Stroke width of radial fin spokes in regular size.",
-              "$extensions": { "apple_citation": "Apple AppKit NSProgressIndicator spoke thickness" }
+              "$extensions": {
+                "apple_citation": "Apple AppKit NSProgressIndicator spoke thickness"
+              }
             },
             "font_size": {
               "$type": "dimension",
               "$value": "12.0pt",
               "$description": "Typography size for optional status/percentage label in regular size.",
-              "$extensions": { "apple_citation": "macOS HIG Progress Indicators label typography" }
+              "$extensions": {
+                "apple_citation": "macOS HIG Progress Indicators label typography"
+              }
             }
           },
           "small": {
@@ -847,31 +1111,41 @@
               "$type": "dimension",
               "$value": "4.0pt",
               "$description": "Compact track height for NSProgressIndicator bar in small size.",
-              "$extensions": { "apple_citation": "Apple AppKit NSProgressIndicator small bar height" }
+              "$extensions": {
+                "apple_citation": "Apple AppKit NSProgressIndicator small bar height"
+              }
             },
             "bar_corner_radius": {
               "$type": "dimension",
               "$value": "2.0pt",
               "$description": "Capsule corner radius for small progress bar.",
-              "$extensions": { "apple_citation": "macOS HIG Progress Indicators (Small)" }
+              "$extensions": {
+                "apple_citation": "macOS HIG Progress Indicators (Small)"
+              }
             },
             "spinner_size": {
               "$type": "dimension",
               "$value": "16.0pt",
               "$description": "Diameter of spinning progress indicator in small size.",
-              "$extensions": { "apple_citation": "Apple AppKit NSProgressIndicatorSpinningStyle small" }
+              "$extensions": {
+                "apple_citation": "Apple AppKit NSProgressIndicatorSpinningStyle small"
+              }
             },
             "spoke_width": {
               "$type": "dimension",
               "$value": "1.6pt",
               "$description": "Stroke width of radial fin spokes in small size.",
-              "$extensions": { "apple_citation": "Apple AppKit NSProgressIndicator small spoke thickness" }
+              "$extensions": {
+                "apple_citation": "Apple AppKit NSProgressIndicator small spoke thickness"
+              }
             },
             "font_size": {
               "$type": "dimension",
               "$value": "11.0pt",
               "$description": "Typography size for optional status/percentage label in small size.",
-              "$extensions": { "apple_citation": "NSFont.systemFontSize(for: .small)" }
+              "$extensions": {
+                "apple_citation": "NSFont.systemFontSize(for: .small)"
+              }
             }
           },
           "mini": {
@@ -879,98 +1153,130 @@
               "$type": "dimension",
               "$value": "4.0pt",
               "$description": "Miniature track height for NSProgressIndicator bar in mini size (Sonoma/Sequoia 4.0pt).",
-              "$extensions": { "apple_citation": "Apple AppKit NSProgressIndicator mini bar height" }
+              "$extensions": {
+                "apple_citation": "Apple AppKit NSProgressIndicator mini bar height"
+              }
             },
             "bar_corner_radius": {
               "$type": "dimension",
               "$value": "2.0pt",
               "$description": "Capsule corner radius for mini progress bar.",
-              "$extensions": { "apple_citation": "macOS HIG Progress Indicators (Mini)" }
+              "$extensions": {
+                "apple_citation": "macOS HIG Progress Indicators (Mini)"
+              }
             },
             "spinner_size": {
               "$type": "dimension",
               "$value": "12.0pt",
               "$description": "Diameter of spinning progress indicator in mini size.",
-              "$extensions": { "apple_citation": "Apple AppKit NSProgressIndicatorSpinningStyle mini" }
+              "$extensions": {
+                "apple_citation": "Apple AppKit NSProgressIndicatorSpinningStyle mini"
+              }
             },
             "spoke_width": {
               "$type": "dimension",
               "$value": "1.2pt",
               "$description": "Stroke width of radial fin spokes in mini size.",
-              "$extensions": { "apple_citation": "Apple AppKit NSProgressIndicator mini spoke thickness" }
+              "$extensions": {
+                "apple_citation": "Apple AppKit NSProgressIndicator mini spoke thickness"
+              }
             },
             "font_size": {
               "$type": "dimension",
               "$value": "9.0pt",
               "$description": "Typography size for optional status/percentage label in mini size.",
-              "$extensions": { "apple_citation": "NSFont.systemFontSize(for: .mini)" }
+              "$extensions": {
+                "apple_citation": "NSFont.systemFontSize(for: .mini)"
+              }
             }
           },
           "default_bar_width": {
             "$type": "dimension",
             "$value": "160.0pt",
             "$description": "Default width for horizontal progress bar when not explicitly specified.",
-            "$extensions": { "apple_citation": "AppKit NSProgressIndicator standard width" }
+            "$extensions": {
+              "apple_citation": "AppKit NSProgressIndicator standard width"
+            }
           },
           "spoke_count": {
             "$type": "dimension",
             "$value": "12.0pt",
             "$description": "Number of radial fin spokes in spinning progress indicator.",
-            "$extensions": { "apple_citation": "macOS HIG Progress Indicators 12-spoke fin geometry" }
+            "$extensions": {
+              "apple_citation": "macOS HIG Progress Indicators 12-spoke fin geometry"
+            }
           },
           "spoke_inner_ratio": {
             "$type": "dimension",
             "$value": "0.52pt",
             "$description": "Inner radius ratio of radial fin spokes relative to outer radius.",
-            "$extensions": { "apple_citation": "macOS HIG Progress Indicators inner hub clearance" }
+            "$extensions": {
+              "apple_citation": "macOS HIG Progress Indicators inner hub clearance"
+            }
           },
           "indeterminate_pill_ratio": {
             "$type": "dimension",
             "$value": "0.35pt",
             "$description": "Width ratio of the sliding indeterminate pulse pill relative to bar width.",
-            "$extensions": { "apple_citation": "macOS Big Sur+ indeterminate bar pulse width" }
+            "$extensions": {
+              "apple_citation": "macOS Big Sur+ indeterminate bar pulse width"
+            }
           },
           "spin_speed_hz": {
             "$type": "dimension",
             "$value": "1.0pt",
             "$description": "Rotational cycle frequency in Hz for spinning progress indicator.",
-            "$extensions": { "apple_citation": "AppKit NSProgressIndicator 1Hz cycle" }
+            "$extensions": {
+              "apple_citation": "AppKit NSProgressIndicator 1Hz cycle"
+            }
           },
           "bar_indeterminate_speed": {
             "$type": "dimension",
             "$value": "1.2pt",
             "$description": "Oscillation frequency in Hz for indeterminate bar pulse.",
-            "$extensions": { "apple_citation": "AppKit NSProgressIndicator indeterminate pulse cycle" }
+            "$extensions": {
+              "apple_citation": "AppKit NSProgressIndicator indeterminate pulse cycle"
+            }
           },
           "label_spacing": {
             "$type": "dimension",
             "$value": "6.0pt",
             "$description": "Spacing between progress indicator and optional status/percentage label.",
-            "$extensions": { "apple_citation": "macOS HIG Progress Indicators label spacing" }
+            "$extensions": {
+              "apple_citation": "macOS HIG Progress Indicators label spacing"
+            }
           },
           "border_width": {
             "$type": "dimension",
             "$value": "1.0pt",
             "$description": "Subtle track border stroke width.",
-            "$extensions": { "apple_citation": "AppKit NSProgressIndicator track border" }
+            "$extensions": {
+              "apple_citation": "AppKit NSProgressIndicator track border"
+            }
           },
           "tau_radians": {
             "$type": "dimension",
             "$value": "6.2831855pt",
             "$description": "Full circle angle 2*pi in radians for radial spoke placement.",
-            "$extensions": { "apple_citation": "Trigonometric full turn constant" }
+            "$extensions": {
+              "apple_citation": "Trigonometric full turn constant"
+            }
           },
           "min_spoke_alpha": {
             "$type": "dimension",
             "$value": "0.18pt",
             "$description": "Minimum trailing spoke opacity in spinning progress indicator.",
-            "$extensions": { "apple_citation": "AppKit NSProgressIndicator spoke opacity floor" }
+            "$extensions": {
+              "apple_citation": "AppKit NSProgressIndicator spoke opacity floor"
+            }
           },
           "percentage_scale": {
             "$type": "dimension",
             "$value": "100.0pt",
             "$description": "Percentage conversion multiplier for status display.",
-            "$extensions": { "apple_citation": "Standard percentage scale factor" }
+            "$extensions": {
+              "apple_citation": "Standard percentage scale factor"
+            }
           }
         },
         "table_view": {
@@ -978,73 +1284,97 @@
             "$type": "dimension",
             "$value": "28.0pt",
             "$description": "Standard height of NSTableHeaderView bar (macOS Sonoma ground truth 28.0pt).",
-            "$extensions": { "apple_citation": "Apple AppKit NSTableHeaderView frame height (macOS 14 Sonoma)" }
+            "$extensions": {
+              "apple_citation": "Apple AppKit NSTableHeaderView frame height (macOS 14 Sonoma)"
+            }
           },
           "row_height": {
             "$type": "dimension",
             "$value": "24.0pt",
             "$description": "Standard row height for NSTableView data rows (macOS Sonoma ground truth 24.0pt).",
-            "$extensions": { "apple_citation": "Apple AppKit NSTableView standard rowHeight (macOS 14 Sonoma)" }
+            "$extensions": {
+              "apple_citation": "Apple AppKit NSTableView standard rowHeight (macOS 14 Sonoma)"
+            }
           },
           "cell_padding_horizontal": {
             "$type": "dimension",
             "$value": "8.0pt",
             "$description": "Horizontal inset padding within table header and data cells.",
-            "$extensions": { "apple_citation": "AppKit NSTableView intercellSpacing horizontal margin" }
+            "$extensions": {
+              "apple_citation": "AppKit NSTableView intercellSpacing horizontal margin"
+            }
           },
           "cell_padding_vertical": {
             "$type": "dimension",
             "$value": "2.0pt",
             "$description": "Vertical inset padding within table data cells.",
-            "$extensions": { "apple_citation": "AppKit NSTableView intercellSpacing vertical margin" }
+            "$extensions": {
+              "apple_citation": "AppKit NSTableView intercellSpacing vertical margin"
+            }
           },
           "header_font_size": {
             "$type": "dimension",
             "$value": "11.0pt",
             "$description": "Typography size for column header titles.",
-            "$extensions": { "apple_citation": "AppKit NSTableHeaderCell font size" }
+            "$extensions": {
+              "apple_citation": "AppKit NSTableHeaderCell font size"
+            }
           },
           "cell_font_size": {
             "$type": "dimension",
             "$value": "12.0pt",
             "$description": "Typography size for standard table cell content.",
-            "$extensions": { "apple_citation": "AppKit NSTableView standard cell font size" }
+            "$extensions": {
+              "apple_citation": "AppKit NSTableView standard cell font size"
+            }
           },
           "sort_chevron_size": {
             "$type": "dimension",
             "$value": "8.0pt",
             "$description": "Font/icon size of ascending/descending sort indicator chevron (8.0pt).",
-            "$extensions": { "apple_citation": "AppKit NSTableHeaderCell sort indicator size" }
+            "$extensions": {
+              "apple_citation": "AppKit NSTableHeaderCell sort indicator size"
+            }
           },
           "sort_chevron_spacing": {
             "$type": "dimension",
             "$value": "6.0pt",
             "$description": "Horizontal gap between column title and sort indicator (6.0pt).",
-            "$extensions": { "apple_citation": "AppKit NSTableHeaderCell sort indicator margin" }
+            "$extensions": {
+              "apple_citation": "AppKit NSTableHeaderCell sort indicator margin"
+            }
           },
           "separator_width": {
             "$type": "dimension",
             "$value": "1.0pt",
             "$description": "Hairline divider stroke width for header and column separators.",
-            "$extensions": { "apple_citation": "AppKit NSTableView gridLine thickness" }
+            "$extensions": {
+              "apple_citation": "AppKit NSTableView gridLine thickness"
+            }
           },
           "header_divider_inset": {
             "$type": "dimension",
             "$value": "4.0pt",
             "$description": "Top and bottom vertical inset for column divider lines inside the header bar.",
-            "$extensions": { "apple_citation": "macOS HIG Table Views header column divider inset" }
+            "$extensions": {
+              "apple_citation": "macOS HIG Table Views header column divider inset"
+            }
           },
           "corner_radius": {
             "$type": "dimension",
             "$value": "6.0pt",
             "$description": "Outer container squircle corner radius for bordered table views.",
-            "$extensions": { "apple_citation": "macOS HIG Table Views container radius" }
+            "$extensions": {
+              "apple_citation": "macOS HIG Table Views container radius"
+            }
           },
           "row_corner_radius": {
             "$type": "dimension",
             "$value": "4.0pt",
             "$description": "Corner radius for selected or hovered row highlight.",
-            "$extensions": { "apple_citation": "macOS Big Sur+ inset table selection radius" }
+            "$extensions": {
+              "apple_citation": "macOS Big Sur+ inset table selection radius"
+            }
           }
         },
         "token_field": {
@@ -1052,109 +1382,145 @@
             "$type": "dimension",
             "$value": "22.0pt",
             "$description": "Minimum single-row height of NSTokenField bezel container (regular 22.0pt).",
-            "$extensions": { "apple_citation": "Apple AppKit NSTokenField intrinsic height (22.0pt)" }
+            "$extensions": {
+              "apple_citation": "Apple AppKit NSTokenField intrinsic height (22.0pt)"
+            }
           },
           "corner_radius": {
             "$type": "dimension",
             "$value": "6.0pt",
             "$description": "Outer bezel squircle corner radius for token field.",
-            "$extensions": { "apple_citation": "macOS HIG Token Fields" }
+            "$extensions": {
+              "apple_citation": "macOS HIG Token Fields"
+            }
           },
           "border_width": {
             "$type": "dimension",
             "$value": "1.0pt",
             "$description": "Outer bezel border thickness.",
-            "$extensions": { "apple_citation": "AppKit NSTokenField border stroke" }
+            "$extensions": {
+              "apple_citation": "AppKit NSTokenField border stroke"
+            }
           },
           "padding_horizontal": {
             "$type": "dimension",
             "$value": "6.0pt",
             "$description": "Horizontal inner padding from bezel to token pills.",
-            "$extensions": { "apple_citation": "AppKit NSTokenFieldCell horizontal inset" }
+            "$extensions": {
+              "apple_citation": "AppKit NSTokenFieldCell horizontal inset"
+            }
           },
           "padding_vertical": {
             "$type": "dimension",
             "$value": "3.0pt",
             "$description": "Vertical inner padding from bezel to token pills (3.0pt top/bottom around 16.0pt pill = 22.0pt).",
-            "$extensions": { "apple_citation": "AppKit NSTokenFieldCell vertical inset" }
+            "$extensions": {
+              "apple_citation": "AppKit NSTokenFieldCell vertical inset"
+            }
           },
           "pill_height": {
             "$type": "dimension",
             "$value": "16.0pt",
             "$description": "Height of each rounded token pill capsule (16.0pt).",
-            "$extensions": { "apple_citation": "AppKit NSTokenFieldCell .rounded pill height" }
+            "$extensions": {
+              "apple_citation": "AppKit NSTokenFieldCell .rounded pill height"
+            }
           },
           "pill_corner_radius": {
             "$type": "dimension",
             "$value": "8.0pt",
             "$description": "Fully rounded capsule corner radius for token pills (8.0pt = half of 16.0pt).",
-            "$extensions": { "apple_citation": "macOS HIG Token Fields .rounded capsule radius" }
+            "$extensions": {
+              "apple_citation": "macOS HIG Token Fields .rounded capsule radius"
+            }
           },
           "pill_padding_horizontal": {
             "$type": "dimension",
             "$value": "6.0pt",
             "$description": "Horizontal text padding inside a token pill (6.0pt).",
-            "$extensions": { "apple_citation": "AppKit NSTokenFieldCell token text margin" }
+            "$extensions": {
+              "apple_citation": "AppKit NSTokenFieldCell token text margin"
+            }
           },
           "pill_spacing": {
             "$type": "dimension",
             "$value": "4.0pt",
             "$description": "Horizontal gap between adjacent token pills.",
-            "$extensions": { "apple_citation": "AppKit NSTokenField inter-token spacing" }
+            "$extensions": {
+              "apple_citation": "AppKit NSTokenField inter-token spacing"
+            }
           },
           "row_spacing": {
             "$type": "dimension",
             "$value": "4.0pt",
             "$description": "Vertical gap between wrapped rows of token pills.",
-            "$extensions": { "apple_citation": "AppKit NSTokenField wrapped line spacing" }
+            "$extensions": {
+              "apple_citation": "AppKit NSTokenField wrapped line spacing"
+            }
           },
           "font_size": {
             "$type": "dimension",
             "$value": "12.0pt",
             "$description": "Typography size for token pill labels and inline input.",
-            "$extensions": { "apple_citation": "AppKit NSTokenField standard font size" }
+            "$extensions": {
+              "apple_citation": "AppKit NSTokenField standard font size"
+            }
           },
           "counter_font_size": {
             "$type": "dimension",
             "$value": "10.0pt",
             "$description": "Typography size for bottom-right character/token counter.",
-            "$extensions": { "apple_citation": "macOS HIG caption counter font size" }
+            "$extensions": {
+              "apple_citation": "macOS HIG caption counter font size"
+            }
           },
           "remove_icon_size": {
             "$type": "dimension",
             "$value": "12.0pt",
             "$description": "Hit target and bounding size of trailing remove (x) button on token pill.",
-            "$extensions": { "apple_citation": "AppKit NSTokenField token remove button" }
+            "$extensions": {
+              "apple_citation": "AppKit NSTokenField token remove button"
+            }
           },
           "remove_icon_stroke": {
             "$type": "dimension",
             "$value": "1.2pt",
             "$description": "Stroke width of vector cross mark inside token remove button.",
-            "$extensions": { "apple_citation": "AppKit NSTokenField remove icon stroke" }
+            "$extensions": {
+              "apple_citation": "AppKit NSTokenField remove icon stroke"
+            }
           },
           "remove_cross_span": {
             "$type": "dimension",
             "$value": "2.5pt",
             "$description": "Half-span of the vector cross mark inside token remove button.",
-            "$extensions": { "apple_citation": "AppKit NSTokenField remove cross geometry" }
+            "$extensions": {
+              "apple_citation": "AppKit NSTokenField remove cross geometry"
+            }
           },
           "min_input_width": {
             "$type": "dimension",
             "$value": "64.0pt",
             "$description": "Minimum horizontal width reserved for trailing inline text edit.",
-            "$extensions": { "apple_citation": "AppKit NSTokenField trailing insertion field minimum width" }
+            "$extensions": {
+              "apple_citation": "AppKit NSTokenField trailing insertion field minimum width"
+            }
           },
           "default_width": {
             "$type": "dimension",
             "$value": "240.0pt",
             "$description": "Default width for MacTokenField when not explicitly specified.",
-            "$extensions": { "apple_citation": "AppKit NSTokenField default width" }
+            "$extensions": {
+              "apple_citation": "AppKit NSTokenField default width"
+            }
           },
           "counter_row_height": {
             "$type": "dimension",
             "$value": "14.0pt",
             "$description": "Additional bottom row height reserved when character counter is active.",
-            "$extensions": { "apple_citation": "macOS HIG Token Field counter footer height" }
+            "$extensions": {
+              "apple_citation": "macOS HIG Token Field counter footer height"
+            }
           }
         },
         "level_indicator": {
@@ -1162,55 +1528,73 @@
             "$type": "dimension",
             "$value": "160.0pt",
             "$description": "Default primary axis length for NSLevelIndicator.",
-            "$extensions": { "apple_citation": "Apple AppKit NSLevelIndicator standard length" }
+            "$extensions": {
+              "apple_citation": "Apple AppKit NSLevelIndicator standard length"
+            }
           },
           "thickness": {
             "$type": "dimension",
             "$value": "16.0pt",
             "$description": "Standard cross-axis thickness for NSLevelIndicator (regular 16.0pt).",
-            "$extensions": { "apple_citation": "Apple AppKit NSLevelIndicator regular thickness" }
+            "$extensions": {
+              "apple_citation": "Apple AppKit NSLevelIndicator regular thickness"
+            }
           },
           "corner_radius": {
             "$type": "dimension",
             "$value": "3.0pt",
             "$description": "Outer bezel corner radius for level indicator.",
-            "$extensions": { "apple_citation": "macOS HIG Level Indicators" }
+            "$extensions": {
+              "apple_citation": "macOS HIG Level Indicators"
+            }
           },
           "segment_corner_radius": {
             "$type": "dimension",
             "$value": "1.5pt",
             "$description": "Corner radius for individual discrete level segments.",
-            "$extensions": { "apple_citation": "AppKit NSLevelIndicator discrete segment radius" }
+            "$extensions": {
+              "apple_citation": "AppKit NSLevelIndicator discrete segment radius"
+            }
           },
           "segment_spacing": {
             "$type": "dimension",
             "$value": "2.0pt",
             "$description": "Gap between adjacent segments in discrete mode.",
-            "$extensions": { "apple_citation": "AppKit NSLevelIndicator discrete inter-segment gap" }
+            "$extensions": {
+              "apple_citation": "AppKit NSLevelIndicator discrete inter-segment gap"
+            }
           },
           "default_segment_count": {
             "$type": "dimension",
             "$value": "12.0pt",
             "$description": "Default number of discrete blocks when not overridden.",
-            "$extensions": { "apple_citation": "AppKit NSLevelIndicator default discrete segment count" }
+            "$extensions": {
+              "apple_citation": "AppKit NSLevelIndicator default discrete segment count"
+            }
           },
           "border_width": {
             "$type": "dimension",
             "$value": "1.0pt",
             "$description": "Perimeter border stroke width for level meter track.",
-            "$extensions": { "apple_citation": "AppKit NSLevelIndicator bezel border" }
+            "$extensions": {
+              "apple_citation": "AppKit NSLevelIndicator bezel border"
+            }
           },
           "peak_line_width": {
             "$type": "dimension",
             "$value": "2.0pt",
             "$description": "Stroke width of the peak-hold indicator marker line.",
-            "$extensions": { "apple_citation": "Logic Pro / AVKit audio level peak-hold marker" }
+            "$extensions": {
+              "apple_citation": "Logic Pro / AVKit audio level peak-hold marker"
+            }
           },
           "track_inset": {
             "$type": "dimension",
             "$value": "1.5pt",
             "$description": "Interior inset from outer bezel to active meter bar/segments.",
-            "$extensions": { "apple_citation": "AppKit NSLevelIndicator inner groove inset" }
+            "$extensions": {
+              "apple_citation": "AppKit NSLevelIndicator inner groove inset"
+            }
           }
         },
         "trim_scrubber": {
@@ -1218,121 +1602,161 @@
             "$type": "dimension",
             "$value": "44.0pt",
             "$description": "Standard total height of AVKit / QuickTime trim scrubber bar.",
-            "$extensions": { "apple_citation": "Apple AVKit AVPlayerView trim scrubber height" }
+            "$extensions": {
+              "apple_citation": "Apple AVKit AVPlayerView trim scrubber height"
+            }
           },
           "default_width": {
             "$type": "dimension",
             "$value": "320.0pt",
             "$description": "Default width of MacTrimScrubber when not explicitly specified.",
-            "$extensions": { "apple_citation": "AVKit scrubber standard minimum width" }
+            "$extensions": {
+              "apple_citation": "AVKit scrubber standard minimum width"
+            }
           },
           "track_inset_vertical": {
             "$type": "dimension",
             "$value": "8.0pt",
             "$description": "Top and bottom vertical margin around the waveform track.",
-            "$extensions": { "apple_citation": "QuickTime Player trim bar vertical margin" }
+            "$extensions": {
+              "apple_citation": "QuickTime Player trim bar vertical margin"
+            }
           },
           "corner_radius": {
             "$type": "dimension",
             "$value": "6.0pt",
             "$description": "Corner radius of the scrubber track and trim selection frame.",
-            "$extensions": { "apple_citation": "macOS QuickTime Player trim frame corner radius" }
+            "$extensions": {
+              "apple_citation": "macOS QuickTime Player trim frame corner radius"
+            }
           },
           "handle_width": {
             "$type": "dimension",
             "$value": "12.0pt",
             "$description": "Horizontal width of left (In) and right (Out) yellow trim grab handles (12.0pt).",
-            "$extensions": { "apple_citation": "Apple AVKit AVPlayerView trim handle width (12-14pt)" }
+            "$extensions": {
+              "apple_citation": "Apple AVKit AVPlayerView trim handle width (12-14pt)"
+            }
           },
           "handle_slot_width": {
             "$type": "dimension",
             "$value": "1.0pt",
             "$description": "Stroke width of vertical grip slit inside each trim handle (1.0pt).",
-            "$extensions": { "apple_citation": "Apple AVKit trim handle grip slot" }
+            "$extensions": {
+              "apple_citation": "Apple AVKit trim handle grip slot"
+            }
           },
           "handle_slot_height": {
             "$type": "dimension",
             "$value": "10.0pt",
             "$description": "Vertical length of grip line inside each trim handle.",
-            "$extensions": { "apple_citation": "Apple AVKit trim handle grip slot height" }
+            "$extensions": {
+              "apple_citation": "Apple AVKit trim handle grip slot height"
+            }
           },
           "selection_border_width": {
             "$type": "dimension",
             "$value": "2.0pt",
             "$description": "Top and bottom border thickness of active yellow trim selection frame.",
-            "$extensions": { "apple_citation": "Apple AVKit trim selection border thickness" }
+            "$extensions": {
+              "apple_citation": "Apple AVKit trim selection border thickness"
+            }
           },
           "playhead_width": {
             "$type": "dimension",
             "$value": "2.0pt",
             "$description": "Stroke thickness of the vertical playhead cursor line.",
-            "$extensions": { "apple_citation": "AVKit playhead line width" }
+            "$extensions": {
+              "apple_citation": "AVKit playhead line width"
+            }
           },
           "playhead_hit_width": {
             "$type": "dimension",
             "$value": "12.0pt",
             "$description": "Interactive pointer hit-target width centered on the playhead.",
-            "$extensions": { "apple_citation": "macOS HIG pointer target expansion" }
+            "$extensions": {
+              "apple_citation": "macOS HIG pointer target expansion"
+            }
           },
           "badge_height": {
             "$type": "dimension",
             "$value": "14.0pt",
             "$description": "Height of floating MM:SS.d timecode pill badge above playhead.",
-            "$extensions": { "apple_citation": "QuickTime Player timecode readout pill" }
+            "$extensions": {
+              "apple_citation": "QuickTime Player timecode readout pill"
+            }
           },
           "badge_padding_horizontal": {
             "$type": "dimension",
             "$value": "6.0pt",
             "$description": "Horizontal text padding inside timecode badge.",
-            "$extensions": { "apple_citation": "QuickTime Player timecode badge padding" }
+            "$extensions": {
+              "apple_citation": "QuickTime Player timecode badge padding"
+            }
           },
           "badge_corner_radius": {
             "$type": "dimension",
             "$value": "7.0pt",
             "$description": "Capsule corner radius of timecode readout pill badge (7.0pt).",
-            "$extensions": { "apple_citation": "QuickTime Player timecode badge capsule radius" }
+            "$extensions": {
+              "apple_citation": "QuickTime Player timecode badge capsule radius"
+            }
           },
           "badge_font_size": {
             "$type": "dimension",
             "$value": "11.0pt",
             "$description": "Monospace/tabular font size for MM:SS.d timecode readout (11.0pt).",
-            "$extensions": { "apple_citation": "NSFont.monospacedDigitSystemFont(ofSize: 11.0)" }
+            "$extensions": {
+              "apple_citation": "NSFont.monospacedDigitSystemFont(ofSize: 11.0)"
+            }
           },
           "zone_font_size": {
             "$type": "dimension",
             "$value": "9.0pt",
             "$description": "Typography size for named timeline zone labels.",
-            "$extensions": { "apple_citation": "Final Cut Pro / AVKit timeline marker label" }
+            "$extensions": {
+              "apple_citation": "Final Cut Pro / AVKit timeline marker label"
+            }
           },
           "zone_label_padding": {
             "$type": "dimension",
             "$value": "4.0pt",
             "$description": "Inset padding for timeline zone title label.",
-            "$extensions": { "apple_citation": "AVKit timeline zone label inset" }
+            "$extensions": {
+              "apple_citation": "AVKit timeline zone label inset"
+            }
           },
           "waveform_bar_width": {
             "$type": "dimension",
             "$value": "2.0pt",
             "$description": "Stroke width of individual vertical waveform bars.",
-            "$extensions": { "apple_citation": "AVKit waveform bar width" }
+            "$extensions": {
+              "apple_citation": "AVKit waveform bar width"
+            }
           },
           "waveform_min_amplitude": {
             "$type": "dimension",
             "$value": "0.08pt",
             "$description": "Minimum visible amplitude ratio for silent waveform samples.",
-            "$extensions": { "apple_citation": "AVKit waveform center-line floor" }
+            "$extensions": {
+              "apple_citation": "AVKit waveform center-line floor"
+            }
           },
           "seconds_per_minute": {
             "$type": "dimension",
             "$value": "60.0pt",
             "$description": "Seconds per minute conversion constant for timecode formatting.",
-            "$extensions": { "apple_citation": "SMPTE / QuickTime timecode standard" }
+            "$extensions": {
+              "apple_citation": "SMPTE / QuickTime timecode standard"
+            }
           },
           "tenths_per_second": {
             "$type": "dimension",
             "$value": "10.0pt",
             "$description": "Deciseconds per second multiplier for MM:SS.d formatting.",
-            "$extensions": { "apple_citation": "QuickTime decisecond readout precision" }
+            "$extensions": {
+              "apple_citation": "QuickTime decisecond readout precision"
+            }
           }
         },
         "path_control": {
@@ -1340,91 +1764,121 @@
             "$type": "dimension",
             "$value": "22.0pt",
             "$description": "Standard intrinsic height for NSPathControl bar.",
-            "$extensions": { "apple_citation": "Apple AppKit NSPathControl regular height" }
+            "$extensions": {
+              "apple_citation": "Apple AppKit NSPathControl regular height"
+            }
           },
           "corner_radius": {
             "$type": "dimension",
             "$value": "5.0pt",
             "$description": "Outer bezel corner radius for NSPathControl.",
-            "$extensions": { "apple_citation": "macOS HIG Path Controls" }
+            "$extensions": {
+              "apple_citation": "macOS HIG Path Controls"
+            }
           },
           "segment_corner_radius": {
             "$type": "dimension",
             "$value": "4.0pt",
             "$description": "Hover and active highlight corner radius for individual path segments.",
-            "$extensions": { "apple_citation": "AppKit NSPathComponentCell highlight radius" }
+            "$extensions": {
+              "apple_citation": "AppKit NSPathComponentCell highlight radius"
+            }
           },
           "padding_horizontal": {
             "$type": "dimension",
             "$value": "6.0pt",
             "$description": "Leading and trailing horizontal padding inside path bar.",
-            "$extensions": { "apple_citation": "AppKit NSPathControl horizontal inset" }
+            "$extensions": {
+              "apple_citation": "AppKit NSPathControl horizontal inset"
+            }
           },
           "segment_padding_horizontal": {
             "$type": "dimension",
             "$value": "5.0pt",
             "$description": "Horizontal padding inside each clickable path component.",
-            "$extensions": { "apple_citation": "AppKit NSPathComponentCell margin" }
+            "$extensions": {
+              "apple_citation": "AppKit NSPathComponentCell margin"
+            }
           },
           "segment_spacing": {
             "$type": "dimension",
             "$value": "2.0pt",
             "$description": "Horizontal spacing around chevron separators between segments.",
-            "$extensions": { "apple_citation": "AppKit NSPathControl inter-component spacing" }
+            "$extensions": {
+              "apple_citation": "AppKit NSPathControl inter-component spacing"
+            }
           },
           "icon_size": {
             "$type": "dimension",
             "$value": "16.0pt",
             "$description": "Bounding size of leading folder or file vector icon in each segment (16x16pt).",
-            "$extensions": { "apple_citation": "AppKit NSPathComponentCell image size (16x16pt)" }
+            "$extensions": {
+              "apple_citation": "AppKit NSPathComponentCell image size (16x16pt)"
+            }
           },
           "icon_spacing": {
             "$type": "dimension",
             "$value": "4.0pt",
             "$description": "Gap between segment icon and segment title text.",
-            "$extensions": { "apple_citation": "AppKit NSPathComponentCell image-to-title gap" }
+            "$extensions": {
+              "apple_citation": "AppKit NSPathComponentCell image-to-title gap"
+            }
           },
           "chevron_size": {
             "$type": "dimension",
             "$value": "8.0pt",
             "$description": "Font size of ChevronRight separator symbol between segments (8.0pt).",
-            "$extensions": { "apple_citation": "AppKit NSPathControl divider arrow size" }
+            "$extensions": {
+              "apple_citation": "AppKit NSPathControl divider arrow size"
+            }
           },
           "font_size": {
             "$type": "dimension",
             "$value": "11.0pt",
             "$description": "Typography size for path component labels.",
-            "$extensions": { "apple_citation": "NSFont.systemFontSize(for: .small)" }
+            "$extensions": {
+              "apple_citation": "NSFont.systemFontSize(for: .small)"
+            }
           },
           "border_width": {
             "$type": "dimension",
             "$value": "1.0pt",
             "$description": "Hairline border stroke width for path control bezel and choose button.",
-            "$extensions": { "apple_citation": "AppKit NSPathControl bezel border" }
+            "$extensions": {
+              "apple_citation": "AppKit NSPathControl bezel border"
+            }
           },
           "choose_button_padding": {
             "$type": "dimension",
             "$value": "8.0pt",
             "$description": "Horizontal label padding inside optional trailing Choose... button.",
-            "$extensions": { "apple_citation": "AppKit NSButton small push button padding" }
+            "$extensions": {
+              "apple_citation": "AppKit NSButton small push button padding"
+            }
           },
           "choose_button_height": {
             "$type": "dimension",
             "$value": "18.0pt",
             "$description": "Height of optional trailing Choose... button.",
-            "$extensions": { "apple_citation": "AppKit NSControlSizeSmall button height" }
+            "$extensions": {
+              "apple_citation": "AppKit NSControlSizeSmall button height"
+            }
           },
           "folder_tab_width": {
             "$type": "dimension",
             "$value": "5.0pt",
             "$description": "Width of top-left tab on vector folder glyph.",
-            "$extensions": { "apple_citation": "macOS SF Symbols folder vector proportion" }
+            "$extensions": {
+              "apple_citation": "macOS SF Symbols folder vector proportion"
+            }
           },
           "folder_tab_height": {
             "$type": "dimension",
             "$value": "2.0pt",
             "$description": "Height of top-left tab on vector folder glyph.",
-            "$extensions": { "apple_citation": "macOS SF Symbols folder vector proportion" }
+            "$extensions": {
+              "apple_citation": "macOS SF Symbols folder vector proportion"
+            }
           }
         }
       },
@@ -1433,91 +1887,121 @@
           "$type": "dimension",
           "$value": "70.0pt",
           "$description": "Leading toolbar margin clearing the traffic light button cluster in unified titlebars.",
-          "$extensions": { "apple_citation": "macOS HIG Window Anatomy & Unified Toolbars" }
+          "$extensions": {
+            "apple_citation": "macOS HIG Window Anatomy & Unified Toolbars"
+          }
         },
         "height_unified": {
           "value": "52.0pt",
           "$type": "dimension",
           "$description": "Standard unified titlebar and toolbar height in modern macOS (Big Sur through Sequoia).",
-          "$extensions": { "apple_citation": "macOS Human Interface Guidelines - Window Anatomy & Unified Toolbars" }
+          "$extensions": {
+            "apple_citation": "macOS Human Interface Guidelines - Window Anatomy & Unified Toolbars"
+          }
         },
         "height_compact": {
           "value": "44.0pt",
           "$type": "dimension",
           "$description": "Standard baseline / compact toolbar height (SPEC-001 Top Toolbar).",
-          "$extensions": { "apple_citation": "Apple HIG Toolbars / SPEC-001 Section 4.1" }
+          "$extensions": {
+            "apple_citation": "Apple HIG Toolbars / SPEC-001 Section 4.1"
+          }
         },
         "icon_size": {
           "value": "20.0pt",
           "$type": "dimension",
           "$description": "Vector template icon bounding box (20x20pt).",
-          "$extensions": { "apple_citation": "macOS HIG SF Symbols / SPEC-001 Section 4.1" }
+          "$extensions": {
+            "apple_citation": "macOS HIG SF Symbols / SPEC-001 Section 4.1"
+          }
         },
         "hit_target_width": {
           "value": "32.0pt",
           "$type": "dimension",
           "$description": "Standard width for interactive toolbar item target zone.",
-          "$extensions": { "apple_citation": "SPEC-001 Section 4.1 / Apple HIG Toolbars" }
+          "$extensions": {
+            "apple_citation": "SPEC-001 Section 4.1 / Apple HIG Toolbars"
+          }
         },
         "hit_target_height": {
           "value": "28.0pt",
           "$type": "dimension",
           "$description": "Standard height for interactive toolbar item target zone.",
-          "$extensions": { "apple_citation": "SPEC-001 Section 4.1 / Apple HIG Toolbars" }
+          "$extensions": {
+            "apple_citation": "SPEC-001 Section 4.1 / Apple HIG Toolbars"
+          }
         },
         "hit_target_min": {
           "value": "28.0pt",
           "$type": "dimension",
           "$description": "Minimum accessible pointer interaction hit target in macOS HIG.",
-          "$extensions": { "apple_citation": "macOS Human Interface Guidelines - Pointers & Accessibility Targets" }
+          "$extensions": {
+            "apple_citation": "macOS Human Interface Guidelines - Pointers & Accessibility Targets"
+          }
         },
         "item_spacing": {
           "value": "8.0pt",
           "$type": "dimension",
           "$description": "Standard inter-item gap between adjacent toolbar buttons.",
-          "$extensions": { "apple_citation": "macOS HIG Toolbars layout spacing" }
+          "$extensions": {
+            "apple_citation": "macOS HIG Toolbars layout spacing"
+          }
         },
         "item_spacing_compact": {
           "value": "6.0pt",
           "$type": "dimension",
           "$description": "Tight inter-item gap for dense toolbars.",
-          "$extensions": { "apple_citation": "AppKit NSToolbar default item minimum spacing" }
+          "$extensions": {
+            "apple_citation": "AppKit NSToolbar default item minimum spacing"
+          }
         },
         "edge_padding": {
           "value": "10.0pt",
           "$type": "dimension",
           "$description": "Standard padding from toolbar edge to first tool item.",
-          "$extensions": { "apple_citation": "macOS HIG Toolbars edge insets" }
+          "$extensions": {
+            "apple_citation": "macOS HIG Toolbars edge insets"
+          }
         },
         "caption_button_width": {
           "value": "46.0pt",
           "$type": "dimension",
           "$description": "Standard width for Windows 11 caption buttons (minimize, maximize, close).",
-          "$extensions": { "citation": "Microsoft Fluent Design System Title Bar / Caption Buttons" }
+          "$extensions": {
+            "citation": "Microsoft Fluent Design System Title Bar / Caption Buttons"
+          }
         },
         "caption_button_height": {
           "value": "32.0pt",
           "$type": "dimension",
           "$description": "Standard height for Windows 11 caption buttons in custom titlebars.",
-          "$extensions": { "citation": "Microsoft Fluent Design System Title Bar / Caption Buttons" }
+          "$extensions": {
+            "citation": "Microsoft Fluent Design System Title Bar / Caption Buttons"
+          }
         },
         "caption_icon_size": {
           "value": "10.0pt",
           "$type": "dimension",
           "$description": "Standard vector symbol dimension for Windows caption buttons (close X, max square, min line).",
-          "$extensions": { "citation": "Windows 11 Segoe Fluent Icons caption icon metrics" }
+          "$extensions": {
+            "citation": "Windows 11 Segoe Fluent Icons caption icon metrics"
+          }
         },
         "traffic_light_radius": {
           "value": "6.0pt",
           "$type": "dimension",
           "$description": "Radius of authentic macOS traffic light circle (12pt diameter).",
-          "$extensions": { "apple_citation": "macOS Human Interface Guidelines - Window Anatomy" }
+          "$extensions": {
+            "apple_citation": "macOS Human Interface Guidelines - Window Anatomy"
+          }
         },
         "traffic_light_spacing": {
           "value": "8.0pt",
           "$type": "dimension",
           "$description": "Inter-item spacing between Apple traffic lights (center-to-center pitch of 20pt with 12pt diameter).",
-          "$extensions": { "apple_citation": "macOS Human Interface Guidelines - Window Anatomy" }
+          "$extensions": {
+            "apple_citation": "macOS Human Interface Guidelines - Window Anatomy"
+          }
         }
       },
       "popover": {
@@ -1525,103 +2009,137 @@
           "value": "24.0pt",
           "$type": "dimension",
           "$description": "Width of the NSPopover anchor arrow base where it joins the popover body.",
-          "$extensions": { "apple_citation": "AppKit _NSPopoverFrame / GNUstep libs-gui NSPopover layout standard" }
+          "$extensions": {
+            "apple_citation": "AppKit _NSPopoverFrame / GNUstep libs-gui NSPopover layout standard"
+          }
         },
         "arrow_height": {
           "value": "12.0pt",
           "$type": "dimension",
           "$description": "Height of the NSPopover anchor arrow from base to apex.",
-          "$extensions": { "apple_citation": "AppKit _NSPopoverFrame geometry standard" }
+          "$extensions": {
+            "apple_citation": "AppKit _NSPopoverFrame geometry standard"
+          }
         },
         "arrow_tip_radius": {
           "value": "2.5pt",
           "$type": "dimension",
           "$description": "Corner radius rounding the sharp apex of the anchor arrow.",
-          "$extensions": { "apple_citation": "AppKit _NSPopoverFrame continuous path specification" }
+          "$extensions": {
+            "apple_citation": "AppKit _NSPopoverFrame continuous path specification"
+          }
         },
         "arrow_base_radius": {
           "value": "3.0pt",
           "$type": "dimension",
           "$description": "Tangential fillet radius blending arrow base into popover frame.",
-          "$extensions": { "apple_citation": "AppKit _NSPopoverFrame continuous path specification" }
+          "$extensions": {
+            "apple_citation": "AppKit _NSPopoverFrame continuous path specification"
+          }
         },
         "corner_radius": {
           "value": "10.0pt",
           "$type": "dimension",
           "$description": "Continuous squircle corner radius for macOS NSPopover window frames (Big Sur+).",
-          "$extensions": { "apple_citation": "macOS HIG Popovers / NSPopoverFrame _cornerRadius" }
+          "$extensions": {
+            "apple_citation": "macOS HIG Popovers / NSPopoverFrame _cornerRadius"
+          }
         },
         "border_width": {
           "value": "1.0pt",
           "$type": "dimension",
           "$description": "Border stroke width (or 0.5pt under hardware subpixel snap on 2x displays).",
-          "$extensions": { "apple_citation": "SPEC-001 Section 2.1 A & Section 4.1" }
+          "$extensions": {
+            "apple_citation": "SPEC-001 Section 2.1 A & Section 4.1"
+          }
         },
         "compact_panel_width": {
           "value": "178.0pt",
           "$type": "dimension",
           "$description": "Standard width for compact floating HUD panels and utility inspector accessories.",
-          "$extensions": { "apple_citation": "AppKit NSPanelStyleMaskHUDWindow / NSWindowStyleMaskUtilityWindow standard accessory" }
+          "$extensions": {
+            "apple_citation": "AppKit NSPanelStyleMaskHUDWindow / NSWindowStyleMaskUtilityWindow standard accessory"
+          }
         },
         "compact_panel_height": {
           "value": "63.0pt",
           "$type": "dimension",
           "$description": "Standard height for two-row compact HUD panels (with 22pt header and 41pt body budget).",
-          "$extensions": { "apple_citation": "AppKit NSStackView two-row compact layout budget" }
+          "$extensions": {
+            "apple_citation": "AppKit NSStackView two-row compact layout budget"
+          }
         },
         "wing_width": {
           "value": "84.0pt",
           "$type": "dimension",
           "$description": "Floating infobox wing compartment width.",
-          "$extensions": { "apple_citation": "SPEC-001 Section 4.1" }
+          "$extensions": {
+            "apple_citation": "SPEC-001 Section 4.1"
+          }
         },
         "wing_height": {
           "value": "44.0pt",
           "$type": "dimension",
           "$description": "Floating infobox wing compartment height.",
-          "$extensions": { "apple_citation": "SPEC-001 Section 4.1" }
+          "$extensions": {
+            "apple_citation": "SPEC-001 Section 4.1"
+          }
         },
         "full_popover_width": {
           "value": "178.0pt",
           "$type": "dimension",
           "$description": "Expanded popover width.",
-          "$extensions": { "apple_citation": "SPEC-001 Section 4.1" }
+          "$extensions": {
+            "apple_citation": "SPEC-001 Section 4.1"
+          }
         },
         "full_popover_height": {
           "value": "259.0pt",
           "$type": "dimension",
           "$description": "Expanded popover height.",
-          "$extensions": { "apple_citation": "SPEC-001 Section 4.1" }
+          "$extensions": {
+            "apple_citation": "SPEC-001 Section 4.1"
+          }
         },
         "shadow_blur": {
           "value": "18.0pt",
           "$type": "dimension",
           "$description": "Primary window drop shadow Gaussian blur radius.",
-          "$extensions": { "apple_citation": "macOS HIG Window & Popover Shadow Specifications" }
+          "$extensions": {
+            "apple_citation": "macOS HIG Window & Popover Shadow Specifications"
+          }
         },
         "shadow_y_offset": {
           "value": "6.0pt",
           "$type": "dimension",
           "$description": "Primary window drop shadow vertical offset.",
-          "$extensions": { "apple_citation": "macOS HIG Window & Popover Shadow Specifications" }
+          "$extensions": {
+            "apple_citation": "macOS HIG Window & Popover Shadow Specifications"
+          }
         },
         "header_height": {
           "value": "22.0pt",
           "$type": "dimension",
           "$description": "Standard panel and popover title header bar height.",
-          "$extensions": { "apple_citation": "AppKit NSPanel titlebar height" }
+          "$extensions": {
+            "apple_citation": "AppKit NSPanel titlebar height"
+          }
         },
         "header_font_size": {
           "value": "11.0pt",
           "$type": "dimension",
           "$description": "Standard typography font size for panel and popover title.",
-          "$extensions": { "apple_citation": "macOS HIG Panel title typography" }
+          "$extensions": {
+            "apple_citation": "macOS HIG Panel title typography"
+          }
         },
         "inner_padding": {
           "value": "8.0pt",
           "$type": "dimension",
           "$description": "Standard inner content margin for popover panels.",
-          "$extensions": { "apple_citation": "macOS HIG Popover content margins" }
+          "$extensions": {
+            "apple_citation": "macOS HIG Popover content margins"
+          }
         }
       },
       "split_view": {
@@ -1629,37 +2147,49 @@
           "$type": "dimension",
           "$value": "1.0pt",
           "$description": "Hairline divider thickness for NSSplitView.",
-          "$extensions": { "apple_citation": "AppKit NSSplitView.dividerThickness (thin style)" }
+          "$extensions": {
+            "apple_citation": "AppKit NSSplitView.dividerThickness (thin style)"
+          }
         },
         "hit_thickness": {
           "$type": "dimension",
           "$value": "6.0pt",
           "$description": "Interactive drag target hit margin centered on divider line.",
-          "$extensions": { "apple_citation": "AppKit NSSplitView divider hit zone" }
+          "$extensions": {
+            "apple_citation": "AppKit NSSplitView divider hit zone"
+          }
         },
         "min_pane_size": {
           "$type": "dimension",
           "$value": "50.0pt",
           "$description": "Default minimum collapsible constraint dimension for split view pane.",
-          "$extensions": { "apple_citation": "AppKit NSSplitView delegate minSize limit" }
+          "$extensions": {
+            "apple_citation": "AppKit NSSplitView delegate minSize limit"
+          }
         },
         "handle_length": {
           "$type": "dimension",
           "$value": "24.0pt",
           "$description": "Length of visual center drag handle pill.",
-          "$extensions": { "apple_citation": "macOS NSSplitView drag handle pill metric" }
+          "$extensions": {
+            "apple_citation": "macOS NSSplitView drag handle pill metric"
+          }
         },
         "handle_thickness": {
           "$type": "dimension",
           "$value": "3.0pt",
           "$description": "Thickness of visual center drag handle pill.",
-          "$extensions": { "apple_citation": "macOS NSSplitView drag handle pill metric" }
+          "$extensions": {
+            "apple_citation": "macOS NSSplitView drag handle pill metric"
+          }
         },
         "default_ratio": {
           "$type": "dimension",
           "$value": "0.5pt",
           "$description": "Default split proportion between first and second panes (50/50).",
-          "$extensions": { "apple_citation": "AppKit NSSplitView default split ratio" }
+          "$extensions": {
+            "apple_citation": "AppKit NSSplitView default split ratio"
+          }
         }
       },
       "layout": {
@@ -1668,49 +2198,65 @@
             "$type": "dimension",
             "$value": "7.0pt",
             "$description": "Overlay scrollbar thumb thickness in points.",
-            "$extensions": { "apple_citation": "macOS NSScrollView overlay scrollbar thickness" }
+            "$extensions": {
+              "apple_citation": "macOS NSScrollView overlay scrollbar thickness"
+            }
           },
           "thumb_min_length": {
             "$type": "dimension",
             "$value": "20.0pt",
             "$description": "Minimum length of overlay scrollbar thumb.",
-            "$extensions": { "apple_citation": "macOS NSScrollView minimum thumb length" }
+            "$extensions": {
+              "apple_citation": "macOS NSScrollView minimum thumb length"
+            }
           },
           "corner_radius": {
             "$type": "dimension",
             "$value": "3.5pt",
             "$description": "Corner radius for rounded overlay scrollbar thumb pill.",
-            "$extensions": { "apple_citation": "macOS NSScrollView thumb corner radius" }
+            "$extensions": {
+              "apple_citation": "macOS NSScrollView thumb corner radius"
+            }
           },
           "fade_timeout": {
             "$type": "dimension",
             "$value": "0.8pt",
             "$description": "Seconds before overlay scrollbar fades out when inactive.",
-            "$extensions": { "apple_citation": "macOS NSScrollView overlay auto-fade timeout" }
+            "$extensions": {
+              "apple_citation": "macOS NSScrollView overlay auto-fade timeout"
+            }
           },
           "edge_inset": {
             "$type": "dimension",
             "$value": "3.0pt",
             "$description": "Inset from viewport edge to overlay scrollbar.",
-            "$extensions": { "apple_citation": "macOS NSScrollView overlay edge inset" }
+            "$extensions": {
+              "apple_citation": "macOS NSScrollView overlay edge inset"
+            }
           },
           "hit_zone_padding": {
             "$type": "dimension",
             "$value": "8.0pt",
             "$description": "Interactive hit detection zone margin around scrollbar thumb.",
-            "$extensions": { "apple_citation": "macOS NSScrollView overlay hit zone margin" }
+            "$extensions": {
+              "apple_citation": "macOS NSScrollView overlay hit zone margin"
+            }
           },
           "min_visible_thumb_length": {
             "$type": "dimension",
             "$value": "2.0pt",
             "$description": "Minimum rendering length threshold below which thumb is omitted.",
-            "$extensions": { "apple_citation": "macOS NSScrollView overlay minimum visibility threshold" }
+            "$extensions": {
+              "apple_citation": "macOS NSScrollView overlay minimum visibility threshold"
+            }
           },
           "scrollbar_hover_thickness": {
             "$type": "dimension",
             "$value": "10.0pt",
             "$description": "Expanded overlay scrollbar thumb and track thickness when hovered or dragged.",
-            "$extensions": { "apple_citation": "macOS NSScrollView overlay scrollbar expanded hover thickness (7pt -> 10pt)" }
+            "$extensions": {
+              "apple_citation": "macOS NSScrollView overlay scrollbar expanded hover thickness (7pt -> 10pt)"
+            }
           }
         },
         "stack_view": {
@@ -1718,101 +2264,339 @@
             "$type": "dimension",
             "$value": "8.0pt",
             "$description": "Standard spacing between adjacent views in NSStackView.",
-            "$extensions": { "apple_citation": "AppKit NSStackView.spacing standard default" }
+            "$extensions": {
+              "apple_citation": "AppKit NSStackView.spacing standard default"
+            }
           },
           "edge_padding": {
             "$type": "dimension",
             "$value": "8.0pt",
             "$description": "Standard edge insets around stack view content.",
-            "$extensions": { "apple_citation": "AppKit NSStackView.edgeInsets default" }
+            "$extensions": {
+              "apple_citation": "AppKit NSStackView.edgeInsets default"
+            }
           },
           "separator_thickness": {
             "$type": "dimension",
             "$value": "1.0pt",
             "$description": "Hairline separator thickness between stack view sections.",
-            "$extensions": { "apple_citation": "macOS separator hairline thickness" }
+            "$extensions": {
+              "apple_citation": "macOS separator hairline thickness"
+            }
           },
           "section_header_font_size": {
             "$type": "dimension",
             "$value": "11.0pt",
             "$description": "Standard section header typography font size in NSStackView.",
-            "$extensions": { "apple_citation": "AppKit NSFont.systemFontSize(for: .small)" }
+            "$extensions": {
+              "apple_citation": "AppKit NSFont.systemFontSize(for: .small)"
+            }
           },
           "default_item_height": {
             "$type": "dimension",
             "$value": "22.0pt",
             "$description": "Standard fallback cross-axis height for horizontal stack views.",
-            "$extensions": { "apple_citation": "AppKit NSStackView default item height" }
+            "$extensions": {
+              "apple_citation": "AppKit NSStackView default item height"
+            }
           }
         }
       },
       "navigation": {
         "menu_bar": {
-          "bar_height": { "$type": "dimension", "$value": "24.0pt", "$description": "Standard macOS NSMenu bar height." },
-          "item_padding_x": { "$type": "dimension", "$value": "8.0pt", "$description": "Horizontal padding per top-level menu item." },
-          "item_spacing": { "$type": "dimension", "$value": "2.0pt", "$description": "Horizontal spacing between top-level menu titles." },
-          "dropdown_min_width": { "$type": "dimension", "$value": "180.0pt", "$description": "Minimum dropdown menu width." },
-          "dropdown_max_width": { "$type": "dimension", "$value": "360.0pt", "$description": "Maximum dropdown menu width." },
-          "dropdown_item_height": { "$type": "dimension", "$value": "22.0pt", "$description": "Standard height for dropdown menu item row." },
-          "dropdown_separator_height": { "$type": "dimension", "$value": "9.0pt", "$description": "Vertical span of menu separator row." },
-          "dropdown_corner_radius": { "$type": "dimension", "$value": "6.0pt", "$description": "Corner radius for dropdown menu container." },
-          "dropdown_padding_y": { "$type": "dimension", "$value": "4.0pt", "$description": "Top and bottom padding inside dropdown menu." },
-          "dropdown_padding_x": { "$type": "dimension", "$value": "10.0pt", "$description": "Horizontal padding inside dropdown menu item." },
-          "shortcut_clearance": { "$type": "dimension", "$value": "24.0pt", "$description": "Minimum horizontal clearance between item title and shortcut text." },
-          "submenu_gap": { "$type": "dimension", "$value": "2.0pt", "$description": "Horizontal gap between parent menu and cascading submenu." },
-          "bar_corner_radius": { "$type": "dimension", "$value": "4.0pt", "$description": "Corner radius for active top-level menu bar pill." },
-          "font_size": { "$type": "dimension", "$value": "13.0pt", "$description": "Menu item title font size." },
-          "shortcut_font_size": { "$type": "dimension", "$value": "12.0pt", "$description": "Menu item shortcut accelerator font size." }
+          "bar_height": {
+            "$type": "dimension",
+            "$value": "24.0pt",
+            "$description": "Standard macOS NSMenu bar height."
+          },
+          "item_padding_x": {
+            "$type": "dimension",
+            "$value": "8.0pt",
+            "$description": "Horizontal padding per top-level menu item."
+          },
+          "item_spacing": {
+            "$type": "dimension",
+            "$value": "2.0pt",
+            "$description": "Horizontal spacing between top-level menu titles."
+          },
+          "dropdown_min_width": {
+            "$type": "dimension",
+            "$value": "180.0pt",
+            "$description": "Minimum dropdown menu width."
+          },
+          "dropdown_max_width": {
+            "$type": "dimension",
+            "$value": "360.0pt",
+            "$description": "Maximum dropdown menu width."
+          },
+          "dropdown_item_height": {
+            "$type": "dimension",
+            "$value": "22.0pt",
+            "$description": "Standard height for dropdown menu item row."
+          },
+          "dropdown_separator_height": {
+            "$type": "dimension",
+            "$value": "9.0pt",
+            "$description": "Vertical span of menu separator row."
+          },
+          "dropdown_corner_radius": {
+            "$type": "dimension",
+            "$value": "6.0pt",
+            "$description": "Corner radius for dropdown menu container."
+          },
+          "dropdown_padding_y": {
+            "$type": "dimension",
+            "$value": "4.0pt",
+            "$description": "Top and bottom padding inside dropdown menu."
+          },
+          "dropdown_padding_x": {
+            "$type": "dimension",
+            "$value": "10.0pt",
+            "$description": "Horizontal padding inside dropdown menu item."
+          },
+          "shortcut_clearance": {
+            "$type": "dimension",
+            "$value": "24.0pt",
+            "$description": "Minimum horizontal clearance between item title and shortcut text."
+          },
+          "submenu_gap": {
+            "$type": "dimension",
+            "$value": "2.0pt",
+            "$description": "Horizontal gap between parent menu and cascading submenu."
+          },
+          "bar_corner_radius": {
+            "$type": "dimension",
+            "$value": "4.0pt",
+            "$description": "Corner radius for active top-level menu bar pill."
+          },
+          "font_size": {
+            "$type": "dimension",
+            "$value": "13.0pt",
+            "$description": "Menu item title font size."
+          },
+          "shortcut_font_size": {
+            "$type": "dimension",
+            "$value": "12.0pt",
+            "$description": "Menu item shortcut accelerator font size."
+          }
         },
         "footer": {
-          "height": { "$type": "dimension", "$value": "24.0pt", "$description": "Deterministic SPEC-007 canvas footer height." },
-          "edge_padding_x": { "$type": "dimension", "$value": "10.0pt", "$description": "Horizontal edge inset for footer bar." },
-          "preset_width": { "$type": "dimension", "$value": "36.0pt", "$description": "Width of zoom preset pill button." },
-          "preset_height": { "$type": "dimension", "$value": "18.0pt", "$description": "Height of zoom preset pill button." },
-          "preset_spacing": { "$type": "dimension", "$value": "2.0pt", "$description": "Horizontal gap between zoom preset buttons." },
-          "preset_corner_radius": { "$type": "dimension", "$value": "3.0pt", "$description": "Corner radius of zoom preset pill button." },
-          "font_size": { "$type": "dimension", "$value": "10.5pt", "$description": "Breadcrumb and coordinate status font size." },
-          "preset_font_size": { "$type": "dimension", "$value": "10.0pt", "$description": "Zoom preset button font size." },
-          "separator_gap": { "$type": "dimension", "$value": "10.0pt", "$description": "Horizontal gap around vertical footer dividers." },
-          "coords_width": { "$type": "dimension", "$value": "75.0pt", "$description": "Reserved width for cursor coordinate readout." },
-          "presets_zone_offset": { "$type": "dimension", "$value": "150.0pt", "$description": "Trailing offset for zoom presets cluster." },
-          "divider_trailing_offset": { "$type": "dimension", "$value": "155.0pt", "$description": "Trailing offset for divider before zoom presets." },
-          "divider_vertical_inset": { "$type": "dimension", "$value": "5.0pt", "$description": "Top/bottom inset for vertical footer divider line." }
+          "height": {
+            "$type": "dimension",
+            "$value": "24.0pt",
+            "$description": "Deterministic SPEC-007 canvas footer height."
+          },
+          "edge_padding_x": {
+            "$type": "dimension",
+            "$value": "10.0pt",
+            "$description": "Horizontal edge inset for footer bar."
+          },
+          "preset_width": {
+            "$type": "dimension",
+            "$value": "36.0pt",
+            "$description": "Width of zoom preset pill button."
+          },
+          "preset_height": {
+            "$type": "dimension",
+            "$value": "18.0pt",
+            "$description": "Height of zoom preset pill button."
+          },
+          "preset_spacing": {
+            "$type": "dimension",
+            "$value": "2.0pt",
+            "$description": "Horizontal gap between zoom preset buttons."
+          },
+          "preset_corner_radius": {
+            "$type": "dimension",
+            "$value": "3.0pt",
+            "$description": "Corner radius of zoom preset pill button."
+          },
+          "font_size": {
+            "$type": "dimension",
+            "$value": "10.5pt",
+            "$description": "Breadcrumb and coordinate status font size."
+          },
+          "preset_font_size": {
+            "$type": "dimension",
+            "$value": "10.0pt",
+            "$description": "Zoom preset button font size."
+          },
+          "separator_gap": {
+            "$type": "dimension",
+            "$value": "10.0pt",
+            "$description": "Horizontal gap around vertical footer dividers."
+          },
+          "coords_width": {
+            "$type": "dimension",
+            "$value": "75.0pt",
+            "$description": "Reserved width for cursor coordinate readout."
+          },
+          "presets_zone_offset": {
+            "$type": "dimension",
+            "$value": "150.0pt",
+            "$description": "Trailing offset for zoom presets cluster."
+          },
+          "divider_trailing_offset": {
+            "$type": "dimension",
+            "$value": "155.0pt",
+            "$description": "Trailing offset for divider before zoom presets."
+          },
+          "divider_vertical_inset": {
+            "$type": "dimension",
+            "$value": "5.0pt",
+            "$description": "Top/bottom inset for vertical footer divider line."
+          }
         },
         "palette": {
-          "width": { "$type": "dimension", "$value": "480.0pt", "$description": "Spotlight command palette modal width." },
-          "max_height": { "$type": "dimension", "$value": "280.0pt", "$description": "Maximum command palette modal height." },
-          "corner_radius": { "$type": "dimension", "$value": "10.0pt", "$description": "Command palette outer squircle corner radius." },
-          "search_bar_height": { "$type": "dimension", "$value": "36.0pt", "$description": "Top query input bar height." },
-          "search_padding_x": { "$type": "dimension", "$value": "12.0pt", "$description": "Horizontal padding inside query input bar." },
-          "search_icon_size": { "$type": "dimension", "$value": "14.0pt", "$description": "Leading magnifying glass icon size in palette." },
-          "row_height": { "$type": "dimension", "$value": "28.0pt", "$description": "Height of each command result row." },
-          "row_padding_x": { "$type": "dimension", "$value": "12.0pt", "$description": "Horizontal padding inside each result row." },
-          "row_corner_radius": { "$type": "dimension", "$value": "5.0pt", "$description": "Corner radius of highlighted result row." },
-          "row_inset": { "$type": "dimension", "$value": "4.0pt", "$description": "Horizontal inset of result rows from palette edge." },
-          "query_font_size": { "$type": "dimension", "$value": "14.0pt", "$description": "Font size of query input text." },
-          "item_font_size": { "$type": "dimension", "$value": "12.5pt", "$description": "Font size of result item title." },
-          "category_font_size": { "$type": "dimension", "$value": "10.5pt", "$description": "Font size of category badge." },
-          "shortcut_font_size": { "$type": "dimension", "$value": "10.5pt", "$description": "Font size of keyboard shortcut badge." }
+          "width": {
+            "$type": "dimension",
+            "$value": "480.0pt",
+            "$description": "Spotlight command palette modal width."
+          },
+          "max_height": {
+            "$type": "dimension",
+            "$value": "280.0pt",
+            "$description": "Maximum command palette modal height."
+          },
+          "corner_radius": {
+            "$type": "dimension",
+            "$value": "10.0pt",
+            "$description": "Command palette outer squircle corner radius."
+          },
+          "search_bar_height": {
+            "$type": "dimension",
+            "$value": "36.0pt",
+            "$description": "Top query input bar height."
+          },
+          "search_padding_x": {
+            "$type": "dimension",
+            "$value": "12.0pt",
+            "$description": "Horizontal padding inside query input bar."
+          },
+          "search_icon_size": {
+            "$type": "dimension",
+            "$value": "14.0pt",
+            "$description": "Leading magnifying glass icon size in palette."
+          },
+          "row_height": {
+            "$type": "dimension",
+            "$value": "28.0pt",
+            "$description": "Height of each command result row."
+          },
+          "row_padding_x": {
+            "$type": "dimension",
+            "$value": "12.0pt",
+            "$description": "Horizontal padding inside each result row."
+          },
+          "row_corner_radius": {
+            "$type": "dimension",
+            "$value": "5.0pt",
+            "$description": "Corner radius of highlighted result row."
+          },
+          "row_inset": {
+            "$type": "dimension",
+            "$value": "4.0pt",
+            "$description": "Horizontal inset of result rows from palette edge."
+          },
+          "query_font_size": {
+            "$type": "dimension",
+            "$value": "14.0pt",
+            "$description": "Font size of query input text."
+          },
+          "item_font_size": {
+            "$type": "dimension",
+            "$value": "12.5pt",
+            "$description": "Font size of result item title."
+          },
+          "category_font_size": {
+            "$type": "dimension",
+            "$value": "10.5pt",
+            "$description": "Font size of category badge."
+          },
+          "shortcut_font_size": {
+            "$type": "dimension",
+            "$value": "10.5pt",
+            "$description": "Font size of keyboard shortcut badge."
+          }
         },
         "context_menu": {
-          "item_height": { "$type": "dimension", "$value": "22.0pt", "$description": "Context menu item row height." },
-          "min_width": { "$type": "dimension", "$value": "140.0pt", "$description": "Minimum context menu width." },
-          "padding": { "$type": "dimension", "$value": "4.0pt", "$description": "Inner padding of context menu container." },
-          "item_padding_x": { "$type": "dimension", "$value": "8.0pt", "$description": "Horizontal text inset inside context menu row." },
-          "corner_radius": { "$type": "dimension", "$value": "6.0pt", "$description": "Context menu outer corner radius." },
-          "row_corner_radius": { "$type": "dimension", "$value": "4.0pt", "$description": "Highlighted context menu item corner radius." },
-          "shortcut_clearance": { "$type": "dimension", "$value": "24.0pt", "$description": "Minimum clearance between context menu label and shortcut." },
-          "font_size": { "$type": "dimension", "$value": "12.0pt", "$description": "Context menu item font size." }
+          "item_height": {
+            "$type": "dimension",
+            "$value": "22.0pt",
+            "$description": "Context menu item row height."
+          },
+          "min_width": {
+            "$type": "dimension",
+            "$value": "140.0pt",
+            "$description": "Minimum context menu width."
+          },
+          "padding": {
+            "$type": "dimension",
+            "$value": "4.0pt",
+            "$description": "Inner padding of context menu container."
+          },
+          "item_padding_x": {
+            "$type": "dimension",
+            "$value": "8.0pt",
+            "$description": "Horizontal text inset inside context menu row."
+          },
+          "corner_radius": {
+            "$type": "dimension",
+            "$value": "6.0pt",
+            "$description": "Context menu outer corner radius."
+          },
+          "row_corner_radius": {
+            "$type": "dimension",
+            "$value": "4.0pt",
+            "$description": "Highlighted context menu item corner radius."
+          },
+          "shortcut_clearance": {
+            "$type": "dimension",
+            "$value": "24.0pt",
+            "$description": "Minimum clearance between context menu label and shortcut."
+          },
+          "font_size": {
+            "$type": "dimension",
+            "$value": "12.0pt",
+            "$description": "Context menu item font size."
+          }
         },
         "toast": {
-          "height": { "$type": "dimension", "$value": "32.0pt", "$description": "Floating toast pill height." },
-          "min_width": { "$type": "dimension", "$value": "120.0pt", "$description": "Minimum floating toast pill width." },
-          "top_margin": { "$type": "dimension", "$value": "20.0pt", "$description": "Top viewport margin for floating toast stack." },
-          "spacing": { "$type": "dimension", "$value": "8.0pt", "$description": "Vertical spacing between stacked toast pills." },
-          "padding_x": { "$type": "dimension", "$value": "32.0pt", "$description": "Total horizontal text padding inside toast pill." },
-          "duration_secs": { "$type": "dimension", "$value": "2.5pt", "$description": "Default toast display duration in seconds." },
-          "font_size": { "$type": "dimension", "$value": "12.0pt", "$description": "Toast message typography font size." }
+          "height": {
+            "$type": "dimension",
+            "$value": "32.0pt",
+            "$description": "Floating toast pill height."
+          },
+          "min_width": {
+            "$type": "dimension",
+            "$value": "120.0pt",
+            "$description": "Minimum floating toast pill width."
+          },
+          "top_margin": {
+            "$type": "dimension",
+            "$value": "20.0pt",
+            "$description": "Top viewport margin for floating toast stack."
+          },
+          "spacing": {
+            "$type": "dimension",
+            "$value": "8.0pt",
+            "$description": "Vertical spacing between stacked toast pills."
+          },
+          "padding_x": {
+            "$type": "dimension",
+            "$value": "32.0pt",
+            "$description": "Total horizontal text padding inside toast pill."
+          },
+          "duration_secs": {
+            "$type": "dimension",
+            "$value": "2.5pt",
+            "$description": "Default toast display duration in seconds."
+          },
+          "font_size": {
+            "$type": "dimension",
+            "$value": "12.0pt",
+            "$description": "Toast message typography font size."
+          }
         }
       }
     },
@@ -1822,163 +2606,217 @@
           "$type": "color",
           "$value": "#ECECEC",
           "$description": "Standard window background surface color for Aqua Light mode.",
-          "$extensions": { "apple_citation": "NSColor.windowBackgroundColor in NSAppearanceNameAqua" }
+          "$extensions": {
+            "apple_citation": "NSColor.windowBackgroundColor in NSAppearanceNameAqua"
+          }
         },
         "control_background": {
           "$type": "color",
           "$value": "#FFFFFF",
           "$description": "Background surface color for large controls, text fields, and tables in Aqua Light mode.",
-          "$extensions": { "apple_citation": "NSColor.controlBackgroundColor in NSAppearanceNameAqua" }
+          "$extensions": {
+            "apple_citation": "NSColor.controlBackgroundColor in NSAppearanceNameAqua"
+          }
         },
         "control": {
           "$type": "color",
           "$value": "#EAEAEA",
           "$description": "Flat surface color of controls and push buttons in Aqua Light mode.",
-          "$extensions": { "apple_citation": "NSColor.controlColor in NSAppearanceNameAqua (resolves #EAEAEA)" }
+          "$extensions": {
+            "apple_citation": "NSColor.controlColor in NSAppearanceNameAqua (resolves #EAEAEA)"
+          }
         },
         "control_accent": {
           "$type": "color",
           "$value": "#007AFF",
           "$description": "System primary blue accent color for interactive controls in Light mode.",
-          "$extensions": { "apple_citation": "NSColor.controlAccentColor / Color.accentColor in Light Appearance" }
+          "$extensions": {
+            "apple_citation": "NSColor.controlAccentColor / Color.accentColor in Light Appearance"
+          }
         },
         "selected_control": {
           "$type": "color",
           "$value": "#B3D7FF",
           "$description": "Surface background color of a selected control in Aqua Light mode.",
-          "$extensions": { "apple_citation": "NSColor.selectedControlColor in NSAppearanceNameAqua" }
+          "$extensions": {
+            "apple_citation": "NSColor.selectedControlColor in NSAppearanceNameAqua"
+          }
         },
         "selected_control_inactive": {
           "$type": "color",
           "$value": "#DCDCDC",
           "$description": "Selection surface color when control/window is unfocused.",
-          "$extensions": { "apple_citation": "NSColor.secondarySelectedControlColor in NSAppearanceNameAqua" }
+          "$extensions": {
+            "apple_citation": "NSColor.secondarySelectedControlColor in NSAppearanceNameAqua"
+          }
         },
         "separator": {
           "$type": "color",
           "$value": "rgba(0, 0, 0, 0.10)",
           "$description": "Hairline separator border stroke in Aqua Light mode (resolves to #D5D5D5 on #ECECEC).",
-          "$extensions": { "apple_citation": "NSColor.separatorColor in NSAppearanceNameAqua" }
+          "$extensions": {
+            "apple_citation": "NSColor.separatorColor in NSAppearanceNameAqua"
+          }
         },
         "placeholder_text": {
           "$type": "color",
           "$value": "rgba(0, 0, 0, 0.25)",
           "$description": "Placeholder/hint text color in Aqua Light mode.",
-          "$extensions": { "apple_citation": "NSColor.placeholderTextColor in NSAppearanceNameAqua" }
+          "$extensions": {
+            "apple_citation": "NSColor.placeholderTextColor in NSAppearanceNameAqua"
+          }
         },
         "keyboard_focus_indicator": {
           "$type": "color",
           "$value": "rgba(0, 103, 244, 0.50)",
           "$description": "Outer focus ring halo stroke color for keyboard-navigated controls.",
-          "$extensions": { "apple_citation": "NSColor.keyboardFocusIndicatorColor (NSFocusRingPlacementOutside)" }
+          "$extensions": {
+            "apple_citation": "NSColor.keyboardFocusIndicatorColor (NSFocusRingPlacementOutside)"
+          }
         },
         "label": {
           "$type": "color",
           "$value": "#262626",
           "$description": "Primary label text color in Aqua Light mode.",
-          "$extensions": { "apple_citation": "NSColor.labelColor in NSAppearanceNameAqua" }
+          "$extensions": {
+            "apple_citation": "NSColor.labelColor in NSAppearanceNameAqua"
+          }
         },
         "secondary_label": {
           "$type": "color",
           "$value": "#6E6E73",
           "$description": "Secondary label text color in Aqua Light mode.",
-          "$extensions": { "apple_citation": "NSColor.secondaryLabelColor in NSAppearanceNameAqua" }
+          "$extensions": {
+            "apple_citation": "NSColor.secondaryLabelColor in NSAppearanceNameAqua"
+          }
         },
         "system_green": {
           "$type": "color",
           "$value": "#34C759",
           "$description": "System green accent color for switches and success indicators in Light mode.",
-          "$extensions": { "apple_citation": "NSColor.systemGreenColor in NSAppearanceNameAqua" }
+          "$extensions": {
+            "apple_citation": "NSColor.systemGreenColor in NSAppearanceNameAqua"
+          }
         },
         "system_yellow": {
           "$type": "color",
           "$value": "#FFCC00",
           "$description": "System yellow/amber semantic color for warnings and trim handles in Light mode.",
-          "$extensions": { "apple_citation": "NSColor.systemYellowColor in NSAppearanceNameAqua" }
+          "$extensions": {
+            "apple_citation": "NSColor.systemYellowColor in NSAppearanceNameAqua"
+          }
         },
         "system_orange": {
           "$type": "color",
           "$value": "#FF9500",
           "$description": "System orange semantic color in Light mode.",
-          "$extensions": { "apple_citation": "NSColor.systemOrangeColor in NSAppearanceNameAqua" }
+          "$extensions": {
+            "apple_citation": "NSColor.systemOrangeColor in NSAppearanceNameAqua"
+          }
         },
         "system_red": {
           "$type": "color",
           "$value": "#FF3B30",
           "$description": "System red semantic color for critical meters and alerts in Light mode.",
-          "$extensions": { "apple_citation": "NSColor.systemRedColor in NSAppearanceNameAqua" }
+          "$extensions": {
+            "apple_citation": "NSColor.systemRedColor in NSAppearanceNameAqua"
+          }
         },
         "alternating_row_even": {
           "$type": "color",
           "$value": "#FFFFFF",
           "$description": "Even row background color in NSTableView for Aqua Light mode.",
-          "$extensions": { "apple_citation": "NSColor.alternatingContentBackgroundColors[0] in Aqua (#FFFFFF)" }
+          "$extensions": {
+            "apple_citation": "NSColor.alternatingContentBackgroundColors[0] in Aqua (#FFFFFF)"
+          }
         },
         "alternating_row_odd": {
           "$type": "color",
           "$value": "#F4F5F5",
           "$description": "Odd row subtle alternating tint in NSTableView for Aqua Light mode.",
-          "$extensions": { "apple_citation": "NSColor.alternatingContentBackgroundColors[1] in Aqua (#F4F5F5)" }
+          "$extensions": {
+            "apple_citation": "NSColor.alternatingContentBackgroundColors[1] in Aqua (#F4F5F5)"
+          }
         },
         "scrubber_selection_border": {
           "$type": "color",
           "$value": "#FFCC00",
           "$description": "QuickTime / AVKit active trim selection border and handle color in Light mode.",
-          "$extensions": { "apple_citation": "AVKit AVPlayerView trim handle yellow in Aqua" }
+          "$extensions": {
+            "apple_citation": "AVKit AVPlayerView trim handle yellow in Aqua"
+          }
         },
         "scrubber_outside_dim": {
           "$type": "color",
           "$value": "rgba(0, 0, 0, 0.58)",
           "$description": "Dimming overlay color for timeline regions outside In/Out trim bounds in Light mode (58% black scrim).",
-          "$extensions": { "apple_citation": "AVKit trim scrubber excluded region dim overlay (rgba(0,0,0,0.58))" }
+          "$extensions": {
+            "apple_citation": "AVKit trim scrubber excluded region dim overlay (rgba(0,0,0,0.58))"
+          }
         },
         "scrubber_waveform": {
           "$type": "color",
           "$value": "#007AFF",
           "$description": "Normalized audio waveform bar color inside timeline track in Light mode.",
-          "$extensions": { "apple_citation": "AVKit waveform tint in Aqua" }
+          "$extensions": {
+            "apple_citation": "AVKit waveform tint in Aqua"
+          }
         },
         "scrubber_playhead": {
           "$type": "color",
           "$value": "#FFFFFF",
           "$description": "Playhead cursor needle color in Light mode.",
-          "$extensions": { "apple_citation": "QuickTime / AVKit white playhead needle" }
+          "$extensions": {
+            "apple_citation": "QuickTime / AVKit white playhead needle"
+          }
         },
         "traffic_light_close": {
           "$type": "color",
           "$value": "#FF5F56",
           "$description": "Window close traffic light fill color.",
-          "$extensions": { "apple_citation": "macOS window traffic light close fill" }
+          "$extensions": {
+            "apple_citation": "macOS window traffic light close fill"
+          }
         },
         "traffic_light_close_border": {
           "$type": "color",
           "$value": "#E0443E",
           "$description": "Window close traffic light border stroke color.",
-          "$extensions": { "apple_citation": "macOS window traffic light close border" }
+          "$extensions": {
+            "apple_citation": "macOS window traffic light close border"
+          }
         },
         "traffic_light_minimize": {
           "$type": "color",
           "$value": "#FFBD2E",
           "$description": "Window minimize traffic light fill color.",
-          "$extensions": { "apple_citation": "macOS window traffic light minimize fill" }
+          "$extensions": {
+            "apple_citation": "macOS window traffic light minimize fill"
+          }
         },
         "traffic_light_minimize_border": {
           "$type": "color",
           "$value": "#D69A1E",
           "$description": "Window minimize traffic light border stroke color.",
-          "$extensions": { "apple_citation": "macOS window traffic light minimize border" }
+          "$extensions": {
+            "apple_citation": "macOS window traffic light minimize border"
+          }
         },
         "traffic_light_zoom": {
           "$type": "color",
           "$value": "#27C93F",
           "$description": "Window zoom/maximize traffic light fill color.",
-          "$extensions": { "apple_citation": "macOS window traffic light zoom fill" }
+          "$extensions": {
+            "apple_citation": "macOS window traffic light zoom fill"
+          }
         },
         "traffic_light_zoom_border": {
           "$type": "color",
           "$value": "#1BA931",
           "$description": "Window zoom/maximize traffic light border stroke color.",
-          "$extensions": { "apple_citation": "macOS window traffic light zoom border" }
+          "$extensions": {
+            "apple_citation": "macOS window traffic light zoom border"
+          }
         },
         "on_accent_text": {
           "$type": "color",
@@ -2061,163 +2899,510 @@
           "$type": "color",
           "$value": "#323232",
           "$description": "Standard window background surface color for DarkAqua (Dark mode).",
-          "$extensions": { "apple_citation": "NSColor.windowBackgroundColor in NSAppearanceNameDarkAqua" }
+          "$extensions": {
+            "apple_citation": "NSColor.windowBackgroundColor in NSAppearanceNameDarkAqua"
+          }
         },
         "control_background": {
           "$type": "color",
           "$value": "#1E1E1E",
           "$description": "Background surface color for large controls, text fields, and tables in DarkAqua.",
-          "$extensions": { "apple_citation": "NSColor.controlBackgroundColor in NSAppearanceNameDarkAqua" }
+          "$extensions": {
+            "apple_citation": "NSColor.controlBackgroundColor in NSAppearanceNameDarkAqua"
+          }
         },
         "control": {
           "$type": "color",
           "$value": "#3A3A3A",
           "$description": "Flat surface color of controls and push buttons in DarkAqua.",
-          "$extensions": { "apple_citation": "NSColor.controlColor in NSAppearanceNameDarkAqua" }
+          "$extensions": {
+            "apple_citation": "NSColor.controlColor in NSAppearanceNameDarkAqua"
+          }
         },
         "control_accent": {
           "$type": "color",
           "$value": "#0A84FF",
           "$description": "System primary blue accent color for interactive controls in Dark mode.",
-          "$extensions": { "apple_citation": "NSColor.controlAccentColor / Color.accentColor in Dark Appearance" }
+          "$extensions": {
+            "apple_citation": "NSColor.controlAccentColor / Color.accentColor in Dark Appearance"
+          }
         },
         "selected_control": {
           "$type": "color",
           "$value": "#3F638B",
           "$description": "Surface background color of a selected control in DarkAqua.",
-          "$extensions": { "apple_citation": "NSColor.selectedControlColor in NSAppearanceNameDarkAqua" }
+          "$extensions": {
+            "apple_citation": "NSColor.selectedControlColor in NSAppearanceNameDarkAqua"
+          }
         },
         "selected_control_inactive": {
           "$type": "color",
           "$value": "#3F3F3F",
           "$description": "Selection surface color when control/window is unfocused in Dark mode.",
-          "$extensions": { "apple_citation": "NSColor.secondarySelectedControlColor in NSAppearanceNameDarkAqua" }
+          "$extensions": {
+            "apple_citation": "NSColor.secondarySelectedControlColor in NSAppearanceNameDarkAqua"
+          }
         },
         "separator": {
           "$type": "color",
           "$value": "rgba(255, 255, 255, 0.10)",
           "$description": "Hairline separator border stroke in DarkAqua (resolves to #474747 on #323232).",
-          "$extensions": { "apple_citation": "NSColor.separatorColor in NSAppearanceNameDarkAqua" }
+          "$extensions": {
+            "apple_citation": "NSColor.separatorColor in NSAppearanceNameDarkAqua"
+          }
         },
         "placeholder_text": {
           "$type": "color",
           "$value": "rgba(255, 255, 255, 0.25)",
           "$description": "Placeholder/hint text color in DarkAqua.",
-          "$extensions": { "apple_citation": "NSColor.placeholderTextColor in NSAppearanceNameDarkAqua" }
+          "$extensions": {
+            "apple_citation": "NSColor.placeholderTextColor in NSAppearanceNameDarkAqua"
+          }
         },
         "keyboard_focus_indicator": {
           "$type": "color",
           "$value": "rgba(0, 103, 244, 0.50)",
           "$description": "Outer focus ring halo stroke color for keyboard-navigated controls in Dark mode.",
-          "$extensions": { "apple_citation": "NSColor.keyboardFocusIndicatorColor in NSAppearanceNameDarkAqua" }
+          "$extensions": {
+            "apple_citation": "NSColor.keyboardFocusIndicatorColor in NSAppearanceNameDarkAqua"
+          }
         },
         "label": {
           "$type": "color",
           "$value": "#DCDCDC",
           "$description": "Primary label text color in DarkAqua Dark mode.",
-          "$extensions": { "apple_citation": "NSColor.labelColor in NSAppearanceNameDarkAqua" }
+          "$extensions": {
+            "apple_citation": "NSColor.labelColor in NSAppearanceNameDarkAqua"
+          }
         },
         "secondary_label": {
           "$type": "color",
           "$value": "#A0A0A5",
           "$description": "Secondary label text color in DarkAqua Dark mode.",
-          "$extensions": { "apple_citation": "NSColor.secondaryLabelColor in NSAppearanceNameDarkAqua" }
+          "$extensions": {
+            "apple_citation": "NSColor.secondaryLabelColor in NSAppearanceNameDarkAqua"
+          }
         },
         "system_green": {
           "$type": "color",
           "$value": "#30D158",
           "$description": "System green accent color for switches and success indicators in DarkAqua.",
-          "$extensions": { "apple_citation": "NSColor.systemGreenColor in NSAppearanceNameDarkAqua" }
+          "$extensions": {
+            "apple_citation": "NSColor.systemGreenColor in NSAppearanceNameDarkAqua"
+          }
         },
         "system_yellow": {
           "$type": "color",
           "$value": "#FFD60A",
           "$description": "System yellow/amber semantic color for warnings and trim handles in DarkAqua.",
-          "$extensions": { "apple_citation": "NSColor.systemYellowColor in NSAppearanceNameDarkAqua" }
+          "$extensions": {
+            "apple_citation": "NSColor.systemYellowColor in NSAppearanceNameDarkAqua"
+          }
         },
         "system_orange": {
           "$type": "color",
           "$value": "#FF9F0A",
           "$description": "System orange semantic color in DarkAqua.",
-          "$extensions": { "apple_citation": "NSColor.systemOrangeColor in NSAppearanceNameDarkAqua" }
+          "$extensions": {
+            "apple_citation": "NSColor.systemOrangeColor in NSAppearanceNameDarkAqua"
+          }
         },
         "system_red": {
           "$type": "color",
           "$value": "#FF453A",
           "$description": "System red semantic color for critical meters and alerts in DarkAqua.",
-          "$extensions": { "apple_citation": "NSColor.systemRedColor in NSAppearanceNameDarkAqua" }
+          "$extensions": {
+            "apple_citation": "NSColor.systemRedColor in NSAppearanceNameDarkAqua"
+          }
         },
         "alternating_row_even": {
           "$type": "color",
           "$value": "#1E1E1E",
           "$description": "Even row background color in NSTableView for DarkAqua.",
-          "$extensions": { "apple_citation": "NSColor.alternatingContentBackgroundColors[0] in DarkAqua (#1E1E1E)" }
+          "$extensions": {
+            "apple_citation": "NSColor.alternatingContentBackgroundColors[0] in DarkAqua (#1E1E1E)"
+          }
         },
         "alternating_row_odd": {
           "$type": "color",
           "$value": "rgba(255, 255, 255, 0.05)",
           "$description": "Odd row subtle alternating tint in NSTableView for DarkAqua.",
-          "$extensions": { "apple_citation": "NSColor.alternatingContentBackgroundColors[1] in DarkAqua (rgba(255,255,255,0.0471))" }
+          "$extensions": {
+            "apple_citation": "NSColor.alternatingContentBackgroundColors[1] in DarkAqua (rgba(255,255,255,0.0471))"
+          }
         },
         "scrubber_selection_border": {
           "$type": "color",
           "$value": "#FFD60A",
           "$description": "QuickTime / AVKit active trim selection border and handle color in DarkAqua.",
-          "$extensions": { "apple_citation": "AVKit AVPlayerView trim handle yellow in DarkAqua" }
+          "$extensions": {
+            "apple_citation": "AVKit AVPlayerView trim handle yellow in DarkAqua"
+          }
         },
         "scrubber_outside_dim": {
           "$type": "color",
           "$value": "rgba(0, 0, 0, 0.58)",
           "$description": "Dimming overlay color for timeline regions outside In/Out trim bounds in DarkAqua (58% black scrim).",
-          "$extensions": { "apple_citation": "AVKit trim scrubber excluded region dim overlay (rgba(0,0,0,0.58))" }
+          "$extensions": {
+            "apple_citation": "AVKit trim scrubber excluded region dim overlay (rgba(0,0,0,0.58))"
+          }
         },
         "scrubber_waveform": {
           "$type": "color",
           "$value": "#0A84FF",
           "$description": "Normalized audio waveform bar color inside timeline track in DarkAqua.",
-          "$extensions": { "apple_citation": "AVKit waveform tint in DarkAqua" }
+          "$extensions": {
+            "apple_citation": "AVKit waveform tint in DarkAqua"
+          }
         },
         "scrubber_playhead": {
           "$type": "color",
           "$value": "#FFFFFF",
           "$description": "Playhead cursor needle color in DarkAqua.",
-          "$extensions": { "apple_citation": "QuickTime / AVKit white playhead needle" }
+          "$extensions": {
+            "apple_citation": "QuickTime / AVKit white playhead needle"
+          }
         },
         "traffic_light_close": {
           "$type": "color",
           "$value": "#FF5F56",
           "$description": "Window close traffic light fill color.",
-          "$extensions": { "apple_citation": "macOS window traffic light close fill" }
+          "$extensions": {
+            "apple_citation": "macOS window traffic light close fill"
+          }
         },
         "traffic_light_close_border": {
           "$type": "color",
           "$value": "#E0443E",
           "$description": "Window close traffic light border stroke color.",
-          "$extensions": { "apple_citation": "macOS window traffic light close border" }
+          "$extensions": {
+            "apple_citation": "macOS window traffic light close border"
+          }
         },
         "traffic_light_minimize": {
           "$type": "color",
           "$value": "#FFBD2E",
           "$description": "Window minimize traffic light fill color.",
-          "$extensions": { "apple_citation": "macOS window traffic light minimize fill" }
+          "$extensions": {
+            "apple_citation": "macOS window traffic light minimize fill"
+          }
         },
         "traffic_light_minimize_border": {
           "$type": "color",
           "$value": "#D69A1E",
           "$description": "Window minimize traffic light border stroke color.",
-          "$extensions": { "apple_citation": "macOS window traffic light minimize border" }
+          "$extensions": {
+            "apple_citation": "macOS window traffic light minimize border"
+          }
         },
         "traffic_light_zoom": {
           "$type": "color",
           "$value": "#27C93F",
           "$description": "Window zoom/maximize traffic light fill color.",
-          "$extensions": { "apple_citation": "macOS window traffic light zoom fill" }
+          "$extensions": {
+            "apple_citation": "macOS window traffic light zoom fill"
+          }
         },
         "traffic_light_zoom_border": {
           "$type": "color",
           "$value": "#1BA931",
           "$description": "Window zoom/maximize traffic light border stroke color.",
-          "$extensions": { "apple_citation": "macOS window traffic light zoom border" }
+          "$extensions": {
+            "apple_citation": "macOS window traffic light zoom border"
+          }
+        },
+        "on_accent_text": {
+          "$type": "color",
+          "$value": "#FFFFFF",
+          "$description": "High-contrast white label color on system accent and active controls."
+        },
+        "knob_fill": {
+          "$type": "color",
+          "$value": "#FFFFFF",
+          "$description": "Pure white surface fill for switch and slider thumb knobs."
+        },
+        "drop_shadow": {
+          "$type": "color",
+          "$value": "rgba(0, 0, 0, 0.35)",
+          "$description": "Subtle ambient drop shadow color for controls and floating surfaces in DarkAqua."
+        },
+        "backdrop_dim": {
+          "$type": "color",
+          "$value": "rgba(0, 0, 0, 0.55)",
+          "$description": "Modal backdrop dimming overlay color in DarkAqua."
+        },
+        "hud_background": {
+          "$type": "color",
+          "$value": "rgba(30, 30, 32, 0.90)",
+          "$description": "Translucent dark NSPanelStyleMaskHUDWindow background fill (SPEC-006 §2.2)."
+        },
+        "hud_border": {
+          "$type": "color",
+          "$value": "#3C3C3E",
+          "$description": "Hairline border stroke for dark floating HUD panels."
+        },
+        "hud_text": {
+          "$type": "color",
+          "$value": "#F2F2F7",
+          "$description": "Primary label color inside dark floating HUD panels."
+        },
+        "hud_secondary_text": {
+          "$type": "color",
+          "$value": "#B4B4B8",
+          "$description": "Secondary coordinate label color inside dark floating HUD panels."
+        },
+        "caption_close_hover": {
+          "$type": "color",
+          "$value": "#E81123",
+          "$description": "Windows 11 caption close button hover fill."
+        },
+        "caption_close_pressed": {
+          "$type": "color",
+          "$value": "#C42B1C",
+          "$description": "Windows 11 caption close button pressed fill."
+        },
+        "caption_hover": {
+          "$type": "color",
+          "$value": "rgba(255, 255, 255, 0.08)",
+          "$description": "Windows 11 caption button hover fill in Dark mode."
+        },
+        "caption_pressed": {
+          "$type": "color",
+          "$value": "rgba(255, 255, 255, 0.12)",
+          "$description": "Windows 11 caption button pressed fill in Dark mode."
+        },
+        "traffic_light_glyph": {
+          "$type": "color",
+          "$value": "rgba(0, 0, 0, 0.63)",
+          "$description": "Interior glyph stroke color for hovered macOS traffic light buttons."
+        },
+        "scrollbar_thumb": {
+          "$type": "color",
+          "$value": "rgba(255, 255, 255, 0.45)",
+          "$description": "Overlay scrollbar thumb base color in DarkAqua."
+        },
+        "scrollbar_thumb_active": {
+          "$type": "color",
+          "$value": "rgba(255, 255, 255, 0.70)",
+          "$description": "Overlay scrollbar thumb hovered/dragged color in DarkAqua."
+        }
+      },
+      "anthracite": {
+        "window_background": {
+          "$type": "color",
+          "$value": "#32363E",
+          "$description": "Standard window background surface color for Anthracite Studio mode.",
+          "$extensions": {
+            "apple_citation": "Studio Anthracite Window Background (#32363E)"
+          }
+        },
+        "control_background": {
+          "$type": "color",
+          "$value": "#3C4049",
+          "$description": "Background surface color for controls, tables, and inspectors in Anthracite mode.",
+          "$extensions": {
+            "apple_citation": "Studio Anthracite Control Background (#3C4049)"
+          }
+        },
+        "control": {
+          "$type": "color",
+          "$value": "#3C4049",
+          "$description": "Flat surface color of controls and push buttons in Anthracite mode.",
+          "$extensions": {
+            "apple_citation": "Studio Anthracite Control Color (#3C4049)"
+          }
+        },
+        "control_accent": {
+          "$type": "color",
+          "$value": "#0A84FF",
+          "$description": "System primary blue accent color for interactive controls in Anthracite mode.",
+          "$extensions": {
+            "apple_citation": "Studio Anthracite Accent Blue (#0A84FF)"
+          }
+        },
+        "selected_control": {
+          "$type": "color",
+          "$value": "#415A77",
+          "$description": "Surface background color of a selected control in Anthracite mode.",
+          "$extensions": {
+            "apple_citation": "Studio Anthracite Selected Control (#415A77)"
+          }
+        },
+        "selected_control_inactive": {
+          "$type": "color",
+          "$value": "#444955",
+          "$description": "Selection surface color when control/window is unfocused in Anthracite mode.",
+          "$extensions": {
+            "apple_citation": "Studio Anthracite Inactive Selection (#444955)"
+          }
+        },
+        "separator": {
+          "$type": "color",
+          "$value": "#484D57",
+          "$description": "Hairline separator border stroke in Anthracite mode (#484D57).",
+          "$extensions": {
+            "apple_citation": "Studio Anthracite Separator Border (#484D57)"
+          }
+        },
+        "placeholder_text": {
+          "$type": "color",
+          "$value": "rgba(255, 255, 255, 0.35)",
+          "$description": "Placeholder/hint text color in Anthracite mode.",
+          "$extensions": {
+            "apple_citation": "Studio Anthracite Placeholder Text"
+          }
+        },
+        "keyboard_focus_indicator": {
+          "$type": "color",
+          "$value": "rgba(10, 132, 255, 0.50)",
+          "$description": "Outer focus ring halo stroke color for keyboard-navigated controls in Anthracite mode.",
+          "$extensions": {
+            "apple_citation": "Studio Anthracite Focus Ring Halo"
+          }
+        },
+        "label": {
+          "$type": "color",
+          "$value": "#ECEEF2",
+          "$description": "Primary label text color in Anthracite Studio mode.",
+          "$extensions": {
+            "apple_citation": "Studio Anthracite Label Primary (#ECEEF2)"
+          }
+        },
+        "secondary_label": {
+          "$type": "color",
+          "$value": "#B4BAC4",
+          "$description": "Secondary label text color in Anthracite Studio mode.",
+          "$extensions": {
+            "apple_citation": "Studio Anthracite Label Secondary (#B4BAC4)"
+          }
+        },
+        "system_green": {
+          "$type": "color",
+          "$value": "#30D158",
+          "$description": "System green accent color in Anthracite mode.",
+          "$extensions": {
+            "apple_citation": "Studio Anthracite System Green (#30D158)"
+          }
+        },
+        "system_yellow": {
+          "$type": "color",
+          "$value": "#FFD60A",
+          "$description": "System yellow/amber semantic color in Anthracite mode.",
+          "$extensions": {
+            "apple_citation": "Studio Anthracite System Yellow (#FFD60A)"
+          }
+        },
+        "system_orange": {
+          "$type": "color",
+          "$value": "#FF9F0A",
+          "$description": "System orange semantic color in Anthracite mode.",
+          "$extensions": {
+            "apple_citation": "Studio Anthracite System Orange (#FF9F0A)"
+          }
+        },
+        "system_red": {
+          "$type": "color",
+          "$value": "#FF453A",
+          "$description": "System red semantic color in Anthracite mode.",
+          "$extensions": {
+            "apple_citation": "Studio Anthracite System Red (#FF453A)"
+          }
+        },
+        "alternating_row_even": {
+          "$type": "color",
+          "$value": "#32363E",
+          "$description": "Even row background color in NSTableView for Anthracite mode.",
+          "$extensions": {
+            "apple_citation": "Studio Anthracite Alternating Row Even (#32363E)"
+          }
+        },
+        "alternating_row_odd": {
+          "$type": "color",
+          "$value": "rgba(255, 255, 255, 0.04)",
+          "$description": "Odd row subtle alternating tint in NSTableView for Anthracite mode.",
+          "$extensions": {
+            "apple_citation": "Studio Anthracite Alternating Row Odd"
+          }
+        },
+        "scrubber_selection_border": {
+          "$type": "color",
+          "$value": "#FFD60A",
+          "$description": "Trim selection border and handle color in Anthracite mode.",
+          "$extensions": {
+            "apple_citation": "Studio Anthracite Trim Handle Yellow"
+          }
+        },
+        "scrubber_outside_dim": {
+          "$type": "color",
+          "$value": "rgba(0, 0, 0, 0.58)",
+          "$description": "Dimming overlay color outside trim range in Anthracite mode.",
+          "$extensions": {
+            "apple_citation": "Studio Anthracite Trim Scrubber Dim Overlay"
+          }
+        },
+        "scrubber_waveform": {
+          "$type": "color",
+          "$value": "#0A84FF",
+          "$description": "Waveform bar color in Anthracite mode.",
+          "$extensions": {
+            "apple_citation": "Studio Anthracite Waveform Tint"
+          }
+        },
+        "scrubber_playhead": {
+          "$type": "color",
+          "$value": "#FFFFFF",
+          "$description": "Playhead cursor needle color in Anthracite mode.",
+          "$extensions": {
+            "apple_citation": "Studio Anthracite Playhead Needle"
+          }
+        },
+        "traffic_light_close": {
+          "$type": "color",
+          "$value": "#FF5F56",
+          "$description": "Window close traffic light fill color.",
+          "$extensions": {
+            "apple_citation": "macOS window traffic light close fill"
+          }
+        },
+        "traffic_light_close_border": {
+          "$type": "color",
+          "$value": "#E0443E",
+          "$description": "Window close traffic light border stroke color.",
+          "$extensions": {
+            "apple_citation": "macOS window traffic light close border"
+          }
+        },
+        "traffic_light_minimize": {
+          "$type": "color",
+          "$value": "#FFBD2E",
+          "$description": "Window minimize traffic light fill color.",
+          "$extensions": {
+            "apple_citation": "macOS window traffic light minimize fill"
+          }
+        },
+        "traffic_light_minimize_border": {
+          "$type": "color",
+          "$value": "#D69A1E",
+          "$description": "Window minimize traffic light border stroke color.",
+          "$extensions": {
+            "apple_citation": "macOS window traffic light minimize border"
+          }
+        },
+        "traffic_light_zoom": {
+          "$type": "color",
+          "$value": "#27C93F",
+          "$description": "Window zoom/maximize traffic light fill color.",
+          "$extensions": {
+            "apple_citation": "macOS window traffic light zoom fill"
+          }
+        },
+        "traffic_light_zoom_border": {
+          "$type": "color",
+          "$value": "#1BA931",
+          "$description": "Window zoom/maximize traffic light border stroke color.",
+          "$extensions": {
+            "apple_citation": "macOS window traffic light zoom border"
+          }
         },
         "on_accent_text": {
           "$type": "color",
@@ -2304,7 +3489,9 @@
           "tracking_em_1000": 41,
           "tracking_pt": 0.24,
           "$description": "Letter spacing for 6pt text (positive tracking for legibility).",
-          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+          "$extensions": {
+            "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values"
+          }
         },
         "pt_7": {
           "size_pt": 7,
@@ -2312,7 +3499,9 @@
           "tracking_em_1000": 34,
           "tracking_pt": 0.23,
           "$description": "Letter spacing for 7pt text.",
-          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+          "$extensions": {
+            "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values"
+          }
         },
         "pt_8": {
           "size_pt": 8,
@@ -2320,7 +3509,9 @@
           "tracking_em_1000": 26,
           "tracking_pt": 0.21,
           "$description": "Letter spacing for 8pt text.",
-          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+          "$extensions": {
+            "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values"
+          }
         },
         "pt_9": {
           "size_pt": 9,
@@ -2328,7 +3519,9 @@
           "tracking_em_1000": 19,
           "tracking_pt": 0.17,
           "$description": "Letter spacing for 9pt text (NSFont.systemFontSize(for: .mini)).",
-          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+          "$extensions": {
+            "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values"
+          }
         },
         "pt_10": {
           "size_pt": 10,
@@ -2336,7 +3529,9 @@
           "tracking_em_1000": 12,
           "tracking_pt": 0.12,
           "$description": "Letter spacing for 10pt text.",
-          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+          "$extensions": {
+            "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values"
+          }
         },
         "pt_11": {
           "size_pt": 11,
@@ -2344,15 +3539,19 @@
           "tracking_em_1000": 6,
           "tracking_pt": 0.06,
           "$description": "Letter spacing for 11pt text (NSFont.systemFontSize(for: .small)).",
-          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+          "$extensions": {
+            "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values"
+          }
         },
         "pt_12": {
           "size_pt": 12,
           "subfamily": "SF Pro Text",
           "tracking_em_1000": 0,
-          "tracking_pt": 0.00,
+          "tracking_pt": 0.0,
           "$description": "Neutral baseline letter spacing for 12pt text.",
-          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+          "$extensions": {
+            "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values"
+          }
         },
         "pt_13": {
           "size_pt": 13,
@@ -2360,7 +3559,9 @@
           "tracking_em_1000": -6,
           "tracking_pt": -0.08,
           "$description": "Letter spacing for 13pt text (NSFont.systemFontSize(for: .regular)).",
-          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+          "$extensions": {
+            "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values"
+          }
         },
         "pt_14": {
           "size_pt": 14,
@@ -2368,7 +3569,9 @@
           "tracking_em_1000": -11,
           "tracking_pt": -0.15,
           "$description": "Letter spacing for 14pt text.",
-          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+          "$extensions": {
+            "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values"
+          }
         },
         "pt_15": {
           "size_pt": 15,
@@ -2376,7 +3579,9 @@
           "tracking_em_1000": -16,
           "tracking_pt": -0.23,
           "$description": "Letter spacing for 15pt text.",
-          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+          "$extensions": {
+            "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values"
+          }
         },
         "pt_16": {
           "size_pt": 16,
@@ -2384,7 +3589,9 @@
           "tracking_em_1000": -20,
           "tracking_pt": -0.31,
           "$description": "Letter spacing for 16pt text (NSFont.systemFontSize(for: .large)).",
-          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+          "$extensions": {
+            "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values"
+          }
         },
         "pt_17": {
           "size_pt": 17,
@@ -2392,7 +3599,9 @@
           "tracking_em_1000": -26,
           "tracking_pt": -0.43,
           "$description": "Letter spacing for 17pt body text.",
-          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+          "$extensions": {
+            "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values"
+          }
         },
         "pt_18": {
           "size_pt": 18,
@@ -2400,7 +3609,9 @@
           "tracking_em_1000": -25,
           "tracking_pt": -0.44,
           "$description": "Letter spacing for 18pt subhead text.",
-          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+          "$extensions": {
+            "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values"
+          }
         },
         "pt_19": {
           "size_pt": 19,
@@ -2408,7 +3619,9 @@
           "tracking_em_1000": -24,
           "tracking_pt": -0.45,
           "$description": "Letter spacing for 19pt text.",
-          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+          "$extensions": {
+            "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values"
+          }
         },
         "pt_20": {
           "size_pt": 20,
@@ -2416,7 +3629,9 @@
           "tracking_em_1000": -23,
           "tracking_pt": -0.45,
           "$description": "Letter spacing for 20pt display text (Display optical threshold).",
-          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+          "$extensions": {
+            "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values"
+          }
         },
         "pt_21": {
           "size_pt": 21,
@@ -2424,7 +3639,9 @@
           "tracking_em_1000": -18,
           "tracking_pt": -0.36,
           "$description": "Letter spacing for 21pt headline text.",
-          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+          "$extensions": {
+            "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values"
+          }
         },
         "pt_22": {
           "size_pt": 22,
@@ -2432,15 +3649,19 @@
           "tracking_em_1000": -12,
           "tracking_pt": -0.26,
           "$description": "Letter spacing for 22pt title text.",
-          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+          "$extensions": {
+            "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values"
+          }
         },
         "pt_23": {
           "size_pt": 23,
           "subfamily": "SF Pro Display",
           "tracking_em_1000": -4,
-          "tracking_pt": -0.10,
+          "tracking_pt": -0.1,
           "$description": "Letter spacing for 23pt text.",
-          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+          "$extensions": {
+            "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values"
+          }
         },
         "pt_24": {
           "size_pt": 24,
@@ -2448,14 +3669,20 @@
           "tracking_em_1000": 3,
           "tracking_pt": 0.07,
           "$description": "Letter spacing for 24pt title text.",
-          "$extensions": { "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values" }
+          "$extensions": {
+            "apple_citation": "Apple Human Interface Guidelines - Typography Tracking Values"
+          }
         }
       },
       "polynomial_spec001": {
         "description": "Polynomial curve tracking for compact numeric cells defined in SPEC-001 Section 2.1 B.",
         "quadratic_inspector_fit": {
           "formula": "Tracking(p) = -0.00916667 * p^2 + 0.295000 * p - 2.365833",
-          "coefficients": { "a2": -0.00916667, "a1": 0.295000, "a0": -2.365833 }
+          "coefficients": {
+            "a2": -0.00916667,
+            "a1": 0.295,
+            "a0": -2.365833
+          }
         },
         "cubic_apple_hig_fit": {
           "formula": "Tracking(p) = a * p^3 + b * p^2 + c * p + d",
@@ -2467,9 +3694,18 @@
           }
         },
         "points": {
-          "p11": { "pt": 11.0, "tracking_pt": -0.23 },
-          "p13": { "pt": 13.0, "tracking_pt": -0.08 },
-          "p17": { "pt": 17.0, "tracking_pt": 0.00 }
+          "p11": {
+            "pt": 11.0,
+            "tracking_pt": -0.23
+          },
+          "p13": {
+            "pt": 13.0,
+            "tracking_pt": -0.08
+          },
+          "p17": {
+            "pt": 17.0,
+            "tracking_pt": 0.0
+          }
         }
       }
     },
@@ -2479,40 +3715,48 @@
         "stiffness": 100.0,
         "damping": 10.0,
         "omega_0": 10.0,
-        "damping_ratio": 0.50,
+        "damping_ratio": 0.5,
         "response": 0.628318,
         "$description": "CoreAnimation CASpringAnimation default physical constants (underdamped, natural bounce).",
-        "$extensions": { "apple_citation": "Apple Developer Documentation - CASpringAnimation (mass=1, stiffness=100, damping=10)" }
+        "$extensions": {
+          "apple_citation": "Apple Developer Documentation - CASpringAnimation (mass=1, stiffness=100, damping=10)"
+        }
       },
       "swiftui_spring_default": {
         "mass": 1.0,
-        "stiffness": 130.50,
+        "stiffness": 130.5,
         "damping": 22.85,
         "omega_0": 11.423973,
         "damping_ratio": 1.0,
         "response": 0.55,
         "$description": "SwiftUI Animation.spring() modern default parameters (iOS 17+ / macOS 14+ critically damped).",
-        "$extensions": { "apple_citation": "Apple Developer Documentation - SwiftUI Animation.spring(response: 0.55, dampingFraction: 1.0)" }
+        "$extensions": {
+          "apple_citation": "Apple Developer Documentation - SwiftUI Animation.spring(response: 0.55, dampingFraction: 1.0)"
+        }
       },
       "swiftui_snappy": {
         "mass": 1.0,
         "stiffness": 438.65,
-        "damping": 35.60,
+        "damping": 35.6,
         "omega_0": 20.943951,
         "damping_ratio": 0.85,
-        "response": 0.30,
+        "response": 0.3,
         "$description": "SwiftUI Animation.snappy preset for responsive UI elements, switches, and compact panels.",
-        "$extensions": { "apple_citation": "Apple Developer Documentation - SwiftUI Animation.snappy (duration: 0.3, extraBounce: 0.1)" }
+        "$extensions": {
+          "apple_citation": "Apple Developer Documentation - SwiftUI Animation.snappy (duration: 0.3, extraBounce: 0.1)"
+        }
       },
       "swiftui_bouncy": {
         "mass": 1.0,
         "stiffness": 157.91,
         "damping": 17.59,
         "omega_0": 12.566371,
-        "damping_ratio": 0.70,
-        "response": 0.50,
+        "damping_ratio": 0.7,
+        "response": 0.5,
         "$description": "SwiftUI Animation.bouncy preset for playful micro-interactions and badges.",
-        "$extensions": { "apple_citation": "Apple Developer Documentation - SwiftUI Animation.bouncy (duration: 0.5, extraBounce: 0.2)" }
+        "$extensions": {
+          "apple_citation": "Apple Developer Documentation - SwiftUI Animation.bouncy (duration: 0.5, extraBounce: 0.2)"
+        }
       },
       "swiftui_smooth": {
         "mass": 1.0,
@@ -2520,9 +3764,11 @@
         "damping": 31.42,
         "omega_0": 15.707963,
         "damping_ratio": 1.0,
-        "response": 0.40,
+        "response": 0.4,
         "$description": "SwiftUI Animation.smooth preset for fluid transitions without overshoot.",
-        "$extensions": { "apple_citation": "Apple Developer Documentation - SwiftUI Animation.smooth (duration: 0.4, extraBounce: 0.0)" }
+        "$extensions": {
+          "apple_citation": "Apple Developer Documentation - SwiftUI Animation.smooth (duration: 0.4, extraBounce: 0.0)"
+        }
       },
       "hud_panel_transition": {
         "mass": 1.0,
@@ -2534,7 +3780,9 @@
         "response": 0.35,
         "settling_duration": 0.452637,
         "$description": "CoreAnimation damped harmonic oscillator specification for floating HUD panels and utility inspector transitions.",
-        "$extensions": { "apple_citation": "AppKit NSPanelStyleMaskHUDWindow transition dynamics (response: 0.35s, damping: 0.85, omega_0: 17.951958 rad/s, omega_d: 9.456781 rad/s, settling: 0.453s)" }
+        "$extensions": {
+          "apple_citation": "AppKit NSPanelStyleMaskHUDWindow transition dynamics (response: 0.35s, damping: 0.85, omega_0: 17.951958 rad/s, omega_d: 9.456781 rad/s, settling: 0.453s)"
+        }
       }
     }
   }

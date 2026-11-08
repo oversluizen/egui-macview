@@ -248,7 +248,11 @@ impl<'a> Widget for MacSearchField<'a> {
         }
 
         // 2. Render TextEdit AFTER background bezel so text and cursor sit on top
-        let mut child_ui = ui.new_child(egui::UiBuilder::new().max_rect(text_rect));
+        let mut child_ui = ui.new_child(
+            egui::UiBuilder::new()
+                .id_salt((text_id, "search_field_inner"))
+                .max_rect(text_rect),
+        );
         let edit_response = child_ui.add_sized(
             text_rect.size(),
             TextEdit::singleline(self.text)

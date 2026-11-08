@@ -50,7 +50,10 @@ impl CenterState {
                     um.is_grouping(),
                 )
             };
-            let undo_lbl = format!("{} Undo ({undo_n})", MacSymbol::ArrowCounterClockwise.as_str());
+            let undo_lbl = format!(
+                "{} Undo ({undo_n})",
+                MacSymbol::ArrowCounterClockwise.as_str()
+            );
             if h.add(MacButtonCell::new(&undo_lbl).theme(theme).enabled(can_undo))
                 .clicked()
                 && undo_manager.borrow_mut().undo(card)
@@ -66,13 +69,19 @@ impl CenterState {
                 *last_stable_card.borrow_mut() = card.clone();
                 toasts.borrow_mut().info("NSUndoManager: Redone");
             }
-            if h.add(MacButtonCell::new("Toast: Info").theme(theme)).clicked() {
+            if h.add(MacButtonCell::new("Toast: Info").theme(theme))
+                .clicked()
+            {
                 toasts.borrow_mut().info("AppKit HUD Notification");
             }
-            if h.add(MacButtonCell::new("Toast: Success").theme(theme)).clicked() {
+            if h.add(MacButtonCell::new("Toast: Success").theme(theme))
+                .clicked()
+            {
                 toasts.borrow_mut().success("State Snapshot Verified");
             }
-            if h.add(MacButtonCell::new("Toast: Warning").theme(theme)).clicked() {
+            if h.add(MacButtonCell::new("Toast: Warning").theme(theme))
+                .clicked()
+            {
                 toasts.borrow_mut().warning("Contrast Threshold Alert");
             }
             h.label(
@@ -130,12 +139,15 @@ impl CenterState {
         let is_en = self.showcase_controls_enabled;
 
         content_ui.horizontal(|h| {
-            MacInputCell::with_id(Id::NULL.with("showcase_input_cell"), &mut self.showcase_text)
-                .theme(theme)
-                .control_size(active_ctrl_size)
-                .width(110.0)
-                .enabled(is_en)
-                .show(h);
+            MacInputCell::with_id(
+                Id::NULL.with("showcase_input_cell"),
+                &mut self.showcase_text,
+            )
+            .theme(theme)
+            .control_size(active_ctrl_size)
+            .width(110.0)
+            .enabled(is_en)
+            .show(h);
 
             h.label(egui::RichText::new("Numeric ↑/↓:").size(11.0));
             MacInputCell::with_id(
@@ -153,7 +165,11 @@ impl CenterState {
                 .theme(theme)
                 .enabled(is_en)
                 .show(h);
-            h.label(egui::RichText::new(format!("{:.0}", self.showcase_step_val)).size(11.0).strong());
+            h.label(
+                egui::RichText::new(format!("{:.0}", self.showcase_step_val))
+                    .size(11.0)
+                    .strong(),
+            );
 
             MacPopUpButton::new(
                 &mut self.showcase_popup_idx,
@@ -192,6 +208,7 @@ impl CenterState {
 
         let mut eval_ui = content_ui.new_child(
             egui::UiBuilder::new()
+                .id_salt("gallery_wcag_eval_ui")
                 .max_rect(eval_rect.shrink(10.0))
                 .layout(Layout::top_down(Align::Min)),
         );
@@ -202,15 +219,21 @@ impl CenterState {
             h.label(egui::RichText::new("BG:").size(11.0).strong());
             h.add(MacColorWell::new(&mut self.wcag_bg).theme(theme));
             h.add_space(10.0);
-            if h.add(MacButtonCell::new("Label on Window").theme(theme)).clicked() {
+            if h.add(MacButtonCell::new("Label on Window").theme(theme))
+                .clicked()
+            {
                 self.wcag_fg = theme.label();
                 self.wcag_bg = theme.window_background();
             }
-            if h.add(MacButtonCell::new("White on Accent").theme(theme)).clicked() {
+            if h.add(MacButtonCell::new("White on Accent").theme(theme))
+                .clicked()
+            {
                 self.wcag_fg = Color32::WHITE;
                 self.wcag_bg = theme.control_accent();
             }
-            if h.add(MacButtonCell::new("Dark on Accent").theme(theme)).clicked() {
+            if h.add(MacButtonCell::new("Dark on Accent").theme(theme))
+                .clicked()
+            {
                 self.wcag_fg = Color32::from_rgb(30, 30, 30);
                 self.wcag_bg = theme.control_accent();
             }
@@ -265,15 +288,24 @@ impl CenterState {
         let rows: &[(&str, &str)] = match self.token_tab_idx {
             0 => &[
                 ("button.regular.height", "22.0 pt — Standard push button"),
-                ("text_field.regular.height", "22.0 pt — Standard NSTextField"),
+                (
+                    "text_field.regular.height",
+                    "22.0 pt — Standard NSTextField",
+                ),
                 ("outline_view.row_height", "24.0 pt — Sidebar row height"),
                 ("toolbar.height_unified", "52.0 pt — Unified AppKit toolbar"),
-                ("table_view.header_height", "28.0 pt — NSTableHeaderView height"),
+                (
+                    "table_view.header_height",
+                    "28.0 pt — NSTableHeaderView height",
+                ),
             ],
             1 => &[
                 ("window_background", "Dynamic Aqua / DarkAqua surface"),
                 ("control_accent", "System accent blue (#007AFF / #0A84FF)"),
-                ("keyboard_focus_indicator", "50% alpha outer focus ring halo"),
+                (
+                    "keyboard_focus_indicator",
+                    "50% alpha outer focus ring halo",
+                ),
             ],
             _ => &[
                 ("motion.hud_panel_transition", "T₀ = 0.30s, ζ = 0.70"),
@@ -285,8 +317,17 @@ impl CenterState {
                 continue;
             }
             content_ui.horizontal(|h| {
-                h.label(egui::RichText::new(*k).size(11.0).monospace().color(theme.control_accent()));
-                h.label(egui::RichText::new(*v).size(10.5).color(theme.secondary_label()));
+                h.label(
+                    egui::RichText::new(*k)
+                        .size(11.0)
+                        .monospace()
+                        .color(theme.control_accent()),
+                );
+                h.label(
+                    egui::RichText::new(*v)
+                        .size(10.5)
+                        .color(theme.secondary_label()),
+                );
             });
         }
         content_ui.add_space(18.0);

@@ -18,9 +18,12 @@ fn decimal_places_if_valid(s: &str) -> usize {
 }
 
 fn format_stepped_number(reference: &str, fallback_ref: &str, step: f64, val: f64) -> String {
-    let ref_decimals = decimal_places_if_valid(reference).max(decimal_places_if_valid(fallback_ref));
+    let ref_decimals =
+        decimal_places_if_valid(reference).max(decimal_places_if_valid(fallback_ref));
     let step_decimals = if (step - step.round()).abs() > f64::EPSILON {
-        format!("{step}").split_once('.').map_or(1, |(_, f)| f.len())
+        format!("{step}")
+            .split_once('.')
+            .map_or(1, |(_, f)| f.len())
     } else {
         0
     };
@@ -405,6 +408,7 @@ impl<'a> MacInputCell<'a> {
             .unwrap_or_else(|| metrics.corner_radius.points());
         let mut child_ui = ui.new_child(
             egui::UiBuilder::new()
+                .id_salt((self.id, "input_cell_inner"))
                 .max_rect(rect.shrink2(Vec2::new(shrink_pad, 0.0)))
                 .layout(egui::Layout::left_to_right(egui::Align::Center)),
         );

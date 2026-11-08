@@ -323,11 +323,61 @@ fn default_scrollbar_thumb_active() -> ColorValue {
     color_val("rgba(0, 0, 0, 0.70)")
 }
 
-/// Semantic system color tokens for Aqua and DarkAqua.
+/// Semantic system color tokens for Aqua, Anthracite, and DarkAqua.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MacColorTokens {
     /// Light mode appearance colors (`NSAppearanceNameAqua`).
     pub aqua: MacAppearanceColors,
+    /// Anthracite studio appearance colors.
+    pub anthracite: MacAppearanceColors,
     /// Dark mode appearance colors (`NSAppearanceNameDarkAqua`).
     pub dark_aqua: MacAppearanceColors,
+}
+
+/// Generates fallback anthracite studio color values.
+pub fn default_anthracite_colors() -> MacAppearanceColors {
+    MacAppearanceColors {
+        window_background: color_val("#32363E"),
+        control_background: color_val("#3C4049"),
+        control: color_val("#3C4049"),
+        control_accent: color_val("#0A84FF"),
+        selected_control: color_val("#415A77"),
+        selected_control_inactive: color_val("#444955"),
+        separator: color_val("#484D57"),
+        placeholder_text: color_val("rgba(255, 255, 255, 0.35)"),
+        keyboard_focus_indicator: color_val("rgba(10, 132, 255, 0.50)"),
+        label: color_val("#ECEEF2"),
+        secondary_label: color_val("#B4BAC4"),
+        system_green: color_val("#30D158"),
+        system_yellow: color_val("#FFD60A"),
+        system_orange: color_val("#FF9F0A"),
+        system_red: color_val("#FF453A"),
+        alternating_row_even: color_val("#32363E"),
+        alternating_row_odd: color_val("rgba(255, 255, 255, 0.04)"),
+        scrubber_selection_border: color_val("#FFD60A"),
+        scrubber_outside_dim: color_val("rgba(0, 0, 0, 0.58)"),
+        scrubber_waveform: color_val("#0A84FF"),
+        scrubber_playhead: color_val("#FFFFFF"),
+        traffic_light_close: color_val("#FF5F56"),
+        traffic_light_close_border: color_val("#E0443E"),
+        traffic_light_minimize: color_val("#FFBD2E"),
+        traffic_light_minimize_border: color_val("#D69A1E"),
+        traffic_light_zoom: color_val("#27C93F"),
+        traffic_light_zoom_border: color_val("#1BA931"),
+        on_accent_text: color_val("#FFFFFF"),
+        knob_fill: color_val("#FFFFFF"),
+        drop_shadow: color_val("rgba(0, 0, 0, 0.30)"),
+        backdrop_dim: color_val("rgba(0, 0, 0, 0.50)"),
+        hud_background: color_val("rgba(30, 30, 32, 0.90)"),
+        hud_border: color_val("#3C3C3E"),
+        hud_text: color_val("#F2F2F7"),
+        hud_secondary_text: color_val("#B4B4B8"),
+        caption_close_hover: color_val("#E81123"),
+        caption_close_pressed: color_val("#C42B1C"),
+        caption_hover: color_val("rgba(255, 255, 255, 0.08)"),
+        caption_pressed: color_val("rgba(255, 255, 255, 0.12)"),
+        traffic_light_glyph: color_val("rgba(0, 0, 0, 0.63)"),
+        scrollbar_thumb: color_val("rgba(255, 255, 255, 0.45)"),
+        scrollbar_thumb_active: color_val("rgba(255, 255, 255, 0.70)"),
+    }
 }

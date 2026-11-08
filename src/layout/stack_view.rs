@@ -297,6 +297,7 @@ impl<'a> MacStackView<'a> {
 
         let inner_rect = container_rect.shrink(padding);
 
+        let stack_id = ui.next_auto_id();
         let mut child_ui = match self.orientation {
             MacStackOrientation::Vertical => {
                 let layout = egui::Layout::top_down(match self.alignment {
@@ -304,7 +305,12 @@ impl<'a> MacStackView<'a> {
                     MacStackAlignment::Center => egui::Align::Center,
                     MacStackAlignment::Trailing => egui::Align::Max,
                 });
-                ui.new_child(UiBuilder::new().max_rect(inner_rect).layout(layout))
+                ui.new_child(
+                    UiBuilder::new()
+                        .id_salt((stack_id, "stack_v"))
+                        .max_rect(inner_rect)
+                        .layout(layout),
+                )
             }
             MacStackOrientation::Horizontal => {
                 let layout = egui::Layout::left_to_right(match self.alignment {
@@ -312,7 +318,12 @@ impl<'a> MacStackView<'a> {
                     MacStackAlignment::Center => egui::Align::Center,
                     MacStackAlignment::Trailing => egui::Align::Max,
                 });
-                ui.new_child(UiBuilder::new().max_rect(inner_rect).layout(layout))
+                ui.new_child(
+                    UiBuilder::new()
+                        .id_salt((stack_id, "stack_h"))
+                        .max_rect(inner_rect)
+                        .layout(layout),
+                )
             }
         };
 

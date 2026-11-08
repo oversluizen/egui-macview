@@ -171,6 +171,7 @@ impl<'a> MacFloatingInfoBox<'a> {
 
                 let mut row1_ui = ui.new_child(
                     UiBuilder::new()
+                        .id_salt((self.id, "hud_row1"))
                         .max_rect(row1_rect)
                         .layout(Layout::left_to_right(Align::Center)),
                 );
@@ -178,6 +179,7 @@ impl<'a> MacFloatingInfoBox<'a> {
 
                 let mut row2_ui = ui.new_child(
                     UiBuilder::new()
+                        .id_salt((self.id, "hud_row2"))
                         .max_rect(row2_rect)
                         .layout(Layout::left_to_right(Align::Center)),
                 );

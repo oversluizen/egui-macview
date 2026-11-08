@@ -350,6 +350,7 @@ impl<'a> MacToolbar<'a> {
         );
         let mut child_ui = ui.new_child(
             UiBuilder::new()
+                .id_salt((self.id, "toolbar_contents"))
                 .max_rect(inner_rect)
                 .layout(Layout::left_to_right(Align::Center)),
         );

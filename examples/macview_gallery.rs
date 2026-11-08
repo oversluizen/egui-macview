@@ -291,7 +291,10 @@ impl eframe::App for GalleryApp {
         );
 
         let mut menu_ui = ui.new_child(
-            egui::UiBuilder::new().max_rect(menu_bar_rect).layout(Layout::left_to_right(Align::Center)),
+            egui::UiBuilder::new()
+                .id_salt("gallery_menu_bar")
+                .max_rect(menu_bar_rect)
+                .layout(Layout::left_to_right(Align::Center)),
         );
         menu_ui.add_space(8.0);
         if let Some(action) = MacMenuBar::new(&self.menus, &mut self.open_menu_idx, &mut self.highlighted_item_idx)
@@ -317,7 +320,10 @@ impl eframe::App for GalleryApp {
             full_rect.max,
         );
         let mut work_ui = ui.new_child(
-            egui::UiBuilder::new().max_rect(work_rect).layout(Layout::left_to_right(Align::Min)),
+            egui::UiBuilder::new()
+                .id_salt("gallery_work_area")
+                .max_rect(work_rect)
+                .layout(Layout::left_to_right(Align::Min)),
         );
 
         let mut left_split_pos = self.left_split_pos;

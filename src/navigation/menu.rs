@@ -305,7 +305,7 @@ impl<'a> MacMenuBar<'a> {
                     .order(Order::Foreground)
                     .fixed_pos(popup_pos)
                     .show(ui.ctx(), |pop_ui| {
-                        let _ = pop_ui.allocate_rect(menu_rect, Sense::click());
+                        let _ = pop_ui.allocate_rect(menu_rect, Sense::hover());
                         let painter = pop_ui.painter();
                         let drop_corner_r = mb_metrics.dropdown_corner_radius.points() as u8;
 
@@ -441,10 +441,12 @@ impl<'a> MacMenuBar<'a> {
                         }
                     });
 
-                // Dismiss open dropdown if primary pointer clicked outside bar, dropdown, and submenu
+                // Dismiss open dropdown if pointer clicked outside bar, dropdown, and submenu
                 let clicked_outside = ui.input(|i| {
-                    if i.pointer.primary_clicked() || i.pointer.primary_pressed() {
-                        if let Some(pos) = i.pointer.interact_pos() {
+                    if i.pointer.any_pressed() || i.pointer.any_click() {
+                        if let Some(pos) =
+                            i.pointer.interact_pos().or_else(|| i.pointer.latest_pos())
+                        {
                             let in_bar = bar_union_rect.contains(pos);
                             let in_menu = menu_rect.contains(pos);
                             let in_sub = active_sub_rect.is_some_and(|r| r.contains(pos));

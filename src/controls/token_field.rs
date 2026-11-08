@@ -222,7 +222,11 @@ impl<'a> Widget for MacTokenField<'a> {
         } else {
             theme.placeholder_text()
         };
-        let mut child_ui = ui.new_child(UiBuilder::new().max_rect(input_rect));
+        let mut child_ui = ui.new_child(
+            UiBuilder::new()
+                .id_salt((self.id, "token_field_inner"))
+                .max_rect(input_rect),
+        );
         let edit_w = TextEdit::singleline(self.input_buffer)
             .id(input_id)
             .font(font_id.clone())

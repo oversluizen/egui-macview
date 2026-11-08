@@ -164,7 +164,9 @@ impl<'a> MacSegmentedControl<'a> {
             cur
         } else {
             let elapsed = (now - start_time).max(0.0) as f32;
-            if elapsed < spring.settling_duration() {
+            if (target_idx - start_val).abs() > f32::EPSILON
+                && elapsed < spring.settling_duration()
+            {
                 ui.ctx().request_repaint();
                 start_val + (target_idx - start_val) * spring.position_at(elapsed)
             } else {

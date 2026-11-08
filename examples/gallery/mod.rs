@@ -234,6 +234,7 @@ impl CenterState {
         );
         let mut search_ui = ui.new_child(
             egui::UiBuilder::new()
+                .id_salt("gallery_center_search_ui")
                 .max_rect(search_rect)
                 .layout(Layout::left_to_right(Align::Center)),
         );
@@ -251,6 +252,7 @@ impl CenterState {
         );
         let mut footer_ui = ui.new_child(
             egui::UiBuilder::new()
+                .id_salt("gallery_center_footer_ui")
                 .max_rect(footer_rect)
                 .layout(Layout::left_to_right(Align::Center)),
         );
@@ -286,6 +288,7 @@ impl CenterState {
         );
         let mut scroll_container_ui = ui.new_child(
             egui::UiBuilder::new()
+                .id_salt("gallery_center_scroll_container_ui")
                 .max_rect(scroll_rect)
                 .layout(Layout::top_down(Align::Min)),
         );

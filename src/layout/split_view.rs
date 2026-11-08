@@ -336,6 +336,7 @@ impl<'a> MacSplitView<'a> {
         // Render panes as top-down vertical columns
         let mut ui1 = ui.new_child(
             UiBuilder::new()
+                .id_salt((self.id, "split_first"))
                 .max_rect(first_rect)
                 .layout(Layout::top_down(Align::Min)),
         );
@@ -343,6 +344,7 @@ impl<'a> MacSplitView<'a> {
 
         let mut ui2 = ui.new_child(
             UiBuilder::new()
+                .id_salt((self.id, "split_second"))
                 .max_rect(second_rect)
                 .layout(Layout::top_down(Align::Min)),
         );

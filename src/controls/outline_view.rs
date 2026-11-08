@@ -214,7 +214,9 @@ impl<'t> MacOutlineTree<'t> {
                 cur
             } else {
                 let elapsed = (now - start_time).max(0.0) as f32;
-                if elapsed < spring.settling_duration() {
+                if (target_frac - start_val).abs() > f32::EPSILON
+                    && elapsed < spring.settling_duration()
+                {
                     self.ui.ctx().request_repaint();
                     start_val + (target_frac - start_val) * spring.position_at(elapsed)
                 } else {
