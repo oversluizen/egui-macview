@@ -292,11 +292,50 @@ impl<'a> Widget for MacLevelIndicator<'a> {
                     };
 
                     let color = if is_lit {
-                        self.color_for_value(theme, seg_val)
+                        if self.segmented_threshold_colors {
+                            self.color_for_value(theme, seg_val)
+                        } else {
+                            self.color_for_value(theme, self.value)
+                        }
                     } else {
                         theme.control()
                     };
                     painter.rect_filled(seg_rect, seg_r, color);
+                }
+            }
+        }
+
+        if self.tick_marks > 0 {
+            let tick_stroke = Stroke::new(lm.border_width.points(), theme.secondary_label());
+            let tick_len = lm.track_inset.points() + lm.border_width.points();
+            let denom = (self.tick_marks.saturating_sub(1)).max(1) as f32;
+            for idx in 0..self.tick_marks {
+                let t_frac = if self.tick_marks == 1 {
+                    0.5
+                } else {
+                    (idx as f32) / denom
+                };
+                match self.orientation {
+                    MacLevelOrientation::Horizontal => {
+                        let tx = inner.left() + inner.width() * t_frac;
+                        painter.line_segment(
+                            [
+                                Pos2::new(tx, rect.bottom() - tick_len),
+                                Pos2::new(tx, rect.bottom()),
+                            ],
+                            tick_stroke,
+                        );
+                    }
+                    MacLevelOrientation::Vertical => {
+                        let ty = inner.bottom() - inner.height() * t_frac;
+                        painter.line_segment(
+                            [
+                                Pos2::new(rect.right() - tick_len, ty),
+                                Pos2::new(rect.right(), ty),
+                            ],
+                            tick_stroke,
+                        );
+                    }
                 }
             }
         }

@@ -150,27 +150,23 @@ pub(crate) fn paint_trim_scrubber(
         StrokeKind::Inside,
     );
 
-    let left_handle = Rect::from_min_size(
-        Pos2::new(in_x, track_rect.top()),
-        Vec2::new(handle_w, track_rect.height()),
-    );
-    let right_handle = Rect::from_min_size(
-        Pos2::new((out_x - handle_w).max(in_x), track_rect.top()),
-        Vec2::new(handle_w, track_rect.height()),
-    );
+    let (left_handle, right_handle) = compute_handle_rects(track_rect, in_x, out_x, handle_w);
     painter.rect_filled(left_handle, corner_r, trim_color);
     painter.rect_filled(right_handle, corner_r, trim_color);
 
     let slot_half = sm.handle_slot_height.points() * 0.5;
-    let slot_stroke = Stroke::new(sm.handle_slot_width.points(), theme.control_background());
+    let slot_w = sm.handle_slot_width.points();
+    let slot_stroke = Stroke::new(slot_w, theme.control_background());
     for hc in [left_handle.center(), right_handle.center()] {
-        painter.line_segment(
-            [
-                Pos2::new(hc.x, hc.y - slot_half),
-                Pos2::new(hc.x, hc.y + slot_half),
-            ],
-            slot_stroke,
-        );
+        for sx in [hc.x - slot_w, hc.x + slot_w] {
+            painter.line_segment(
+                [
+                    Pos2::new(sx, hc.y - slot_half),
+                    Pos2::new(sx, hc.y + slot_half),
+                ],
+                slot_stroke,
+            );
+        }
     }
 
     // 6. Playhead needle & MM:SS.d timecode pill badge
@@ -207,4 +203,33 @@ pub(crate) fn paint_trim_scrubber(
         badge_font,
         theme.scrubber_playhead(),
     );
+}
+
+/// Computes non-overlapping left (`In`) and right (`Out`) handle rectangles along `track_rect`.
+pub(super) fn compute_handle_rects(
+    track_rect: Rect,
+    in_x: f32,
+    out_x: f32,
+    handle_w: f32,
+) -> (Rect, Rect) {
+    let h = track_rect.height();
+    let y = track_rect.top();
+    if out_x - in_x >= handle_w * 2.0 {
+        (
+            Rect::from_min_size(Pos2::new(in_x, y), Vec2::new(handle_w, h)),
+            Rect::from_min_size(Pos2::new(out_x - handle_w, y), Vec2::new(handle_w, h)),
+        )
+    } else {
+        let mid = (in_x + out_x) * 0.5;
+        let left_min = (mid - handle_w).max(track_rect.left());
+        let left_max = mid.max(left_min + 1.0);
+        let right_min = left_max;
+        let right_max = (right_min + handle_w)
+            .min(track_rect.right())
+            .max(right_min + 1.0);
+        (
+            Rect::from_min_max(Pos2::new(left_min, y), Pos2::new(left_max, y + h)),
+            Rect::from_min_max(Pos2::new(right_min, y), Pos2::new(right_max, y + h)),
+        )
+    }
 }

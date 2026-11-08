@@ -210,14 +210,7 @@ impl<'a> MacTrimScrubber<'a> {
         let in_x = time_to_x(*self.in_point);
         let out_x = time_to_x(*self.out_point);
 
-        let in_rect = Rect::from_min_size(
-            Pos2::new(in_x, track_rect.top()),
-            Vec2::new(handle_w, track_rect.height()),
-        );
-        let out_rect = Rect::from_min_size(
-            Pos2::new((out_x - handle_w).max(in_x), track_rect.top()),
-            Vec2::new(handle_w, track_rect.height()),
-        );
+        let (in_rect, out_rect) = painter::compute_handle_rects(track_rect, in_x, out_x, handle_w);
 
         let sense = if self.enabled {
             Sense::click_and_drag()
@@ -232,34 +225,70 @@ impl<'a> MacTrimScrubber<'a> {
         let mut playhead_dragged = false;
 
         if self.enabled {
-            if in_resp.dragged() {
-                if let Some(pos) = in_resp.interact_pointer_pos() {
-                    let next_in = x_to_time(pos.x).clamp(0.0, *self.out_point);
-                    *self.in_point = next_in;
-                    if *self.playhead < next_in {
-                        *self.playhead = next_in;
+            let drag_id = self.id.with("active_drag_target");
+            let (any_pressed, primary_down, any_released, ptr_pos) = ui.input(|i| {
+                (
+                    i.pointer.any_pressed(),
+                    i.pointer.primary_down(),
+                    i.pointer.any_released(),
+                    i.pointer.interact_pos().or_else(|| i.pointer.latest_pos()),
+                )
+            });
+            let mut target = ui
+                .data_mut(|d| d.get_temp::<(bool, bool, bool)>(drag_id))
+                .unwrap_or((false, false, false));
+
+            if any_pressed {
+                if let Some(pos) = ptr_pos {
+                    if in_rect.contains(pos) {
+                        target = (true, false, false);
+                    } else if out_rect.contains(pos) {
+                        target = (false, true, false);
+                    } else if rect.contains(pos) {
+                        target = (false, false, true);
+                    } else {
+                        target = (false, false, false);
                     }
-                    in_point_dragged = true;
-                    changed = true;
-                }
-            } else if out_resp.dragged() {
-                if let Some(pos) = out_resp.interact_pointer_pos() {
-                    let next_out = x_to_time(pos.x).clamp(*self.in_point, dur);
-                    *self.out_point = next_out;
-                    if *self.playhead > next_out {
-                        *self.playhead = next_out;
-                    }
-                    out_point_dragged = true;
-                    changed = true;
-                }
-            } else if response.clicked() || response.dragged() {
-                if let Some(pos) = response.interact_pointer_pos() {
-                    let next_play = x_to_time(pos.x).clamp(*self.in_point, *self.out_point);
-                    *self.playhead = next_play;
-                    playhead_dragged = true;
-                    changed = true;
                 }
             }
+
+            let active_in = target.0 || in_resp.dragged() || in_resp.drag_stopped();
+            let active_out = target.1 || out_resp.dragged() || out_resp.drag_stopped();
+            let active_play = target.2 || response.clicked() || response.dragged();
+
+            if (primary_down || any_released || any_pressed)
+                && (active_in || active_out || active_play)
+            {
+                if let Some(pos) = ptr_pos {
+                    if active_in {
+                        let next_in = x_to_time(pos.x).clamp(0.0, *self.out_point);
+                        *self.in_point = next_in;
+                        if *self.playhead < next_in {
+                            *self.playhead = next_in;
+                        }
+                        in_point_dragged = true;
+                        changed = true;
+                    } else if active_out {
+                        let next_out = x_to_time(pos.x).clamp(*self.in_point, dur);
+                        *self.out_point = next_out;
+                        if *self.playhead > next_out {
+                            *self.playhead = next_out;
+                        }
+                        out_point_dragged = true;
+                        changed = true;
+                    } else if active_play {
+                        let next_play = x_to_time(pos.x).clamp(*self.in_point, *self.out_point);
+                        *self.playhead = next_play;
+                        playhead_dragged = true;
+                        changed = true;
+                    }
+                }
+            }
+
+            if !primary_down || any_released {
+                target = (false, false, false);
+            }
+            ui.data_mut(|d| d.insert_temp(drag_id, target));
         }
 
         let tc = Self::format_timecode(theme, *self.playhead);

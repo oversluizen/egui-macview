@@ -273,6 +273,13 @@ impl<'a> MacTableView<'a> {
                         .layout(layout)
                         .id_salt(("cell", row_idx, col_idx)),
                 );
+                child_ui.set_clip_rect(cell_rect.intersect(ui.clip_rect()));
+                if is_selected {
+                    let fg = theme
+                        .selected_control_background_style()
+                        .primary_text_color(theme);
+                    child_ui.visuals_mut().override_text_color = Some(fg);
+                }
                 cell_ui(&mut child_ui, row_idx, col_idx);
                 col_x += col.width;
             }

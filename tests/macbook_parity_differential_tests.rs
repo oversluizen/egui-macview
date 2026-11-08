@@ -329,8 +329,14 @@ fn test_macbook_v05_studio_controls_ground_truth_parity() {
     ];
     for (name, exp_w, exp_h) in &studio_bitmaps {
         let p = golden_dir.join(name);
-        assert!(p.exists(), "Missing studio golden master PNG: {}", p.display());
-        let img = image::open(&p).expect("Valid studio golden master PNG").to_rgba8();
+        assert!(
+            p.exists(),
+            "Missing studio golden master PNG: {}",
+            p.display()
+        );
+        let img = image::open(&p)
+            .expect("Valid studio golden master PNG")
+            .to_rgba8();
         assert_eq!(
             (img.width(), img.height()),
             (*exp_w, *exp_h),

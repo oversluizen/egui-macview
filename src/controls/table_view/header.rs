@@ -113,8 +113,20 @@ pub(crate) fn render_table_header(
             toggled_sort = Some((col_idx, next_dir));
         }
 
+        let right_reserve = if col.sort_direction.is_some() {
+            chevron_sz + pad_h
+        } else {
+            pad_h
+        };
+        let title_clip_rect = Rect::from_min_max(
+            col_rect.min,
+            Pos2::new(
+                (col_rect.right() - right_reserve).max(col_rect.left()),
+                col_rect.max.y,
+            ),
+        );
         let title_pos = Pos2::new(col_rect.left() + pad_h, col_rect.center().y);
-        painter.text(
+        painter.with_clip_rect(title_clip_rect).text(
             title_pos,
             Align2::LEFT_CENTER,
             col.title,
