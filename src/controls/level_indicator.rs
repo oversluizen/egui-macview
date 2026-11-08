@@ -61,6 +61,8 @@ pub struct MacLevelIndicator<'a> {
     style: MacLevelIndicatorStyle,
     orientation: MacLevelOrientation,
     segment_count: Option<usize>,
+    segmented_threshold_colors: bool,
+    tick_marks: usize,
     length: Option<f32>,
     thickness: Option<f32>,
     enabled: bool,
@@ -82,6 +84,8 @@ impl<'a> MacLevelIndicator<'a> {
             style: MacLevelIndicatorStyle::Continuous,
             orientation: MacLevelOrientation::Horizontal,
             segment_count: None,
+            segmented_threshold_colors: false,
+            tick_marks: 0,
             length: None,
             thickness: None,
             enabled: true,
@@ -122,6 +126,18 @@ impl<'a> MacLevelIndicator<'a> {
     /// Sets discrete segment count.
     pub fn segments(mut self, count: usize) -> Self {
         self.segment_count = Some(count.max(1));
+        self
+    }
+
+    /// Enables per-segment VU meter threshold coloring instead of uniform AppKit discrete capacity color.
+    pub fn segmented_threshold_colors(mut self, enabled: bool) -> Self {
+        self.segmented_threshold_colors = enabled;
+        self
+    }
+
+    /// Sets the number of graduation tick marks rendered along the meter axis.
+    pub fn tick_marks(mut self, count: usize) -> Self {
+        self.tick_marks = count;
         self
     }
 

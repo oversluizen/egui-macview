@@ -312,29 +312,34 @@ fn test_macbook_v05_studio_controls_ground_truth_parity() {
     let mac_path_h = v["controls"]["path_control"]["fitting_h"].as_f64().unwrap() as f32;
     assert_eq!(aqua.path_control().height.points(), mac_path_h);
 
-    // 3. Verify all 10 new v0.5.0 golden master bitmaps from MacBook Air
-    let studio_bitmaps = [
-        "progress_bar_aqua.png",
-        "progress_bar_dark.png",
-        "progress_spin_aqua.png",
-        "progress_spin_dark.png",
-        "table_header_aqua.png",
-        "table_header_dark.png",
-        "token_field_aqua.png",
-        "token_field_dark.png",
-        "level_indicator_aqua.png",
-        "level_indicator_dark.png",
-        "path_control_aqua.png",
-        "path_control_dark.png",
+    // 3. Verify all 12 new v0.5.0 golden master bitmaps from MacBook Air (dimensions & non-empty pixel sampling)
+    let studio_bitmaps: [(&str, u32, u32); 12] = [
+        ("progress_bar_aqua.png", 160, 20),
+        ("progress_bar_dark.png", 160, 20),
+        ("progress_spin_aqua.png", 32, 32),
+        ("progress_spin_dark.png", 32, 32),
+        ("table_header_aqua.png", 240, 28),
+        ("table_header_dark.png", 240, 28),
+        ("token_field_aqua.png", 240, 22),
+        ("token_field_dark.png", 240, 22),
+        ("level_indicator_aqua.png", 160, 18),
+        ("level_indicator_dark.png", 160, 18),
+        ("path_control_aqua.png", 240, 22),
+        ("path_control_dark.png", 240, 22),
     ];
-    for name in &studio_bitmaps {
+    for (name, exp_w, exp_h) in &studio_bitmaps {
         let p = golden_dir.join(name);
-        assert!(
-            p.exists(),
-            "Missing studio golden master PNG: {}",
-            p.display()
+        assert!(p.exists(), "Missing studio golden master PNG: {}", p.display());
+        let img = image::open(&p).expect("Valid studio golden master PNG").to_rgba8();
+        assert_eq!(
+            (img.width(), img.height()),
+            (*exp_w, *exp_h),
+            "Unexpected bitmap dimensions for {name}"
         );
-        let img = image::open(&p).expect("Valid studio golden master PNG");
-        assert!(img.width() > 0 && img.height() > 0);
+        let non_empty_pixels = img.pixels().filter(|px| px[3] > 0).count();
+        assert!(
+            non_empty_pixels > 32,
+            "Golden master {name} must contain rendered AppKit control pixels"
+        );
     }
 }

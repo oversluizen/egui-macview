@@ -99,6 +99,13 @@ impl<'a> MacTokenField<'a> {
     pub fn show(self, ui: &mut Ui) -> Response {
         ui.add(self)
     }
+
+    /// Queries the currently selected token pill index for `id_source` in `ui`.
+    pub fn selected_token(ui: &Ui, id_source: impl Hash + Debug) -> Option<usize> {
+        #[allow(deprecated)]
+        let id = Id::new(id_source).with("selected_token");
+        ui.data(|d| d.get_temp::<Option<usize>>(id)).flatten()
+    }
 }
 
 impl<'a> Widget for MacTokenField<'a> {

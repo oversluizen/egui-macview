@@ -47,12 +47,17 @@ fn key_input(key: Key) -> RawInput {
     }
 }
 
-fn run_pass(ctx: &Context, input: RawInput, f: impl FnMut(&mut egui::Ui)) {
+fn run_pass(
+    ctx: &Context,
+    input: RawInput,
+    f: impl FnMut(&mut egui::Ui),
+) -> Vec<egui::epaint::ClippedShape> {
     let mut out = ctx.run_ui(input, f);
     out.textures_delta.clear();
+    out.shapes
 }
 
-/// TC-011-01: Verifies `MacProgressIndicator` bar and spinning styles across Regular, Small, and Mini sizes.
+/// TC-011-01: Verifies `MacProgressIndicator` CASpring time animation, spinning capsule tips, and sizes.
 #[test]
 fn test_progress_indicator_styles_and_sizes() {
     let ctx = Context::default();
@@ -60,10 +65,24 @@ fn test_progress_indicator_styles_and_sizes() {
     let (mut reg_bar, mut small_bar, mut mini_spin) = (Rect::NOTHING, Rect::NOTHING, Rect::NOTHING);
 
     run_pass(&ctx, RawInput::default(), |ui| {
-        reg_bar = MacProgressIndicator::bar(0.65)
+        reg_bar = MacProgressIndicator::bar(0.20)
             .theme(&theme)
             .control_size(MacProgressControlSize::Regular)
             .width(180.0)
+            .time(0.0)
+            .show_percentage(true)
+            .show(ui)
+            .rect;
+    });
+
+    // Defect 1 & 2: Jump from 0.20 -> 0.80 at t=0.01 must animate via CASpring (not jump in 1 frame),
+    // and spinning spokes must be inset within rect with rounded Circle capsule tips.
+    let shapes = run_pass(&ctx, RawInput::default(), |ui| {
+        reg_bar = MacProgressIndicator::bar(0.80)
+            .theme(&theme)
+            .control_size(MacProgressControlSize::Regular)
+            .width(180.0)
+            .time(0.01)
             .show_percentage(true)
             .show(ui)
             .rect;
@@ -82,6 +101,42 @@ fn test_progress_indicator_styles_and_sizes() {
             .rect;
     });
 
+    let fill_w = shapes
+        .iter()
+        .filter_map(|cs| match &cs.shape {
+            egui::Shape::Rect(r) if r.fill == theme.control_accent() && reg_bar.contains(r.rect.center()) => {
+                Some(r.rect.width())
+            }
+            _ => None,
+        })
+        .next()
+        .unwrap_or(0.0);
+    assert!(
+        fill_w > 36.0 && fill_w < 90.0,
+        "CASpring determinate progress at t=0.01s must interpolate smoothly (got fill_w={fill_w})"
+    );
+
+    let circle_tips = shapes
+        .iter()
+        .filter(|cs| matches!(&cs.shape, egui::Shape::Circle(c) if mini_spin.contains(c.center)))
+        .count();
+    assert!(circle_tips >= 24, "Spinning fins must have 24 rounded capsule tip circles (got {circle_tips})");
+
+    let spoke_half_w = theme.progress_indicator().mini.spoke_width.points() * 0.49;
+    let safe_spin = mini_spin.shrink(spoke_half_w);
+    for cs in &shapes {
+        if let egui::Shape::LineSegment { points, .. } = &cs.shape {
+            if mini_spin.contains(points[0]) {
+                assert!(
+                    safe_spin.contains(points[1]),
+                    "Spoke outer tip {:?} must be inset inside {:?}",
+                    points[1],
+                    safe_spin
+                );
+            }
+        }
+    }
+
     assert!(reg_bar.width() >= 180.0);
     assert!(reg_bar.height() >= theme.progress_indicator().regular.bar_height.points());
     assert!(small_bar.height() >= theme.progress_indicator().small.bar_height.points());
@@ -93,12 +148,13 @@ fn test_progress_indicator_styles_and_sizes() {
 #[test]
 fn test_table_view_header_sort_selection_and_keyboard() {
     let ctx = Context::default();
-    let theme = MacTheme::new(MacAppearance::DarkAqua);
+    let theme = MacTheme::new(MacAppearance::Aqua);
     let mut selection = BTreeSet::new();
     let mut sort_dir = Some(MacSortDirection::Ascending);
     let mut table_rect = Rect::NOTHING;
+    let mut cell0_clip_w = f32::MAX;
 
-    run_pass(&ctx, RawInput::default(), |ui| {
+    let hdr_shapes = run_pass(&ctx, RawInput::default(), |ui| {
         let cols = [
             MacTableColumn::new("Track", 120.0).sort(sort_dir),
             MacTableColumn::new("LUFS", 80.0),
@@ -107,15 +163,34 @@ fn test_table_view_header_sort_selection_and_keyboard() {
             .theme(&theme)
             .uses_alternating_row_backgrounds(true)
             .show(ui, |cell_ui, r, c| {
+                if r == 0 && c == 0 {
+                    cell0_clip_w = cell_ui.clip_rect().width();
+                }
                 cell_ui.label(format!("R{r}C{c}"));
             })
             .response
             .rect;
     });
-
+    // Defect 4: Cell clip rect must be constrained to column width, and header title clipped before chevron
+    assert!(cell0_clip_w <= 120.0, "Cell clip width ({cell0_clip_w}) must be <= column width 120.0");
     let hdr_h = theme.table_view().header_height.points();
-    let row_h = theme.table_view().row_height.points();
+    let chev_sz = theme.table_view().sort_chevron_size.points();
+    let hdr_text_clip_right = hdr_shapes
+        .iter()
+        .filter_map(|cs| match &cs.shape {
+            egui::Shape::Text(t) if t.pos.y < table_rect.top() + hdr_h && t.pos.x < table_rect.left() + 60.0 => {
+                Some(cs.clip_rect.right())
+            }
+            _ => None,
+        })
+        .next()
+        .unwrap_or(f32::MAX);
+    assert!(
+        hdr_text_clip_right <= table_rect.left() + 120.0 - chev_sz,
+        "Sorted header title clip right ({hdr_text_clip_right}) must stop before sort chevron"
+    );
 
+    let row_h = theme.table_view().row_height.points();
     let hdr_click_pos = Pos2::new(table_rect.left() + 30.0, table_rect.top() + hdr_h * 0.5);
     let mut clicked_hdr = None;
     run_pass(&ctx, click_input(hdr_click_pos, Modifiers::NONE), |ui| {
@@ -141,10 +216,7 @@ fn test_table_view_header_sort_selection_and_keyboard() {
         MacTableColumn::new("LUFS", 80.0),
     ];
 
-    let row1_pos = Pos2::new(
-        table_rect.left() + 40.0,
-        table_rect.top() + hdr_h + row_h * 1.5,
-    );
+    let row1_pos = Pos2::new(table_rect.left() + 40.0, table_rect.top() + hdr_h + row_h * 1.5);
     run_pass(&ctx, click_input(row1_pos, Modifiers::NONE), |ui| {
         MacTableView::new("studio_table", &base_cols, 5, &mut selection)
             .theme(&theme)
@@ -154,22 +226,26 @@ fn test_table_view_header_sort_selection_and_keyboard() {
     });
     assert_eq!(selection, BTreeSet::from([1]));
 
-    let row3_pos = Pos2::new(
-        table_rect.left() + 40.0,
-        table_rect.top() + hdr_h + row_h * 3.5,
-    );
-    let shift_mods = Modifiers {
-        shift: true,
-        ..Default::default()
-    };
+    // Defect 3: Selected row must override child_ui text color with selected_control_background_style primary text color
+    let row3_pos = Pos2::new(table_rect.left() + 40.0, table_rect.top() + hdr_h + row_h * 3.5);
+    let shift_mods = Modifiers { shift: true, ..Default::default() };
+    let mut sel_fg = None;
     run_pass(&ctx, click_input(row3_pos, shift_mods), |ui| {
         MacTableView::new("studio_table", &base_cols, 5, &mut selection)
             .theme(&theme)
             .show(ui, |cell_ui, r, c| {
+                if r == 1 && c == 0 {
+                    sel_fg = cell_ui.visuals().override_text_color;
+                }
                 cell_ui.label(format!("R{r}C{c}"));
             });
     });
     assert_eq!(selection, BTreeSet::from([1, 2, 3]));
+    assert_eq!(
+        sel_fg,
+        Some(theme.selected_control_background_style().primary_text_color(&theme)),
+        "Selected row cell must override text color for WCAG contrast on selected_control()"
+    );
 
     let mut arrow_leaked = true;
     run_pass(&ctx, key_input(Key::ArrowDown), |ui| {
@@ -181,32 +257,62 @@ fn test_table_view_header_sort_selection_and_keyboard() {
         arrow_leaked = ui.input(|i| i.key_pressed(Key::ArrowDown));
     });
     assert_eq!(selection, BTreeSet::from([4]));
-    assert!(
-        !arrow_leaked,
-        "ArrowDown key must be consumed by MacTableView"
-    );
+    assert!(!arrow_leaked, "ArrowDown key must be consumed by MacTableView");
 }
 
-/// TC-011-03: Verifies `MacTokenField` comma/Enter commit, Backspace deletion, flow wrap, and char counter.
+/// TC-011-03: Verifies `MacTokenField` pill selection, Delete key removal, long-pill clipping, and flow wrap.
 #[test]
 fn test_token_field_commit_backspace_and_flow_wrap() {
     let ctx = Context::default();
     let theme = MacTheme::default();
     let mut tokens = vec!["Audio".to_string(), "Video".to_string()];
     let mut buf = "Timeline,".to_string();
+    let mut field_rect = Rect::NOTHING;
 
-    let mut single_row_h = 0.0;
-    run_pass(&ctx, RawInput::default(), |ui| {
-        single_row_h = MacTokenField::new("tags", &mut tokens, &mut buf)
+    let shapes1 = run_pass(&ctx, RawInput::default(), |ui| {
+        field_rect = MacTokenField::new("tags", &mut tokens, &mut buf)
             .theme(&theme)
             .width(260.0)
             .max_chars(100)
             .show(ui)
-            .rect
-            .height();
+            .rect;
     });
     assert_eq!(tokens, vec!["Audio", "Video", "Timeline"]);
     assert!(buf.is_empty());
+
+    // Defect 6: Token pill text clip rect must be constrained inside the pill before the 'x' button
+    let pill_text_clip_w = shapes1
+        .iter()
+        .filter_map(|cs| match &cs.shape {
+            egui::Shape::Text(t) if t.pos.y < field_rect.top() + 20.0 => Some(cs.clip_rect.width()),
+            _ => None,
+        })
+        .next()
+        .unwrap_or(f32::MAX);
+    assert!(
+        pill_text_clip_w < 120.0,
+        "Token pill text must be clipped to pill interior (got clip width {pill_text_clip_w})"
+    );
+
+    // Defect 5: Clicking pill 0 body selects token 0, and Delete key removes token 0
+    let pill0_body_pos = Pos2::new(field_rect.left() + 14.0, field_rect.top() + 10.0);
+    let mut sel_tok = None;
+    run_pass(&ctx, click_input(pill0_body_pos, Modifiers::NONE), |ui| {
+        MacTokenField::new("tags", &mut tokens, &mut buf)
+            .theme(&theme)
+            .width(260.0)
+            .show(ui);
+        sel_tok = MacTokenField::selected_token(ui, "tags");
+    });
+    assert_eq!(sel_tok, Some(0), "Clicking token pill 0 body must select token 0");
+
+    run_pass(&ctx, key_input(Key::Delete), |ui| {
+        MacTokenField::new("tags", &mut tokens, &mut buf)
+            .theme(&theme)
+            .width(260.0)
+            .show(ui);
+    });
+    assert_eq!(tokens, vec!["Video", "Timeline"], "Delete key must remove selected token 0");
 
     let mut bs_leaked = true;
     run_pass(&ctx, key_input(Key::Backspace), |ui| {
@@ -216,7 +322,7 @@ fn test_token_field_commit_backspace_and_flow_wrap() {
             .show(ui);
         bs_leaked = ui.input(|i| i.key_pressed(Key::Backspace));
     });
-    assert_eq!(tokens, vec!["Audio", "Video"]);
+    assert_eq!(tokens, vec!["Video"]);
     assert!(!bs_leaked, "Backspace must be consumed by MacTokenField");
 
     for i in 0..6 {
@@ -232,10 +338,10 @@ fn test_token_field_commit_backspace_and_flow_wrap() {
             .rect
             .height();
     });
-    assert!(wrapped_h > single_row_h);
+    assert!(wrapped_h > field_rect.height());
 }
 
-/// TC-011-04: Verifies `MacLevelIndicator` semantic thresholds, continuous/discrete styles, and orientations.
+/// TC-011-04: Verifies `MacLevelIndicator` uniform `.discreteCapacity` color, tick marks, and orientations.
 #[test]
 fn test_level_indicator_thresholds_and_orientations() {
     let ctx = Context::default();
@@ -252,10 +358,13 @@ fn test_level_indicator_thresholds_and_orientations() {
     assert_eq!(meter.color_for_value(&theme, -2.0), theme.system_red());
 
     let (mut horiz_rect, mut vert_rect) = (Rect::NOTHING, Rect::NOTHING);
-    run_pass(&ctx, RawInput::default(), |ui| {
-        horiz_rect = MacLevelIndicator::new(-14.0, -60.0..=0.0)
+    let shapes = run_pass(&ctx, RawInput::default(), |ui| {
+        horiz_rect = MacLevelIndicator::new(-2.0, -60.0..=0.0)
             .theme(&theme)
+            .warning_value(-18.0)
+            .critical_value(-6.0)
             .style(MacLevelIndicatorStyle::Discrete)
+            .tick_marks(5)
             .orientation(MacLevelOrientation::Horizontal)
             .length(160.0)
             .thickness(16.0)
@@ -271,17 +380,104 @@ fn test_level_indicator_thresholds_and_orientations() {
             .rect;
     });
 
+    // Defect 7: In default Discrete mode at critical value (-2.0), ALL active segments must be system_red()
+    let non_red_active_segs = shapes
+        .iter()
+        .filter(|cs| match &cs.shape {
+            egui::Shape::Rect(r) if horiz_rect.contains(r.rect.center()) => {
+                r.fill == theme.system_green() || r.fill == theme.system_yellow()
+            }
+            _ => false,
+        })
+        .count();
+    assert_eq!(
+        non_red_active_segs, 0,
+        "AppKit .discreteCapacity at critical level must tint all active segments system_red()"
+    );
+    let ticks = shapes
+        .iter()
+        .filter(|cs| matches!(&cs.shape, egui::Shape::LineSegment { .. }))
+        .count();
+    assert!(ticks >= 5, "Expected >= 5 tick mark LineSegments, found {ticks}");
+
     assert_eq!(horiz_rect.size(), egui::Vec2::new(160.0, 16.0));
     assert_eq!(vert_rect.size(), egui::Vec2::new(16.0, 120.0));
 }
 
-/// TC-011-05 & TC-011-06: Verifies `MacTrimScrubber` timecode formatting & `MacPathControl` segment clicks.
+/// TC-011-05 & TC-011-06: Verifies `MacTrimScrubber` non-overlapping handles, double slits, and `MacPathControl` clipping.
 #[test]
 fn test_trim_scrubber_and_path_control_interactions() {
     let ctx = Context::default();
     let theme = MacTheme::default();
-
     assert_eq!(MacTrimScrubber::format_timecode(&theme, 65.4), "01:05.4");
+
+    // Defect 8 & 9: When in_pt == out_pt == 50.0, dragging right handle ear must move out_pt independently,
+    // and trim handles must render 4 vertical grip slits (2 per handle).
+    let (mut in_pt, mut out_pt, mut playhead) = (50.0, 50.0, 50.0);
+    let mut scrub_rect = Rect::NOTHING;
+    let scrub_shapes = run_pass(&ctx, RawInput::default(), |ui| {
+        scrub_rect = MacTrimScrubber::new("scrubber", 100.0, &mut in_pt, &mut out_pt, &mut playhead)
+            .theme(&theme)
+            .width(300.0)
+            .show(ui)
+            .response
+            .rect;
+    });
+    let slot_h = theme.trim_scrubber().handle_slot_height.points();
+    let grip_slits = scrub_shapes
+        .iter()
+        .filter(|cs| match &cs.shape {
+            egui::Shape::LineSegment { points, .. } => {
+                (points[0].x - points[1].x).abs() < 0.1
+                    && ((points[1].y - points[0].y).abs() - slot_h).abs() < 0.5
+            }
+            _ => false,
+        })
+        .count();
+    assert_eq!(grip_slits, 4, "AVKit trim handles must render 4 grip slits (2 per handle)");
+
+    let out_ear_start = Pos2::new(scrub_rect.center().x + 4.0, scrub_rect.center().y);
+    let out_ear_drag = Pos2::new(scrub_rect.center().x + 60.0, scrub_rect.center().y);
+    let drag_start = RawInput {
+        events: vec![
+            Event::PointerMoved(out_ear_start),
+            Event::PointerButton {
+                pos: out_ear_start,
+                button: PointerButton::Primary,
+                pressed: true,
+                modifiers: Modifiers::NONE,
+            },
+        ],
+        ..Default::default()
+    };
+    run_pass(&ctx, drag_start, |ui| {
+        MacTrimScrubber::new("scrubber", 100.0, &mut in_pt, &mut out_pt, &mut playhead)
+            .theme(&theme)
+            .width(300.0)
+            .show(ui);
+    });
+    let drag_move = RawInput {
+        events: vec![
+            Event::PointerMoved(out_ear_drag),
+            Event::PointerButton {
+                pos: out_ear_drag,
+                button: PointerButton::Primary,
+                pressed: false,
+                modifiers: Modifiers::NONE,
+            },
+        ],
+        ..Default::default()
+    };
+    run_pass(&ctx, drag_move, |ui| {
+        MacTrimScrubber::new("scrubber", 100.0, &mut in_pt, &mut out_pt, &mut playhead)
+            .theme(&theme)
+            .width(300.0)
+            .show(ui);
+    });
+    assert!(
+        out_pt > 60.0 && (in_pt - 50.0).abs() < 1e-4,
+        "Dragging right handle when in==out must increase out_pt ({out_pt}) while keeping in_pt ({in_pt}) at 50.0"
+    );
 
     let comps = [
         MacPathComponent::folder("Projects"),
@@ -289,7 +485,7 @@ fn test_trim_scrubber_and_path_control_interactions() {
         MacPathComponent::file("Master.mov"),
     ];
     let mut path_rect = Rect::NOTHING;
-    run_pass(&ctx, RawInput::default(), |ui| {
+    let path_shapes = run_pass(&ctx, RawInput::default(), |ui| {
         path_rect = MacPathControl::new("path_bar", &comps)
             .theme(&theme)
             .show_choose_button(true)
@@ -299,6 +495,22 @@ fn test_trim_scrubber_and_path_control_interactions() {
             .rect;
     });
     assert_eq!(path_rect.height(), theme.path_control().height.points());
+
+    // Defect 10: Segment text clip_rect must stop before Choose... button
+    let seg_text_clip_right = path_shapes
+        .iter()
+        .filter_map(|cs| match &cs.shape {
+            egui::Shape::Text(t) if path_rect.contains(t.pos) && t.pos.x < path_rect.right() - 70.0 => {
+                Some(cs.clip_rect.right())
+            }
+            _ => None,
+        })
+        .next()
+        .unwrap_or(f32::MAX);
+    assert!(
+        seg_text_clip_right <= path_rect.right() - 40.0,
+        "Segment text clip_rect right ({seg_text_clip_right}) must stop before Choose... button"
+    );
 
     let seg0_pos = Pos2::new(path_rect.left() + 24.0, path_rect.center().y);
     let mut clicked_seg = None;
