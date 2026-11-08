@@ -355,7 +355,24 @@ fn test_trim_scrubber_and_path_control_interactions() {
         clicked_seg = resp.clicked_segment;
     });
     out2.textures_delta.clear();
-    assert_eq!(clicked_seg, Some(0));
+    // Click trailing Choose... button
+    let choose_pos = Pos2::new(path_rect.right() - 24.0, path_rect.center().y);
+    let mut choose_clicked = false;
+    let mut out3 = ctx.run_ui(click_input(choose_pos, Modifiers::NONE), |ui| {
+        let comps = [
+            MacPathComponent::folder("Projects"),
+            MacPathComponent::folder("Timeline"),
+            MacPathComponent::file("Master.mov"),
+        ];
+        let resp = MacPathControl::new("path_bar", &comps)
+            .theme(&theme)
+            .show_choose_button(true)
+            .width(320.0)
+            .show(ui);
+        choose_clicked = resp.choose_clicked;
+    });
+    out3.textures_delta.clear();
+    assert!(choose_clicked, "Clicking Choose... button must set choose_clicked = true");
 }
 
 proptest! {

@@ -1,7 +1,16 @@
 //! Authentic macOS AppKit Progress Indicator (`NSProgressIndicator` equivalent, SPEC-011).
+//!
+//! Grounded in Apple AppKit `NSProgressIndicator` and W3C DTCG tokens via [`MacTheme`].
+//! Supports `Bar` (determinate with `CASpring` smoothing & indeterminate pulse) and
+//! `Spinning` (12-spoke radial fin spinner) across `Regular`, `Small`, and `Mini` control sizes.
 
+use crate::layout::subpixel_snap_rect;
+use crate::motion::CASpring;
 use crate::theme::MacTheme;
-use egui::{Response, Sense, Ui, Vec2, Widget};
+use crate::tokens::ProgressSizeMetrics;
+use egui::{
+    Align2, CornerRadius, FontId, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2, Widget,
+};
 
 /// Presentation style for [`MacProgressIndicator`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -16,16 +25,33 @@ pub enum MacProgressStyle {
 /// Control size tier for [`MacProgressIndicator`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum MacProgressControlSize {
-    /// Standard size (`NSControlSizeRegular`).
+    /// Standard size (`NSControlSizeRegular`: 6pt bar, 32pt spinner).
     #[default]
     Regular,
-    /// Compact size (`NSControlSizeSmall`).
+    /// Compact size (`NSControlSizeSmall`: 4pt bar, 16pt spinner).
     Small,
-    /// Miniature size (`NSControlSizeMini`).
+    /// Miniature size (`NSControlSizeMini`: 4pt bar, 12pt spinner).
     Mini,
 }
 
 /// Authentic macOS AppKit progress indicator (`NSProgressIndicator` equivalent).
+///
+/// # Example
+///
+/// ```rust
+/// use egui_macview::{MacProgressControlSize, MacProgressIndicator, MacTheme};
+///
+/// # let ctx = egui::Context::default();
+/// # let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
+/// let theme = MacTheme::default();
+/// MacProgressIndicator::bar(0.75)
+///     .theme(&theme)
+///     .control_size(MacProgressControlSize::Regular)
+///     .show_percentage(true)
+///     .show(ui);
+/// # });
+/// # output.textures_delta.clear();
+/// ```
 pub struct MacProgressIndicator<'a> {
     style: MacProgressStyle,
     control_size: MacProgressControlSize,
@@ -86,7 +112,7 @@ impl<'a> MacProgressIndicator<'a> {
 
     /// Sets determinate progress fraction (`0.0..=1.0`).
     pub fn progress(mut self, progress: f32) -> Self {
-        self.progress = Some(progress);
+        self.progress = Some(progress.clamp(0.0, 1.0));
         self
     }
 
@@ -135,7 +161,16 @@ impl<'a> MacProgressIndicator<'a> {
 
     /// Returns the clamped determinate progress in `0.0..=1.0`, if determinate.
     pub fn clamped_progress(&self) -> Option<f32> {
-        self.progress
+        self.progress.map(|p| p.clamp(0.0, 1.0))
+    }
+
+    fn size_metrics<'t>(&self, theme: &'t MacTheme) -> &'t ProgressSizeMetrics {
+        let pm = theme.progress_indicator();
+        match self.control_size {
+            MacProgressControlSize::Regular => &pm.regular,
+            MacProgressControlSize::Small => &pm.small,
+            MacProgressControlSize::Mini => &pm.mini,
+        }
     }
 
     /// Renders the progress indicator in `ui`.
@@ -146,17 +181,153 @@ impl<'a> MacProgressIndicator<'a> {
 
 impl<'a> Widget for MacProgressIndicator<'a> {
     fn ui(self, ui: &mut Ui) -> Response {
-        let _ = (
-            self.style,
-            self.control_size,
-            self.progress,
-            self.time,
-            self.label,
-            self.show_percentage,
-            self.width,
-            self.enabled,
-            self.theme,
-        );
-        ui.allocate_exact_size(Vec2::ZERO, Sense::hover()).1
+        let fallback_theme;
+        let theme = match self.theme {
+            Some(t) => t,
+            None => {
+                fallback_theme = MacTheme::default();
+                &fallback_theme
+            }
+        };
+
+        let pm = theme.progress_indicator();
+        let sm = self.size_metrics(theme);
+        let font_sz = sm.font_size.points();
+        let label_spacing = pm.label_spacing.points();
+        let pct_scale = pm.percentage_scale.points();
+
+        let status_text: Option<String> = match (self.label, self.show_percentage, self.progress) {
+            (Some(lbl), true, Some(p)) => {
+                let pct = (p.clamp(0.0, 1.0) * pct_scale).round() as u32;
+                Some(format!("{lbl} ({pct}%)"))
+            }
+            (Some(lbl), _, _) => Some(lbl.to_string()),
+            (None, true, Some(p)) => {
+                let pct = (p.clamp(0.0, 1.0) * pct_scale).round() as u32;
+                Some(format!("{pct}%"))
+            }
+            (None, _, _) => None,
+        };
+
+        match self.style {
+            MacProgressStyle::Bar => {
+                let bar_w = self.width.unwrap_or_else(|| pm.default_bar_width.points());
+                let bar_h = sm.bar_height.points();
+                let total_h = if status_text.is_some() {
+                    bar_h + label_spacing + font_sz
+                } else {
+                    bar_h
+                };
+
+                let (raw_rect, response) =
+                    ui.allocate_exact_size(Vec2::new(bar_w, total_h), Sense::hover());
+                let rect = subpixel_snap_rect(raw_rect, ui.ctx().pixels_per_point());
+                let track_rect = Rect::from_min_size(rect.min, Vec2::new(rect.width(), bar_h));
+                let radius = CornerRadius::same(sm.bar_corner_radius.points() as u8);
+                let painter = ui.painter_at(rect);
+
+                painter.rect(
+                    track_rect,
+                    radius,
+                    theme.control(),
+                    Stroke::new(pm.border_width.points(), theme.separator()),
+                    StrokeKind::Inside,
+                );
+
+                let fill_color = if self.enabled {
+                    theme.control_accent()
+                } else {
+                    theme.selected_control_inactive()
+                };
+
+                if let Some(target_p) = self.clamped_progress() {
+                    let spring_preset = &theme.motion().swiftui_smooth;
+                    let spring = CASpring::new(
+                        spring_preset.response as f32,
+                        spring_preset.damping_ratio as f32,
+                    );
+                    let prev_id = response.id.with("prev_progress");
+                    let prev_p = ui
+                        .data(|d| d.get_temp::<f32>(prev_id))
+                        .unwrap_or(target_p);
+                    let eval = spring.evaluate(1.0).clamp(0.0, 1.0);
+                    let smooth_p = (prev_p + (target_p - prev_p) * eval).clamp(0.0, 1.0);
+                    ui.data_mut(|d| d.insert_temp(prev_id, target_p));
+
+                    if smooth_p > 0.0 {
+                        let fill_w = track_rect.width() * smooth_p;
+                        let fill_rect =
+                            Rect::from_min_size(track_rect.min, Vec2::new(fill_w, bar_h));
+                        painter.rect_filled(fill_rect, radius, fill_color);
+                    }
+                } else {
+                    let pill_ratio = pm.indeterminate_pill_ratio.points().clamp(0.0, 1.0);
+                    let pill_w = track_rect.width() * pill_ratio;
+                    let travel = (track_rect.width() - pill_w).max(0.0);
+                    let freq = pm.bar_indeterminate_speed.points() as f64;
+                    let tau = pm.tau_radians.points() as f64;
+                    let phase = (((self.time * freq * tau).sin() + 1.0) * 0.5) as f32;
+                    let pill_x = track_rect.left() + travel * phase;
+                    let pill_rect = Rect::from_min_size(
+                        Pos2::new(pill_x, track_rect.top()),
+                        Vec2::new(pill_w, bar_h),
+                    );
+                    painter.rect_filled(pill_rect, radius, fill_color);
+                    ui.ctx().request_repaint();
+                }
+
+                if let Some(text) = status_text {
+                    let label_y = track_rect.bottom() + label_spacing;
+                    painter.text(
+                        Pos2::new(track_rect.left(), label_y),
+                        Align2::LEFT_TOP,
+                        text,
+                        FontId::proportional(font_sz),
+                        theme.secondary_label(),
+                    );
+                }
+
+                response
+            }
+            MacProgressStyle::Spinning => {
+                let spin_sz = sm.spinner_size.points();
+                let (raw_rect, response) =
+                    ui.allocate_exact_size(Vec2::splat(spin_sz), Sense::hover());
+                let rect = subpixel_snap_rect(raw_rect, ui.ctx().pixels_per_point());
+                let painter = ui.painter_at(rect);
+
+                let center = rect.center();
+                let outer_r = spin_sz * 0.5;
+                let inner_r = outer_r * pm.spoke_inner_ratio.points();
+                let spoke_count = (pm.spoke_count.points().round() as usize).max(1);
+                let tau = pm.tau_radians.points();
+                let min_alpha = pm.min_spoke_alpha.points();
+                let speed_hz = pm.spin_speed_hz.points() as f64;
+                let active_step =
+                    ((self.time * speed_hz * spoke_count as f64).floor() as usize) % spoke_count;
+
+                let base_color = theme.secondary_label();
+
+                for idx in 0..spoke_count {
+                    let angle = (idx as f32 / spoke_count as f32) * tau;
+                    let dir = Vec2::new(angle.sin(), -angle.cos());
+                    let p0 = center + dir * inner_r;
+                    let p1 = center + dir * outer_r;
+
+                    let dist = (active_step + spoke_count - idx) % spoke_count;
+                    let decay = 1.0 - (dist as f32 / spoke_count as f32);
+                    let factor = min_alpha + (1.0 - min_alpha) * decay;
+                    let spoke_color = base_color.gamma_multiply(factor.clamp(0.0, 1.0));
+
+                    painter.line_segment(
+                        [p0, p1],
+                        Stroke::new(sm.spoke_width.points(), spoke_color),
+                    );
+                }
+
+                ui.ctx().request_repaint();
+                response
+            }
+        }
     }
 }

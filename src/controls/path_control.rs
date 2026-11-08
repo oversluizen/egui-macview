@@ -2,7 +2,10 @@
 
 use crate::symbols::MacSymbol;
 use crate::theme::MacTheme;
-use egui::{Id, Response, Sense, Ui, Vec2};
+use egui::{
+    Align2, Color32, CornerRadius, FontId, Id, Painter, Pos2, Rect, Response, Sense, Stroke,
+    StrokeKind, Ui, Vec2,
+};
 use std::fmt::Debug;
 use std::hash::Hash;
 
@@ -138,20 +141,231 @@ impl<'a> MacPathControl<'a> {
 
     /// Renders the path control bar in `ui`.
     pub fn show(self, ui: &mut Ui) -> MacPathControlResponse {
-        let _ = (
-            self.id,
-            &self.components,
-            self.show_choose_button,
-            self.choose_label,
-            self.width,
-            self.enabled,
-            self.theme,
+        let default_theme = MacTheme::default();
+        let theme = self.theme.unwrap_or(&default_theme);
+        let pcm = theme.path_control();
+
+        let width = self.width.unwrap_or_else(|| ui.available_width());
+        let height = pcm.height.points();
+        let (rect, response) = ui.allocate_exact_size(
+            Vec2::new(width, height),
+            if self.enabled {
+                Sense::click()
+            } else {
+                Sense::hover()
+            },
         );
-        let (_, response) = ui.allocate_exact_size(Vec2::ZERO, Sense::hover());
+
+        let painter = ui.painter_at(rect);
+        let corner_r = pcm.corner_radius.points();
+        painter.rect(
+            rect,
+            CornerRadius::same(corner_r as u8),
+            theme.control_background(),
+            Stroke::new(pcm.border_width.points(), theme.separator()),
+            StrokeKind::Inside,
+        );
+
+        let font_sz = pcm.font_size.points();
+        let font_id = FontId::proportional(font_sz);
+        let pad_h = pcm.padding_horizontal.points();
+        let seg_pad_h = pcm.segment_padding_horizontal.points();
+        let seg_spacing = pcm.segment_spacing.points();
+        let icon_sz = pcm.icon_size.points();
+        let icon_gap = pcm.icon_spacing.points();
+        let chev_sz = pcm.chevron_size.points();
+        let seg_r = pcm.segment_corner_radius.points();
+        let border_w = pcm.border_width.points();
+
+        let mut choose_clicked = false;
+        let right_limit = if self.show_choose_button {
+            let choose_text_w = ui.fonts_mut(|f| {
+                f.layout_no_wrap(self.choose_label.to_owned(), font_id.clone(), theme.label())
+                    .size()
+                    .x
+            });
+            let btn_pad = pcm.choose_button_padding.points();
+            let btn_w = choose_text_w + btn_pad * 2.0;
+            let btn_h = pcm.choose_button_height.points();
+            let half_diff = (height - btn_h) * 0.5;
+            let btn_rect = Rect::from_min_size(
+                Pos2::new(rect.right() - pad_h - btn_w, rect.top() + half_diff),
+                Vec2::new(btn_w, btn_h),
+            );
+            let btn_id = self.id.with("choose_btn");
+            let btn_resp = ui.interact(
+                btn_rect,
+                btn_id,
+                if self.enabled {
+                    Sense::click()
+                } else {
+                    Sense::hover()
+                },
+            );
+            if btn_resp.clicked() && self.enabled {
+                choose_clicked = true;
+            }
+            let btn_bg = if btn_resp.is_pointer_button_down_on() {
+                theme.selected_control()
+            } else if btn_resp.hovered() {
+                theme.control()
+            } else {
+                theme.window_background()
+            };
+            let btn_fg = if btn_resp.is_pointer_button_down_on() {
+                theme.selected_control_background_style().primary_text_color(theme)
+            } else if self.enabled {
+                theme.label()
+            } else {
+                theme.placeholder_text()
+            };
+            painter.rect(
+                btn_rect,
+                CornerRadius::same(seg_r as u8),
+                btn_bg,
+                Stroke::new(pcm.border_width.points(), theme.separator()),
+                StrokeKind::Inside,
+            );
+            painter.text(
+                btn_rect.center(),
+                Align2::CENTER_CENTER,
+                self.choose_label,
+                font_id.clone(),
+                btn_fg,
+            );
+            btn_rect.left() - pad_h
+        } else {
+            rect.right() - pad_h
+        };
+
+        let mut cursor_x = rect.left() + pad_h;
+        let mut clicked_segment = None;
+        let count = self.components.len();
+
+        for (idx, comp) in self.components.iter().enumerate() {
+            if cursor_x >= right_limit {
+                break;
+            }
+            let title_w = ui.fonts_mut(|f| {
+                f.layout_no_wrap(comp.title.to_owned(), font_id.clone(), theme.label())
+                    .size()
+                    .x
+            });
+            let seg_w = (seg_pad_h * 2.0 + icon_sz + icon_gap + title_w)
+                .min((right_limit - cursor_x).max(0.0));
+            let seg_rect = Rect::from_min_size(
+                Pos2::new(cursor_x, rect.top() + border_w),
+                Vec2::new(seg_w, height - border_w * 2.0),
+            );
+            let seg_id = self.id.with(("seg", idx));
+            let seg_resp = ui.interact(
+                seg_rect,
+                seg_id,
+                if self.enabled {
+                    Sense::click()
+                } else {
+                    Sense::hover()
+                },
+            );
+            if seg_resp.clicked() && self.enabled {
+                clicked_segment = Some(idx);
+            }
+            if seg_resp.hovered() && self.enabled {
+                painter.rect_filled(
+                    seg_rect,
+                    CornerRadius::same(seg_r as u8),
+                    theme.control(),
+                );
+            }
+
+            let half_icon = icon_sz * 0.5;
+            let icon_rect = Rect::from_center_size(
+                Pos2::new(seg_rect.left() + seg_pad_h + half_icon, rect.center().y),
+                Vec2::splat(icon_sz),
+            );
+            paint_component_icon(&painter, theme, comp, icon_rect);
+
+            let text_x = icon_rect.right() + icon_gap;
+            let text_color = if self.enabled {
+                theme.label()
+            } else {
+                theme.placeholder_text()
+            };
+            painter.text(
+                Pos2::new(text_x, rect.center().y),
+                Align2::LEFT_CENTER,
+                comp.title,
+                font_id.clone(),
+                text_color,
+            );
+
+            cursor_x = seg_rect.right() + seg_spacing;
+            if idx + 1 < count && cursor_x + chev_sz < right_limit {
+                let half_chev = chev_sz * 0.5;
+                painter.text(
+                    Pos2::new(cursor_x + half_chev, rect.center().y),
+                    Align2::CENTER_CENTER,
+                    MacSymbol::ChevronRight.as_str(),
+                    FontId::proportional(chev_sz),
+                    theme.secondary_label(),
+                );
+                cursor_x += chev_sz + seg_spacing;
+            }
+        }
+
         MacPathControlResponse {
             response,
-            clicked_segment: None,
-            choose_clicked: false,
+            clicked_segment,
+            choose_clicked,
         }
+    }
+}
+
+/// Paints the leading folder, file, or override symbol for a path segment.
+fn paint_component_icon(
+    painter: &Painter,
+    theme: &MacTheme,
+    comp: &MacPathComponent<'_>,
+    icon_rect: Rect,
+) {
+    let pcm = theme.path_control();
+    let border_w = pcm.border_width.points();
+    if let Some(sym) = comp.symbol {
+        painter.text(
+            icon_rect.center(),
+            Align2::CENTER_CENTER,
+            sym.as_str(),
+            FontId::proportional(pcm.font_size.points()),
+            theme.control_accent(),
+        );
+    } else if comp.is_folder {
+        let tab_w = pcm.folder_tab_width.points();
+        let tab_h = pcm.folder_tab_height.points();
+        let body_rect = Rect::from_min_max(
+            Pos2::new(icon_rect.left() + border_w, icon_rect.top() + tab_h + border_w),
+            Pos2::new(icon_rect.right() - border_w, icon_rect.bottom() - border_w * 2.0),
+        );
+        let tab_rect = Rect::from_min_size(
+            Pos2::new(body_rect.left(), body_rect.top() - tab_h),
+            Vec2::new(tab_w, tab_h + border_w),
+        );
+        let r = border_w * 2.0;
+        painter.rect_filled(tab_rect, CornerRadius::same(border_w as u8), theme.control_accent());
+        painter.rect_filled(body_rect, CornerRadius::same(r as u8), theme.control_accent());
+    } else {
+        let inset_x = border_w * 2.0 + border_w;
+        let inset_y = border_w * 2.0;
+        let doc_rect = Rect::from_min_max(
+            Pos2::new(icon_rect.left() + inset_x, icon_rect.top() + inset_y),
+            Pos2::new(icon_rect.right() - inset_x, icon_rect.bottom() - inset_y),
+        );
+        let r = border_w * 2.0;
+        painter.rect(
+            doc_rect,
+            CornerRadius::same(r as u8),
+            Color32::TRANSPARENT,
+            Stroke::new(border_w, theme.secondary_label()),
+            StrokeKind::Inside,
+        );
     }
 }
