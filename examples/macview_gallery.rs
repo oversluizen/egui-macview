@@ -14,57 +14,27 @@ mod gallery;
 
 use egui::{pos2, vec2, Align, CornerRadius, Layout, Rect, Stroke, StrokeKind};
 use egui_macview::{
-    setup_symbols_font,
     theme::{MacAppearance, MacTheme, WindowControlsStyle},
     CommandPaletteItem, MacCommandPalette, MacMenuBar, MacSplitOrientation, MacSplitView,
     MacToastManager, NSMenu, NSUndoManager,
 };
 #[allow(unused_imports)]
 pub use gallery::{
-    convert_card_units, detect_frameless_resize_dir, unit_scale_and_suffix, CardModel,
+    convert_card_units, detect_frameless_resize_dir, format_tracked_small_caps,
+    setup_system_or_custom_fonts, unit_scale_and_suffix, CardModel, ExpandedProTab, GalleryScreen,
+    InspectorMode,
 };
 use gallery::{inspector::InspectorState, CenterState, SidebarState};
 use std::cell::{Cell, RefCell};
 
-/// Formats uppercase section headers with optical tracking without intermediate `Vec` allocations.
-pub fn format_tracked_small_caps(text: &str) -> String {
-    let mut out = String::with_capacity(text.len() * 3);
-    for (wi, word) in text.split_whitespace().enumerate() {
-        if wi > 0 { out.push_str("   "); }
-        for (ci, ch) in word.chars().enumerate() {
-            if ci > 0 { out.push('\u{2009}'); }
-            out.extend(ch.to_uppercase());
-        }
-    }
-    out
-}
-
-fn setup_system_or_custom_fonts(ctx: &egui::Context) {
-    let mut fonts = egui::FontDefinitions::default();
-    let local_app_data = std::env::var("LOCALAPPDATA").unwrap_or_default();
-    let font_dir = std::path::Path::new(&local_app_data).join("Microsoft\\Windows\\Fonts");
-    for (name, path, family) in [
-        ("sf_pro", font_dir.join("SF-Pro-Text-Regular.otf"), egui::FontFamily::Proportional),
-        ("inter", font_dir.join("Inter-Variable.ttf"), egui::FontFamily::Proportional),
-        ("sf_mono", font_dir.join("SF-Mono-Regular.otf"), egui::FontFamily::Monospace),
-        ("cascadia_mono", std::path::Path::new("C:\\Windows\\Fonts\\CascadiaMono.ttf").to_path_buf(), egui::FontFamily::Monospace),
-    ] {
-        if let Ok(bytes) = std::fs::read(&path) {
-            fonts.font_data.insert(name.to_owned(), std::sync::Arc::new(egui::FontData::from_owned(bytes)));
-            fonts.families.entry(family).or_default().insert(0, name.to_owned());
-        }
-    }
-    setup_symbols_font(&mut fonts);
-    ctx.set_fonts(fonts);
-}
-
 fn main() -> eframe::Result<()> {
-    let renderer = match std::env::var("MACVIEW_RENDERER").as_deref() {
-        Ok("glow") => eframe::Renderer::Glow,
-        Ok("wgpu") => eframe::Renderer::Wgpu,
-        _ if cfg!(target_os = "macos") => eframe::Renderer::Glow,
-        _ => eframe::Renderer::Wgpu,
+    let renderer = if std::env::var("MACVIEW_RENDERER").as_deref() == Ok("wgpu") {
+        eframe::Renderer::Wgpu
+    } else {
+        eframe::Renderer::Glow
     };
+    let mut wgpu_setup = eframe::egui_wgpu::WgpuSetupCreateNew::without_display_handle();
+    wgpu_setup.instance_descriptor.flags = eframe::wgpu::InstanceFlags::empty();
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([1160.0, 740.0])
@@ -72,88 +42,27 @@ fn main() -> eframe::Result<()> {
             .with_decorations(false)
             .with_active(true)
             .with_visible(true)
-            .with_title(format!("macview_gallery v{} (AppKit & AVKit Studio Showcase)", egui_macview::VERSION)),
+            .with_title(format!(
+                "macview_gallery v{} (AppKit & AVKit Studio Showcase)",
+                egui_macview::VERSION
+            )),
         renderer,
+        wgpu_options: eframe::egui_wgpu::WgpuConfiguration {
+            wgpu_setup: eframe::egui_wgpu::WgpuSetup::CreateNew(wgpu_setup),
+            ..Default::default()
+        },
+        system_font_fallback: false,
+        persist_window: false,
         ..Default::default()
     };
-    eframe::run_native("macview_gallery", options, Box::new(|cc| {
-        setup_system_or_custom_fonts(&cc.egui_ctx);
-        Ok(Box::new(GalleryApp::new()))
-    }))
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum GalleryScreen {
-    #[default]
-    CanvasPhysics = 0,
-    VectorAssets = 1,
-    DesignTokensWcag = 2,
-    FinderDataBrowser = 3,
-    AvKitMediaStudio = 4,
-}
-
-impl GalleryScreen {
-    pub const ALL: [Self; 5] = [
-        Self::CanvasPhysics,
-        Self::VectorAssets,
-        Self::DesignTokensWcag,
-        Self::FinderDataBrowser,
-        Self::AvKitMediaStudio,
-    ];
-
-    pub fn title(&self) -> &'static str {
-        match self {
-            Self::CanvasPhysics => "v0.1–v0.2: Vector & Inspector Studio",
-            Self::VectorAssets => "v0.3: Symbols & Layout Lab",
-            Self::DesignTokensWcag => "v0.4–v0.4.1: Command & State Lab",
-            Self::FinderDataBrowser => "v0.5: Finder & Publishing Browser",
-            Self::AvKitMediaStudio => "v0.5: AVKit Media & Timeline Studio",
-        }
-    }
-
-    pub fn sidebar_label(&self) -> &'static str {
-        match self {
-            Self::CanvasPhysics => "1. Vector Studio (v0.2)",
-            Self::VectorAssets => "2. Symbols & Layout (v0.3)",
-            Self::DesignTokensWcag => "3. Command & State (v0.4)",
-            Self::FinderDataBrowser => "4. Finder & Publish (v0.5)",
-            Self::AvKitMediaStudio => "5. AVKit Timeline (v0.5)",
-        }
-    }
-
-    pub fn search_placeholder(&self) -> &'static str {
-        match self {
-            Self::CanvasPhysics => "Search canvas geometry, transforms, CASpring physics...",
-            Self::VectorAssets => "Filter 14 AppKit vector symbols (e.g. search, chevron, gear)...",
-            Self::DesignTokensWcag => "Filter W3C design tokens (e.g. button, metric, motion)...",
-            Self::FinderDataBrowser => "Filter v0.5 table assets by name, codec, or NSTokenField tag...",
-            Self::AvKitMediaStudio => "Search AVKit timeline scenes and audio channels...",
-        }
-    }
-
-    pub fn breadcrumb_path(&self) -> [&'static str; 3] {
-        match self {
-            Self::CanvasPhysics => ["macview_gallery", "State 1 (v0.2)", "Vector & Inspector Studio"],
-            Self::VectorAssets => ["macview_gallery", "State 2 (v0.3)", "Symbols & Layout Lab"],
-            Self::DesignTokensWcag => ["macview_gallery", "State 3 (v0.4.1)", "Command & State Lab"],
-            Self::FinderDataBrowser => ["macview_gallery", "State 4 (v0.5)", "Finder & Publishing"],
-            Self::AvKitMediaStudio => ["macview_gallery", "State 5 (v0.5)", "AVKit Media Timeline"],
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum InspectorMode {
-    DefaultNib = 0,
-    CompactHud = 1,
-    ExpandedPro = 2,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ExpandedProTab {
-    Attributes = 0,
-    Metrics = 1,
-    Matrix = 2,
+    eframe::run_native(
+        "macview_gallery",
+        options,
+        Box::new(|cc| {
+            setup_system_or_custom_fonts(&cc.egui_ctx);
+            Ok(Box::new(GalleryApp::new()))
+        }),
+    )
 }
 
 pub(crate) struct GalleryApp {
@@ -186,17 +95,36 @@ pub(crate) struct GalleryApp {
 impl GalleryApp {
     pub(crate) fn new() -> Self {
         let palette_items = vec![
-            CommandPaletteItem::new("edit.undo", "Edit: Undo").category("Edit").shortcut("⌘Z / Ctrl+Z"),
-            CommandPaletteItem::new("edit.redo", "Edit: Redo").category("Edit").shortcut("⌘⇧Z / Ctrl+Shift+Z"),
-            CommandPaletteItem::new("screen.canvas", "State 1 (v0.2): Vector & Inspector Studio").category("States"),
-            CommandPaletteItem::new("screen.vector", "State 2 (v0.3): Symbols & Layout Lab").category("States"),
-            CommandPaletteItem::new("screen.tokens", "State 3 (v0.4.1): Command & State Lab").category("States"),
-            CommandPaletteItem::new("screen.finder", "State 4 (v0.5): Finder & Publishing Browser").category("States"),
-            CommandPaletteItem::new("screen.avkit", "State 5 (v0.5): AVKit Media & Timeline Studio").category("States"),
-            CommandPaletteItem::new("theme.aqua", "Appearance: Switch to Aqua (Light)").category("Theme"),
-            CommandPaletteItem::new("theme.dark", "Appearance: Switch to DarkAqua (Dark)").category("Theme"),
-            CommandPaletteItem::new("canvas.pulse", "Physics: Trigger CASpring Pulse").category("Motion"),
-            CommandPaletteItem::new("matrix.reset", "Canvas: Reset Affine Transform to Identity").category("Canvas"),
+            CommandPaletteItem::new("edit.undo", "Edit: Undo")
+                .category("Edit")
+                .shortcut("⌘Z / Ctrl+Z"),
+            CommandPaletteItem::new("edit.redo", "Edit: Redo")
+                .category("Edit")
+                .shortcut("⌘⇧Z / Ctrl+Shift+Z"),
+            CommandPaletteItem::new("screen.canvas", "State 1 (v0.2): Vector & Inspector Studio")
+                .category("States"),
+            CommandPaletteItem::new("screen.vector", "State 2 (v0.3): Symbols & Layout Lab")
+                .category("States"),
+            CommandPaletteItem::new("screen.tokens", "State 3 (v0.4.1): Command & State Lab")
+                .category("States"),
+            CommandPaletteItem::new(
+                "screen.finder",
+                "State 4 (v0.5): Finder & Publishing Browser",
+            )
+            .category("States"),
+            CommandPaletteItem::new(
+                "screen.avkit",
+                "State 5 (v0.5): AVKit Media & Timeline Studio",
+            )
+            .category("States"),
+            CommandPaletteItem::new("theme.aqua", "Appearance: Switch to Aqua (Light)")
+                .category("Theme"),
+            CommandPaletteItem::new("theme.dark", "Appearance: Switch to DarkAqua (Dark)")
+                .category("Theme"),
+            CommandPaletteItem::new("canvas.pulse", "Physics: Trigger CASpring Pulse")
+                .category("Motion"),
+            CommandPaletteItem::new("matrix.reset", "Canvas: Reset Affine Transform to Identity")
+                .category("Canvas"),
         ];
         let default_card = CardModel::default();
         Self {
@@ -290,7 +218,8 @@ impl GalleryApp {
         );
 
         let toolbar_height = theme.toolbar_metrics().height_unified.points();
-        let toolbar_rect = Rect::from_min_size(full_rect.min, vec2(full_rect.width(), toolbar_height));
+        let toolbar_rect =
+            Rect::from_min_size(full_rect.min, vec2(full_rect.width(), toolbar_height));
         self.render_toolbar(ui, toolbar_rect, &theme, on_resize_border);
 
         let menu_bar_h = 24.0;
@@ -301,7 +230,10 @@ impl GalleryApp {
         let mp = ui.painter_at(menu_bar_rect);
         mp.rect_filled(menu_bar_rect, CornerRadius::ZERO, theme.window_background());
         mp.line_segment(
-            [pos2(menu_bar_rect.min.x, menu_bar_rect.max.y), pos2(menu_bar_rect.max.x, menu_bar_rect.max.y)],
+            [
+                pos2(menu_bar_rect.min.x, menu_bar_rect.max.y),
+                pos2(menu_bar_rect.max.x, menu_bar_rect.max.y),
+            ],
             Stroke::new(1.0, theme.separator()),
         );
 
@@ -312,9 +244,13 @@ impl GalleryApp {
                 .layout(Layout::left_to_right(Align::Center)),
         );
         menu_ui.add_space(8.0);
-        if let Some(action) = MacMenuBar::new(&self.menus, &mut self.open_menu_idx, &mut self.highlighted_item_idx)
-            .theme(&theme)
-            .show(&mut menu_ui)
+        if let Some(action) = MacMenuBar::new(
+            &self.menus,
+            &mut self.open_menu_idx,
+            &mut self.highlighted_item_idx,
+        )
+        .theme(&theme)
+        .show(&mut menu_ui)
         {
             self.handle_menu_action(&action, ui.ctx());
         }
@@ -331,7 +267,10 @@ impl GalleryApp {
         }
 
         let work_rect = Rect::from_min_max(
-            pos2(full_rect.min.x, full_rect.min.y + toolbar_height + menu_bar_h),
+            pos2(
+                full_rect.min.x,
+                full_rect.min.y + toolbar_height + menu_bar_h,
+            ),
             full_rect.max,
         );
         let mut work_ui = ui.new_child(
@@ -373,46 +312,63 @@ impl GalleryApp {
         let snapping_enabled = inspector.snapping_enabled;
         let unit_segmented_idx = inspector.unit_segmented_idx;
 
-        MacSplitView::with_pos("gallery_left_split", MacSplitOrientation::Horizontal, &mut left_split_pos)
-            .theme(&theme)
-            .min_first(220.0)
-            .max_first(340.0)
-            .min_second(620.0)
-            .show(
-                &mut work_ui,
-                |sidebar_ui| {
-                    let (mut m, mut s) = (inspector_mode_cell.get(), active_screen_cell.get());
-                    sidebar.render(sidebar_ui, &theme, &mut m, &mut s, &self.toasts);
-                    inspector_mode_cell.set(m);
-                    active_screen_cell.set(s);
-                    vis_canvas_cell.set(sidebar.vis_canvas);
-                    lock_canvas_cell.set(sidebar.lock_canvas);
-                },
-                |body_ui| {
-                    let (vis_canvas, lock_canvas) = (vis_canvas_cell.get(), lock_canvas_cell.get());
-                    MacSplitView::with_pos("gallery_right_split", MacSplitOrientation::Horizontal, &mut right_split_pos)
-                        .theme(&theme)
-                        .min_first(min_canvas_w)
-                        .min_second(min_inspector_w)
-                        .show(
-                            body_ui,
-                            |center_ui| {
-                                let mut s = active_screen_cell.get();
-                                center.render(
-                                    center_ui, &theme, card, &self.undo_manager, &self.last_stable_card,
-                                    inspector_mode_cell.get(), &mut s, snapping_enabled, unit_segmented_idx,
-                                    vis_canvas, lock_canvas, &self.toasts,
-                                );
-                                active_screen_cell.set(s);
-                            },
-                            |inspector_ui| {
-                                let mut m = inspector_mode_cell.get();
-                                inspector.render(inspector_ui, &theme, card, &mut m, &self.toasts);
-                                inspector_mode_cell.set(m);
-                            },
+        MacSplitView::with_pos(
+            "gallery_left_split",
+            MacSplitOrientation::Horizontal,
+            &mut left_split_pos,
+        )
+        .theme(&theme)
+        .min_first(220.0)
+        .max_first(340.0)
+        .min_second(620.0)
+        .show(
+            &mut work_ui,
+            |sidebar_ui| {
+                let (mut m, mut s) = (inspector_mode_cell.get(), active_screen_cell.get());
+                sidebar.render(sidebar_ui, &theme, &mut m, &mut s, &self.toasts);
+                inspector_mode_cell.set(m);
+                active_screen_cell.set(s);
+                vis_canvas_cell.set(sidebar.vis_canvas);
+                lock_canvas_cell.set(sidebar.lock_canvas);
+            },
+            |body_ui| {
+                let (vis_canvas, lock_canvas) = (vis_canvas_cell.get(), lock_canvas_cell.get());
+                MacSplitView::with_pos(
+                    "gallery_right_split",
+                    MacSplitOrientation::Horizontal,
+                    &mut right_split_pos,
+                )
+                .theme(&theme)
+                .min_first(min_canvas_w)
+                .min_second(min_inspector_w)
+                .show(
+                    body_ui,
+                    |center_ui| {
+                        let mut s = active_screen_cell.get();
+                        center.render(
+                            center_ui,
+                            &theme,
+                            card,
+                            &self.undo_manager,
+                            &self.last_stable_card,
+                            inspector_mode_cell.get(),
+                            &mut s,
+                            snapping_enabled,
+                            unit_segmented_idx,
+                            vis_canvas,
+                            lock_canvas,
+                            &self.toasts,
                         );
-                },
-            );
+                        active_screen_cell.set(s);
+                    },
+                    |inspector_ui| {
+                        let mut m = inspector_mode_cell.get();
+                        inspector.render(inspector_ui, &theme, card, &mut m, &self.toasts);
+                        inspector_mode_cell.set(m);
+                    },
+                );
+            },
+        );
 
         self.inspector_mode = inspector_mode_cell.get();
         let new_screen = active_screen_cell.get();
@@ -424,9 +380,13 @@ impl GalleryApp {
             self.center.is_publishing = false;
         }
         self.left_split_pos = left_split_pos;
-        self.inspector_width = (available_body_w - right_split_pos).clamp(min_inspector_w, max_inspector_w);
+        self.inspector_width =
+            (available_body_w - right_split_pos).clamp(min_inspector_w, max_inspector_w);
 
-        if !ui.input(|i| i.pointer.any_down()) && !self.is_dragging_card.get() && focused_id.is_none() {
+        if !ui.input(|i| i.pointer.any_down())
+            && !self.is_dragging_card.get()
+            && focused_id.is_none()
+        {
             let changed = *self.card.borrow() != *self.last_stable_card.borrow();
             if changed {
                 let current = self.card.borrow().clone();

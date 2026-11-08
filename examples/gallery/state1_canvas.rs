@@ -1,45 +1,16 @@
 //! State 1 (`v0.1–v0.2`): Vector & Inspector Studio (`GalleryScreen::CanvasPhysics`).
 
+use super::types::apply_blend_mode;
 use super::CenterState;
 use crate::{CardModel, InspectorMode};
 use egui::{
-    pos2, vec2, Align2, Color32, CornerRadius, FontId, Id, Pos2, Rect, Sense, Stroke, StrokeKind,
-    Ui,
+    pos2, vec2, Align2, Color32, CornerRadius, FontId, Pos2, Rect, Sense, Stroke, StrokeKind, Ui,
 };
 use egui_macview::{
-    theme::MacTheme, MacBackgroundStyle, MacButtonCell, MacContextMenu, MacControlSize,
-    MacFloatingInfoBox, MacInputCell, MacPopover, MacPopoverArrowEdge, MacSlider, MacSymbol,
-    MacToastManager, NSMenuItem, NSUndoManager,
+    theme::MacTheme, MacBackgroundStyle, MacButtonCell, MacContextMenu, MacSymbol, MacToastManager,
+    NSMenuItem, NSUndoManager,
 };
 use std::cell::RefCell;
-
-fn apply_blend_mode(base: Color32, top: Color32, mode_idx: usize) -> Color32 {
-    let (br, bg, bb) = (
-        base.r() as f32 / 255.0,
-        base.g() as f32 / 255.0,
-        base.b() as f32 / 255.0,
-    );
-    let (tr, tg, tb) = (
-        top.r() as f32 / 255.0,
-        top.g() as f32 / 255.0,
-        top.b() as f32 / 255.0,
-    );
-    let blend_ch = |b: f32, t: f32| -> f32 {
-        match mode_idx {
-            1 => b * t,
-            2 => 1.0 - (1.0 - b) * (1.0 - t),
-            3 if b < 0.5 => 2.0 * b * t,
-            3 => 1.0 - 2.0 * (1.0 - b) * (1.0 - t),
-            _ => t,
-        }
-    };
-    Color32::from_rgba_unmultiplied(
-        (blend_ch(br, tr).clamp(0.0, 1.0) * 255.0) as u8,
-        (blend_ch(bg, tg).clamp(0.0, 1.0) * 255.0) as u8,
-        (blend_ch(bb, tb).clamp(0.0, 1.0) * 255.0) as u8,
-        top.a(),
-    )
-}
 
 impl CenterState {
     #[allow(clippy::too_many_arguments)]
@@ -59,14 +30,13 @@ impl CenterState {
     ) {
         let label_font = FontId::proportional(12.0);
         content_ui.label(
-            egui::RichText::new("State 1 (v0.1–v0.2) — Vector & Inspector Studio (2D Affine Canvas & HUD)")
-                .font(label_font)
-                .strong(),
+            egui::RichText::new(
+                "State 1 (v0.1–v0.2) — Vector & Inspector Studio (2D Affine Canvas & HUD)",
+            )
+            .font(label_font)
+            .strong(),
         );
-        content_ui.label(
-            egui::RichText::new("Drag card or its corner resize handle on canvas, step W/H/R with ArrowUp/Down (Shift=×10, Cmd/Ctrl=×100), or right-click for NSMenu.")
-                .size(11.0),
-        );
+        content_ui.label(egui::RichText::new("Drag card or its corner resize handle on canvas, step W/H/R with ArrowUp/Down (Shift=×10, Cmd/Ctrl=×100), or right-click for NSMenu.").size(11.0));
         content_ui.add_space(6.0);
 
         let canvas_w = (content_ui.available_width() - 32.0).max(340.0);
@@ -88,12 +58,18 @@ impl CenterState {
         let grid_stroke = Stroke::new(0.5, theme.separator().gamma_multiply(0.4));
         let mut gx = canvas_rect.min.x + 24.0;
         while gx < canvas_rect.max.x {
-            cp.line_segment([pos2(gx, canvas_rect.min.y), pos2(gx, canvas_rect.max.y)], grid_stroke);
+            cp.line_segment(
+                [pos2(gx, canvas_rect.min.y), pos2(gx, canvas_rect.max.y)],
+                grid_stroke,
+            );
             gx += 24.0;
         }
         let mut gy = canvas_rect.min.y + 24.0;
         while gy < canvas_rect.max.y {
-            cp.line_segment([pos2(canvas_rect.min.x, gy), pos2(canvas_rect.max.x, gy)], grid_stroke);
+            cp.line_segment(
+                [pos2(canvas_rect.min.x, gy), pos2(canvas_rect.max.x, gy)],
+                grid_stroke,
+            );
             gy += 24.0;
         }
 
@@ -110,17 +86,20 @@ impl CenterState {
 
         let (w_scale, h_scale, r_scale, _) =
             super::inspector::unit_scale_and_suffix(unit_segmented_idx);
-        let raw_card_w = (card.width.parse::<f32>().unwrap_or(240.0 * w_scale) / w_scale)
-            .clamp(60.0, 500.0);
-        let card_h = (card.height.parse::<f32>().unwrap_or(140.0 * h_scale) / h_scale)
-            .clamp(40.0, 300.0);
-        let card_radius = (card.radius.parse::<f32>().unwrap_or(10.0 * r_scale) / r_scale)
-            .clamp(0.0, 40.0);
+        let raw_card_w =
+            (card.width.parse::<f32>().unwrap_or(240.0 * w_scale) / w_scale).clamp(60.0, 500.0);
+        let card_h =
+            (card.height.parse::<f32>().unwrap_or(140.0 * h_scale) / h_scale).clamp(40.0, 300.0);
+        let card_radius =
+            (card.radius.parse::<f32>().unwrap_or(10.0 * r_scale) / r_scale).clamp(0.0, 40.0);
 
         let (card_w, base_center_x) = match card.alignment_idx {
             0 => (raw_card_w, canvas_rect.min.x + 24.0 + raw_card_w * 0.5),
             2 => (raw_card_w, canvas_rect.max.x - 24.0 - raw_card_w * 0.5),
-            3 => ((canvas_rect.width() - 48.0).max(60.0), canvas_rect.center().x),
+            3 => (
+                (canvas_rect.width() - 48.0).max(60.0),
+                canvas_rect.center().x,
+            ),
             _ => (raw_card_w, canvas_rect.center().x),
         };
         let cur_time = content_ui.input(|i| i.time);
@@ -149,17 +128,23 @@ impl CenterState {
         let (a, b, c, d) = card.affine_matrix(effective_rot, scale_factor);
 
         let card_center = pos2(
-            (base_center_x + self.card_drag_offset.x).clamp(canvas_rect.min.x + 40.0, canvas_rect.max.x - 40.0),
-            (canvas_rect.center().y + self.card_drag_offset.y).clamp(canvas_rect.min.y + 30.0, canvas_rect.max.y - 30.0),
+            (base_center_x + self.card_drag_offset.x)
+                .clamp(canvas_rect.min.x + 40.0, canvas_rect.max.x - 40.0),
+            (canvas_rect.center().y + self.card_drag_offset.y)
+                .clamp(canvas_rect.min.y + 30.0, canvas_rect.max.y - 30.0),
         );
         let (hw, hh) = (card_w * 0.5, card_h * 0.5);
-        let corners_world: Vec<Pos2> = [pos2(-hw, -hh), pos2(hw, -hh), pos2(hw, hh), pos2(-hw, hh)]
-            .iter()
-            .map(|pt| pos2(card_center.x + a * pt.x + b * pt.y, card_center.y + c * pt.x + d * pt.y))
-            .collect();
+        let corners_world: [Pos2; 4] = [pos2(-hw, -hh), pos2(hw, -hh), pos2(hw, hh), pos2(-hw, hh)]
+            .map(|pt| {
+                pos2(
+                    card_center.x + a * pt.x + b * pt.y,
+                    card_center.y + c * pt.x + d * pt.y,
+                )
+            });
 
         let fill_alpha = (card.opacity / 100.0).clamp(0.0, 1.0);
-        let card_fill = apply_blend_mode(card.alpha_color, card.fill_color, card.blend_mode_idx).gamma_multiply(fill_alpha);
+        let card_fill = apply_blend_mode(card.alpha_color, card.fill_color, card.blend_mode_idx)
+            .gamma_multiply(fill_alpha);
         let unit_str = ["pt", "px", "%"][unit_segmented_idx.min(2)];
         let blend_label = ["Normal", "Multiply", "Screen", "Overlay"][card.blend_mode_idx.min(3)];
         let card_bg_style = MacBackgroundStyle::from_color(card_fill);
@@ -169,18 +154,43 @@ impl CenterState {
         );
 
         if (effective_rot.abs() < 1e-4) && (card.skew_deg.abs() < 1e-4) {
-            let card_rect = Rect::from_center_size(card_center, vec2(card_w * scale_factor, card_h * scale_factor));
+            let card_rect = Rect::from_center_size(
+                card_center,
+                vec2(card_w * scale_factor, card_h * scale_factor),
+            );
             if card.shadow_enabled && card.shadow_blur > 0.1 {
                 let blur = card.shadow_blur as f32;
                 for ring in 1..=3 {
                     let spread = blur * (ring as f32 / 3.0);
-                    let shadow_rect = card_rect.expand(spread * 0.4).translate(vec2(0.0, 2.0 + spread * 0.35));
-                    cp.rect_filled(shadow_rect, CornerRadius::same((card_radius + spread) as u8), Color32::from_black_alpha((48 / ring) as u8));
+                    let shadow_rect = card_rect
+                        .expand(spread * 0.4)
+                        .translate(vec2(0.0, 2.0 + spread * 0.35));
+                    cp.rect_filled(
+                        shadow_rect,
+                        CornerRadius::same((card_radius + spread) as u8),
+                        Color32::from_black_alpha((48 / ring) as u8),
+                    );
                 }
             }
-            cp.rect(card_rect, CornerRadius::same(card_radius as u8), card_fill, Stroke::new(2.0, card.alpha_color), StrokeKind::Inside);
-            let title_str = if lock_canvas { format!("{} [LOCKED]", card.layer_name) } else { card.layer_name.clone() };
-            cp.text(pos2(card_rect.center().x, card_rect.center().y - 12.0), Align2::CENTER_CENTER, title_str, FontId::proportional(13.0), text_primary);
+            cp.rect(
+                card_rect,
+                CornerRadius::same(card_radius as u8),
+                card_fill,
+                Stroke::new(2.0, card.alpha_color),
+                StrokeKind::Inside,
+            );
+            let title_str: std::borrow::Cow<'_, str> = if lock_canvas {
+                std::borrow::Cow::Owned(format!("{} [LOCKED]", card.layer_name))
+            } else {
+                std::borrow::Cow::Borrowed(&card.layer_name)
+            };
+            cp.text(
+                pos2(card_rect.center().x, card_rect.center().y - 12.0),
+                Align2::CENTER_CENTER,
+                title_str.as_ref(),
+                FontId::proportional(13.0),
+                text_primary,
+            );
             cp.text(
                 pos2(card_rect.center().x, card_rect.center().y + 12.0),
                 Align2::CENTER_CENTER,
@@ -196,11 +206,28 @@ impl CenterState {
         } else {
             if card.shadow_enabled && card.shadow_blur > 0.1 {
                 let offset_y = 2.0 + card.shadow_blur as f32 * 0.4;
-                let shadow_pts: Vec<Pos2> = corners_world.iter().map(|pt| pos2(pt.x, pt.y + offset_y)).collect();
-                cp.add(egui::epaint::Shape::convex_polygon(shadow_pts, Color32::from_black_alpha(45), Stroke::NONE));
+                let shadow_pts: Vec<Pos2> = corners_world
+                    .iter()
+                    .map(|pt| pos2(pt.x, pt.y + offset_y))
+                    .collect();
+                cp.add(egui::epaint::Shape::convex_polygon(
+                    shadow_pts,
+                    Color32::from_black_alpha(45),
+                    Stroke::NONE,
+                ));
             }
-            cp.add(egui::epaint::Shape::convex_polygon(corners_world.clone(), card_fill, Stroke::new(2.0, card.alpha_color)));
-            cp.text(pos2(card_center.x, card_center.y - 10.0), Align2::CENTER_CENTER, &card.layer_name, FontId::proportional(13.0), text_primary);
+            cp.add(egui::epaint::Shape::convex_polygon(
+                corners_world.to_vec(),
+                card_fill,
+                Stroke::new(2.0, card.alpha_color),
+            ));
+            cp.text(
+                pos2(card_center.x, card_center.y - 10.0),
+                Align2::CENTER_CENTER,
+                &card.layer_name,
+                FontId::proportional(13.0),
+                text_primary,
+            );
             cp.text(
                 pos2(card_center.x, card_center.y + 10.0),
                 Align2::CENTER_CENTER,
@@ -211,14 +238,22 @@ impl CenterState {
         }
 
         let handle_rect = Rect::from_center_size(corners_world[2], vec2(10.0, 10.0));
-        cp.rect(handle_rect, CornerRadius::same(2), theme.window_background(), Stroke::new(1.5, theme.control_accent()), StrokeKind::Inside);
+        cp.rect(
+            handle_rect,
+            CornerRadius::same(2),
+            theme.window_background(),
+            Stroke::new(1.5, theme.control_accent()),
+            StrokeKind::Inside,
+        );
         let resize_resp = content_ui.interact(
             handle_rect.expand(4.0),
             content_ui.scope_id().with("interactive_canvas_card_resize"),
             Sense::click_and_drag(),
         );
         if resize_resp.hovered() || resize_resp.dragged() {
-            content_ui.ctx().set_cursor_icon(egui::CursorIcon::ResizeSouthEast);
+            content_ui
+                .ctx()
+                .set_cursor_icon(egui::CursorIcon::ResizeSouthEast);
         }
         if resize_resp.dragged() && !lock_canvas {
             let delta = resize_resp.drag_delta();
@@ -233,7 +268,11 @@ impl CenterState {
         }
 
         let card_bounds = Rect::from_points(&corners_world);
-        let card_resp = content_ui.interact(card_bounds, content_ui.scope_id().with("interactive_canvas_card_hit"), Sense::click_and_drag());
+        let card_resp = content_ui.interact(
+            card_bounds,
+            content_ui.scope_id().with("interactive_canvas_card_hit"),
+            Sense::click_and_drag(),
+        );
         if card_resp.dragged() && !resize_resp.dragged() && !lock_canvas {
             self.card_drag_offset += card_resp.drag_delta();
         }
@@ -243,11 +282,19 @@ impl CenterState {
             NSMenuItem::action("Center Card", "card.center"),
             NSMenuItem::action("Fill Width", "card.fill_width"),
             NSMenuItem::separator(),
-            NSMenuItem::action("Toggle Proportions", "card.toggle_proportions").checked(card.constrain_proportions),
-            NSMenuItem::action("Toggle Drop Shadow", "card.toggle_shadow").checked(card.shadow_enabled),
+            NSMenuItem::action("Toggle Proportions", "card.toggle_proportions")
+                .checked(card.constrain_proportions),
+            NSMenuItem::action("Toggle Drop Shadow", "card.toggle_shadow")
+                .checked(card.shadow_enabled),
             NSMenuItem::action("Copy Style", "card.copy_style"),
         ];
-        let mut context_menu = MacContextMenu::new(&context_items, &mut self.card_menu_open, &mut self.card_menu_pos, &mut self.card_menu_selected).theme(theme);
+        let mut context_menu = MacContextMenu::new(
+            &context_items,
+            &mut self.card_menu_open,
+            &mut self.card_menu_pos,
+            &mut self.card_menu_selected,
+        )
+        .theme(theme);
         context_menu.attach_to(&card_resp);
         if !card_resp.secondary_clicked() {
             context_menu.attach_to(&canvas_resp);
@@ -255,7 +302,12 @@ impl CenterState {
         if let Some(action) = context_menu.show(content_ui) {
             match action.as_str() {
                 "card.reset_transform" => {
-                    (card.rotation_deg, card.scale_pct, card.skew_deg, self.card_drag_offset) = (0.0, 100.0, 0.0, egui::Vec2::ZERO);
+                    (
+                        card.rotation_deg,
+                        card.scale_pct,
+                        card.skew_deg,
+                        self.card_drag_offset,
+                    ) = (0.0, 100.0, 0.0, egui::Vec2::ZERO);
                     toasts.borrow_mut().info("Transform reset");
                 }
                 "card.center" => {
@@ -275,7 +327,10 @@ impl CenterState {
                     toasts.borrow_mut().info("Drop shadow toggled");
                 }
                 "card.copy_style" => {
-                    content_ui.ctx().copy_text(format!("width: {}pt; height: {}pt; radius: {}pt;", card.width, card.height, card.radius));
+                    content_ui.ctx().copy_text(format!(
+                        "width: {}pt; height: {}pt; radius: {}pt;",
+                        card.width, card.height, card.radius
+                    ));
                     toasts.borrow_mut().success("Style copied");
                 }
                 _ => {}
@@ -284,82 +339,77 @@ impl CenterState {
 
         content_ui.add_space(8.0);
         content_ui.horizontal(|h| {
-            let pulse_label = format!("{} Trigger CASpring Pulse", MacSymbol::ArrowClockwise.as_str());
-            if h.add(MacButtonCell::new(&pulse_label).theme(theme).selected(self.bounce_start_time.is_some())).clicked() {
+            let pulse_label = format!(
+                "{} Trigger CASpring Pulse",
+                MacSymbol::ArrowClockwise.as_str()
+            );
+            if h.add(
+                MacButtonCell::new(&pulse_label)
+                    .theme(theme)
+                    .selected(self.bounce_start_time.is_some()),
+            )
+            .clicked()
+            {
                 self.bounce_start_time = Some(h.input(|i| i.time));
             }
-            let reset_label = format!("{} Reset Identity", MacSymbol::ArrowCounterClockwise.as_str());
-            if h.add(MacButtonCell::new(&reset_label).theme(theme)).clicked() {
-                (card.rotation_deg, card.scale_pct, card.skew_deg, self.card_drag_offset) = (0.0, 100.0, 0.0, egui::Vec2::ZERO);
+            let reset_label = format!(
+                "{} Reset Identity",
+                MacSymbol::ArrowCounterClockwise.as_str()
+            );
+            if h.add(MacButtonCell::new(&reset_label).theme(theme))
+                .clicked()
+            {
+                (
+                    card.rotation_deg,
+                    card.scale_pct,
+                    card.skew_deg,
+                    self.card_drag_offset,
+                ) = (0.0, 100.0, 0.0, egui::Vec2::ZERO);
                 toasts.borrow_mut().info("Transform reset");
             }
-            let (can_undo, can_redo, undo_n, redo_m) = {
-                let um = undo_manager.borrow();
-                (um.can_undo(), um.can_redo(), um.undo_count(), um.redo_count())
-            };
-            let undo_label = format!("{} Undo ({undo_n})", MacSymbol::ArrowCounterClockwise.as_str());
-            if h.add(MacButtonCell::new(&undo_label).theme(theme).enabled(can_undo)).clicked() && undo_manager.borrow_mut().undo(card) {
+            let um = undo_manager.borrow();
+            let (can_undo, can_redo, undo_n, redo_m) = (
+                um.can_undo(),
+                um.can_redo(),
+                um.undo_count(),
+                um.redo_count(),
+            );
+            drop(um);
+            let sym_ccw = MacSymbol::ArrowCounterClockwise.as_str();
+            let sym_cw = MacSymbol::ArrowClockwise.as_str();
+            let undo_label = format!("{sym_ccw} Undo ({undo_n})");
+            if h.add(
+                MacButtonCell::new(&undo_label)
+                    .theme(theme)
+                    .enabled(can_undo),
+            )
+            .clicked()
+                && undo_manager.borrow_mut().undo(card)
+            {
                 *last_stable_card.borrow_mut() = card.clone();
                 toasts.borrow_mut().info("Undo applied");
             }
-            let redo_label = format!("{} Redo ({redo_m})", MacSymbol::ArrowClockwise.as_str());
-            if h.add(MacButtonCell::new(&redo_label).theme(theme).enabled(can_redo)).clicked() && undo_manager.borrow_mut().redo(card) {
+            let redo_label = format!("{sym_cw} Redo ({redo_m})");
+            if h.add(
+                MacButtonCell::new(&redo_label)
+                    .theme(theme)
+                    .enabled(can_redo),
+            )
+            .clicked()
+                && undo_manager.borrow_mut().redo(card)
+            {
                 *last_stable_card.borrow_mut() = card.clone();
                 toasts.borrow_mut().info("Redo applied");
             }
         });
 
-        if inspector_mode == InspectorMode::CompactHud {
-            let mut hud_abs_pos = pos2(canvas_rect.min.x + self.hud_pos.x, canvas_rect.min.y + self.hud_pos.y);
-            let label_col = theme.hud_secondary_text();
-            let font_pt = theme.text_field().compact_infobox.font_size.points();
-            let cell_w = theme.text_field().compact_infobox.default_width.points();
-            let (hud_w_id, hud_h_id, hud_r_id) = (Id::NULL.with("hud_w"), Id::NULL.with("hud_h"), Id::NULL.with("hud_r"));
-
-            let (w_range, h_range, r_range) = (
-                ((60.0 * w_scale) as f64)..=((500.0 * w_scale) as f64),
-                ((40.0 * h_scale) as f64)..=((300.0 * h_scale) as f64),
-                0.0..=((40.0 * r_scale) as f64),
-            );
-            MacFloatingInfoBox::new("gallery_compact_hud", &mut hud_abs_pos)
-                .theme(theme)
-                .title("HUD Palette")
-                .bounds(canvas_rect)
-                .show(
-                    content_ui.ctx(),
-                    |row1_ui| {
-                        row1_ui.label(egui::RichText::new("W:").size(font_pt).color(label_col));
-                        MacInputCell::with_id(hud_w_id, &mut card.width).theme(theme).control_size(MacControlSize::CompactInfobox).numeric(w_range, 1.0).width(cell_w).prev_focus(hud_r_id).next_focus(hud_h_id).show(row1_ui);
-                        row1_ui.add_space(4.0);
-                        row1_ui.label(egui::RichText::new("H:").size(font_pt).color(label_col));
-                        MacInputCell::with_id(hud_h_id, &mut card.height).theme(theme).control_size(MacControlSize::CompactInfobox).numeric(h_range, 1.0).width(cell_w).prev_focus(hud_w_id).next_focus(hud_r_id).show(row1_ui);
-                    },
-                    |row2_ui| {
-                        row2_ui.label(egui::RichText::new("R:").size(font_pt).color(label_col));
-                        MacInputCell::with_id(hud_r_id, &mut card.radius).theme(theme).control_size(MacControlSize::CompactInfobox).numeric(r_range, 1.0).width(cell_w).prev_focus(hud_h_id).next_focus(hud_w_id).show(row2_ui);
-                        row2_ui.add_space(4.0);
-                        row2_ui.label(egui::RichText::new("θ:").size(font_pt).color(label_col));
-                        MacSlider::new(&mut card.rotation_deg, 0.0..=360.0).theme(theme).width(55.0).show(row2_ui);
-                    },
-                );
-            self.hud_pos = pos2(hud_abs_pos.x - canvas_rect.min.x, hud_abs_pos.y - canvas_rect.min.y);
-        }
-
-        content_ui.add_space(12.0);
-        let btn_text = if self.popover_open { "Dismiss Spring Popover" } else { "Present Spring Popover" };
-        if content_ui.add(MacButtonCell::new(btn_text).theme(theme)).clicked() {
-            self.popover_open = !self.popover_open;
-            self.spring_start_time = Some(content_ui.input(|i| i.time));
-        }
-        if self.popover_open {
-            content_ui.add_space(6.0);
-            let (pop_rect, _) = content_ui.allocate_exact_size(vec2(320.0, 96.0), Sense::hover());
-            MacPopover::new().theme(theme).arrow_edge(MacPopoverArrowEdge::Top).show(content_ui, pop_rect, |pop_ui| {
-                pop_ui.add_space(6.0);
-                pop_ui.label(egui::RichText::new(format!("CASpring Harmonic Oscillator (T₀={:.2}s, ζ={:.2})", self.spring.response, self.spring.damping_ratio)).size(11.5).strong());
-                pop_ui.label(egui::RichText::new(format!("Settling Duration: {:.3}s | Angular Freq ω₀: {:.2} rad/s", self.spring.settling_duration(), self.spring.omega_0())).size(10.5));
-            });
-        }
-        content_ui.add_space(18.0);
+        self.render_state1_hud_and_popover(
+            content_ui,
+            theme,
+            card,
+            inspector_mode,
+            canvas_rect,
+            (w_scale, h_scale, r_scale),
+        );
     }
 }

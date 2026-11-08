@@ -83,7 +83,7 @@ impl<'a> MacCanvasFooter<'a> {
         let mut action = None;
 
         // 2. Trailing Zone: Zoom Presets (50% | 100% | 200%) via Layout::right_to_left
-        let zoom_presets = [2.0f32, 1.0f32, 0.5f32];
+        let zoom_presets = [(2.0f32, "200%"), (1.0f32, "100%"), (0.5f32, "50%")];
         let preset_btn_width = fm.preset_width.points();
         let preset_btn_height = fm.preset_height.points();
         let preset_corner_r = fm.preset_corner_radius.points() as u8;
@@ -106,7 +106,7 @@ impl<'a> MacCanvasFooter<'a> {
                     .layout(Layout::right_to_left(Align::Center)),
             );
 
-            for (z_idx, &preset) in zoom_presets.iter().enumerate() {
+            for (z_idx, &(preset, label)) in zoom_presets.iter().enumerate() {
                 let (btn_rect, resp) = zoom_ui.allocate_exact_size(
                     Vec2::new(preset_btn_width, preset_btn_height),
                     Sense::click(),
@@ -135,8 +135,6 @@ impl<'a> MacCanvasFooter<'a> {
                     StrokeKind::Inside,
                 );
 
-                let pct_scale = f32::from(100u8);
-                let label = format!("{:.0}%", preset * pct_scale);
                 zoom_ui.painter().text(
                     btn_rect.center(),
                     Align2::CENTER_CENTER,

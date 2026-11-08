@@ -323,19 +323,19 @@ impl<'a> MacToolbar<'a> {
         }
 
         if !self.title.is_empty() {
-            painter.text(
-                Pos2::new(content_left, rect.center().y),
-                Align2::LEFT_CENTER,
-                &self.title,
-                FontId::proportional(title_font_pt),
-                theme.label(),
-            );
             let title_galley = painter.layout_no_wrap(
-                self.title.clone(),
+                self.title,
                 FontId::proportional(title_font_pt),
-                theme.label(),
+                egui::Color32::PLACEHOLDER,
             );
+            let title_pos = Align2::LEFT_CENTER
+                .anchor_size(
+                    Pos2::new(content_left, rect.center().y),
+                    title_galley.size(),
+                )
+                .min;
             content_left += title_galley.size().x + tb.item_spacing.points() * 2.0;
+            painter.galley(title_pos, title_galley, theme.label());
         }
 
         let inner_rect = Rect::from_min_max(

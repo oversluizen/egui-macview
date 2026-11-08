@@ -11,6 +11,21 @@ use egui_macview::{
     MacControlSize, MacInputCell, MacOutlineView, MacPopUpButton, MacSearchField,
 };
 
+fn click_raw(pos: Pos2, pressed: bool) -> RawInput {
+    RawInput {
+        events: vec![
+            Event::PointerMoved(pos),
+            Event::PointerButton {
+                pos,
+                button: PointerButton::Primary,
+                pressed,
+                modifiers: Modifiers::NONE,
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 fn find_shape_indices(
     shapes: &[egui::epaint::ClippedShape],
     target_text: &str,
@@ -170,50 +185,25 @@ fn test_outline_view_trailing_accessory_click_isolation() {
     out1.textures_delta.clear();
     assert!(acc_rect.width() > 0.0, "Accessory rect must be allocated");
 
-    // Frame 2: Press pointer on trailing accessory button
+    // Frame 2 & 3: Press and release pointer on trailing accessory button (completes click)
     let click_pos = acc_rect.center();
-    let mut press_input = RawInput::default();
-    press_input.events.push(Event::PointerMoved(click_pos));
-    press_input.events.push(Event::PointerButton {
-        pos: click_pos,
-        button: PointerButton::Primary,
-        pressed: true,
-        modifiers: Modifiers::NONE,
-    });
-    let mut out2 = ctx.run_ui(press_input, |ui| {
-        MacOutlineView::new("outline_acc_isolation")
-            .theme(&theme)
-            .show(ui, |tree| {
-                tree.row("row_1", 0, true, &mut is_expanded, false, |row| {
-                    row.label("Layer 1");
-                    row.accessory_custom("vis_btn", &mut is_visible, |_p, _r, _a| {});
-                });
-            });
-    });
-    out2.textures_delta.clear();
-
-    // Frame 3: Release pointer on trailing accessory button (completes click)
-    let mut release_input = RawInput::default();
-    release_input.events.push(Event::PointerMoved(click_pos));
-    release_input.events.push(Event::PointerButton {
-        pos: click_pos,
-        button: PointerButton::Primary,
-        pressed: false,
-        modifiers: Modifiers::NONE,
-    });
     let mut row_was_clicked = false;
-    let mut out3 = ctx.run_ui(release_input, |ui| {
-        MacOutlineView::new("outline_acc_isolation")
-            .theme(&theme)
-            .show(ui, |tree| {
-                let resp = tree.row("row_1", 0, true, &mut is_expanded, false, |row| {
-                    row.label("Layer 1");
-                    row.accessory_custom("vis_btn", &mut is_visible, |_p, _r, _a| {});
+    for pressed in [true, false] {
+        let mut out_step = ctx.run_ui(click_raw(click_pos, pressed), |ui| {
+            MacOutlineView::new("outline_acc_isolation")
+                .theme(&theme)
+                .show(ui, |tree| {
+                    let resp = tree.row("row_1", 0, true, &mut is_expanded, false, |row| {
+                        row.label("Layer 1");
+                        row.accessory_custom("vis_btn", &mut is_visible, |_p, _r, _a| {});
+                    });
+                    if !pressed {
+                        row_was_clicked = resp.clicked;
+                    }
                 });
-                row_was_clicked = resp.clicked;
-            });
-    });
-    out3.textures_delta.clear();
+        });
+        out_step.textures_delta.clear();
+    }
 
     assert!(
         !is_visible,
@@ -323,48 +313,23 @@ fn test_input_cell_consumes_single_char_keys_and_commits_on_outside_popup_click(
     assert_eq!(val, "128.5");
 
     // Frame 4 & 5: Click MacPopUpButton outside MacInputCell -> MacInputCell commits on blur & popup opens
-    let mut press_pop = RawInput::default();
-    press_pop.events.push(Event::PointerMoved(popup_pos));
-    press_pop.events.push(Event::PointerButton {
-        pos: popup_pos,
-        button: PointerButton::Primary,
-        pressed: true,
-        modifiers: Modifiers::NONE,
-    });
-    let mut out4 = ctx.run_ui(press_pop, |ui| {
-        MacInputCell::new("cell_edit", &mut val)
-            .theme(&theme)
-            .show(ui);
-        MacPopUpButton::new(&mut unit_idx, &items)
-            .id("unit_pop")
-            .theme(&theme)
-            .show(ui);
-    });
-    out4.textures_delta.clear();
-
-    let mut release_pop = RawInput::default();
-    release_pop.events.push(Event::PointerMoved(popup_pos));
-    release_pop.events.push(Event::PointerButton {
-        pos: popup_pos,
-        button: PointerButton::Primary,
-        pressed: false,
-        modifiers: Modifiers::NONE,
-    });
     let mut lost_focus_on_click = false;
     let mut popup_is_open = false;
-    let mut out5 = ctx.run_ui(release_pop, |ui| {
-        let cell_resp = MacInputCell::new("cell_edit", &mut val)
-            .theme(&theme)
-            .show(ui);
-        lost_focus_on_click = cell_resp.lost_focus() || !cell_resp.has_focus();
-        MacPopUpButton::new(&mut unit_idx, &items)
-            .id("unit_pop")
-            .theme(&theme)
-            .show(ui);
-        let is_open_id = Id::NULL.with("unit_pop").with("mac_popup_is_open");
-        popup_is_open = ui.data_mut(|d| d.get_temp::<bool>(is_open_id).unwrap_or(false));
-    });
-    out5.textures_delta.clear();
+    for pressed in [true, false] {
+        let mut out_pop = ctx.run_ui(click_raw(popup_pos, pressed), |ui| {
+            let cell_resp = MacInputCell::new("cell_edit", &mut val)
+                .theme(&theme)
+                .show(ui);
+            lost_focus_on_click = cell_resp.lost_focus() || !cell_resp.has_focus();
+            MacPopUpButton::new(&mut unit_idx, &items)
+                .id("unit_pop")
+                .theme(&theme)
+                .show(ui);
+            let is_open_id = Id::NULL.with("unit_pop").with("mac_popup_is_open");
+            popup_is_open = ui.data_mut(|d| d.get_temp::<bool>(is_open_id).unwrap_or(false));
+        });
+        out_pop.textures_delta.clear();
+    }
 
     assert_eq!(
         val, "128.5",
@@ -382,11 +347,21 @@ fn test_input_cell_consumes_single_char_keys_and_commits_on_outside_popup_click(
 
 #[test]
 fn test_input_cell_numeric_arrow_key_stepping_and_clamping() {
-    let (ctx, theme, mut val) = (Context::default(), MacTheme::new(MacAppearance::Aqua), "100.0".to_string());
+    let (ctx, theme, mut val) = (
+        Context::default(),
+        MacTheme::new(MacAppearance::Aqua),
+        "100.0".to_string(),
+    );
     for _ in 0..2 {
         ctx.run_ui(RawInput::default(), |ui| {
-            MacInputCell::new("num_cell", &mut val).theme(&theme).numeric(50.0..=250.0, 1.0).show(ui).request_focus();
-        }).textures_delta.clear();
+            MacInputCell::new("num_cell", &mut val)
+                .theme(&theme)
+                .numeric(50.0..=250.0, 1.0)
+                .show(ui)
+                .request_focus();
+        })
+        .textures_delta
+        .clear();
     }
     let cases = [
         (Key::ArrowUp, Modifiers::NONE, "101.0"),
@@ -400,11 +375,29 @@ fn test_input_cell_numeric_arrow_key_stepping_and_clamping() {
         (Key::ArrowDown, Modifiers::NONE, "50.0"),
     ];
     for (key, modifiers, expected) in cases {
-        let ev = Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers };
+        let ev = Event::Key {
+            key,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers,
+        };
         let mut changed = false;
-        ctx.run_ui(RawInput { events: vec![ev], ..Default::default() }, |ui| {
-            changed = MacInputCell::new("num_cell", &mut val).theme(&theme).numeric(50.0..=250.0, 1.0).show(ui).changed();
-        }).textures_delta.clear();
+        ctx.run_ui(
+            RawInput {
+                events: vec![ev],
+                ..Default::default()
+            },
+            |ui| {
+                changed = MacInputCell::new("num_cell", &mut val)
+                    .theme(&theme)
+                    .numeric(50.0..=250.0, 1.0)
+                    .show(ui)
+                    .changed();
+            },
+        )
+        .textures_delta
+        .clear();
         assert_eq!(val, expected);
         assert!(changed);
     }
@@ -415,13 +408,29 @@ fn test_input_cell_numeric_arrow_key_stepping_and_clamping() {
         ("1e2", Key::ArrowUp, "101.0"),
         ("corrupted", Key::Escape, "101.0"),
     ] {
-        let ev = Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers: Modifiers::NONE };
-        ctx.run_ui(RawInput { events: vec![ev], ..Default::default() }, |ui| {
-            let edit_id = Id::NULL.with("num_cell").with("mac_input_buffer");
-            ui.data_mut(|d| d.insert_temp(edit_id, buf_override.to_string()));
-            MacInputCell::new("num_cell", &mut val).theme(&theme).numeric(50.0..=250.0, 1.0).show(ui);
-        }).textures_delta.clear();
+        let ev = Event::Key {
+            key,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: Modifiers::NONE,
+        };
+        ctx.run_ui(
+            RawInput {
+                events: vec![ev],
+                ..Default::default()
+            },
+            |ui| {
+                let edit_id = Id::NULL.with("num_cell").with("mac_input_buffer");
+                ui.data_mut(|d| d.insert_temp(edit_id, buf_override.to_string()));
+                MacInputCell::new("num_cell", &mut val)
+                    .theme(&theme)
+                    .numeric(50.0..=250.0, 1.0)
+                    .show(ui);
+            },
+        )
+        .textures_delta
+        .clear();
         assert_eq!(val, expected);
     }
 }
-

@@ -267,7 +267,8 @@ impl<'a> Widget for MacProgressIndicator<'a> {
                     );
                     painter.rect_filled(pill_rect, radius, fill_color);
                     if self.time > 0.0 {
-                        ui.ctx().request_repaint_after(std::time::Duration::from_millis(33));
+                        ui.ctx()
+                            .request_repaint_after(std::time::Duration::from_millis(33));
                     }
                 }
 
@@ -324,8 +325,7 @@ impl<'a> Widget for MacProgressIndicator<'a> {
                 }
 
                 if self.time > 0.0 {
-                    let step_secs =
-                        (1.0 / (speed_hz * spoke_count as f64)).min(1.0) as f32;
+                    let step_secs = (1.0 / (speed_hz * spoke_count as f64)).min(1.0) as f32;
                     ui.ctx().request_repaint_after_secs(step_secs);
                 }
                 response

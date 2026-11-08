@@ -6,8 +6,8 @@
 use crate::layout::subpixel_snap_rect;
 use crate::theme::MacTheme;
 use egui::{
-    Align2, Area, CornerRadius, FontId, Key, Modifiers, Order, Pos2, Rect, Response, Sense, Stroke,
-    StrokeKind, Ui, Vec2, Widget,
+    Align2, Area, Color32, CornerRadius, FontId, Key, Modifiers, Order, Pos2, Rect, Response,
+    Sense, Stroke, StrokeKind, Ui, Vec2, Widget,
 };
 
 /// Authentic macOS AppKit Pop-Up Button (`NSPopUpButton` equivalent).
@@ -119,19 +119,29 @@ impl<'a> Widget for MacPopUpButton<'a> {
             *self.selected_index = self.items.len() - 1;
         }
         let current_text = self.items.get(*self.selected_index).copied().unwrap_or("");
+        let current_galley = ui.painter().layout_no_wrap(
+            current_text.to_owned(),
+            font_id.clone(),
+            Color32::PLACEHOLDER,
+        );
+        let current_galley_w = current_galley.size().x;
 
-        // Measure max width across all items so unselected longer items are never clipped
-        let mut max_item_text_w = 0.0f32;
-        for &item in self.items {
-            let w = ui
-                .painter()
-                .layout_no_wrap(item.to_owned(), font_id.clone(), theme.label())
-                .size()
-                .x;
-            max_item_text_w = max_item_text_w.max(w);
-        }
-        let auto_width = max_item_text_w + padding_h * 2.0 + chevron_size + chevron_spacing;
-        let desired_width = self.width.unwrap_or(auto_width);
+        let measure_all_items_width = |ui: &Ui| -> f32 {
+            let mut max_item_text_w = current_galley_w;
+            for &item in self.items {
+                if std::ptr::eq(item, current_text) {
+                    continue;
+                }
+                let w = ui
+                    .painter()
+                    .layout_no_wrap(item.to_owned(), font_id.clone(), Color32::PLACEHOLDER)
+                    .size()
+                    .x;
+                max_item_text_w = max_item_text_w.max(w);
+            }
+            max_item_text_w + padding_h * 2.0 + chevron_size + chevron_spacing
+        };
+        let desired_width = self.width.unwrap_or_else(|| measure_all_items_width(ui));
 
         let sense = if self.enabled {
             Sense::click()
@@ -202,14 +212,13 @@ impl<'a> Widget for MacPopUpButton<'a> {
             theme.label()
         };
 
-        let label_pos = Pos2::new(rect.left() + padding_h, rect.center().y);
-        painter.text(
-            label_pos,
-            Align2::LEFT_CENTER,
-            current_text,
-            font_id.clone(),
-            text_color,
-        );
+        let label_pos = Align2::LEFT_CENTER
+            .anchor_size(
+                Pos2::new(rect.left() + padding_h, rect.center().y),
+                current_galley.size(),
+            )
+            .min;
+        painter.galley(label_pos, current_galley, text_color);
 
         // Draw trailing double chevrons (up/down pair)
         let chevron_color = if !self.enabled {
@@ -257,6 +266,7 @@ impl<'a> Widget for MacPopUpButton<'a> {
         }
 
         if self.enabled && is_popup_open {
+            let auto_width = measure_all_items_width(ui);
             let menu_width = desired_width
                 .max(auto_width)
                 .max(metrics.menu_min_width.points());

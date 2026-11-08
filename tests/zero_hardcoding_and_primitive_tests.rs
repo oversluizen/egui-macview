@@ -210,3 +210,86 @@ fn test_dtcg_color_parser() {
     assert!((srgba_focus[2] as i32 - 244).abs() <= 1);
     assert_eq!(srgba_focus[3], 128);
 }
+
+/// Test 5: Verifies consolidated single-struct `IdTypeMap` state per widget (`MacScrollView`, `MacInputCell`)
+/// and color-independent `Galley` reuse (`Color32::PLACEHOLDER`) in `MacButtonCell` and `MacSegmentedControl`.
+#[test]
+fn test_consolidated_widget_memory_and_galley_reuse() {
+    use egui_macview::{MacButtonCell, MacInputCell, MacScrollView, MacSegmentedControl};
+
+    let ctx = egui::Context::default();
+    let theme = MacTheme::default();
+    let mut text = String::from("42.0");
+
+    let base_len = ctx.data(|d| d.len());
+    let mut out1 = ctx.run_ui(egui::RawInput::default(), |ui| {
+        MacScrollView::new("perf_scroll")
+            .theme(&theme)
+            .max_height(80.0)
+            .show(ui, |c_ui| {
+                c_ui.allocate_exact_size(egui::vec2(120.0, 240.0), egui::Sense::hover());
+            });
+    });
+    out1.textures_delta.clear();
+    let after_scroll_len = ctx.data(|d| d.len());
+    assert_eq!(
+        after_scroll_len - base_len,
+        2,
+        "MacScrollView must consolidate its own temp state into 1 IdTypeMap entry (+1 for egui::ScrollArea)"
+    );
+
+    // Unfocused MacInputCell must not allocate transactional temp entries
+    let before_unfocused_ic = ctx.data(|d| d.len());
+    let mut out2 = ctx.run_ui(egui::RawInput::default(), |ui| {
+        MacInputCell::new("perf_input_idle", &mut text)
+            .theme(&theme)
+            .show(ui);
+    });
+    out2.textures_delta.clear();
+    let after_unfocused_ic = ctx.data(|d| d.len());
+    assert_eq!(
+        after_unfocused_ic - before_unfocused_ic,
+        1,
+        "Unfocused idle MacInputCell must insert 0 transactional temp entries (+1 for egui::TextEditState)"
+    );
+
+    // Focused MacInputCell must consolidate active/snapshot/buffer into 1 IdTypeMap entry
+    let focused_id = egui::Id::NULL.with("perf_input_focused");
+    ctx.memory_mut(|m| m.request_focus(focused_id));
+    let before_focused_ic = ctx.data(|d| d.len());
+    let mut out3 = ctx.run_ui(egui::RawInput::default(), |ui| {
+        MacInputCell::with_id(focused_id, &mut text)
+            .theme(&theme)
+            .show(ui);
+    });
+    out3.textures_delta.clear();
+    let after_focused_ic = ctx.data(|d| d.len());
+    assert_eq!(
+        after_focused_ic - before_focused_ic,
+        2,
+        "Focused MacInputCell must consolidate its 3 transactional keys into 1 struct (+1 for egui::TextEditState)"
+    );
+
+    // Verify Galley reuse with Color32::PLACEHOLDER in MacButtonCell and MacSegmentedControl
+    let mut out = ctx.run_ui(egui::RawInput::default(), |ui| {
+        ui.add(MacButtonCell::new("Action").theme(&theme));
+        MacSegmentedControl::new(&["One", "Two"], 0)
+            .theme(&theme)
+            .show(ui, |_| {});
+    });
+    out.textures_delta.clear();
+    let mut text_shapes = 0usize;
+    for clipped in &out.shapes {
+        if let egui::epaint::Shape::Text(ts) = &clipped.shape {
+            text_shapes += 1;
+            for section in &ts.galley.job.sections {
+                assert_eq!(
+                    section.format.color,
+                    Color32::PLACEHOLDER,
+                    "Galley LayoutJob should use Color32::PLACEHOLDER so hover/active colors use fallback_color without GalleyCache churn"
+                );
+            }
+        }
+    }
+    assert_eq!(text_shapes, 3);
+}

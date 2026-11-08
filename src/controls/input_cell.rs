@@ -7,6 +7,13 @@ use crate::theme::MacTheme;
 use egui::{CornerRadius, Key, Modifiers, Response, Stroke, StrokeKind, Ui, Vec2};
 use std::ops::RangeInclusive;
 
+#[derive(Clone, Debug, Default)]
+struct InputCellTransactionState {
+    active: bool,
+    snapshot: String,
+    buffer: String,
+}
+
 fn decimal_places_if_valid(s: &str) -> usize {
     let t = s.trim();
     if t.parse::<f64>().is_ok() {
@@ -211,11 +218,16 @@ impl<'a> MacInputCell<'a> {
             theme.disabled_opacity()
         };
 
-        // Transactional buffer state management in egui::Memory
-        let active_key = self.id.with("mac_input_editing_active");
-        let snapshot_key = self.id.with("mac_input_snapshot");
-        let buffer_key = self.id.with("mac_input_buffer");
-        let was_active = ui.data(|d| d.get_temp::<bool>(active_key).unwrap_or(false));
+        // Consolidated transactional buffer state in egui::Memory (single IdTypeMap entry)
+        let tx_key = self.id.with("mac_input_tx_state");
+        let (mut tx, injected_buf) = ui.data_mut(|d| {
+            (
+                d.get_temp::<InputCellTransactionState>(tx_key),
+                d.remove_temp::<String>(self.id.with("mac_input_buffer")),
+            )
+        });
+        let mut tx_dirty = false;
+        let was_active = tx.as_ref().is_some_and(|s| s.active);
 
         let esc_pressed = (is_focused || was_active)
             && (ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Escape))
@@ -234,18 +246,27 @@ impl<'a> MacInputCell<'a> {
 
         if is_focused && !was_active && !esc_pressed {
             let initial = self.value.clone();
-            ui.data_mut(|d| {
-                d.insert_temp(active_key, true);
-                d.insert_temp(snapshot_key, initial.clone());
-                d.insert_temp(buffer_key, initial);
+            tx = Some(InputCellTransactionState {
+                active: true,
+                snapshot: initial.clone(),
+                buffer: initial,
             });
+            tx_dirty = true;
         } else if !is_focused && was_active && !esc_pressed {
-            if let Some(buf) = ui.data(|d| d.get_temp::<String>(buffer_key)) {
-                *self.value = buf;
+            if let Some(ref mut st) = tx {
+                *self.value = st.buffer.clone();
+                st.active = false;
+                tx_dirty = true;
             }
-            ui.data_mut(|d| {
-                d.insert_temp(active_key, false);
+        }
+        if let Some(override_buf) = injected_buf {
+            let st = tx.get_or_insert_with(|| InputCellTransactionState {
+                active: is_focused,
+                snapshot: self.value.clone(),
+                buffer: String::new(),
             });
+            st.buffer = override_buf;
+            tx_dirty = true;
         }
 
         // Prevent egui's built-in FocusDirection::Next / Previous from hijacking Tab/Shift+Tab
@@ -259,12 +280,13 @@ impl<'a> MacInputCell<'a> {
         let mut surrender_now = false;
 
         if esc_pressed {
-            if let Some(snapshot) = ui.data(|d| d.get_temp::<String>(snapshot_key)) {
-                *self.value = snapshot.clone();
-                ui.data_mut(|d| d.insert_temp(buffer_key, snapshot));
+            if let Some(ref mut st) = tx {
+                *self.value = st.snapshot.clone();
+                st.buffer = st.snapshot.clone();
+                st.active = false;
+                tx_dirty = true;
                 response.mark_changed();
             }
-            ui.data_mut(|d| d.insert_temp(active_key, false));
             ui.memory_mut(|m| m.surrender_focus(self.id));
             surrender_now = true;
         } else if is_focused {
@@ -272,55 +294,52 @@ impl<'a> MacInputCell<'a> {
                 let stepper_tokens = &theme.control_metrics().stepper;
                 let shift_mult = stepper_tokens.shift_multiplier.points() as f64;
                 let cmd_mult = stepper_tokens.cmd_multiplier.points() as f64;
-                let num_delta = super::stepper::consume_step_arrow_mult(
-                    ui,
-                    Key::ArrowUp,
-                    cmd_mult,
-                    shift_mult,
-                )
-                .map(|m| step * m)
-                .or_else(|| {
-                    super::stepper::consume_step_arrow_mult(
-                        ui,
-                        Key::ArrowDown,
-                        cmd_mult,
-                        shift_mult,
-                    )
-                    .map(|m| -step * m)
-                });
+                let num_delta =
+                    super::stepper::consume_step_arrow_mult(ui, Key::ArrowUp, cmd_mult, shift_mult)
+                        .map(|m| step * m)
+                        .or_else(|| {
+                            super::stepper::consume_step_arrow_mult(
+                                ui,
+                                Key::ArrowDown,
+                                cmd_mult,
+                                shift_mult,
+                            )
+                            .map(|m| -step * m)
+                        });
                 if let Some(delta) = num_delta {
-                    let cur_str = ui
-                        .data(|d| d.get_temp::<String>(buffer_key))
-                        .unwrap_or_else(|| self.value.clone());
-                    let snap_str = ui
-                        .data(|d| d.get_temp::<String>(snapshot_key))
-                        .unwrap_or_else(|| self.value.clone());
+                    let cur_str = tx
+                        .as_ref()
+                        .map(|s| s.buffer.as_str())
+                        .unwrap_or(self.value.as_str());
+                    let snap_str = tx
+                        .as_ref()
+                        .map(|s| s.snapshot.as_str())
+                        .unwrap_or(self.value.as_str());
                     let cur_val = cur_str
                         .trim()
                         .parse::<f64>()
                         .or_else(|_| snap_str.trim().parse::<f64>())
                         .unwrap_or(*range.start());
                     let next_val = (cur_val + delta).clamp(*range.start(), *range.end());
-                    let formatted = format_stepped_number(&cur_str, &snap_str, step, next_val);
+                    let formatted = format_stepped_number(cur_str, snap_str, step, next_val);
                     *self.value = formatted.clone();
-                    ui.data_mut(|d| {
-                        d.insert_temp(buffer_key, formatted.clone());
-                        d.insert_temp(snapshot_key, formatted);
-                    });
+                    let st = tx.get_or_insert_with(InputCellTransactionState::default);
+                    st.buffer = formatted.clone();
+                    st.snapshot = formatted;
+                    tx_dirty = true;
                     response.mark_changed();
                 }
             }
 
             let mut commit_and_surrender = |ui: &mut Ui, update_snapshot: bool| {
-                if let Some(buf) = ui.data(|d| d.get_temp::<String>(buffer_key)) {
-                    *self.value = buf;
-                }
-                ui.data_mut(|d| {
-                    d.insert_temp(active_key, false);
+                if let Some(ref mut st) = tx {
+                    *self.value = st.buffer.clone();
+                    st.active = false;
                     if update_snapshot {
-                        d.insert_temp(snapshot_key, self.value.clone());
+                        st.snapshot = self.value.clone();
                     }
-                });
+                    tx_dirty = true;
+                }
                 ui.memory_mut(|m| m.surrender_focus(self.id));
             };
 
@@ -382,7 +401,8 @@ impl<'a> MacInputCell<'a> {
         );
 
         let mut edit_buf = if is_focused && !surrender_now {
-            ui.data(|d| d.get_temp::<String>(buffer_key))
+            tx.as_ref()
+                .map(|s| s.buffer.clone())
                 .unwrap_or_else(|| self.value.clone())
         } else {
             self.value.clone()
@@ -404,7 +424,9 @@ impl<'a> MacInputCell<'a> {
         let text_res = child_ui.add(text_edit);
         if text_res.changed() && !surrender_now {
             *self.value = edit_buf.clone();
-            ui.data_mut(|d| d.insert_temp(buffer_key, edit_buf));
+            let st = tx.get_or_insert_with(InputCellTransactionState::default);
+            st.buffer = edit_buf;
+            tx_dirty = true;
             response.mark_changed();
         }
 
@@ -431,10 +453,17 @@ impl<'a> MacInputCell<'a> {
         let post_focused = ui.memory(|m| m.has_focus(self.id));
         if is_focused && !post_focused && !surrender_now && focus_transition_to.is_none() {
             // Focus lost via outside click (blur) -> commit transactional buffer
-            if let Some(buf) = ui.data(|d| d.get_temp::<String>(buffer_key)) {
-                *self.value = buf;
+            if let Some(ref mut st) = tx {
+                *self.value = st.buffer.clone();
+                st.active = false;
+                tx_dirty = true;
             }
-            ui.data_mut(|d| d.insert_temp(active_key, false));
+        }
+
+        if tx_dirty {
+            if let Some(st) = tx {
+                ui.data_mut(|d| d.insert_temp(tx_key, st));
+            }
         }
 
         if surrender_now {

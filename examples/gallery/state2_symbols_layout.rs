@@ -1,13 +1,13 @@
 //! State 2 (`v0.3`): Cupertino Symbols & Layout Lab (`GalleryScreen::VectorAssets`).
 
-use super::CenterState;
+use super::{CenterState, SYMBOLS_META};
 use crate::CardModel;
 use egui::{
     pos2, vec2, Align2, Color32, CornerRadius, FontId, Rect, Sense, Stroke, StrokeKind, Ui,
 };
 use egui_macview::{
     theme::MacTheme, MacButtonCell, MacColorWell, MacFixedView, MacRow, MacScrollView,
-    MacSegmentedControl, MacSlider, MacSymbol, MacToastManager, MacToggle,
+    MacSegmentedControl, MacSlider, MacToastManager, MacToggle,
 };
 use std::cell::RefCell;
 
@@ -39,7 +39,9 @@ impl CenterState {
                 });
             h.add_space(12.0);
             h.label(egui::RichText::new("Symbol Tint:").size(11.0).strong());
-            MacColorWell::new(&mut self.symbol_tint).theme(theme).show(h);
+            MacColorWell::new(&mut self.symbol_tint)
+                .theme(theme)
+                .show(h);
         });
         content_ui.add_space(6.0);
 
@@ -50,24 +52,7 @@ impl CenterState {
         };
 
         let q = self.search_query.trim().to_lowercase();
-        let symbols_meta: [(MacSymbol, &'static str, &'static str, &'static str); 14] = [
-            (MacSymbol::Search, "Search", "Search fields, Spotlight", "U+F4A5"),
-            (MacSymbol::ChevronRight, "Chevron Right", "Navigation forward, disclosure", "U+F3D3"),
-            (MacSymbol::ChevronLeft, "Chevron Left", "Navigation back", "U+F3D2"),
-            (MacSymbol::ChevronDown, "Chevron Down", "Popup buttons, dropdown menus", "U+F5D5"),
-            (MacSymbol::ChevronUp, "Chevron Up", "Steppers, navigation up", "U+F5E5"),
-            (MacSymbol::SidebarLeading, "Sidebar Leading", "Sidebar toggle, window layout", "U+F7D6"),
-            (MacSymbol::Gear, "Gear", "Settings, preferences, metrics", "U+F43C"),
-            (MacSymbol::Sliders, "Sliders", "Filters, display adjustments", "U+F7DC"),
-            (MacSymbol::Checkmark, "Checkmark", "Menu checkmarks, verification", "U+F3FD"),
-            (MacSymbol::Xmark, "Xmark", "Close button, cancel, clear", "U+F404"),
-            (MacSymbol::Plus, "Plus", "Add layer, expand, zoom in", "U+F489"),
-            (MacSymbol::Minus, "Minus", "Remove layer, collapse, zoom out", "U+F70F"),
-            (MacSymbol::ArrowClockwise, "Arrow Clockwise", "Reload, refresh, repeat", "U+F49A"),
-            (MacSymbol::ArrowCounterClockwise, "Arrow Counter Clockwise", "Undo action, reset", "U+F21C"),
-        ];
-
-        let filtered: Vec<_> = symbols_meta
+        let filtered: Vec<_> = SYMBOLS_META
             .iter()
             .copied()
             .filter(|(sym, name, usage, cp)| {
@@ -94,7 +79,9 @@ impl CenterState {
                         grid_ui.allocate_exact_size(vec2(item_w, item_h), Sense::click());
                     if resp.clicked() {
                         self.selected_symbol = *sym;
-                        toasts.borrow_mut().info(format!("Selected {name} ({cp_hex})"));
+                        toasts
+                            .borrow_mut()
+                            .info(format!("Selected {name} ({cp_hex})"));
                     }
                     let p = grid_ui.painter_at(rect);
                     let bg = if is_selected {
@@ -179,7 +166,8 @@ impl CenterState {
                 let mut fixed_view = MacFixedView::new(content_ui, fixed_container_rect);
                 let action_label = format!("Vector Action A ({})", self.vector_action_count);
                 let clicked_a = fixed_view.subview(pos2(14.0, 14.0), vec2(155.0, 32.0), |ui_a| {
-                    ui_a.add(MacButtonCell::new(&action_label).theme(theme)).clicked()
+                    ui_a.add(MacButtonCell::new(&action_label).theme(theme))
+                        .clicked()
                 });
                 if clicked_a {
                     self.vector_action_count += 1;
@@ -224,11 +212,18 @@ impl CenterState {
             1 => {
                 let clip_rect = fixed_container_rect.shrink2(vec2(24.0, 16.0));
                 let clipped_painter = content_ui.painter().with_clip_rect(clip_rect);
-                clipped_painter.rect_filled(clip_rect, CornerRadius::same(6), Color32::from_rgb(22, 24, 28));
+                clipped_painter.rect_filled(
+                    clip_rect,
+                    CornerRadius::same(6),
+                    Color32::from_rgb(22, 24, 28),
+                );
                 let mut sx = clip_rect.min.x - 60.0;
                 while sx < clip_rect.max.x + 60.0 {
                     clipped_painter.line_segment(
-                        [pos2(sx, clip_rect.max.y + 20.0), pos2(sx + 50.0, clip_rect.min.y - 20.0)],
+                        [
+                            pos2(sx, clip_rect.max.y + 20.0),
+                            pos2(sx + 50.0, clip_rect.min.y - 20.0),
+                        ],
                         Stroke::new(14.0, theme.control_accent().gamma_multiply(0.45)),
                     );
                     sx += 36.0;
@@ -244,7 +239,9 @@ impl CenterState {
             _ => {
                 let mut fixed_view = MacFixedView::new(content_ui, fixed_container_rect);
                 let clicked = fixed_view.subview(pos2(14.0, 12.0), vec2(240.0, 24.0), |btn_ui| {
-                    btn_ui.add(MacButtonCell::new("Trigger Cascading Spring").theme(theme)).clicked()
+                    btn_ui
+                        .add(MacButtonCell::new("Trigger Cascading Spring").theme(theme))
+                        .clicked()
                 });
                 if clicked {
                     self.cascade_start_time = Some(cur_time);
@@ -262,7 +259,10 @@ impl CenterState {
                         (0.0, 1.0)
                     };
                     let c_rect = Rect::from_min_size(
-                        pos2(fixed_container_rect.min.x + 14.0 + idx as f32 * 102.0, fixed_container_rect.min.y + 46.0 + disp_y),
+                        pos2(
+                            fixed_container_rect.min.x + 14.0 + idx as f32 * 102.0,
+                            fixed_container_rect.min.y + 46.0 + disp_y,
+                        ),
                         vec2(88.0, 56.0),
                     );
                     fp.rect(
@@ -295,26 +295,60 @@ impl CenterState {
         let (row_alloc_rect, _) =
             content_ui.allocate_exact_size(vec2(self.row_container_width, 32.0), Sense::hover());
         let rp = content_ui.painter_at(row_alloc_rect);
-        let mut row = MacRow::new(row_alloc_rect.min.y + 2.0, 28.0, self.row_container_width, 6.0);
+        let mut row = MacRow::new(
+            row_alloc_rect.min.y + 2.0,
+            28.0,
+            self.row_container_width,
+            6.0,
+        );
         let (x0, y0, w0, h0) = row.allocate_cell(90.0);
         let (x1, y1, w1, h1) = row.allocate_cell(120.0);
         let rem_w = row.remaining_width().max(30.0);
         let (x2, y2, w2, h2) = row.allocate_cell(rem_w);
         for (x, y, w, h, col, txt) in [
-            (x0, y0, w0, h0, Color32::from_rgb(30, 80, 160), "90pt".to_string()),
-            (x1, y1, w1, h1, Color32::from_rgb(110, 50, 160), "120pt".to_string()),
-            (x2, y2, w2, h2, Color32::from_rgb(20, 140, 110), format!("Flex {:.0}pt", w2)),
+            (
+                x0,
+                y0,
+                w0,
+                h0,
+                Color32::from_rgb(30, 80, 160),
+                "90pt".to_string(),
+            ),
+            (
+                x1,
+                y1,
+                w1,
+                h1,
+                Color32::from_rgb(110, 50, 160),
+                "120pt".to_string(),
+            ),
+            (
+                x2,
+                y2,
+                w2,
+                h2,
+                Color32::from_rgb(20, 140, 110),
+                format!("Flex {:.0}pt", w2),
+            ),
         ] {
             let r = Rect::from_min_size(pos2(row_alloc_rect.min.x + x, y), vec2(w, h));
             rp.rect_filled(r, CornerRadius::same(4), col);
-            rp.text(r.center(), Align2::CENTER_CENTER, txt, FontId::proportional(10.5), Color32::WHITE);
+            rp.text(
+                r.center(),
+                Align2::CENTER_CENTER,
+                txt,
+                FontId::proportional(10.5),
+                Color32::WHITE,
+            );
         }
 
         content_ui.add_space(12.0);
         content_ui.label(
-            egui::RichText::new("MacScrollView (7pt → 10pt Hover Expansion & Track-Click Page Jump)")
-                .font(label_font)
-                .strong(),
+            egui::RichText::new(
+                "MacScrollView (7pt → 10pt Hover Expansion & Track-Click Page Jump)",
+            )
+            .font(label_font)
+            .strong(),
         );
         MacScrollView::both("demo_nested_scroll")
             .theme(theme)

@@ -5,7 +5,8 @@
 
 use crate::theme::MacTheme;
 use egui::{
-    CornerRadius, Key, Modifiers, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2,
+    Color32, CornerRadius, Key, Modifiers, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui,
+    Vec2,
 };
 
 /// Authentic macOS segmented pill selector (`NSSegmentedControl` equivalent).
@@ -88,14 +89,16 @@ impl<'a> MacSegmentedControl<'a> {
         let min_item_w = segmented_tokens.item_width.points();
 
         let mut max_content_w = min_item_w;
-        for opt in self.options.iter() {
+        let mut galleys = Vec::with_capacity(self.options.len());
+        for &opt in self.options {
             let galley =
                 ui.painter()
-                    .layout_no_wrap((*opt).to_string(), font_id.clone(), theme.label());
+                    .layout_no_wrap(opt.to_owned(), font_id.clone(), Color32::PLACEHOLDER);
             let padded_w = galley.size().x + padding_h * 2.0;
             if padded_w > max_content_w {
                 max_content_w = padded_w;
             }
+            galleys.push(galley);
         }
         let segment_width = max_content_w;
         let count = self.options.len().max(1);
@@ -167,7 +170,7 @@ impl<'a> MacSegmentedControl<'a> {
             StrokeKind::Inside,
         );
 
-        for (i, opt) in self.options.iter().enumerate() {
+        for (i, galley) in galleys.into_iter().enumerate() {
             let seg_rect = Rect::from_min_size(
                 Pos2::new(rect.min.x + i as f32 * segment_width, rect.min.y),
                 Vec2::new(segment_width, height),
@@ -190,13 +193,10 @@ impl<'a> MacSegmentedControl<'a> {
                 theme.secondary_label().gamma_multiply(alpha_factor)
             };
 
-            painter.text(
-                seg_rect.center(),
-                egui::Align2::CENTER_CENTER,
-                *opt,
-                font_id.clone(),
-                text_color,
-            );
+            let text_pos = egui::Align2::CENTER_CENTER
+                .anchor_size(seg_rect.center(), galley.size())
+                .min;
+            painter.galley(text_pos, galley, text_color);
         }
 
         response

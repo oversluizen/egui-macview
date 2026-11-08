@@ -177,12 +177,12 @@ impl<'a> MacPathControl<'a> {
 
         let mut choose_clicked = false;
         let right_limit = if self.show_choose_button {
-            let lbl = self.choose_label.to_owned();
-            let choose_text_w = ui.fonts_mut(|f| {
-                f.layout_no_wrap(lbl, font_id.clone(), theme.label())
-                    .size()
-                    .x
-            });
+            let choose_galley = painter.layout_no_wrap(
+                self.choose_label.to_owned(),
+                font_id.clone(),
+                Color32::PLACEHOLDER,
+            );
+            let choose_text_w = choose_galley.size().x;
             let btn_w = choose_text_w + pcm.choose_button_padding.points() * 2.0;
             let btn_h = pcm.choose_button_height.points();
             let btn_pos = Pos2::new(
@@ -212,13 +212,10 @@ impl<'a> MacPathControl<'a> {
                 theme.placeholder_text()
             };
             painter.rect(btn_rect, seg_r, btn_bg, border_stroke, StrokeKind::Inside);
-            painter.text(
-                btn_rect.center(),
-                Align2::CENTER_CENTER,
-                self.choose_label,
-                font_id.clone(),
-                btn_fg,
-            );
+            let choose_pos = Align2::CENTER_CENTER
+                .anchor_size(btn_rect.center(), choose_galley.size())
+                .min;
+            painter.galley(choose_pos, choose_galley, btn_fg);
             btn_rect.left() - pad_h
         } else {
             rect.right() - pad_h
@@ -237,12 +234,12 @@ impl<'a> MacPathControl<'a> {
             if cursor_x >= right_limit {
                 break;
             }
-            let title_str = comp.title.to_owned();
-            let title_w = ui.fonts_mut(|f| {
-                f.layout_no_wrap(title_str, font_id.clone(), theme.label())
-                    .size()
-                    .x
-            });
+            let title_galley = painter.layout_no_wrap(
+                comp.title.to_owned(),
+                font_id.clone(),
+                Color32::PLACEHOLDER,
+            );
+            let title_w = title_galley.size().x;
             let seg_w = (seg_pad_h * 2.0 + icon_sz + icon_gap + title_w)
                 .min((right_limit - cursor_x).max(0.0));
             let seg_rect = Rect::from_min_size(
@@ -267,14 +264,11 @@ impl<'a> MacPathControl<'a> {
             let icon_rect = Rect::from_center_size(icon_center, Vec2::splat(icon_sz));
             paint_component_icon(&seg_painter, theme, comp, icon_rect);
 
-            let text_pos = Pos2::new(icon_rect.right() + icon_gap, rect.center().y);
-            seg_painter.text(
-                text_pos,
-                Align2::LEFT_CENTER,
-                comp.title,
-                font_id.clone(),
-                text_color,
-            );
+            let text_anchor = Pos2::new(icon_rect.right() + icon_gap, rect.center().y);
+            let text_pos = Align2::LEFT_CENTER
+                .anchor_size(text_anchor, title_galley.size())
+                .min;
+            seg_painter.galley(text_pos, title_galley, text_color);
 
             cursor_x = seg_rect.right() + seg_spacing;
             if idx + 1 < count && cursor_x + chev_sz < right_limit {

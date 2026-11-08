@@ -4,8 +4,8 @@ use super::CenterState;
 use egui::{FontId, Ui};
 use egui_macview::{
     theme::MacTheme, MacButtonCell, MacPathComponent, MacPathControl, MacProgressControlSize,
-    MacProgressIndicator, MacSlider, MacSortDirection, MacTableColumn, MacTableView, MacToastManager,
-    MacToggle, MacTokenField,
+    MacProgressIndicator, MacSlider, MacSortDirection, MacTableColumn, MacTableView,
+    MacToastManager, MacToggle, MacTokenField,
 };
 use std::cell::RefCell;
 
@@ -126,10 +126,9 @@ impl CenterState {
                 .show(ui);
             if let Some(clicked) = out.clicked_segment {
                 self.active_path_idx = clicked;
-                toasts.borrow_mut().info(format!(
-                    "Navigated to {}",
-                    path_items[clicked].title
-                ));
+                toasts
+                    .borrow_mut()
+                    .info(format!("Navigated to {}", path_items[clicked].title));
             }
             if out.choose_clicked {
                 self.active_path_idx = path_items.len() - 1;
@@ -278,7 +277,14 @@ impl CenterState {
             } else {
                 "Publish Selected Asset"
             };
-            if ui.add(MacButtonCell::new(btn_label).theme(theme).selected(self.is_publishing)).clicked() {
+            if ui
+                .add(
+                    MacButtonCell::new(btn_label)
+                        .theme(theme)
+                        .selected(self.is_publishing),
+                )
+                .clicked()
+            {
                 if !self.is_publishing && self.publish_progress >= 1.0 {
                     self.publish_progress = 0.0;
                 }

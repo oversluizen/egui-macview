@@ -242,7 +242,25 @@ impl eframe::App for StudioApp {
 }
 
 fn main() -> eframe::Result<()> {
-    let options = eframe::NativeOptions::default();
+    let default_wgpu_setup = eframe::egui_wgpu::WgpuSetupCreateNew::without_display_handle();
+    let options = eframe::NativeOptions {
+        renderer: eframe::Renderer::Glow,
+        wgpu_options: eframe::egui_wgpu::WgpuConfiguration {
+            wgpu_setup: eframe::egui_wgpu::WgpuSetup::CreateNew(
+                eframe::egui_wgpu::WgpuSetupCreateNew {
+                    instance_descriptor: eframe::wgpu::InstanceDescriptor {
+                        flags: eframe::wgpu::InstanceFlags::empty(),
+                        ..default_wgpu_setup.instance_descriptor
+                    },
+                    ..default_wgpu_setup
+                },
+            ),
+            ..Default::default()
+        },
+        system_font_fallback: false,
+        persist_window: false,
+        ..Default::default()
+    };
     eframe::run_native(
         "egui-macview v0.5.0 Studio Controls",
         options,

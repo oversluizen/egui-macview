@@ -184,15 +184,18 @@ impl<'a> Widget for MacTokenField<'a> {
         let (mut cursor_x, mut cursor_y) = (0.0f32, 0.0f32);
 
         for (idx, tok) in self.tokens.iter().enumerate() {
-            let f_clone = font_id.clone();
-            let col = theme.label();
-            let text_w = ui.fonts_mut(|f| f.layout_no_wrap(tok.clone(), f_clone, col).size().x);
+            let galley = ui.painter().layout_no_wrap(
+                tok.clone(),
+                font_id.clone(),
+                egui::Color32::PLACEHOLDER,
+            );
+            let text_w = galley.size().x;
             let w = (pill_pad_h * 2.0 + text_w + remove_sz).min(max_inner_w);
             if cursor_x > 0.0 && cursor_x + w > max_inner_w {
                 cursor_x = 0.0;
                 cursor_y += pill_h + row_spacing;
             }
-            pill_layouts.push((idx, cursor_x, cursor_y, w));
+            pill_layouts.push((idx, cursor_x, cursor_y, w, galley));
             cursor_x += w + pill_spacing;
         }
 
@@ -277,7 +280,7 @@ impl<'a> Widget for MacTokenField<'a> {
         let align_lc = Align2::LEFT_CENTER;
         let mut remove_idx = None;
 
-        for &(idx, rel_x, rel_y, w) in &pill_layouts {
+        for (idx, rel_x, rel_y, w, galley) in pill_layouts {
             if idx >= self.tokens.len() {
                 continue;
             }
@@ -308,10 +311,10 @@ impl<'a> Widget for MacTokenField<'a> {
 
             let clip_r = (rm_rect.left() - 2.0).max(pill_rect.left());
             let text_clip = Rect::from_min_max(pill_rect.min, Pos2::new(clip_r, pill_rect.max.y));
-            let text_pos = Pos2::new(pill_rect.left() + pill_pad_h, pill_rect.center().y);
+            let text_anchor = Pos2::new(pill_rect.left() + pill_pad_h, pill_rect.center().y);
+            let text_pos = align_lc.anchor_size(text_anchor, galley.size()).min;
             let clip_p = painter.with_clip_rect(text_clip);
-            let tok_str = &self.tokens[idx];
-            clip_p.text(text_pos, align_lc, tok_str, font_id.clone(), pill_fg);
+            clip_p.galley(text_pos, galley, pill_fg);
 
             let c = rm_rect.center();
             let x_stroke = Stroke::new(tfm.remove_icon_stroke.points(), x_fg);
@@ -325,7 +328,14 @@ impl<'a> Widget for MacTokenField<'a> {
             selected_tok = None;
             changed = true;
         }
-        ui.data_mut(|d| d.insert_temp(sel_id, selected_tok.filter(|&i| i < self.tokens.len())));
+        let next_sel = selected_tok.filter(|&i| i < self.tokens.len());
+        if next_sel != raw_sel {
+            if next_sel.is_some() {
+                ui.data_mut(|d| d.insert_temp(sel_id, next_sel));
+            } else {
+                ui.data_mut(|d| d.remove_temp::<Option<usize>>(sel_id));
+            }
+        }
 
         if self.tokens.is_empty() && self.input_buffer.is_empty() && !is_focused {
             let ph_pos = Pos2::new(input_rect.left(), input_rect.center().y);

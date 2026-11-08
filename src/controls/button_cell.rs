@@ -4,7 +4,7 @@
 //! Fully data-driven: zero hardcoded colors or dimensions.
 
 use crate::theme::MacTheme;
-use egui::{CornerRadius, Response, Stroke, StrokeKind, Ui, Vec2, Widget};
+use egui::{Color32, CornerRadius, Response, Stroke, StrokeKind, Ui, Vec2, Widget};
 
 /// Authentic macOS AppKit Push Button / Tool Button (`NSButtonCell` equivalent).
 ///
@@ -106,7 +106,7 @@ impl<'a> Widget for MacButtonCell<'a> {
         let font_id = egui::FontId::proportional(metrics.font_size.points());
         let text_layout =
             ui.painter()
-                .layout_no_wrap(self.text.to_owned(), font_id.clone(), theme.label());
+                .layout_no_wrap(self.text.to_owned(), font_id, Color32::PLACEHOLDER);
         let desired_width = self
             .width
             .unwrap_or_else(|| text_layout.size().x + padding_h * 2.0);
@@ -161,13 +161,10 @@ impl<'a> Widget for MacButtonCell<'a> {
             .primary_text_color(theme)
             .gamma_multiply(alpha_factor);
 
-        painter.text(
-            rect.center(),
-            egui::Align2::CENTER_CENTER,
-            self.text,
-            font_id,
-            text_color,
-        );
+        let text_pos = egui::Align2::CENTER_CENTER
+            .anchor_size(rect.center(), text_layout.size())
+            .min;
+        painter.galley(text_pos, text_layout, text_color);
 
         response
     }

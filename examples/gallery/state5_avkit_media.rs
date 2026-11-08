@@ -3,9 +3,8 @@
 use super::CenterState;
 use egui::{FontId, Ui};
 use egui_macview::{
-    theme::MacTheme, MacButtonCell, MacLevelIndicator, MacLevelIndicatorStyle,
-    MacLevelOrientation, MacSegmentedControl, MacSlider, MacTimelineZone, MacToastManager,
-    MacToggle, MacTrimScrubber,
+    theme::MacTheme, MacButtonCell, MacLevelIndicator, MacLevelIndicatorStyle, MacLevelOrientation,
+    MacSegmentedControl, MacSlider, MacTimelineZone, MacToastManager, MacToggle, MacTrimScrubber,
 };
 use std::cell::RefCell;
 
@@ -44,9 +43,9 @@ impl CenterState {
 
         // Live-couple stereo L/R VU levels to waveform amplitude at current playhead
         let norm_pos = (self.media_playhead / 120.0).clamp(0.0, 1.0);
-        let wave_idx =
-            ((norm_pos * (self.media_waveform.len().saturating_sub(1)) as f64).round() as usize)
-                .min(self.media_waveform.len().saturating_sub(1));
+        let wave_idx = ((norm_pos * (self.media_waveform.len().saturating_sub(1)) as f64).round()
+            as usize)
+            .min(self.media_waveform.len().saturating_sub(1));
         let wave_amp = self.media_waveform.get(wave_idx).copied().unwrap_or(0.5);
         let jitter = if self.media_playing {
             ((now * 19.0).sin() as f32) * 0.45
@@ -130,11 +129,17 @@ impl CenterState {
                 }
             }
 
-            if ui.add(MacButtonCell::new("Jump to In").theme(theme)).clicked() {
+            if ui
+                .add(MacButtonCell::new("Jump to In").theme(theme))
+                .clicked()
+            {
                 self.media_playhead = self.media_in_point;
                 toasts.borrow_mut().info("Playhead snapped to In point");
             }
-            if ui.add(MacButtonCell::new("Jump to Out").theme(theme)).clicked() {
+            if ui
+                .add(MacButtonCell::new("Jump to Out").theme(theme))
+                .clicked()
+            {
                 self.media_playhead = self.media_out_point;
                 toasts.borrow_mut().info("Playhead snapped to Out point");
             }

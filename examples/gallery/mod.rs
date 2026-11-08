@@ -9,20 +9,23 @@ pub mod state2_symbols_layout;
 pub mod state3_command_state;
 pub mod state4_finder_browser;
 pub mod state5_avkit_media;
+pub mod types;
 
 pub use chrome::detect_frameless_resize_dir;
-pub use inspector::{convert_card_units, unit_scale_and_suffix};
-pub use sidebar::SidebarState;
-
-use crate::{GalleryScreen, InspectorMode};
 use egui::{pos2, vec2, Align, Color32, CornerRadius, Layout, Pos2, Rect, Ui};
 use egui_macview::{
     theme::MacTheme, CASpring, MacCanvasFooter, MacCanvasFooterAction, MacScrollView,
     MacSearchField, MacSortDirection, MacSymbol, MacToastManager, NSUndoManager,
     CANVAS_FOOTER_HEIGHT,
 };
+pub use inspector::{convert_card_units, unit_scale_and_suffix};
+pub use sidebar::SidebarState;
 use std::cell::RefCell;
 use std::collections::BTreeSet;
+pub use types::{
+    format_tracked_small_caps, setup_system_or_custom_fonts, ExpandedProTab, GalleryScreen,
+    InspectorMode, SYMBOLS_META,
+};
 
 /// Dynamic properties of the interactive Canvas Vector Card.
 #[derive(Clone, PartialEq)]

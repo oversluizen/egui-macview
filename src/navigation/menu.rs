@@ -114,7 +114,12 @@ impl<'a> MacMenuBar<'a> {
         let theme: &MacTheme = &theme_cow;
 
         let sub_temp_id = Id::NULL.with("mac_menu_bar_submenu_highlight");
-        let mut sub_highlight: Option<usize> = ui.ctx().data(|d| d.get_temp(sub_temp_id));
+        let was_open = self.open_menu_idx.is_some();
+        let mut sub_highlight: Option<usize> = if was_open {
+            ui.ctx().data(|d| d.get_temp(sub_temp_id))
+        } else {
+            None
+        };
 
         // Guard global shortcut interception when a text editor has keyboard focus
         if !ui.ctx().egui_wants_keyboard_input() && ui.memory(|m| m.focused().is_none()) {
@@ -122,22 +127,23 @@ impl<'a> MacMenuBar<'a> {
                 ui.input_mut(|i| self.menus.iter().find_map(|m| m.consume_shortcut(i)))
             {
                 self.close();
-                ui.ctx().data_mut(|d| d.remove_temp::<usize>(sub_temp_id));
+                if was_open {
+                    ui.ctx().data_mut(|d| d.remove_temp::<usize>(sub_temp_id));
+                }
                 return Some(action);
             }
         }
 
         // Process menu and submenu keyboard navigation (consuming handled navigation keys)
-        let was_open = self.open_menu_idx.is_some();
-        let nav_action = ui.input_mut(|i| {
-            let act = super::submenu::handle_menu_bar_navigation(
-                self.menus,
-                self.open_menu_idx,
-                self.highlighted_item_idx,
-                &mut sub_highlight,
-                i,
-            );
-            if was_open {
+        if was_open {
+            let nav_action = ui.input_mut(|i| {
+                let act = super::submenu::handle_menu_bar_navigation(
+                    self.menus,
+                    self.open_menu_idx,
+                    self.highlighted_item_idx,
+                    &mut sub_highlight,
+                    i,
+                );
                 for nav_key in [
                     egui::Key::Escape,
                     egui::Key::ArrowDown,
@@ -149,18 +155,18 @@ impl<'a> MacMenuBar<'a> {
                 ] {
                     let _ = i.consume_key(egui::Modifiers::NONE, nav_key);
                 }
+                act
+            });
+            if let Some(action) = nav_action {
+                ui.ctx().data_mut(|d| d.remove_temp::<usize>(sub_temp_id));
+                return Some(action);
             }
-            act
-        });
-        if let Some(action) = nav_action {
-            ui.ctx().data_mut(|d| d.remove_temp::<usize>(sub_temp_id));
-            return Some(action);
-        }
 
-        if let Some(s_idx) = sub_highlight {
-            ui.ctx().data_mut(|d| d.insert_temp(sub_temp_id, s_idx));
-        } else {
-            ui.ctx().data_mut(|d| d.remove_temp::<usize>(sub_temp_id));
+            if let Some(s_idx) = sub_highlight {
+                ui.ctx().data_mut(|d| d.insert_temp(sub_temp_id, s_idx));
+            } else {
+                ui.ctx().data_mut(|d| d.remove_temp::<usize>(sub_temp_id));
+            }
         }
 
         let mb_metrics = theme.menu_bar_metrics();
@@ -182,9 +188,11 @@ impl<'a> MacMenuBar<'a> {
                 let text = &menu.title;
                 let text_color = if is_open { on_accent } else { theme.label() };
 
-                let galley = ui
-                    .painter()
-                    .layout_no_wrap(text.clone(), font_id.clone(), text_color);
+                let galley = ui.painter().layout_no_wrap(
+                    text.clone(),
+                    font_id.clone(),
+                    egui::Color32::PLACEHOLDER,
+                );
                 let item_width = galley.size().x + padding_h * 2.0;
                 let (rect, resp) =
                     ui.allocate_exact_size(Vec2::new(item_width, bar_height), Sense::click());
@@ -338,11 +346,14 @@ impl<'a> MacMenuBar<'a> {
                                 item_text_color,
                             );
 
-                            let right_str = match &item.kind {
+                            let right_str: Option<std::borrow::Cow<'static, str>> = match &item.kind
+                            {
                                 MacMenuItemKind::Action {
                                     shortcut: Some(sc), ..
-                                } => Some(sc.format_text()),
-                                MacMenuItemKind::Submenu { .. } => Some("›".to_string()),
+                                } => Some(std::borrow::Cow::Owned(sc.format_text())),
+                                MacMenuItemKind::Submenu { .. } => {
+                                    Some(std::borrow::Cow::Borrowed("›"))
+                                }
                                 _ => None,
                             };
                             if let Some(txt) = right_str {
@@ -351,7 +362,7 @@ impl<'a> MacMenuBar<'a> {
                                 painter.text(
                                     pos,
                                     Align2::RIGHT_CENTER,
-                                    txt,
+                                    txt.as_ref(),
                                     font_id.clone(),
                                     item_text_color,
                                 );

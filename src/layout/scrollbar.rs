@@ -29,8 +29,7 @@ pub fn render_overlay_thumb(
     alpha: f32,
     track_bg_color: Color32,
     color_fn: &impl Fn(bool, bool) -> Color32,
-    active_id: Id,
-    now: f64,
+    thumb_interacted: &mut bool,
 ) -> bool {
     let ratio = (view_span / content_span).clamp(0.0, 1.0);
     let avail = (view_span - lead - trail).max(0.0);
@@ -117,7 +116,7 @@ pub fn render_overlay_thumb(
 
     let pointer_moving = ui.input(|i| i.pointer.delta() != egui::Vec2::ZERO);
     if resp.dragged() || changed || ((track_hovered || resp.hovered()) && pointer_moving) {
-        ui.data_mut(|d| d.insert_temp(active_id, now));
+        *thumb_interacted = true;
     }
     if resp.dragged() || changed {
         ui.ctx().request_repaint();

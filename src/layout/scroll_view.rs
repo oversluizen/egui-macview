@@ -12,6 +12,14 @@ use egui::scroll_area::ScrollBarVisibility;
 use egui::{Color32, Id, Pos2, Rect, ScrollArea, Ui, Vec2};
 use std::hash::Hash;
 
+#[derive(Clone, Copy, Debug)]
+struct ScrollViewTempState {
+    drag_offset: Option<Vec2>,
+    prev_offset: Vec2,
+    last_active: f64,
+    initialized: bool,
+}
+
 /// Output returned by [`MacScrollView::show`].
 #[derive(Debug, Clone)]
 pub struct MacScrollViewOutput<R> {
@@ -177,14 +185,25 @@ impl<'a> MacScrollView<'a> {
             area = area.max_width(mw);
         }
 
+        let state_id = self.id.with("sv_state");
+        let now = ui.input(|i| i.time);
+        let sv_state = ui.data_mut(|d| {
+            if let Some(st) = d.get_temp_mut_or_default::<Option<ScrollViewTempState>>(state_id) {
+                let taken_drag = if self.offset_override.is_none() {
+                    st.drag_offset.take()
+                } else {
+                    None
+                };
+                Some((*st, taken_drag))
+            } else {
+                None
+            }
+        });
+
         if let Some(ref o) = self.offset_override {
             area = area.scroll_offset(**o);
-        } else if let Some(drag_o) = ui.data_mut(|d| {
-            d.get_temp::<Option<Vec2>>(self.id.with("drag_offset"))
-                .flatten()
-        }) {
+        } else if let Some((_, Some(drag_o))) = sv_state {
             area = area.scroll_offset(drag_o);
-            ui.data_mut(|d| d.insert_temp(self.id.with("drag_offset"), None::<Vec2>));
         }
 
         let output = area.show(ui, content);
@@ -198,27 +217,28 @@ impl<'a> MacScrollView<'a> {
         current_offset.x = current_offset.x.clamp(0.0, max_scroll_x);
         current_offset.y = current_offset.y.clamp(0.0, max_scroll_y);
 
-        // 3. Inactivity & Fade computation
-        let prev_offset_id = self.id.with("prev_offset");
-        let prev_offset: Vec2 =
-            ui.data_mut(|d| *d.get_temp_mut_or_insert_with(prev_offset_id, || current_offset));
-        let scrolled_this_frame = (current_offset - prev_offset).length_sq() > f32::EPSILON;
-        ui.data_mut(|d| d.insert_temp(prev_offset_id, current_offset));
-
-        let last_active_id = self.id.with("last_active_time");
-        let now = ui.input(|i| i.time);
-        let mut last_active: f64 =
-            ui.data_mut(|d| *d.get_temp_mut_or_insert_with(last_active_id, || now));
+        // 3. Inactivity & Fade computation (consolidated single state struct)
+        let mut st = sv_state.map(|(s, _)| s).unwrap_or(ScrollViewTempState {
+            drag_offset: None,
+            prev_offset: current_offset,
+            last_active: now,
+            initialized: false,
+        });
+        let scrolled_this_frame = (current_offset - st.prev_offset).length_sq() > f32::EPSILON;
+        st.prev_offset = current_offset;
+        let mut last_active = st.last_active;
+        let initialized = st.initialized;
+        st.initialized = true;
 
         let is_pointer_in_viewport = ui.rect_contains_pointer(viewport_rect);
-        let has_scroll_delta = ui.input(|i| {
-            i.smooth_scroll_delta != Vec2::ZERO
+        let (has_scroll_delta, pointer_moving) = ui.input(|i| {
+            let wheel = i.smooth_scroll_delta != Vec2::ZERO
                 || i.raw
                     .events
                     .iter()
-                    .any(|e| matches!(e, egui::Event::MouseWheel { .. }))
+                    .any(|e| matches!(e, egui::Event::MouseWheel { .. }));
+            (wheel, i.pointer.delta() != Vec2::ZERO)
         });
-        let pointer_moving = ui.input(|i| i.pointer.delta() != Vec2::ZERO);
 
         let hit_zone_padding = metrics.hit_zone_padding.points();
         let min_visible_thumb_len = metrics.min_visible_thumb_length.points();
@@ -239,13 +259,7 @@ impl<'a> MacScrollView<'a> {
             || (in_scrollbar_zone && pointer_moving)
         {
             last_active = now;
-            ui.data_mut(|d| d.insert_temp(last_active_id, last_active));
-        }
-
-        let init_id = self.id.with("init_done");
-        let initialized: bool = ui.data_mut(|d| *d.get_temp_mut_or_insert_with(init_id, || false));
-        if !initialized {
-            ui.data_mut(|d| d.insert_temp(init_id, true));
+            st.last_active = now;
         }
 
         let has_v = self.vertical && max_scroll_y > 0.0;
@@ -282,6 +296,7 @@ impl<'a> MacScrollView<'a> {
             theme.scrollbar_thumb_color(hovered || dragged, alpha)
         };
         let track_bg_color = theme.control().gamma_multiply(alpha * 0.5);
+        let mut thumb_interacted = false;
 
         // 4. Vertical Floating Overlay Scrollbar
         if has_v {
@@ -311,11 +326,10 @@ impl<'a> MacScrollView<'a> {
                 alpha,
                 track_bg_color,
                 &get_thumb_color,
-                last_active_id,
-                now,
+                &mut thumb_interacted,
             ) && self.offset_override.is_none()
             {
-                ui.data_mut(|d| d.insert_temp(self.id.with("drag_offset"), Some(current_offset)));
+                st.drag_offset = Some(current_offset);
             }
         }
 
@@ -347,19 +361,16 @@ impl<'a> MacScrollView<'a> {
                 alpha,
                 track_bg_color,
                 &get_thumb_color,
-                last_active_id,
-                now,
+                &mut thumb_interacted,
             ) && self.offset_override.is_none()
             {
-                ui.data_mut(|d| d.insert_temp(self.id.with("drag_offset"), Some(current_offset)));
+                st.drag_offset = Some(current_offset);
             }
         }
 
-        if self.auto_hide && (has_v || has_h) {
-            let updated_last_active: f64 = ui
-                .data(|d| d.get_temp(last_active_id))
-                .unwrap_or(last_active);
-            if updated_last_active > last_active {
+        if thumb_interacted {
+            st.last_active = now;
+            if self.auto_hide && (has_v || has_h) {
                 if alpha < 1.0 {
                     ui.ctx()
                         .request_repaint_after(std::time::Duration::from_millis(16));
@@ -368,6 +379,8 @@ impl<'a> MacScrollView<'a> {
                 }
             }
         }
+
+        ui.data_mut(|d| d.insert_temp(state_id, Some(st)));
 
         // 6. Persist updated offset
         if let Some(ref mut o) = self.offset_override {

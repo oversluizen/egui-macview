@@ -298,6 +298,7 @@ impl eframe::App for PreferencesApp {
 }
 
 fn main() -> eframe::Result<()> {
+    let default_wgpu_setup = eframe::egui_wgpu::WgpuSetupCreateNew::without_display_handle();
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([540.0, 480.0])
@@ -305,6 +306,21 @@ fn main() -> eframe::Result<()> {
             .with_decorations(false)
             .with_transparent(true)
             .with_title("Glyphs Preferences — egui-macview"),
+        renderer: eframe::Renderer::Glow,
+        wgpu_options: eframe::egui_wgpu::WgpuConfiguration {
+            wgpu_setup: eframe::egui_wgpu::WgpuSetup::CreateNew(
+                eframe::egui_wgpu::WgpuSetupCreateNew {
+                    instance_descriptor: eframe::wgpu::InstanceDescriptor {
+                        flags: eframe::wgpu::InstanceFlags::empty(),
+                        ..default_wgpu_setup.instance_descriptor
+                    },
+                    ..default_wgpu_setup
+                },
+            ),
+            ..Default::default()
+        },
+        system_font_fallback: false,
+        persist_window: false,
         ..Default::default()
     };
     eframe::run_native(
