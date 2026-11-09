@@ -64,6 +64,7 @@ pub struct MacTrimScrubber<'a> {
     width: Option<f32>,
     height: Option<f32>,
     enabled: bool,
+    clamp_playhead_to_trim: bool,
     theme: Option<&'a MacTheme>,
 }
 
@@ -89,6 +90,7 @@ impl<'a> MacTrimScrubber<'a> {
             width: None,
             height: None,
             enabled: true,
+            clamp_playhead_to_trim: true,
             theme: None,
         }
     }
@@ -120,6 +122,13 @@ impl<'a> MacTrimScrubber<'a> {
     /// Enables or disables interaction.
     pub fn enabled(mut self, enabled: bool) -> Self {
         self.enabled = enabled;
+        self
+    }
+
+    /// Configures whether the playhead is strictly clamped to `[in_point, out_point]` (`true`, default)
+    /// or allowed anywhere within `0.0..=duration` (`false`) for out-of-trim inspection.
+    pub fn clamp_playhead_to_trim(mut self, clamp: bool) -> Self {
+        self.clamp_playhead_to_trim = clamp;
         self
     }
 
@@ -157,14 +166,19 @@ impl<'a> MacTrimScrubber<'a> {
 
         let mut changed = false;
 
-        // Enforce ordering invariants: 0.0 <= in_point <= out_point <= duration, in_point <= playhead <= out_point
+        // Enforce ordering invariants: 0.0 <= in_point <= out_point <= duration;
+        // preserve playhead anywhere within 0.0..=duration unless out of media bounds or in > out.
         let orig_in = *self.in_point;
         let orig_out = *self.out_point;
         let orig_play = *self.playhead;
 
         let clamped_in = orig_in.clamp(0.0, dur);
         let clamped_out = orig_out.clamp(clamped_in, dur);
-        let clamped_play = orig_play.clamp(clamped_in, clamped_out);
+        let clamped_play = if self.clamp_playhead_to_trim {
+            orig_play.clamp(clamped_in, clamped_out)
+        } else {
+            orig_play.clamp(0.0, dur)
+        };
 
         if (clamped_in - orig_in).abs() > f64::EPSILON
             || (clamped_out - orig_out).abs() > f64::EPSILON
@@ -228,9 +242,10 @@ impl<'a> MacTrimScrubber<'a> {
                     i.pointer.interact_pos().or_else(|| i.pointer.latest_pos()),
                 )
             });
-            let mut target = ui
-                .data_mut(|d| d.get_temp::<(bool, bool, bool)>(drag_id))
+            let prev_target = ui
+                .data(|d| d.get_temp::<(bool, bool, bool)>(drag_id))
                 .unwrap_or((false, false, false));
+            let mut target = prev_target;
 
             if any_pressed {
                 if let Some(pos) = ptr_pos {
@@ -271,7 +286,11 @@ impl<'a> MacTrimScrubber<'a> {
                         out_point_dragged = true;
                         changed = true;
                     } else if active_play {
-                        let next_play = x_to_time(pos.x).clamp(*self.in_point, *self.out_point);
+                        let next_play = if self.clamp_playhead_to_trim {
+                            x_to_time(pos.x).clamp(*self.in_point, *self.out_point)
+                        } else {
+                            x_to_time(pos.x).clamp(0.0, dur)
+                        };
                         *self.playhead = next_play;
                         playhead_dragged = true;
                         changed = true;
@@ -282,7 +301,9 @@ impl<'a> MacTrimScrubber<'a> {
             if !primary_down || any_released {
                 target = (false, false, false);
             }
-            ui.data_mut(|d| d.insert_temp(drag_id, target));
+            if prev_target != target {
+                ui.data_mut(|d| d.insert_temp(drag_id, target));
+            }
         }
 
         let tc = Self::format_timecode(theme, *self.playhead);

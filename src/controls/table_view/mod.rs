@@ -29,9 +29,14 @@ pub struct MacTableViewResponse {
     pub toggled_sort: Option<(usize, MacSortDirection)>,
     /// Index of the row clicked during this frame, if any.
     pub clicked_row: Option<usize>,
+    /// Index of the row double-clicked or activated via Key::Enter during this frame, if any.
+    pub double_clicked_row: Option<usize>,
     /// True if the row selection set changed during this frame.
     pub selection_changed: bool,
 }
+
+/// Type alias for [`MacTableViewResponse`] adhering to AppKit output naming.
+pub type MacTableViewOutput = MacTableViewResponse;
 
 /// Authentic macOS AppKit multi-column data table (`NSTableView` equivalent).
 ///
@@ -156,6 +161,7 @@ impl<'a> MacTableView<'a> {
         );
 
         let mut clicked_row = None;
+        let mut double_clicked_row = None;
         let mut selection_changed = false;
         let prev_sel_len = self.selection.len();
         self.selection.retain(|&idx| idx < self.row_count);
@@ -170,31 +176,55 @@ impl<'a> MacTableView<'a> {
             .or_else(|| self.selection.iter().next().copied())
             .unwrap_or(0);
 
-        // Keyboard ArrowUp / ArrowDown navigation when enabled and a row is selected or focused
-        if self.enabled
-            && self.row_count > 0
-            && (!self.selection.is_empty() || response.has_focus())
-        {
-            if ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::ArrowDown)) {
+        // Keyboard ArrowUp / ArrowDown navigation only when this table is focused or hovered
+        let is_focused_or_hovered = response.has_focus()
+            || ui.memory(|m| m.has_focus(self.id))
+            || ui.rect_contains_pointer(rect);
+        if self.enabled && self.row_count > 0 {
+            if is_focused_or_hovered
+                && ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::ArrowDown))
+            {
                 let cur = self.selection.iter().next_back().copied().unwrap_or(0);
                 let next = (cur + 1).min(self.row_count - 1);
                 self.selection.clear();
                 self.selection.insert(next);
                 anchor = next;
                 selection_changed = true;
-            } else if ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::ArrowUp)) {
+            } else if is_focused_or_hovered
+                && ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::ArrowUp))
+            {
                 let cur = self.selection.iter().next().copied().unwrap_or(0);
                 let prev = cur.saturating_sub(1);
                 self.selection.clear();
                 self.selection.insert(prev);
                 anchor = prev;
                 selection_changed = true;
+            } else if (is_focused_or_hovered
+                || (!self.selection.is_empty() && ui.memory(|m| m.focused().is_none())))
+                && ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Enter))
+            {
+                if let Some(&first_sel) = self.selection.iter().next() {
+                    double_clicked_row = Some(first_sel);
+                }
             }
         }
 
         let body_top = header_rect.bottom();
+        let clip_rect = ui.clip_rect();
 
-        for row_idx in 0..self.row_count {
+        let (first_row, last_row) = if row_h > 0.0 {
+            let start = ((clip_rect.top() - body_top) / row_h).floor().max(0.0) as usize;
+            let end = (((clip_rect.bottom() - body_top) / row_h).ceil().max(0.0) as usize)
+                .min(self.row_count);
+            // 1-row overscan margin prevents subpixel seam flickering on high-DPI displays
+            let start = start.saturating_sub(1).min(self.row_count);
+            let end = (end + 1).clamp(start, self.row_count);
+            (start, end)
+        } else {
+            (0, self.row_count)
+        };
+
+        for row_idx in first_row..last_row {
             let row_y = body_top + (row_idx as f32) * row_h;
             let row_rect = Rect::from_min_size(
                 Pos2::new(rect.left(), row_y),
@@ -207,6 +237,10 @@ impl<'a> MacTableView<'a> {
                 Sense::hover()
             };
             let row_resp = ui.interact(row_rect, row_id, row_sense);
+
+            if row_resp.double_clicked() && self.enabled {
+                double_clicked_row = Some(row_idx);
+            }
 
             if row_resp.clicked() && self.enabled {
                 clicked_row = Some(row_idx);
@@ -285,7 +319,10 @@ impl<'a> MacTableView<'a> {
             }
         }
 
-        ui.data_mut(|d| d.insert_temp(anchor_id, anchor));
+        let prev_anchor = ui.data(|d| d.get_temp::<usize>(anchor_id));
+        if prev_anchor != Some(anchor) {
+            ui.data_mut(|d| d.insert_temp(anchor_id, anchor));
+        }
 
         ui.painter_at(rect).rect_stroke(
             rect,
@@ -303,6 +340,7 @@ impl<'a> MacTableView<'a> {
             clicked_header,
             toggled_sort,
             clicked_row,
+            double_clicked_row,
             selection_changed,
         }
     }

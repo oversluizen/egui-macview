@@ -293,3 +293,88 @@ fn test_consolidated_widget_memory_and_galley_reuse() {
     }
     assert_eq!(text_shapes, 3);
 }
+
+#[test]
+fn test_cots_unfocused_table_ignores_arrow_keys_and_scrubber_preserves_valid_playhead() {
+    use egui::{Context, Event, Key, Modifiers, Pos2, RawInput, Rect, Vec2};
+    use egui_macview::{MacTableColumn, MacTableView, MacTrimScrubber};
+    use std::collections::BTreeSet;
+
+    let ctx = Context::default();
+    let theme = MacTheme::default();
+    let cols = [MacTableColumn::new("Item", 160.0)];
+
+    let mut sel_a = BTreeSet::from([0usize]);
+    let mut sel_b = BTreeSet::from([1usize]);
+    let mut rect_b = Rect::NOTHING;
+
+    let base_raw = RawInput {
+        screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(400.0, 400.0))),
+        ..Default::default()
+    };
+    ctx.run_ui(base_raw.clone(), |ui| {
+        MacTableView::new("tbl_a", &cols, 5, &mut sel_a)
+            .theme(&theme)
+            .row_height(20.0)
+            .show(ui, |u, r, _| {
+                u.label(format!("A{r}"));
+            });
+        rect_b = MacTableView::new("tbl_b", &cols, 5, &mut sel_b)
+            .theme(&theme)
+            .row_height(20.0)
+            .show(ui, |u, r, _| {
+                u.label(format!("B{r}"));
+            })
+            .response
+            .rect;
+    })
+    .textures_delta
+    .clear();
+
+    let mut arrow_raw = base_raw.clone();
+    arrow_raw.events.push(Event::PointerMoved(rect_b.center()));
+    arrow_raw.events.push(Event::Key {
+        key: Key::ArrowDown,
+        physical_key: None,
+        pressed: true,
+        repeat: false,
+        modifiers: Modifiers::NONE,
+    });
+    ctx.run_ui(arrow_raw, |ui| {
+        MacTableView::new("tbl_a", &cols, 5, &mut sel_a)
+            .theme(&theme)
+            .row_height(20.0)
+            .show(ui, |u, r, _| {
+                u.label(format!("A{r}"));
+            });
+        MacTableView::new("tbl_b", &cols, 5, &mut sel_b)
+            .theme(&theme)
+            .row_height(20.0)
+            .show(ui, |u, r, _| {
+                u.label(format!("B{r}"));
+            });
+    })
+    .textures_delta
+    .clear();
+
+    assert_eq!(sel_a, BTreeSet::from([0]));
+    assert_eq!(sel_b, BTreeSet::from([2]));
+
+    let mut in_pt = 500.0;
+    let mut out_pt = 1000.0;
+    let mut playhead = 70.0;
+    let mut scrub_resp = None;
+    ctx.run_ui(base_raw, |ui| {
+        scrub_resp = Some(
+            MacTrimScrubber::new("trim_test", 1200.0, &mut in_pt, &mut out_pt, &mut playhead)
+                .clamp_playhead_to_trim(false)
+                .theme(&theme)
+                .show(ui),
+        );
+    })
+    .textures_delta
+    .clear();
+    let resp = scrub_resp.expect("scrubber response");
+    assert!((playhead - 70.0).abs() < 1e-6);
+    assert!(!resp.playhead_dragged && !resp.changed);
+}
