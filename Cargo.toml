@@ -98,3 +98,7 @@ path = "tests/studio_controls_v05_tests.rs"
 name = "runtime_hygiene_and_invariants_tests"
 path = "tests/runtime_hygiene_and_invariants_tests.rs"
 
+[[test]]
+name = "media_and_finder_interactive_boost_tests"
+path = "tests/media_and_finder_interactive_boost_tests.rs"
+

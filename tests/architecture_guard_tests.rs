@@ -176,12 +176,14 @@ fn test_guard_zero_cross_component_token_borrowing_and_self_check() {
         }
         let allowed: &[&str] = match (pname, fname) {
             (_, "button_cell.rs") => &["button"],
+            (_, "circular_slider.rs") => &["slider"],
             (_, "color_well.rs") => &["color_well"],
             (_, "level_indicator.rs") => &["level_indicator"],
             (_, "outline_view.rs") => &["outline_view", "thumbnail"],
             (_, "path_control.rs") => &["path_control"],
             (_, "popup_button.rs") => &["popup_button"],
             (_, "progress_indicator.rs") => &["progress_indicator"],
+            (_, "rating_indicator.rs") => &["level_indicator"],
             (_, "search_field.rs") => &["search_field"],
             (_, "segmented.rs") => &["segmented"],
             (_, "slider.rs") => &["slider"],

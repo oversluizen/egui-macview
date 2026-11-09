@@ -18,6 +18,19 @@ pub(crate) use gallery_app::{
     format_tracked_small_caps, CardModel, ExpandedProTab, GalleryApp, GalleryScreen, InspectorMode,
 };
 
+fn key_raw_input(key: Key) -> RawInput {
+    RawInput {
+        events: vec![Event::Key {
+            key,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: Modifiers::default(),
+        }],
+        ..Default::default()
+    }
+}
+
 #[test]
 fn test_canvas_footer_24pt_layout_budget_and_interactive_breadcrumbs() {
     let ctx = Context::default();
@@ -35,8 +48,7 @@ fn test_canvas_footer_24pt_layout_budget_and_interactive_breadcrumbs() {
         let footer =
             MacCanvasFooter::new(&breadcrumbs, Some(cursor_pos), zoom_factor).theme(&theme);
         assert_eq!(footer.get_height(), 24.0);
-        let action = footer.show(ui, container_width);
-        assert_eq!(action, None);
+        assert_eq!(footer.show(ui, container_width), None);
     });
     out1.textures_delta.clear();
 
@@ -106,24 +118,14 @@ fn test_command_palette_query_filter_and_navigation() {
     palette.set_query("zoom");
     assert_eq!(palette.filtered_items().len(), 2);
 
-    let key_inp = |key: Key| RawInput {
-        events: vec![Event::Key {
-            key,
-            physical_key: None,
-            pressed: true,
-            repeat: false,
-            modifiers: Modifiers::default(),
-        }],
-        ..Default::default()
-    };
-    let mut out1 = ctx.run_ui(key_inp(Key::ArrowDown), |ui| {
+    let mut out1 = ctx.run_ui(key_raw_input(Key::ArrowDown), |ui| {
         palette.show(ui.ctx(), &theme);
     });
     out1.textures_delta.clear();
     assert_eq!(palette.selected_index, 1);
 
     let mut triggered = None;
-    let mut out2 = ctx.run_ui(key_inp(Key::Enter), |ui| {
+    let mut out2 = ctx.run_ui(key_raw_input(Key::Enter), |ui| {
         triggered = palette.show(ui.ctx(), &theme);
     });
     out2.textures_delta.clear();
@@ -152,25 +154,15 @@ fn test_command_palette_fuzzy_subsequence_scoring_and_escape() {
     let mut palette = MacCommandPalette::new(items).open(true);
     palette.set_query("export");
 
-    let esc_inp = || RawInput {
-        events: vec![Event::Key {
-            key: Key::Escape,
-            physical_key: None,
-            pressed: true,
-            repeat: false,
-            modifiers: Modifiers::default(),
-        }],
-        ..Default::default()
-    };
     let mut esc_leaked = false;
-    let mut out1 = ctx.run_ui(esc_inp(), |ui| {
+    let mut out1 = ctx.run_ui(key_raw_input(Key::Escape), |ui| {
         palette.show(ui.ctx(), &theme);
         esc_leaked = ui.input(|i| i.key_pressed(Key::Escape));
     });
     out1.textures_delta.clear();
     assert!(palette.is_open() && palette.query().is_empty() && !esc_leaked);
 
-    let mut out2 = ctx.run_ui(esc_inp(), |ui| {
+    let mut out2 = ctx.run_ui(key_raw_input(Key::Escape), |ui| {
         palette.show(ui.ctx(), &theme);
     });
     out2.textures_delta.clear();
@@ -204,7 +196,7 @@ fn test_gallery_v05_five_state_studio_and_frameless_decorations() {
         combined_src.contains(".numeric("),
         "Gallery numeric inspector fields must wire .numeric(range, step) for arrow-key stepping"
     );
-    for required_v05 in [
+    let reqs = [
         "MacPathControl::new",
         "MacTableView::new",
         "MacTokenField::new",
@@ -215,11 +207,9 @@ fn test_gallery_v05_five_state_studio_and_frameless_decorations() {
         ".peak_hold(",
         "interactive_canvas_card_resize",
         "!on_resize_border",
-    ] {
-        assert!(
-            combined_src.contains(required_v05),
-            "5-State v0.5 Gallery must integrate {required_v05}"
-        );
+    ];
+    for req in reqs {
+        assert!(combined_src.contains(req), "Gallery must integrate {req}");
     }
 }
 
@@ -240,12 +230,8 @@ fn test_split_view_sibling_panes_have_distinct_auto_ids() {
         .theme(&theme)
         .show(
             ui,
-            |first_ui| {
-                first_id = first_ui.next_auto_id();
-            },
-            |second_ui| {
-                second_id = second_ui.next_auto_id();
-            },
+            |first_ui| first_id = first_ui.next_auto_id(),
+            |second_ui| second_id = second_ui.next_auto_id(),
         );
     });
     out.textures_delta.clear();
@@ -282,7 +268,7 @@ fn test_caspring_controls_do_not_request_repaint_at_rest() {
                     .theme(&theme)
                     .show(ui, |tree| {
                         tree.row("row_a", 0, true, expanded, false, |row| {
-                            row.label("Idle Row");
+                            row.label("Idle Row")
                         });
                     });
             });
@@ -312,17 +298,15 @@ fn test_caspring_controls_do_not_request_repaint_at_rest() {
     let spring_ctx = Context::default();
     let spring = theme.motion().swiftui_bouncy.to_spring();
     let anim_id = egui::Id::NULL.with("direct_spring_test");
-    let eval_at = |time: f64, target: f32| -> (f32, std::time::Duration) {
+    let eval_at = |time: f64, target: f32| {
         let mut val = 0.0;
-        let mut out = spring_ctx.run_ui(
-            RawInput {
-                time: Some(time),
-                ..Default::default()
-            },
-            |ui| {
-                val = spring.animate_f32(ui.ctx(), anim_id, target);
-            },
-        );
+        let raw = RawInput {
+            time: Some(time),
+            ..Default::default()
+        };
+        let mut out = spring_ctx.run_ui(raw, |ui| {
+            val = spring.animate_f32(ui.ctx(), anim_id, target)
+        });
         out.textures_delta.clear();
         (
             val,
@@ -356,26 +340,21 @@ fn test_caspring_controls_do_not_request_repaint_at_rest() {
 
 #[test]
 fn test_inspector_convert_card_units_and_scale() {
-    let mut card = gallery_app::CardModel::default();
-    assert_eq!(
-        (&*card.width, &*card.height, &*card.radius),
-        ("260.0", "150.0", "10.0")
-    );
-    gallery_app::convert_card_units(&mut card, 0, 1);
-    assert_eq!(
-        (&*card.width, &*card.height, &*card.radius),
-        ("520.0", "300.0", "20.0")
-    );
-    gallery_app::convert_card_units(&mut card, 1, 2);
-    assert_eq!(
-        (&*card.width, &*card.height, &*card.radius),
-        ("100.0", "100.0", "25.0")
-    );
-    gallery_app::convert_card_units(&mut card, 2, 0);
-    assert_eq!(
-        (&*card.width, &*card.height, &*card.radius),
-        ("260.0", "150.0", "10.0")
-    );
+    let mut c = gallery_app::CardModel::default();
+    fn d(card: &gallery_app::CardModel) -> (&str, &str, &str) {
+        (&card.width, &card.height, &card.radius)
+    }
+    for (from, to, exp) in [
+        (0, 0, ("260.0", "150.0", "10.0")),
+        (0, 1, ("520.0", "300.0", "20.0")),
+        (1, 2, ("100.0", "100.0", "25.0")),
+        (2, 0, ("260.0", "150.0", "10.0")),
+    ] {
+        if from != to {
+            gallery_app::convert_card_units(&mut c, from, to);
+        }
+        assert_eq!(d(&c), exp);
+    }
 }
 
 #[test]
@@ -383,65 +362,84 @@ fn test_gallery_native_to_custom_chrome_resize_and_hitbox_resync() {
     use egui::ViewportCommand as VC;
     use egui_macview::theme::WindowControlsStyle as WCS;
     let (ctx, mut app) = (Context::default(), gallery_app::GalleryApp::new());
-    let run_frame = |app: &mut gallery_app::GalleryApp, sz: egui::Vec2, maximized: Option<bool>| {
-        let rect = egui::Rect::from_min_size(Pos2::ZERO, sz);
+    let run_frame = |app: &mut gallery_app::GalleryApp,
+                     in_sz: egui::Vec2,
+                     out_sz: egui::Vec2,
+                     max: Option<bool>| {
+        let (rin, rout) = (
+            egui::Rect::from_min_size(Pos2::ZERO, in_sz),
+            egui::Rect::from_min_size(Pos2::ZERO, out_sz),
+        );
         let mut raw = RawInput {
-            screen_rect: Some(rect),
+            screen_rect: Some(rin),
             ..Default::default()
         };
         let vp = raw.viewports.entry(egui::ViewportId::ROOT).or_default();
-        (vp.inner_rect, vp.maximized) = (Some(rect), maximized);
+        (vp.inner_rect, vp.outer_rect, vp.maximized) = (Some(rin), Some(rout), max);
         let mut out = ctx.run_ui(raw, |ui| app.render_ui(ui));
         out.textures_delta.clear();
         let vp_out = out.viewport_output.remove(&egui::ViewportId::ROOT).unwrap();
         (vp_out.commands, vp_out.repaint_delay)
     };
+    let rf = |app: &mut gallery_app::GalleryApp, sz: egui::Vec2, max: Option<bool>| {
+        run_frame(app, sz, sz, max)
+    };
 
     let init_sz = egui::vec2(1160.0, 740.0);
-    let _ = run_frame(&mut app, init_sz, Some(false));
-    let (cmds_idle, _) = run_frame(&mut app, init_sz, Some(false));
+    let _ = rf(&mut app, init_sz, Some(false));
+    let (cmds_idle, _) = rf(&mut app, init_sz, Some(false));
     assert!(!cmds_idle
         .iter()
         .any(|c| matches!(c, VC::Decorations(_) | VC::InnerSize(_))));
 
-    // 1. AppleTrafficLights -> NativeHost: Decorations(true) + InnerSize nudge/restore + repaint
+    // 1. AppleTrafficLights -> NativeHost: Decorations(true) + 1-frame InnerSize nudge/restore + repaint
     app.window_controls_style = WCS::NativeHost;
-    let (c0, d0) = run_frame(&mut app, init_sz, Some(false));
+    let (c0, d0) = rf(&mut app, init_sz, Some(false));
     assert!(c0.contains(&VC::Decorations(true)) && d0.is_zero());
     assert!(c0.contains(&VC::InnerSize(egui::vec2(1161.0, 741.0))));
-    let (c1, d1) = run_frame(&mut app, init_sz, Some(false));
-    assert!(c1.contains(&VC::InnerSize(egui::vec2(1161.0, 740.0))) && d1.is_zero());
-    let (c2, d2) = run_frame(&mut app, init_sz, Some(false));
-    assert!(c2.contains(&VC::InnerSize(init_sz)) && d2.is_zero());
+    let (c1, d1) = rf(&mut app, init_sz, Some(false));
+    assert!(c1.contains(&VC::InnerSize(init_sz)) && d1.is_zero());
+    let (c2, _) = rf(&mut app, init_sz, Some(false));
+    assert!(!c2.iter().any(|c| matches!(c, VC::InnerSize(_))));
 
     // 2. Resize in NativeHost to 1320x840, then switch back to WindowsCaptionButtons
     let new_sz = egui::vec2(1320.0, 840.0);
-    let _ = run_frame(&mut app, new_sz, Some(false));
+    let _ = rf(&mut app, new_sz, Some(false));
     app.window_controls_style = WCS::WindowsCaptionButtons;
-    let (cw0, _) = run_frame(&mut app, new_sz, Some(false));
+    let (cw0, _) = rf(&mut app, new_sz, Some(false));
     assert!(cw0.contains(&VC::Decorations(false)));
     assert!(cw0.contains(&VC::InnerSize(egui::vec2(1321.0, 841.0))));
-    let _ = run_frame(&mut app, new_sz, Some(false));
-    let (cw2, dw2) = run_frame(&mut app, new_sz, Some(false));
-    assert!(cw2.contains(&VC::InnerSize(new_sz)) && dw2.is_zero());
+    let (cw1, dw1) = rf(&mut app, new_sz, Some(false));
+    assert!(cw1.contains(&VC::InnerSize(new_sz)) && dw1.is_zero());
 
-    // 3. Maximize in NativeHost, then switch to AppleTrafficLights: toggles Maximized(false)->Maximized(true)
+    // 3. Maximize in NativeHost, then switch to AppleTrafficLights: retains maximization without unmaximize glitch
     app.window_controls_style = WCS::NativeHost;
-    let _ = run_frame(&mut app, new_sz, Some(true));
+    let _ = rf(&mut app, new_sz, Some(true));
     assert!(app.is_maximized);
     app.window_controls_style = WCS::AppleTrafficLights;
-    let (cmds_max, _) = run_frame(&mut app, new_sz, Some(true));
-    assert!(cmds_max.contains(&VC::Maximized(false)) && cmds_max.contains(&VC::Maximized(true)));
-    let _ = run_frame(&mut app, new_sz, Some(false));
-    let _ = run_frame(&mut app, new_sz, Some(false));
-    assert!(!app.is_maximized);
+    let (cmds_max, _) = rf(&mut app, new_sz, Some(true));
+    assert!(!cmds_max.contains(&VC::Maximized(false)) && cmds_max.contains(&VC::Maximized(true)));
+    let (cmds_max_idle, _) = rf(&mut app, new_sz, Some(true));
+    assert!(!cmds_max_idle.iter().any(|c| matches!(c, VC::InnerSize(_))));
+    assert!(app.is_maximized, "App must remain maximized");
 
     // 4. Rapid consecutive toggle mid-resync preserves target_size without +1pt drift
     app.window_controls_style = WCS::NativeHost;
-    let _ = run_frame(&mut app, new_sz, Some(false));
+    let _ = rf(&mut app, new_sz, Some(false));
     app.window_controls_style = WCS::WindowsCaptionButtons;
-    let _ = run_frame(&mut app, new_sz, Some(false));
-    let _ = run_frame(&mut app, new_sz, Some(false));
-    let (cmds_rapid, _) = run_frame(&mut app, new_sz, Some(false));
+    let _ = rf(&mut app, new_sz, Some(false));
+    let (cmds_rapid, _) = rf(&mut app, new_sz, Some(false));
     assert!(cmds_rapid.contains(&VC::InnerSize(new_sz)));
+
+    // 5. Switching from NativeHost (where outer_rect > inner_rect) preserves outer_rect bounds
+    let (nat_in, nat_out) = (egui::vec2(1144.0, 692.0), egui::vec2(1160.0, 740.0));
+    app.window_controls_style = WCS::NativeHost;
+    let _ = run_frame(&mut app, nat_in, nat_out, Some(false));
+    let _ = run_frame(&mut app, nat_in, nat_out, Some(false));
+    app.window_controls_style = WCS::AppleTrafficLights;
+    let (c_pres, _) = run_frame(&mut app, nat_in, nat_out, Some(false));
+    assert!(c_pres.contains(&VC::Decorations(false)));
+    assert!(c_pres.contains(&VC::InnerSize(egui::vec2(nat_out.x + 1.0, nat_out.y + 1.0))));
+    let (c_rest, _) = run_frame(&mut app, nat_in, nat_out, Some(false));
+    assert!(c_rest.contains(&VC::InnerSize(nat_out)));
 }

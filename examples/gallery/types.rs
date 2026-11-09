@@ -190,6 +190,7 @@ pub enum ExpandedProTab {
     Attributes = 0,
     Metrics = 1,
     Matrix = 2,
+    CodeSnippet = 3,
 }
 
 /// Metadata table for the 14 embedded Cupertino vector symbols.
@@ -279,3 +280,17 @@ pub const SYMBOLS_META: [(MacSymbol, &str, &str, &str); 14] = [
         "U+F21C",
     ),
 ];
+
+/// Serializable / undoable snapshot for AVKit Studio controls.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct AvKitStudioSnapshot {
+    pub in_point: f64,
+    pub out_point: f64,
+    pub playhead: f64,
+    pub gain: f32,
+    pub pan: f32,
+    pub exposure: f32,
+    pub contrast: f32,
+    pub zoom: f32,
+    pub rating: u32,
+}

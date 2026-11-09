@@ -80,13 +80,14 @@ pub use theme::{
 };
 
 pub use controls::{
-    MacButtonCell, MacColorWell, MacControlSize, MacInputCell, MacLevelIndicator,
-    MacLevelIndicatorStyle, MacLevelOrientation, MacOutlineRow, MacOutlineRowResponse,
-    MacOutlineTree, MacOutlineView, MacPathComponent, MacPathControl, MacPathControlResponse,
-    MacPopUpButton, MacProgressControlSize, MacProgressIndicator, MacProgressStyle, MacSearchField,
-    MacSegmentedControl, MacSlider, MacSortDirection, MacStepper, MacTableColumn, MacTableView,
-    MacTableViewResponse, MacThumbnailCell, MacTimelineZone, MacToggle, MacTokenField,
-    MacTrimScrubber, MacTrimScrubberResponse,
+    MacButtonCell, MacCircularSlider, MacColorWell, MacControlSize, MacInputCell,
+    MacLevelIndicator, MacLevelIndicatorStyle, MacLevelOrientation, MacOutlineRow,
+    MacOutlineRowResponse, MacOutlineTree, MacOutlineView, MacPathComponent, MacPathControl,
+    MacPathControlResponse, MacPopUpButton, MacProgressControlSize, MacProgressIndicator,
+    MacProgressStyle, MacRatingIndicator, MacSearchField, MacSegmentedControl, MacSlider,
+    MacSortDirection, MacStepper, MacTableColumn, MacTableView, MacTableViewResponse,
+    MacThumbnailCell, MacTimelineZone, MacToggle, MacTokenField, MacTrimScrubber,
+    MacTrimScrubberResponse,
 };
 pub use feedback::{clamp_menu_rect, MacContextMenu, MacToast, MacToastManager, ToastLevel};
 pub use layout::{

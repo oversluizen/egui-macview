@@ -1,6 +1,6 @@
 //! 3-Tier Right Inspector (`DefaultNib`, `CompactHud`, `ExpandedPro`) with `.numeric(...)` stepping.
 
-use crate::{CardModel, ExpandedProTab, InspectorMode};
+use crate::{CardModel, ExpandedProTab, GalleryScreen, InspectorMode};
 use egui::{
     pos2, vec2, Align, Align2, CornerRadius, FontId, Id, Layout, Rect, Sense, Stroke, StrokeKind,
     Ui,
@@ -34,13 +34,18 @@ pub use super::inspector_nib::{
     convert_card_units, render_card_geometry_rows, unit_scale_and_suffix,
 };
 
+use super::snippet::SnippetContext;
+
 impl InspectorState {
+    #[allow(clippy::too_many_arguments)]
     pub fn render(
         &mut self,
         ui: &mut Ui,
         theme: &MacTheme,
         card_cell: &RefCell<CardModel>,
         mode: &mut InspectorMode,
+        active_screen: GalleryScreen,
+        snippet_ctx: SnippetContext,
         toasts: &RefCell<MacToastManager>,
     ) {
         let mut card = card_cell.borrow_mut();
@@ -61,9 +66,14 @@ impl InspectorState {
                 scroll_ui.with_layout(Layout::top_down(Align::Min), |s_ui| {
                     s_ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
                     match *mode {
-                        InspectorMode::ExpandedPro => {
-                            self.render_expanded_pro(s_ui, theme, &mut card, toasts)
-                        }
+                        InspectorMode::ExpandedPro => self.render_expanded_pro(
+                            s_ui,
+                            theme,
+                            &mut card,
+                            active_screen,
+                            snippet_ctx,
+                            toasts,
+                        ),
                         _ => self.render_default_nib(s_ui, theme, &mut card, mode, toasts),
                     }
                 });
@@ -75,11 +85,18 @@ impl InspectorState {
         ui: &mut Ui,
         theme: &MacTheme,
         card: &mut CardModel,
+        active_screen: GalleryScreen,
+        snippet_ctx: SnippetContext,
         toasts: &RefCell<MacToastManager>,
     ) {
         ui.add_space(8.0);
         let tab_idx = self.expanded_tab as usize;
-        const TAB_ITEMS: [&str; 3] = ["\u{2630} Attributes", "\u{2699} Metrics", "\u{21BB} Matrix"];
+        const TAB_ITEMS: [&str; 4] = [
+            "\u{2630} Attributes",
+            "\u{2699} Metrics",
+            "\u{21BB} Matrix",
+            "</> Snippet",
+        ];
 
         ui.vertical_centered(|c_ui| {
             MacSegmentedControl::new(&TAB_ITEMS, tab_idx)
@@ -89,11 +106,24 @@ impl InspectorState {
                     self.expanded_tab = match idx {
                         0 => ExpandedProTab::Attributes,
                         1 => ExpandedProTab::Metrics,
-                        _ => ExpandedProTab::Matrix,
+                        2 => ExpandedProTab::Matrix,
+                        _ => ExpandedProTab::CodeSnippet,
                     };
                 });
         });
         ui.add_space(6.0);
+
+        if self.expanded_tab == ExpandedProTab::CodeSnippet {
+            super::snippet::render_code_snippet_tab(
+                ui,
+                theme,
+                active_screen,
+                card,
+                snippet_ctx,
+                toasts,
+            );
+            return;
+        }
 
         MacStackView::new(MacStackOrientation::Vertical)
             .theme(theme)
@@ -363,6 +393,7 @@ impl InspectorState {
                         }
                     });
                 }
+                ExpandedProTab::CodeSnippet => {}
             });
     }
 }

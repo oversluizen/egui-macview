@@ -10,7 +10,7 @@
 #![cfg_attr(not(test), windows_subsystem = "windows")]
 
 #[path = "gallery/mod.rs"]
-mod gallery;
+pub(crate) mod gallery;
 
 use egui::{pos2, vec2, Align, CornerRadius, Layout, Rect, Stroke, StrokeKind};
 use egui_macview::{
@@ -335,6 +335,7 @@ impl GalleryApp {
             },
             |body_ui| {
                 let (vis_canvas, lock_canvas) = (vis_canvas_cell.get(), lock_canvas_cell.get());
+                let snippet_ctx = gallery::snippet::SnippetContext::from(&*center);
                 MacSplitView::with_pos(
                     "gallery_right_split",
                     MacSplitOrientation::Horizontal,
@@ -365,7 +366,15 @@ impl GalleryApp {
                     },
                     |inspector_ui| {
                         let mut m = inspector_mode_cell.get();
-                        inspector.render(inspector_ui, &theme, card, &mut m, &self.toasts);
+                        inspector.render(
+                            inspector_ui,
+                            &theme,
+                            card,
+                            &mut m,
+                            active_screen_cell.get(),
+                            snippet_ctx,
+                            &self.toasts,
+                        );
                         inspector_mode_cell.set(m);
                     },
                 );

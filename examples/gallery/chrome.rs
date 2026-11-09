@@ -82,17 +82,29 @@ impl GalleryApp {
     pub(crate) fn handle_menu_action(&mut self, action: &str, ctx: &egui::Context) {
         match action {
             "edit.undo" => {
-                let mut c = self.card.borrow_mut();
-                if self.undo_manager.borrow_mut().undo(&mut *c) {
-                    *self.last_stable_card.borrow_mut() = c.clone();
-                    self.toasts.borrow_mut().info("Undone");
+                if self.active_screen == GalleryScreen::AvKitMediaStudio {
+                    if self.center.undo_avkit() {
+                        self.toasts.borrow_mut().info("AVKit: Undone adjustment");
+                    }
+                } else {
+                    let mut c = self.card.borrow_mut();
+                    if self.undo_manager.borrow_mut().undo(&mut *c) {
+                        *self.last_stable_card.borrow_mut() = c.clone();
+                        self.toasts.borrow_mut().info("Undone");
+                    }
                 }
             }
             "edit.redo" => {
-                let mut c = self.card.borrow_mut();
-                if self.undo_manager.borrow_mut().redo(&mut *c) {
-                    *self.last_stable_card.borrow_mut() = c.clone();
-                    self.toasts.borrow_mut().info("Redone");
+                if self.active_screen == GalleryScreen::AvKitMediaStudio {
+                    if self.center.redo_avkit() {
+                        self.toasts.borrow_mut().info("AVKit: Redone adjustment");
+                    }
+                } else {
+                    let mut c = self.card.borrow_mut();
+                    if self.undo_manager.borrow_mut().redo(&mut *c) {
+                        *self.last_stable_card.borrow_mut() = c.clone();
+                        self.toasts.borrow_mut().info("Redone");
+                    }
                 }
             }
             "screen.canvas" => self.active_screen = GalleryScreen::CanvasPhysics,
@@ -305,22 +317,34 @@ impl GalleryApp {
             if prev_was_native != native_decorations || self.pending_decoration_resync_frames > 0 {
                 let target_size = if self.pending_decoration_resync_frames == 0 {
                     let cur = ui
-                        .input(|i| i.viewport().inner_rect.map(|r| r.size()))
+                        .input(|i| {
+                            if prev_was_native {
+                                i.viewport()
+                                    .outer_rect
+                                    .map(|r| r.size())
+                                    .or_else(|| i.viewport().inner_rect.map(|r| r.size()))
+                            } else {
+                                i.viewport()
+                                    .inner_rect
+                                    .map(|r| r.size())
+                                    .or_else(|| i.viewport().outer_rect.map(|r| r.size()))
+                            }
+                        })
                         .unwrap_or_else(|| ui.ctx().content_rect().size());
                     egui::vec2(cur.x.max(900.0), cur.y.max(540.0))
                 } else {
                     self.pending_target_inner_size
                         .unwrap_or_else(|| egui::vec2(1160.0, 740.0))
                 };
-                self.pending_target_inner_size = Some(target_size);
-                self.pending_decoration_resync_frames = 2;
                 ui.ctx()
                     .send_viewport_cmd(ViewportCommand::Decorations(native_decorations));
                 if self.is_maximized {
-                    ui.ctx()
-                        .send_viewport_cmd(ViewportCommand::Maximized(false));
+                    self.pending_decoration_resync_frames = 0;
+                    self.pending_target_inner_size = None;
                     ui.ctx().send_viewport_cmd(ViewportCommand::Maximized(true));
                 } else {
+                    self.pending_target_inner_size = Some(target_size);
+                    self.pending_decoration_resync_frames = 1;
                     ui.ctx()
                         .send_viewport_cmd(ViewportCommand::InnerSize(egui::vec2(
                             target_size.x + 1.0,
@@ -335,25 +359,14 @@ impl GalleryApp {
                 ui.ctx().send_viewport_cmd(ViewportCommand::Focus);
             }
         } else if self.pending_decoration_resync_frames > 0 {
-            self.pending_decoration_resync_frames -= 1;
-            if let Some(target_size) = self.pending_target_inner_size {
-                if self.is_maximized {
-                    ui.ctx().send_viewport_cmd(ViewportCommand::Maximized(true));
-                } else if self.pending_decoration_resync_frames == 1 {
-                    ui.ctx()
-                        .send_viewport_cmd(ViewportCommand::InnerSize(egui::vec2(
-                            target_size.x + 1.0,
-                            target_size.y,
-                        )));
-                } else {
+            self.pending_decoration_resync_frames = 0;
+            if let Some(target_size) = self.pending_target_inner_size.take() {
+                if !self.is_maximized {
                     ui.ctx()
                         .send_viewport_cmd(ViewportCommand::InnerSize(target_size));
                 }
             }
-            if self.pending_decoration_resync_frames == 0 {
-                self.pending_target_inner_size = None;
-                ui.ctx().send_viewport_cmd(ViewportCommand::Focus);
-            }
+            ui.ctx().send_viewport_cmd(ViewportCommand::Focus);
             ui.ctx().request_repaint();
         }
         if toggle_palette {

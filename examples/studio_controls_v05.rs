@@ -13,10 +13,10 @@
 use egui_macview::{
     setup_symbols_font,
     theme::{MacAppearance, MacTheme},
-    MacLevelIndicator, MacLevelIndicatorStyle, MacLevelOrientation, MacPathComponent,
-    MacPathControl, MacProgressControlSize, MacProgressIndicator, MacSegmentedControl, MacSlider,
-    MacSortDirection, MacTableColumn, MacTableView, MacTimelineZone, MacTokenField,
-    MacTrimScrubber,
+    MacCircularSlider, MacLevelIndicator, MacLevelIndicatorStyle, MacLevelOrientation,
+    MacPathComponent, MacPathControl, MacProgressControlSize, MacProgressIndicator,
+    MacRatingIndicator, MacSegmentedControl, MacSlider, MacSortDirection, MacTableColumn,
+    MacTableView, MacTimelineZone, MacTokenField, MacTrimScrubber,
 };
 use std::collections::BTreeSet;
 
@@ -36,6 +36,9 @@ pub struct StudioApp {
     pub playhead: f64,
     pub waveform: Vec<f32>,
     pub active_path_idx: usize,
+    pub gain: f32,
+    pub pan: f32,
+    pub rating: u32,
 }
 
 impl Default for StudioApp {
@@ -66,6 +69,9 @@ impl Default for StudioApp {
             playhead: 41.2,
             waveform,
             active_path_idx: 3,
+            gain: 1.15,
+            pan: 0.0,
+            rating: 5,
         }
     }
 }
@@ -165,7 +171,16 @@ impl StudioApp {
             });
             ui.add_space(6.0);
 
-            // 4. NSLevelIndicator
+            // 4. NSLevelIndicator dynamically linked to playhead, gain, and stereo pan
+            let frac = (self.playhead / 120.0).clamp(0.0, 1.0);
+            let wave_idx = (frac * (self.waveform.len().saturating_sub(1) as f64)).round() as usize;
+            let base_amp = self.waveform.get(wave_idx).copied().unwrap_or(0.5);
+            let pan_clamped = self.pan.clamp(-1.0, 1.0);
+            let pan_l = ((1.0 - pan_clamped) * 0.5).sqrt();
+            let pan_r = ((1.0 + pan_clamped) * 0.5).sqrt();
+            self.audio_level_l = (base_amp * self.gain * pan_l * 9.5).clamp(0.0, 10.0);
+            self.audio_level_r = (base_amp * self.gain * pan_r * 9.5).clamp(0.0, 10.0);
+
             ui.horizontal(|ui| {
                 ui.label("NSLevelIndicator (L/R):");
                 MacLevelIndicator::new(self.audio_level_l, 0.0..=10.0)
@@ -192,7 +207,30 @@ impl StudioApp {
             });
             ui.add_space(6.0);
 
-            // 5. NSTableView + NSTableHeaderView
+            // 5. NSSlider (Circular Style) & NSLevelIndicator (Rating Style)
+            ui.horizontal(|ui| {
+                ui.label("MacCircularSlider (Gain/Pan):");
+                MacCircularSlider::new(&mut self.gain, 0.0..=2.0)
+                    .theme(&theme)
+                    .diameter(30.0)
+                    .show(ui);
+                ui.label(format!("{:.2}x", self.gain));
+                ui.add_space(8.0);
+                MacCircularSlider::new(&mut self.pan, -1.0..=1.0)
+                    .theme(&theme)
+                    .diameter(30.0)
+                    .show(ui);
+                ui.label(format!("Pan: {:.1}", self.pan));
+                ui.add_space(12.0);
+                ui.label("MacRatingIndicator:");
+                MacRatingIndicator::new(&mut self.rating, 5)
+                    .theme(&theme)
+                    .item_size(15.0)
+                    .show(ui);
+            });
+            ui.add_space(6.0);
+
+            // 6. NSTableView + NSTableHeaderView
             let cols = [
                 MacTableColumn::new("Clip Name", 180.0).sort(self.sort_dir),
                 MacTableColumn::new("Duration", 110.0),
