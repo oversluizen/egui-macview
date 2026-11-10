@@ -272,7 +272,7 @@ impl<'a> MacTrimScrubber<'a> {
                     if active_in {
                         let next_in = x_to_time(pos.x).clamp(0.0, *self.out_point);
                         *self.in_point = next_in;
-                        if *self.playhead < next_in {
+                        if self.clamp_playhead_to_trim && *self.playhead < next_in {
                             *self.playhead = next_in;
                         }
                         in_point_dragged = true;
@@ -280,7 +280,7 @@ impl<'a> MacTrimScrubber<'a> {
                     } else if active_out {
                         let next_out = x_to_time(pos.x).clamp(*self.in_point, dur);
                         *self.out_point = next_out;
-                        if *self.playhead > next_out {
+                        if self.clamp_playhead_to_trim && *self.playhead > next_out {
                             *self.playhead = next_out;
                         }
                         out_point_dragged = true;

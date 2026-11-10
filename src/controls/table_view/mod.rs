@@ -200,8 +200,7 @@ impl<'a> MacTableView<'a> {
                 self.selection.insert(prev);
                 anchor = prev;
                 selection_changed = true;
-            } else if (is_focused_or_hovered
-                || (!self.selection.is_empty() && ui.memory(|m| m.focused().is_none())))
+            } else if (is_focused_or_hovered || !self.selection.is_empty())
                 && (ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Enter))
                     || ui.input_mut(|i| i.consume_key(Modifiers::COMMAND, Key::ArrowDown))
                     || ui.input_mut(|i| i.consume_key(Modifiers::CTRL, Key::ArrowDown)))

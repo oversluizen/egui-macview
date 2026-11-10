@@ -420,22 +420,38 @@ fn test_cots_unfocused_table_ignores_arrow_keys_and_scrubber_preserves_valid_pla
 
     // Dragging the in_point handle when clamp_playhead_to_trim(false) must NOT snap playhead (70.0) to in_point!
     let scrub_rect = resp.response.rect;
-    let in_handle_x = scrub_rect.left() + (500.0 / 1200.0) as f32 * scrub_rect.width();
+    let in_handle_x = scrub_rect.left() + (500.0 / 1200.0) as f32 * scrub_rect.width() + 2.0;
     let drag_to_x = scrub_rect.left() + (600.0 / 1200.0) as f32 * scrub_rect.width();
     let handle_y = scrub_rect.bottom() - 10.0;
-    let mut drag_in_raw = base_raw;
-    drag_in_raw
+    let mut press_in_raw = base_raw.clone();
+    press_in_raw
         .events
         .push(Event::PointerMoved(Pos2::new(in_handle_x, handle_y)));
-    drag_in_raw.events.push(Event::PointerButton {
+    press_in_raw.events.push(Event::PointerButton {
         pos: Pos2::new(in_handle_x, handle_y),
         button: egui::PointerButton::Primary,
         pressed: true,
         modifiers: Modifiers::NONE,
     });
+    ctx.run_ui(press_in_raw, |ui| {
+        MacTrimScrubber::new("trim_test", 1200.0, &mut in_pt, &mut out_pt, &mut playhead)
+            .clamp_playhead_to_trim(false)
+            .theme(&theme)
+            .show(ui);
+    })
+    .textures_delta
+    .clear();
+
+    let mut drag_in_raw = base_raw;
     drag_in_raw
         .events
         .push(Event::PointerMoved(Pos2::new(drag_to_x, handle_y)));
+    drag_in_raw.events.push(Event::PointerButton {
+        pos: Pos2::new(drag_to_x, handle_y),
+        button: egui::PointerButton::Primary,
+        pressed: false,
+        modifiers: Modifiers::NONE,
+    });
     ctx.run_ui(drag_in_raw, |ui| {
         MacTrimScrubber::new("trim_test", 1200.0, &mut in_pt, &mut out_pt, &mut playhead)
             .clamp_playhead_to_trim(false)
