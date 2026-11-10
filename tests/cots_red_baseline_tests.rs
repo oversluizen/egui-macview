@@ -24,8 +24,8 @@ fn test_token_catalog_deserialization() {
 
     // Verify metadata
     assert_eq!(tokens.name, "egui-macview Design Tokens");
-    assert_eq!(tokens.version, "0.6.0");
-    assert_eq!(egui_macview::VERSION, "0.6.0");
+    assert_eq!(tokens.version, "0.6.1");
+    assert_eq!(egui_macview::VERSION, "0.6.1");
     assert!(!tokens.description.is_empty());
 
     // Verify Control Metrics
@@ -335,21 +335,22 @@ fn test_version_synchronization_invariants() {
     // 1. Cargo.toml version
     let cargo_toml = fs::read_to_string(manifest_dir.join("Cargo.toml")).expect("read Cargo.toml");
     assert!(
-        cargo_toml.contains("version = \"0.6.0\""),
-        "Cargo.toml must have version = \"0.6.0\""
+        cargo_toml.contains("version = \"0.6.1\""),
+        "Cargo.toml must have version = \"0.6.1\""
     );
 
     // 2. Exported crate version constant
-    assert_eq!(egui_macview::VERSION, "0.6.0");
+    assert_eq!(egui_macview::VERSION, "0.6.1");
 
     // 3. Design tokens version
     let tokens = MacDesignTokens::load_default();
-    assert_eq!(tokens.version, "0.6.0");
+    assert_eq!(tokens.version, "0.6.1");
 
     // 4. CHANGELOG.md strictly documents all released milestones
     let changelog =
         fs::read_to_string(manifest_dir.join("CHANGELOG.md")).expect("read CHANGELOG.md");
     for header in [
+        "## [0.6.1] - 2026-11-10",
         "## [0.6.0] - 2026-11-10",
         "## [0.5.2] - 2026-11-10",
         "## [0.5.1] - 2026-11-08",

@@ -5,6 +5,21 @@ All notable changes to the `egui-macview` crate will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2026-11-10
+
+### Added
+- **AppKit Predicate Rule Editor (`MacRuleEditor`, `MacRuleRow`, `REQ-012-07`)**: Multi-row slice predicate editor (`NSRuleEditor` equivalent) with `32.0 pt` row height, `8.0 pt` clause spacing, interactive slice criteria pills, and `20.0 x 20.0 pt` `[+]` / `[-]` row buttons.
+- **Full AVKit Transport, Audio & Speed Controls (`MacPlayerView`, `REQ-012-01`)**: Complete 3-phase pipeline (`compute_geometry`, `handle_input`, `paint`) across `Floating` (`481.0 x 64.0 pt` pod with Mute button, Volume slider, 15s Skip Back/Forward, 1-Frame Step Back/Forward, Speed pill `[0.5x..2.0x]`, AirPlay badge, and buffered/elapsed scrubber), `Inline` (`24.0 pt` bottom bar), and `Minimal` (`29.0 x 18.0 pt` pill).
+- **SPEC-012 AppKit & Battery Parity Test Suite (`tests/spec012_appkit_and_battery_parity_tests.rs`)**: Comprehensive COTS tests covering HUD transport/audio/speed controls, stationary-cursor auto-hide, direct segment token clicks, analog clock ticks & click-to-set-minute, combo box text inset & exact-match filtering, centered segmented tab pill bar, $O(1)$ collection view row culling, and `MacRuleEditor` mutations.
+
+### Fixed
+- **Battery Efficiency & Zero Idle Allocations (`SPEC-012`)**:
+  - `MacPlayerView`: Fixed stationary-cursor auto-hide (`delta != Vec2::ZERO`) so the floating HUD fades out after `3.0s` via a single `request_repaint_after_secs` wakeup and settles with zero continuous repaints; isolated multi-instance widget IDs (`response.id`).
+  - `MacComboBox`: Eliminated per-frame string/vector allocations when closed (`!is_open`), applied size-specific left `text_inset` (`9.0/7.0/6.0 pt`), preserved sibling items on exact match, and restricted `scroll_to_me` to keyboard navigation frames.
+  - `MacCollectionView`: Upgraded both rendering and rubber-band marquee selection to $O(1)$ row-range slicing (`first_row..last_row`) and added keyboard focus acquisition on item click.
+  - `MacDatePicker`: Replaced per-frame heap `Vec<String>` formatting in `TextFieldAndStepper` with a stack-allocated `[SegToken; 11]` buffer, added direct mouse click segment selection, added the `16.0 pt` weekday row (`S M T W T F S`), and added 12-hour analog clock tick marks + click-to-set-minute.
+  - `MacTabView` & `MacDisclosureGroup`: Centered the top `NSTopTabsBezelBorder` segmented pill bar straddling the top bezel with MacBook minimum container bounds (`150x36`, `122x28`, `107x22 pt`), and gated disclosure `CASpring` animations on `is_rect_visible && is_window_active`.
+
 ## [0.6.0] - 2026-11-10
 
 ### Added
