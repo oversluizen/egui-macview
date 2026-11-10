@@ -61,7 +61,7 @@ use egui_macview::{{theme::MacTheme, CASpring, MacCard, MacSlider}};
 
 let theme = MacTheme::default();
 
-// 1. Analytical CASpring CoreAnimation Physics (GL-1015)
+// 1. Analytical CASpring CoreAnimation Physics
 let spring = CASpring::from_perceptual(0.35, 0.65);
 let displacement = spring.evaluate(ui.input(|i| i.time));
 

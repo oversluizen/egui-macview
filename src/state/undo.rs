@@ -190,7 +190,7 @@ impl<T: Clone + PartialEq> NSUndoManager<T> {
         self.active_group_initial = None;
     }
 
-    /// Validates all `NSUndoManager` structural invariants (`GL-1015 §3.5`):
+    /// Validates all `NSUndoManager` structural invariants (State-Invariant Roundtrip Verification):
     /// 1. `capacity >= 1`
     /// 2. `undo_stack.len() <= capacity` and `redo_stack.len() <= capacity`
     /// 3. Zero consecutive identical snapshots in `undo_stack`

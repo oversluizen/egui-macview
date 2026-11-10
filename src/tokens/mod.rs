@@ -17,7 +17,7 @@ pub use metrics::{
     FocusRingMetrics, FooterMetrics, LayoutMetrics, LevelIndicatorMetrics, MacControlMetrics,
     MacMetricsTokens, MenuBarMetrics, NavigationMetrics, OutlineViewMetrics, PaletteMetrics,
     PathControlMetrics, PlayerViewMetrics, PopUpButtonMetrics, PopoverMetrics,
-    ProgressIndicatorMetrics, ProgressSizeMetrics, ScrollViewMetrics, SearchFieldMetrics,
+    ProgressIndicatorMetrics, ProgressSizeMetrics, RuleEditorMetrics, ScrollViewMetrics, SearchFieldMetrics,
     SegmentedMetrics, SegmentedSizeMetrics, SliderMetrics, SplitViewMetrics, StackViewMetrics,
     StepperMetrics, TableViewMetrics, TabViewMetrics, TextFieldMetrics, TextFieldSizeMetrics,
     ThumbnailCellMetrics, ToastMetrics, ToggleMetrics, TokenFieldMetrics, ToolbarMetrics,
@@ -69,7 +69,7 @@ impl MacDesignTokens {
     pub fn load_default() -> Self {
         std::thread::Builder::new()
             .name("mac_token_loader".into())
-            .stack_size(4 * 1024 * 1024)
+            .stack_size(8 * 1024 * 1024)
             .spawn(|| {
                 Self::from_json(include_str!("../../tokens/design_tokens.json"))
                     .expect("Failed to parse embedded tokens/design_tokens.json")
@@ -286,6 +286,12 @@ impl MacDesignTokens {
     #[inline]
     pub fn box_view_metrics(&self) -> &BoxViewMetrics {
         &self.macview.metrics.control.box_view
+    }
+
+    /// Accesses rule editor metrics tokens.
+    #[inline]
+    pub fn rule_editor_metrics(&self) -> &RuleEditorMetrics {
+        &self.macview.metrics.control.rule_editor
     }
 
     /// Accesses semantic color tokens.

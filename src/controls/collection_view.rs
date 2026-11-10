@@ -28,7 +28,7 @@ pub struct MacCollectionViewFlowLayout {
 
 impl Default for MacCollectionViewFlowLayout {
     fn default() -> Self {
-        let theme = MacTheme::resolve(None, &egui::Context::default());
+        let theme = MacTheme::default();
         let m = theme.collection_view();
         let sz = m.item_size.points();
         Self {
@@ -132,7 +132,7 @@ impl<'a, T> MacCollectionView<'a, T> {
 
         let desired_size = Vec2::new(available_w, total_h.max(self.layout.item_size.y));
         let (rect, mut response) =
-            ui.allocate_exact_size(desired_size, Sense::click_and_drag());
+            ui.allocate_exact_size(desired_size, Sense::click_and_drag() | Sense::focusable_noninteractive());
         let rect = subpixel_snap_rect(rect, ui.ctx().pixels_per_point());
 
         // Keyboard 2D spatial navigation when focused
@@ -170,7 +170,26 @@ impl<'a, T> MacCollectionView<'a, T> {
 
         let mut rendered_count = 0usize;
 
-        for (idx, item) in self.items.iter().enumerate() {
+        let row_pitch = self.layout.item_size.y + self.layout.minimum_line_spacing;
+        let (first_idx, last_idx) = if row_pitch <= 0.0 || rows == 0 {
+            (0, item_count)
+        } else {
+            let origin_y = rect.min.y + self.layout.section_inset.top;
+            let rel_top = (clip.min.y - origin_y).max(0.0);
+            let first_row = ((rel_top / row_pitch).floor() as usize).saturating_sub(1);
+            let rel_bottom = (clip.max.y - origin_y).max(0.0);
+            let last_row = (((rel_bottom / row_pitch).ceil() as usize) + 1).min(rows);
+            (
+                (first_row * columns).min(item_count),
+                (last_row * columns).min(item_count),
+            )
+        };
+
+        for (idx, item) in self.items[first_idx..last_idx]
+            .iter()
+            .enumerate()
+            .map(|(i, it)| (first_idx + i, it))
+        {
             let item_rect = self.layout.compute_item_rect(rect.min, idx, columns);
 
             // 2D Viewport culling oracle: strictly bypass if item does not intersect clip rect
@@ -186,6 +205,7 @@ impl<'a, T> MacCollectionView<'a, T> {
                 .is_some_and(|p| item_rect.contains(p));
 
             if item_hovered && ui.input(|inp| inp.pointer.primary_clicked()) {
+                response.request_focus();
                 if !ui.input(|inp| inp.modifiers.shift || inp.modifiers.command) {
                     self.selected_indices.clear();
                 }
@@ -253,8 +273,22 @@ impl<'a, T> MacCollectionView<'a, T> {
                     StrokeKind::Inside,
                 );
 
-                // Compute 2D AABB intersection with all items
-                for (idx, _) in self.items.iter().enumerate() {
+                // Compute 2D AABB intersection with candidate row items
+                let (m_first_idx, m_last_idx) = if row_pitch <= 0.0 || rows == 0 {
+                    (0, item_count)
+                } else {
+                    let origin_y = rect.min.y + self.layout.section_inset.top;
+                    let rel_top = (marquee_rect.min.y - origin_y).max(0.0);
+                    let first_row = ((rel_top / row_pitch).floor() as usize).saturating_sub(1);
+                    let rel_bottom = (marquee_rect.max.y - origin_y).max(0.0);
+                    let last_row = (((rel_bottom / row_pitch).ceil() as usize) + 1).min(rows);
+                    (
+                        (first_row * columns).min(item_count),
+                        (last_row * columns).min(item_count),
+                    )
+                };
+
+                for idx in m_first_idx..m_last_idx {
                     let item_rect = self.layout.compute_item_rect(rect.min, idx, columns);
                     if marquee_rect.intersects(item_rect) {
                         self.selected_indices.insert(idx);

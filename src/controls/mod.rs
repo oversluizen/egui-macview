@@ -19,6 +19,7 @@ pub mod player_view;
 pub mod popup_button;
 pub mod progress_indicator;
 pub mod rating_indicator;
+pub mod rule_editor;
 pub mod search_field;
 pub mod segmented;
 pub mod slider;
@@ -31,7 +32,7 @@ pub mod token_field;
 pub mod trim_scrubber;
 
 pub use box_view::MacBox;
-pub use button_cell::MacButtonCell;
+pub use button_cell::{MacButton, MacButtonCell};
 pub use circular_slider::MacCircularSlider;
 pub use collection_view::{MacCollectionView, MacCollectionViewFlowLayout};
 pub use color_well::MacColorWell;
@@ -46,10 +47,14 @@ pub use level_indicator::{
 };
 pub use outline_view::{MacOutlineRow, MacOutlineRowResponse, MacOutlineTree, MacOutlineView};
 pub use path_control::{MacPathComponent, MacPathControl, MacPathControlResponse};
-pub use player_view::{MacPlayerControlsStyle, MacPlayerView};
+pub use player_view::{
+    format_remaining_timecode, format_timecode, MacPlayerControlsStyle, MacPlayerView,
+    MacPlayerViewResponse, PlayerViewGeometry, PlayerViewState,
+};
 pub use popup_button::MacPopUpButton;
 pub use progress_indicator::{MacProgressControlSize, MacProgressIndicator, MacProgressStyle};
 pub use rating_indicator::{MacRatingIndicator, UNIT_STAR};
+pub use rule_editor::{MacRuleEditor, MacRuleRow};
 pub use search_field::MacSearchField;
 pub use segmented::MacSegmentedControl;
 pub use slider::MacSlider;

@@ -1,7 +1,7 @@
 //! Authentic macOS cascading submenu popover rendering engine.
 //!
 //! Normative Reference: SPEC-007 §2.3.
-//! Grounded in Single Responsibility Principle to maintain GL-1015 modularity ceilings.
+//! Grounded in Single Responsibility Principle to maintain modularity ceilings.
 
 use egui::{
     Align2, Area, CornerRadius, FontId, Id, Order, Pos2, Rect, Sense, Stroke, StrokeKind, Vec2,

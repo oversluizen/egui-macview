@@ -1,6 +1,6 @@
 //! Integration and unit test suite for interactive media, audio sync, real Finder browsing, and code generation.
 //!
-//! Grounded in GL-1015 (failing red COTS test assertions first, zero unused dependencies,
+//! Grounded in Test-Driven Development (failing red baseline test assertions first, zero unused dependencies,
 //! file size ceilings, zero idle repaint invariant, and robust edge-case verification).
 
 #[allow(dead_code)]
@@ -334,7 +334,7 @@ fn test_avkit_audio_video_synchronization_and_undo_roundtrip() {
     assert_eq!(
         idle_delay,
         Duration::MAX,
-        "GL-1015: When AVKit media is paused, repaint delay MUST be Duration::MAX"
+        "When AVKit media is paused, repaint delay MUST be Duration::MAX"
     );
 
     // 2. Adjust gain via circular slider & verify audio level response

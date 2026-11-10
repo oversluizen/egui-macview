@@ -9,15 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Advanced Media, Scheduling & Grid Controls (`SPEC-012`)**:
-  - `MacPlayerView`: Authentic AVKit media player suite featuring QuickTime floating HUD transport pod (`AVPlayerViewControlsStyleFloating`), inline bottom bar (`AVPlayerViewControlsStyleInline`), minimal circular transport (`AVPlayerViewControlsStyleMinimal`), and 3.0s auto-hide timing.
-  - `MacDatePicker`: Dual date/time picker supporting text-field with integrated stepper (`19.0 pt` width, `9.0 pt` chevron pitch), 12-hour analog clock face (`122x123 pt`), and month calendar matrix grid (`139x148 pt`) across `Regular`, `Small`, and `Mini` control sizes (`REQ-012-02`).
-  - `MacComboBox`: Hybrid editable text field with trailing dropdown chevron trigger and viewport-clamped filterable popover list (`18.0 pt` row height, 5 visible items, `90.0 pt` viewport) with case-insensitive substring matching (`REQ-012-03`).
-  - `MacTabView`: Multi-pane segmented container with flipped coordinate system (`isFlipped == 1`), bezel bordered tabs (`NSTopTabsBezelBorder`), and borderless card switching (`NSNoTabsNoBorder`) with exact Apple content insets (`REQ-012-04`).
-  - `MacDisclosureGroup` & `MacDisclosureButton`: Collapsible content container with `13.0 pt` triangular disclosure chevron, analytical `CASpring` rotation physics, and standalone rounded pill disclosure button across `Regular`, `Small`, and `Mini` sizes (`REQ-012-05`).
-  - `MacCollectionView`: High-performance 2D grid layout engine (`NSCollectionViewFlowLayout`) with 2D viewport culling (`ui.clip_rect()`), multi-selection, and 2D spatial keyboard navigation (`REQ-012-06`).
-  - `MacBox`: Grouping container (`NSBox`) with title badge, `5.0 pt` corner radius, and standardized AppKit content insets (`top: 20.0 pt`, `bottom: 10.0 pt`, `left/right: 9.0 pt`) (`REQ-012-07`).
+  - `MacPlayerView`: Authentic AVKit media player suite (`AVPlayerView`) featuring QuickTime floating HUD transport pod (`AVPlayerViewControlsStyleFloating` with volume slider, mute toggle, 15s skip, 1-frame step, playback rate selector `[0.5x..2.0x]`, AirPlay badge, and buffered/elapsed timeline scrubber), inline bottom bar (`AVPlayerViewControlsStyleInline`), minimal transport pill (`AVPlayerViewControlsStyleMinimal`), and battery-efficient 3.0s stationary-cursor auto-hide (`REQ-012-01`).
+  - `MacDatePicker`: Dual date/time picker supporting direct segment-clickable text-field with integrated stepper (`19.0 pt` width, `9.0 pt` chevron pitch, zero heap allocations per frame), interactive 12-hour analog clock face (`122x123 pt`), and month calendar matrix grid (`139x148 pt` with `24.0 pt` nav header + `16.0 pt` weekday row + `6x7` day matrix) across `Regular`, `Small`, and `Mini` sizes (`REQ-012-02`).
+  - `MacComboBox`: Hybrid editable text field with size-calibrated left text inset (`9.0/7.0/6.0 pt`), right-anchored dropdown chevron trigger, and viewport-clamped filterable popover list (`18.0 pt` row height, 5 visible items, `90.0 pt` viewport, zero allocations when closed) (`REQ-012-03`).
+  - `MacTabView`: Multi-pane container with flipped coordinate system (`isFlipped == 1`), centered top segmented pill bar straddling the top bezel line (`NSTopTabsBezelBorder`), MacBook minimum container dimensions (`150x36`, `122x28`, `107x22 pt`), and borderless card switching (`NSNoTabsNoBorder`) (`REQ-012-04`).
+  - `MacDisclosureGroup` & `MacDisclosureButton`: Collapsible content container with `13.0 pt` triangular disclosure chevron, visibility/focus-gated `CASpring` rotation physics, and standalone rounded pill disclosure button across `Regular`, `Small`, and `Mini` sizes (`REQ-012-05`).
+  - `MacCollectionView`: High-performance 2D grid layout engine (`NSCollectionViewFlowLayout`) with $O(1)$ row-range viewport culling (`ui.clip_rect()`), $O(1)$ row-range rubber-band marquee multi-selection, and 2D spatial keyboard navigation (`REQ-012-06`).
+  - `MacBox` & `MacRuleEditor`: Grouping container (`NSBox`) with title badge, `5.0 pt` corner radius, standardized AppKit content insets (`top: 20.0 pt`, `bottom: 10.0 pt`, `left/right: 9.0 pt`), and multi-row predicate slice rule editor (`NSRuleEditor` with `32.0 pt` rows and `20x20 pt` `[+]`/`[-]` buttons) (`REQ-012-07`).
 - **Interactive 6-State Gallery Showcase (`examples/macview_gallery.rs`, `examples/gallery/`)**: Added State 6 (`GalleryScreen::AdvancedControls`) with live interactive demonstrations of all SPEC-012 controls and copyable Rust snippet generation.
-- **SPEC-012 Integration Test Suite (`tests/spec012_advanced_controls_tests.rs`)**: 7 comprehensive integration tests covering geometry, CASpring dynamics, viewport culling, and keyboard interactions across all 7 controls.
+- **SPEC-012 Integration & Parity Test Suites (`tests/spec012_advanced_controls_tests.rs`, `tests/spec012_appkit_and_battery_parity_tests.rs`)**: Comprehensive COTS integration tests covering MacBook AppKit/AVKit geometry, interaction state machines, $O(1)$ viewport culling, and stationary-cursor battery efficiency.
 
 ### Changed
 - Bumped crate version to `0.6.0` in `Cargo.toml`, `src/lib.rs`, and `tokens/design_tokens.json`.
@@ -40,7 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.5.1] - 2026-11-08
 
 ### Added
-- **GL-1015 Golden Master Architecture Guards (`tests/architecture_guard_tests.rs`)**: Added Windows Desktop GUI Subsystem & Safe `eframe` Startup Guard (`#![cfg_attr(not(test), windows_subsystem = "windows")]`, `Renderer::Glow`, `InstanceFlags::empty()`, `system_font_fallback: false`, `persist_window: false`), Anti-Spookcode Guard (`allow(dead_code)` forbidden in `src/`), Zero Unused Dependencies Guard, and Central State-Invariant Guard (`NSUndoManager::validate_invariants`).
+- **Automated Architecture Fitness Guards (`tests/architecture_guard_tests.rs`)**: Added Windows Desktop GUI Subsystem & Safe `eframe` Startup Guard (`#![cfg_attr(not(test), windows_subsystem = "windows")]`, `Renderer::Glow`, `InstanceFlags::empty()`, `system_font_fallback: false`, `persist_window: false`), Anti-Spookcode Guard (`allow(dead_code)` forbidden in `src/`), Zero Unused Dependencies Guard, and Central State-Invariant Guard (`NSUndoManager::validate_invariants`).
 - **Cold-Start, Zero-Idle-Repaint & State-Invariant Smoke Suite (`tests/runtime_hygiene_and_invariants_tests.rs`)**: Headless cold-start + first-frame latency verification (`< 500ms`), zero idle repaint leak verification (`repaint_delay > Duration::ZERO` after 2 rest frames) across all 5 `GalleryScreen` states (`Aqua` & `DarkAqua`) and `StudioApp`, `MacTrimScrubber` bounds invariants, `MacTableView` filtered selection invariants, and bit-exact `Action -> Undo -> Redo` roundtrips on `NSUndoManager`.
 
 ### Changed
@@ -108,7 +108,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `MacSymbol`: Authentic monochrome Cupertino vector symbols (`Search`, `ChevronRight`, `ChevronLeft`, `ChevronDown`, `ChevronUp`, `SidebarLeading`, `Gear`, `Sliders`, `Checkmark`, `Xmark`, `Plus`, `Minus`, `ArrowClockwise`, `ArrowCounterClockwise`) with embedded `CupertinoIcons.ttf` (MIT) and idempotent `setup_symbols_font` registration.
 - `MacForm`: 2-column AppKit form container wrapping `egui::Grid` with token-driven spacing, trailing labels, and leading controls.
 - `SPEC-008`: AppKit Symbols & Iconography specification.
-- Native MacBook AppKit differential test (`test_macbook_symbol_search_parity_differential`) verifying search glyph parity against Jaco's physical MacBook Air (`Jacos-Air.home`).
+- Native MacBook AppKit differential test (`test_macbook_symbol_search_parity_differential`) verifying search glyph parity against physical Apple Silicon MacBook Air hardware (macOS Sonoma 14.8.9).
 
 ### Fixed
 - Replaced host emoji (`"🔍"`) in `macview_gallery` with crisp monochrome vector `MacSymbol::Search`.
@@ -158,7 +158,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial baseline release of `egui-macview`.
 - Core AppKit primitives: `MacButtonCell`, `MacInputCell`, `MacSegmentedControl`, `MacToggle`.
 - Fundamental layout containers: `MacFixedView`, `MacFlexView`, `MacRow`.
-- CoreAnimation spring physics (`CASpring`) with closed-form analytical damped harmonic oscillator integration.
+- CoreAnimation spring physics (`CASpring`) with smooth Apple-style spring dynamics.
 - Subpixel snapping algorithm eliminating fractional blur across Windows/Linux display scales.
 - Dynamic theme resolution (`MacTheme`, `MacAppearance`) supporting Aqua and DarkAqua appearances.
 - W3C DTCG design token catalog parser (`tokens/design_tokens.json`, `tokens/typography.json`).

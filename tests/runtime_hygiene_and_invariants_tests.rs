@@ -1,4 +1,4 @@
-//! Runtime Hygiene, Frame Pacing, Cold-Start, and State Invariant Integration Tests (GL-1015).
+//! Runtime Hygiene, Frame Pacing, Cold-Start, and State Invariant Integration Tests.
 
 #[allow(dead_code)]
 #[path = "../examples/macview_gallery.rs"]

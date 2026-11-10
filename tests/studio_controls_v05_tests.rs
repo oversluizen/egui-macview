@@ -1,6 +1,6 @@
 //! ISO/IEC/IEEE 29119-3:2021 Integration & Property Test Suite for v0.5.0 Studio & AVKit Controls.
 //!
-//! Normative Reference: SPEC-011 (`REQ-011-01` through `REQ-011-06`) & GL-1015.
+//! Normative Reference: SPEC-011 (`REQ-011-01` through `REQ-011-06`) & Architecture Fitness Standards.
 
 use egui::{Context, Event, Key, Modifiers, PointerButton, Pos2, RawInput, Rect};
 use egui_macview::{

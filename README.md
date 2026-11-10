@@ -1,144 +1,27 @@
 # `egui-macview`
 
-**Deterministic macOS AppKit Layout Engines, Authentic Control Primitive Suite, and CoreAnimation Physics Runtime for `egui` on Windows, macOS, Linux, and Web.**
+**Native-style macOS AppKit controls, layouts, and smooth spring animations for [`egui`](https://github.com/emilk/egui) on Windows, macOS, Linux, and Web.**
 
 [![Crates.io](https://img.shields.io/crates/v/egui-macview.svg)](https://crates.io/crates/egui-macview)
 [![Documentation](https://docs.rs/egui-macview/badge.svg)](https://docs.rs/egui-macview)
 [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](https://opensource.org/licenses/MIT)
-[![Tests](https://img.shields.io/badge/tests-159%20passed%20(100%25%20green)-brightgreen.svg)](https://github.com/oversluizen/egui-macview)
 
 ---
 
-## 1. Architectural Overview
+## Why `egui-macview`?
 
-Standard `egui` relies on content-driven streaming flow: widgets dynamically compute their own margins and sequentially advance the cursor. While convenient for rapid prototyping, streaming flow poses challenges when building pixel-exact desktop application suites (like Xcode, Final Cut Pro, or macOS System Settings) that require:
-1. **Mathematical Layout Determinism**: Subpixel-snapped boundaries, zero-margin outer containers, and formal layout contracts that mathematically prevent clipping and content overlap.
-2. **AppKit Control Parity**: Authentic macOS design language—including focused control rings, segmented pill buttons with animated selection thumbs, cyclic Tab-chain FSMs, and discrete stepper steppers with unit suffixes.
-3. **CoreAnimation Physics**: Frame-rate independent damped harmonic oscillator spring motion (`CASpring`), producing exact Apple perceptual micro-interactions across 60Hz, 120Hz ProMotion, and 144Hz displays.
+Standard `egui` is great for quick tools and game overlays, but building a desktop application that feels like a native macOS app (such as Xcode, Final Cut Pro, Finder, or System Settings) requires predictable widget dimensions, crisp 1px borders, keyboard navigation, and smooth animations.
 
-`egui-macview` solves this by introducing retained NIB-style layout framing, an authentic AppKit control suite, and a high-assurance physics engine built directly on top of `egui 0.37.0`.
+`egui-macview` gives you a ready-to-use library of **35+ macOS AppKit and AVKit controls** built directly on `egui 0.37`:
 
----
-
-## 2. Interactive Showcase Gallery (`macview_gallery`)
-
-The crate includes an interactive capability showcase demonstrating all primitives working together in a production-grade multi-window environment.
-
-```bash
-cargo run --example macview_gallery
-```
-
-### The 6 Master-Detail Capability Screens
-
-Clicking the **Screens** group in the left sidebar switches the central work area across 6 specialized AppKit capability screens:
-
-```text
-┌─────────────────┬──────────────────────────────────────────┬──────────────────┐
-│ Left Sidebar    │ Center Work Area (Master-Detail)         │ Right Inspector  │
-│                 │                                          │                  │
-│ • Screens       │ 1. Interactive Canvas & Physics          │ • Presets        │
-│   ├─ 1. Canvas  │    - 2D Affine Matrix live transforms    │   ├─ Default NIB │
-│   ├─ 2. Vectors │    - Damped CASpring pulse on clicks     │   ├─ Compact HUD │
-│   ├─ 3. Tokens  │ 2. Vector Assets Gallery                 │   └─ Expanded    │
-│   ├─ 4. Finder  │    - 14 Cupertino true-vector glyphs     │ • Dimensions     │
-│   ├─ 5. AVKit   │    - Live search filter (⌘K / Ctrl+K)    │ • Layout & Mask  │
-│   └─ 6. Controls│ 3. W3C Design Tokens & WCAG Engine       │   [L][ C ][R][F] │
-│                 │    - Token catalogue (colors/metrics)    │ • 2x2 Matrix     │
-│ • Presets       │    - Real-time WCAG AA contrast tester   │ • Live Swatches  │
-│   ├─ Default    │ 4. Finder & Publishing Data Browser      │                  │
-│   ├─ Compact    │    - NSPathControl breadcrumbs & table   │                  │
-│   └─ Expanded   │ 5. AVKit Media & Timeline Studio         │                  │
-│                 │    - Waveform scrubber & VU meters       │                  │
-│                 │ 6. Advanced Controls (SPEC-012)          │                  │
-│                 │    - Combo, Date, Tab, Grid, Player, Box │                  │
-└─────────────────┴──────────────────────────────────────────┴──────────────────┘
-```
-
-1. **Screen 1: Interactive Canvas & Physics**
-   - **2D Affine Matrix Manipulation**: Live rotation ($\theta$), scaling ($25\%\dots200\%$), skew, and translation.
-   - **CASpring Harmonic Oscillator**: Analytical spring pulse triggered by canvas clicks or inspector actions.
-   - **Layout & Alignment Mask Integration**: Segmented `[Left] [Center] [Right] [Fill]` control in the inspector dynamically updates the card's anchor position or expands it to full container width with zero clipping.
-2. **Screen 2: Vector Assets Gallery**
-   - **14 Authentic Cupertino Symbols**: 100% vector TrueType glyphs (`MacSymbol::Search`, `ChevronDown`, `Gear`, `Checkmark`, etc.) with zero emoji-bleed on Windows or Linux.
-   - **Instant Search Filtering**: Host-adaptive search shortcut (`[🔍 ⌘K]` on macOS, `[🔍 Ctrl+K]` on Windows/Linux) with live fuzzy substring matching and metadata inspection cards.
-3. **Screen 3: W3C Design Tokens & WCAG Contrast Engine**
-   - **DTCG Token Catalogue**: Direct visualization of tokenized colors, elevations, corner radii, and optical typography.
-   - **Dynamic Contrast Engine**: Real-time evaluation of relative luminance ($L \le 0.179$) and contrast ratios against WCAG AA standards with pass/fail badges.
-4. **Screen 4: Finder & Publishing Data Browser**
-   - **`MacPathControl`**: Interactive file system breadcrumb path bar with vector folder icons.
-   - **`MacTableView`**: Multi-column data table with alternating rows, keyboard navigation, and sort chevrons.
-   - **`MacTokenField`**: Capsule tagging pill input with comma/Enter commit and Backspace removal.
-5. **Screen 5: AVKit Media & Timeline Studio**
-   - **`MacTrimScrubber`**: QuickTime/AVKit media timeline trim bar with waveform bars, In/Out trim handles, and floating timecode badge.
-   - **`MacCircularSlider` & `MacLevelIndicator`**: Authentic continuous rotary dial and stereo VU meters with peak hold.
-   - **`MacRatingIndicator`**: 5-star rating control with half-star precision and precomputed geometry.
-6. **Screen 6: Advanced Media, Scheduling & Grid Controls (`SPEC-012`)**
-   - **`MacPlayerView`**: AVKit playback presentation layer with QuickTime floating HUD pod, inline transport, and auto-hide timing.
-   - **`MacDatePicker`**: Dual date/time picker with integrated stepper, 12-hour analog clock face, and calendar matrix grid.
-   - **`MacComboBox`**: Hybrid text input with trailing dropdown trigger and viewport-clamped filterable popover list.
-   - **`MacTabView`**: Flipped-coordinate tab container with bezel bordered tabs and borderless switching.
-   - **`MacDisclosureGroup`**: Collapsible container with triangular chevron, `CASpring` rotation, and pill buttons.
-   - **`MacCollectionView`**: High-performance 2D grid layout with viewport culling and spatial keyboard navigation.
-   - **`MacBox`**: Container grouping with title badge, rounded corners, and standardized AppKit insets.
+- **Measured on real macOS hardware**: Control heights, padding insets, corner radii, and colors are measured directly from macOS Sonoma (`AppKit` and `AVKit`) so your UI looks right out of the box.
+- **Light, Dark, and Anthracite themes**: Switch seamlessly between `MacAppearance::Aqua` (Light), `MacAppearance::DarkAqua` (Dark), and `MacAppearance::Anthracite`, with automatic WCAG contrast handling for custom accent colors.
+- **Battery-friendly by design**: Zero background repaints when idle, automatic animation pausing when the window is unfocused or minimized, and 2D viewport culling for large tables and grids.
+- **Cross-platform vector icons**: Includes an embedded `CupertinoIcons` TrueType font so symbols look identical on Windows, macOS, Linux, and Web without relying on OS emojis.
 
 ---
 
-## 3. Core Component Suite & API Reference
-
-### 3.1 Layout Engines
-
-| Component | AppKit Equivalent | Description |
-| :--- | :--- | :--- |
-| [`MacSplitView`](file:///D:/Programmeren/egui-macview/src/layout/split_view.rs) | `NSSplitView` | Dual hairline draggable divider with min/max constraint protection and cursor styling. |
-| [`MacFixedView`](file:///D:/Programmeren/egui-macview/src/layout/fixed_view.rs) | Retained NIB Frame | Exact coordinate subview placement guaranteeing zero margin bleed and exact pixel alignment. |
-| [`MacRow`](file:///D:/Programmeren/egui-macview/src/layout/row.rs) | Flexible Cell Row | Auto-budgeting horizontal cell layout with analytical $O(n)$ space distribution. |
-| [`MacScrollView`](file:///D:/Programmeren/egui-macview/src/layout/scroll_view.rs) | `NSScrollView` | Floating overlay scrollbars with zero gutter reservation and smooth auto-fade timers. |
-| [`MacStackView`](file:///D:/Programmeren/egui-macview/src/layout/stack_view.rs) | `NSStackView` | Auto-layout linear stacking container with token-governed spacing and section separators. |
-| [`MacBox`](file:///D:/Programmeren/egui-macview/src/controls/box_view.rs) | `NSBox` | Primary container grouping with title badge, rounded corners, and standardized content insets. |
-
-### 3.2 Authentic Control Primitives
-
-| Component | AppKit Equivalent | Key Features |
-| :--- | :--- | :--- |
-| [`MacInputCell`](file:///D:/Programmeren/egui-macview/src/controls/text_field.rs) | `NSTextField` | Compact text input with external focus ring, cyclic Tab-chain FSM, and transactional buffer commit. |
-| [`MacSegmentedControl`](file:///D:/Programmeren/egui-macview/src/controls/segmented.rs) | `NSSegmentedControl` | Apple segmented pill with smooth animated sliding selection indicator and dark-mode contrast. |
-| [`MacOutlineView`](file:///D:/Programmeren/egui-macview/src/controls/outline_view.rs) | `NSOutlineView` | Hierarchical outline view with disclosure triangles, indentation steps, and custom accessory buttons. |
-| [`MacToggle`](file:///D:/Programmeren/egui-macview/src/controls/toggle.rs) | `NSSwitch` | Native macOS toggle switch with system green active fill and smooth spring thumb transitions. |
-| [`MacSlider`](file:///D:/Programmeren/egui-macview/src/controls/slider.rs) | `NSSlider` | Continuous tracking slider with tick marks, keyboard arrow nudging, and token-driven dimensions. |
-| [`MacStepper`](file:///D:/Programmeren/egui-macview/src/controls/stepper.rs) | `NSStepper` | Discrete scalar increment/decrement buttons with float epsilon wrapping protection and unit suffix formatting. |
-| [`MacPopUpButton`](file:///D:/Programmeren/egui-macview/src/controls/popup_button.rs) | `NSPopUpButton` | Trailing double chevrons with dropdown selection overlay and auto-clamping viewport positioning. |
-| [`MacSearchField`](file:///D:/Programmeren/egui-macview/src/controls/search_field.rs) | `NSSearchField` | Magnifying glass glyph, instant clear (`×`) button, and keyboard escape handling. |
-| [`MacColorWell`](file:///D:/Programmeren/egui-macview/src/controls/color_well.rs) | `NSColorWell` | Color swatch preview with translucent alpha checkerboard underlay and popover picker. |
-| [`MacProgressIndicator`](file:///D:/Programmeren/egui-macview/src/controls/progress_indicator.rs) | `NSProgressIndicator` | Determinate/indeterminate horizontal progress bar (`6.0 pt` / `4.0 pt`) and 12-spoke stepped circular activity spinner (`Regular`, `Small`, `Mini`). |
-| [`MacTableView`](file:///D:/Programmeren/egui-macview/src/controls/table_view/mod.rs) | `NSTableView` + `NSTableHeaderView` | Multi-column data table with `24.0 pt` sortable column headers, alternating row backgrounds, single/Shift/Cmd row selection, and keyboard navigation. |
-| [`MacTokenField`](file:///D:/Programmeren/egui-macview/src/controls/token_field.rs) | `NSTokenField` | Interactive capsule tag/pill input with comma/Enter commit, per-pill `×` removal, Backspace pop, flow wrapping, and optional character counter. |
-| [`MacLevelIndicator`](file:///D:/Programmeren/egui-macview/src/controls/level_indicator.rs) | `NSLevelIndicator` | Continuous and discrete segmented capacity/audio level meter (horizontal or vertical) with green/yellow/red thresholds and peak-hold marker. |
-| [`MacTrimScrubber`](file:///D:/Programmeren/egui-macview/src/controls/trim_scrubber/mod.rs) | `AVPlayerView` Trim Bar | QuickTime / AVKit media timeline trim bar with waveform bars, named zones, yellow selection handles, dimmed outside regions, and draggable playhead with `MM:SS.d` badge. |
-| [`MacPathControl`](file:///D:/Programmeren/egui-macview/src/controls/path_control.rs) | `NSPathControl` | Interactive file/folder breadcrumb bar with vector icons, chevron separators, clickable segments, and optional trailing `Choose...` button. |
-| [`MacMenuBar`](file:///D:/Programmeren/egui-macview/src/navigation/menu.rs) | `NSMenu` / App Menu | Authentic menu bar with cascading submenus, global keyboard shortcuts, and dynamic width auto-calculation guaranteeing $\ge 24\,\text{pt}$ clearance between titles and accelerators. |
-| [`MacCommandPalette`](file:///D:/Programmeren/egui-macview/src/navigation/command_palette.rs) | Spotlight / Quick Open | Floating modal command runner with fuzzy subsequence scoring, category badges, and keyboard navigation. |
-| [`MacPlayerView`](file:///D:/Programmeren/egui-macview/src/controls/player_view.rs) | `AVPlayerView` | AVKit media presentation layer with QuickTime floating HUD pod, inline transport bar, and circular transport controls. |
-| [`MacDatePicker`](file:///D:/Programmeren/egui-macview/src/controls/date_picker.rs) | `NSDatePicker` | Date/time scheduling control with stepper field, 12-hour analog clock face, and calendar matrix grid. |
-| [`MacComboBox`](file:///D:/Programmeren/egui-macview/src/controls/combo_box.rs) | `NSComboBox` | Hybrid text input with integrated dropdown button and viewport-clamped filterable popover list. |
-| [`MacTabView`](file:///D:/Programmeren/egui-macview/src/controls/tab_view.rs) | `NSTabView` | Flipped-coordinate segmented tab container supporting bezel bordered tabs and borderless card switching. |
-| [`MacDisclosureGroup`](file:///D:/Programmeren/egui-macview/src/controls/disclosure_group.rs) | `NSButton` Disclosure | Collapsible container with triangular disclosure chevron, `CASpring` rotation, and pill buttons. |
-| [`MacCollectionView`](file:///D:/Programmeren/egui-macview/src/controls/collection_view.rs) | `NSCollectionView` | High-performance 2D grid layout engine with 2D viewport culling and spatial keyboard navigation. |
-
-### 3.3 CoreAnimation Physics (`CASpring`)
-
-[`CASpring`](file:///D:/Programmeren/egui-macview/src/motion/spring.rs) provides the closed-form analytical solution to the damped harmonic oscillator:
-
-$$m \ddot{x} + c \dot{x} + k x = 0$$
-
-- **Response ($T_0$) & Damping Ratio ($\zeta$)**: Configured via Apple design tokens (`macview.motion.spring.default`).
-- **Analytically Exact**: Evaluates position and velocity at any arbitrary time $t$ in microseconds with zero numerical drift or Euler integration lag.
-- **Display Agnostic**: Delivers mathematically identical motion at 60 FPS, 120 FPS ProMotion, or 240 FPS.
-
----
-
-## 4. Developer Quick Start
-
-### Add Dependency
+## Installation
 
 Add `egui-macview` to your `Cargo.toml`:
 
@@ -148,97 +31,466 @@ egui = "0.37.0"
 egui-macview = "0.6.0"
 ```
 
-### Complete Code Example
+To run the interactive showcase gallery included in this repository:
 
-```rust
-use egui_macview::{
-    MacAppearance, MacInputCell, MacSegmentedControl, MacStepper, MacTheme, MacToggle,
-};
-
-pub struct MySettingsView {
-    theme: MacTheme,
-    selected_tab: usize,
-    username: String,
-    notifications_enabled: bool,
-    zoom_level: f64,
-}
-
-impl MySettingsView {
-    pub fn new() -> Self {
-        Self {
-            theme: MacTheme::new(MacAppearance::DarkAqua),
-            selected_tab: 0,
-            username: "developer@apple.internal".to_string(),
-            notifications_enabled: true,
-            zoom_level: 100.0,
-        }
-    }
-
-    pub fn ui(&mut self, ui: &mut egui::Ui) {
-        // 1. Apple Segmented Tab Selector
-        MacSegmentedControl::new(&["General", "Appearance", "Advanced"], self.selected_tab)
-            .theme(&self.theme)
-            .show(ui, |new_idx| {
-                self.selected_tab = new_idx;
-            });
-
-        ui.add_space(12.0);
-
-        // 2. Compact Input with Cyclic Tab Chain
-        MacInputCell::new("input_user", &mut self.username)
-            .theme(&self.theme)
-            .width(220.0)
-            .show(ui);
-
-        ui.add_space(8.0);
-
-        // 3. Native Switch Toggle
-        ui.horizontal(|h_ui| {
-            h_ui.label("Enable Push Notifications:");
-            h_ui.add(MacToggle::new(&mut self.notifications_enabled).theme(&self.theme));
-        });
-
-        ui.add_space(8.0);
-
-        // 4. Stepper with Unit Formatting
-        ui.horizontal(|h_ui| {
-            h_ui.label("Display Scale:");
-            MacStepper::new(&mut self.zoom_level, 25.0..=200.0, 5.0)
-                .theme(&self.theme)
-                .show(h_ui);
-            h_ui.label(format!("{:.0} %", self.zoom_level));
-        });
-    }
-}
+```bash
+cargo run --example macview_gallery
 ```
 
 ---
 
-## 5. Quality Assurance & Standards (GL-1015 Compliance)
+## Quick Start & Copy-Paste Examples
 
-All code adheres strictly to **GL-1015 (De Verankeringswet & Software Engineering Standards)**:
+Every control in `egui-macview` works with standard `egui::Ui` and optionally accepts a [`MacTheme`]. If you call `theme.apply_to_egui(ctx)` once when your app starts (or when the theme changes), widgets will automatically pick up your active theme even if you omit `.theme(&theme)`.
 
-- **100% Red-Green Test Anchoring**: Every requirement, glitch fix, and layout invariant is anchored by failing red COTS tests prior to implementation.
-- **Zero Host OS Emoji Bleed**: Guaranteed 100% monochrome vector rendering via `MacSymbol` TrueType glyphs.
-- **Zero Dead Controls**: Every UI control bidirectionally mutates state and updates visual geometry in real time.
-- **Test Suite Pass Rate**: **142 passed, 0 failed, 1 ignored** (physical Mac SSH differential test runner).
-  - `appkit_primitives_tests` (35 tests)
-  - `architecture_guard_tests` (7 tests)
-  - `cots_red_baseline_tests` (7 tests)
-  - `high_assurance_invariants_tests` (4 tests)
-  - `macbook_parity_differential_tests` (6 tests + 1 live SSH test)
-  - `menu_and_palette_tests` (20 tests)
-  - `micro_animations_and_hud_tests` (7 tests)
-  - `studio_controls_v05_tests` (6 tests)
-  - `symbol_tests` (6 tests)
-  - `undo_and_feedback_tests` (10 tests)
-  - `wcag_contrast_and_visuals_tests` (8 tests)
-  - `zero_hardcoding_and_primitive_tests` (4 tests)
-  - Documentation tests (20+ tests)
+### 1. Theme Setup, Buttons, Toggles & Segmented Controls
+
+```rust
+use egui_macview::{
+    MacAppearance, MacButton, MacSegmentedControl, MacTheme, MacToggle, setup_symbols_font,
+};
+
+# let ctx = egui::Context::default();
+// Call once at startup to register the monochrome Cupertino vector icon font:
+let mut fonts = egui::FontDefinitions::default();
+setup_symbols_font(&mut fonts);
+ctx.set_fonts(fonts);
+
+// Create a macOS theme (Aqua for Light mode, DarkAqua for Dark mode)
+let theme = MacTheme::new(MacAppearance::DarkAqua);
+theme.apply_to_egui(&ctx);
+
+# let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
+let mut auto_save = true;
+let mut view_mode = 0usize;
+
+ui.horizontal(|ui| {
+    // macOS pill toggle switch (NSSwitch)
+    ui.label("Auto-Save:");
+    ui.add(MacToggle::new(&mut auto_save).theme(&theme));
+
+    // Segmented pill switcher (NSSegmentedControl)
+    let modes = ["Grid", "List", "Columns"];
+    MacSegmentedControl::new(&modes, view_mode)
+        .theme(&theme)
+        .show(ui, |new_idx| view_mode = new_idx);
+
+    // Push button (NSButton)
+    if ui.add(MacButton::new("Apply").selected(true).theme(&theme)).clicked() {
+        // Handle click
+    }
+});
+# });
+# output.textures_delta.clear();
+```
 
 ---
 
-## 6. License
+### 2. Forms, Text Inputs, Search Fields, Sliders & Steppers
+
+Use [`MacForm`] for clean two-column macOS preference panes with right-aligned labels and left-aligned controls:
+
+```rust
+use egui_macview::{
+    MacAppearance, MacForm, MacInputCell, MacSearchField, MacSlider, MacStepper, MacTheme,
+};
+
+# let ctx = egui::Context::default();
+# let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
+let theme = MacTheme::new(MacAppearance::Aqua);
+let mut project_name = String::from("Untitled Project");
+let mut search_query = String::new();
+let mut zoom_percent = 100.0f64;
+let mut export_quality = 80.0f32;
+
+// Search bar with magnifying glass icon and instant clear (×) button:
+MacSearchField::new(&mut search_query)
+    .placeholder("Filter settings...")
+    .theme(&theme)
+    .show(ui);
+
+// Two-column macOS Settings form:
+MacForm::new("project_settings_form")
+    .theme(&theme)
+    .show(ui, |form| {
+        form.row(
+            |ui| { ui.label("Project Name:"); },
+            |ui| {
+                MacInputCell::with_id(egui::Id::new("project_name_input"), &mut project_name)
+                    .theme(&theme)
+                    .show(ui);
+            },
+        );
+
+        form.row(
+            |ui| { ui.label("Canvas Zoom:"); },
+            |ui| {
+                ui.horizontal(|ui| {
+                    MacStepper::new(&mut zoom_percent, 25.0..=400.0, 25.0)
+                        .theme(&theme)
+                        .show(ui);
+                    ui.label(format!("{zoom_percent:.0}%"));
+                });
+            },
+        );
+
+        form.row(
+            |ui| { ui.label("Export Quality:"); },
+            |ui| {
+                MacSlider::new(&mut export_quality, 0.0..=100.0)
+                    .ticks(5, true)
+                    .theme(&theme)
+                    .show(ui);
+            },
+        );
+    });
+# });
+# output.textures_delta.clear();
+```
+
+---
+
+### 3. Dropdowns & Searchable Combo Boxes (`MacComboBox` & `MacPopUpButton`)
+
+Use [`MacPopUpButton`] when the user picks from a fixed list, or [`MacComboBox`] when they can both type to filter and pick from a dropdown list:
+
+```rust
+use egui_macview::{MacAppearance, MacComboBox, MacPopUpButton, MacTheme};
+
+# let ctx = egui::Context::default();
+# let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
+let theme = MacTheme::new(MacAppearance::Aqua);
+
+// 1. Fixed selection menu (NSPopUpButton)
+let formats = ["PNG (Lossless)", "JPEG (Compressed)", "SVG (Vector)", "PDF (Print)"];
+let mut selected_format = 0usize;
+MacPopUpButton::new(&mut selected_format, &formats)
+    .theme(&theme)
+    .show(ui);
+
+// 2. Editable + filterable combo box (NSComboBox)
+let mut selected_font = String::from("SF Pro Text");
+let fonts = ["Helvetica Neue", "Menlo", "New York", "SF Mono", "SF Pro Display", "SF Pro Text"];
+MacComboBox::new("font_family_combo", &mut selected_font, &fonts)
+    .width(200.0)
+    .theme(&theme)
+    .show(ui);
+# });
+# output.textures_delta.clear();
+```
+
+---
+
+### 4. Date & Time Picker (`MacDatePicker`)
+
+[`MacDatePicker`] supports both a compact text field with an integrated stepper (`TextFieldAndStepper`, where users can click year/month/day segments and use arrow keys) and a visual month calendar grid with an analog clock (`ClockAndCalendar`):
+
+```rust
+use egui_macview::{
+    MacAppearance, MacDate, MacDatePicker, MacDatePickerElementFlags, MacDatePickerStyle, MacTheme,
+};
+
+# let ctx = egui::Context::default();
+# let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
+let theme = MacTheme::new(MacAppearance::Aqua);
+let mut scheduled_at = MacDate {
+    year: 2026,
+    month: 11,
+    day: 10,
+    hour: 14,
+    minute: 30,
+    second: 0,
+};
+
+// Compact date & time field with up/down stepper arrows:
+ui.add(
+    MacDatePicker::new()
+        .date(&mut scheduled_at)
+        .style(MacDatePickerStyle::TextFieldAndStepper)
+        .elements(MacDatePickerElementFlags::DateAndTime)
+        .theme(&theme),
+);
+
+// Visual month calendar grid + 12-hour analog clock:
+ui.add(
+    MacDatePicker::new()
+        .date(&mut scheduled_at)
+        .style(MacDatePickerStyle::ClockAndCalendar)
+        .elements(MacDatePickerElementFlags::DateAndTime)
+        .theme(&theme),
+);
+# });
+# output.textures_delta.clear();
+```
+
+---
+
+### 5. Layout Containers: Tabs, Collapsible Disclosure Groups, Boxes & Split Views
+
+Organize complex inspector panels and multi-pane windows with [`MacTabView`], [`MacDisclosureGroup`], [`MacBox`], and [`MacSplitView`]:
+
+```rust
+use egui_macview::{
+    MacAppearance, MacBox, MacDisclosureGroup, MacSplitOrientation, MacSplitView, MacTabView,
+    MacTheme,
+};
+
+# let ctx = egui::Context::default();
+# let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
+let theme = MacTheme::new(MacAppearance::DarkAqua);
+let mut active_tab = 0usize;
+let mut show_advanced = true;
+let mut sidebar_width = 200.0f32;
+
+// 1. Tabbed container (NSTabView)
+MacTabView::new(&mut active_tab)
+    .theme(&theme)
+    .tab("General", |ui| {
+        ui.label("General application settings");
+    })
+    .tab("Shortcuts", |ui| {
+        ui.label("Keyboard shortcut bindings");
+    })
+    .show(ui);
+
+// 2. Collapsible section with animated disclosure triangle
+MacDisclosureGroup::new("advanced_options", "Advanced Export Options", &mut show_advanced)
+    .theme(&theme)
+    .show(ui, |ui| {
+        MacBox::new("Color Profile")
+            .theme(&theme)
+            .show(ui, |ui| {
+                ui.label("Display P3 Wide Gamut");
+            });
+    });
+
+// 3. Resizable two-pane split view (NSSplitView)
+MacSplitView::with_pos("main_split", MacSplitOrientation::Horizontal, &mut sidebar_width)
+    .min_first(140.0)
+    .max_first(360.0)
+    .theme(&theme)
+    .show(
+        ui,
+        |left_ui| {
+            left_ui.label("Sidebar Navigation");
+        },
+        |right_ui| {
+            right_ui.label("Main Editor Canvas");
+        },
+    );
+# });
+# output.textures_delta.clear();
+```
+
+---
+
+### 6. Data Views: Multi-Column Tables, 2D Grids, Breadcrumb Path Bars & Rule Editors
+
+Render large datasets smoothly with [`MacTableView`] and [`MacCollectionView`] (both use viewport culling so off-screen rows/tiles cost zero CPU time):
+
+```rust
+use std::collections::BTreeSet;
+use egui_macview::{
+    MacAppearance, MacCollectionView, MacCollectionViewFlowLayout, MacPathComponent,
+    MacPathControl, MacRuleEditor, MacRuleRow, MacSortDirection, MacTableColumn, MacTableView,
+    MacTheme, MacTokenField,
+};
+
+# let ctx = egui::Context::default();
+# let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
+let theme = MacTheme::new(MacAppearance::Aqua);
+
+// 1. Finder-style breadcrumb bar (NSPathControl)
+let path = [
+    MacPathComponent::folder("Projects"),
+    MacPathComponent::folder("egui-macview"),
+    MacPathComponent::file("Cargo.toml"),
+];
+MacPathControl::new("project_path", &path)
+    .theme(&theme)
+    .show(ui);
+
+// 2. Multi-column sortable table (NSTableView)
+let mut columns = vec![
+    MacTableColumn::new("Name", 180.0).sort(Some(MacSortDirection::Ascending)),
+    MacTableColumn::new("Kind", 100.0),
+];
+let rows = [("README.md", "Markdown"), ("Cargo.toml", "TOML")];
+let mut selected_rows = BTreeSet::from([0usize]);
+
+MacTableView::new("files_table", &mut columns, rows.len(), &mut selected_rows)
+    .theme(&theme)
+    .show(ui, |cell_ui, row_idx, col_idx| {
+        let (name, kind) = rows[row_idx];
+        cell_ui.label(if col_idx == 0 { name } else { kind });
+    });
+
+// 3. 2D Grid Collection View (NSCollectionView) with viewport culling & marquee selection
+let glyphs = ["A", "B", "C", "D", "E", "F"];
+let mut selected_tiles = BTreeSet::from([0usize]);
+MacCollectionView::new(&glyphs, &mut selected_tiles)
+    .layout(MacCollectionViewFlowLayout::default())
+    .theme(&theme)
+    .show_with_response(ui, |tile_ui, glyph| {
+        tile_ui.centered_and_justified(|ui| {
+            ui.label(*glyph);
+        });
+    });
+
+// 4. Tag pill input (NSTokenField) & Predicate filter builder (NSRuleEditor)
+let mut tags = vec!["rust".to_string(), "gui".to_string()];
+let mut tag_draft = String::new();
+MacTokenField::new("topic_tags", &mut tags, &mut tag_draft)
+    .placeholder("Add tag...")
+    .theme(&theme)
+    .show(ui);
+
+let mut rules = vec![MacRuleRow::new(vec![0, 0, 0])];
+let criteria: &[&[&str]] = &[
+    &["Name", "Extension", "Modified Date"],
+    &["contains", "begins with", "is"],
+    &["rs", "toml", "md"],
+];
+MacRuleEditor::new("smart_filter", &mut rules, criteria)
+    .theme(&theme)
+    .show(ui);
+# });
+# output.textures_delta.clear();
+```
+
+---
+
+### 7. Media Player Overlay, Timeline Scrubber, Audio Meters & Rotary Dials
+
+Build audio/video players and studio interfaces with [`MacPlayerView`], [`MacTrimScrubber`], [`MacLevelIndicator`], [`MacCircularSlider`], and [`MacRatingIndicator`]:
+
+```rust
+use egui_macview::{
+    MacAppearance, MacCircularSlider, MacLevelIndicator, MacLevelIndicatorStyle,
+    MacPlayerControlsStyle, MacPlayerView, MacRatingIndicator, MacTheme, MacTrimScrubber,
+};
+
+# let ctx = egui::Context::default();
+# let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
+let theme = MacTheme::new(MacAppearance::DarkAqua);
+let mut is_playing = false;
+let mut progress = 0.25f32;
+let mut volume = 0.8f32;
+let mut playhead = 5.0f64;
+let mut trim_in = 2.0f64;
+let mut trim_out = 18.0f64;
+let mut pan_dial = 0.0f32;
+let mut rating = 4u32;
+
+// 1. QuickTime floating HUD media player overlay (AVPlayerView)
+ui.add(
+    MacPlayerView::new()
+        .controls_style(MacPlayerControlsStyle::Floating)
+        .is_playing_mut(&mut is_playing)
+        .progress_mut(&mut progress)
+        .volume_mut(&mut volume)
+        .duration_secs(60.0)
+        .theme(&theme),
+);
+
+// 2. QuickTime yellow trim bar with waveform envelope (MacTrimScrubber)
+let waveform = [0.2, 0.5, 0.8, 0.6, 0.9, 0.4, 0.7, 0.3];
+MacTrimScrubber::new("clip_trim", 20.0, &mut trim_in, &mut trim_out, &mut playhead)
+    .waveform(&waveform)
+    .theme(&theme)
+    .show(ui);
+
+// 3. Rotary pan knob, VU level meter & 5-star rating indicator
+ui.horizontal(|ui| {
+    ui.add(MacCircularSlider::new(&mut pan_dial, -1.0..=1.0).theme(&theme));
+    MacLevelIndicator::new(0.72, 0.0..=1.0)
+        .style(MacLevelIndicatorStyle::Discrete)
+        .peak_hold(0.88)
+        .theme(&theme)
+        .show(ui);
+    ui.add(MacRatingIndicator::new(&mut rating, 5).theme(&theme));
+});
+# });
+# output.textures_delta.clear();
+```
+
+---
+
+## Component Reference
+
+### Layout Containers (`src/layout/` & `src/controls/`)
+
+| Component | macOS AppKit Equivalent | What It Does |
+| :--- | :--- | :--- |
+| [`MacSplitView`](src/layout/split_view.rs) | `NSSplitView` | Resizable two-pane split container with min/max size constraints. |
+| [`MacStackView`](src/layout/stack_view.rs) | `NSStackView` | Horizontal or vertical linear stack with consistent spacing and optional dividers. |
+| [`MacScrollView`](src/layout/scroll_view.rs) | `NSScrollView` | Scroll container with overlay scrollbars that fade out when idle. |
+| [`MacForm`](src/layout/form.rs) | `NSGridView` / Form | Two-column form layout with right-aligned labels and left-aligned controls. |
+| [`MacRow`](src/layout/row.rs) | Auto-Layout Row | Single-line horizontal row that distributes width cleanly across child cells. |
+| [`MacFixedView`](src/layout/fixed_view.rs) | Retained Frame | Fixed-size coordinate container that prevents child widgets from overflowing. |
+| [`MacBox`](src/controls/box_view.rs) | `NSBox` | Grouped border box with an optional title and standard horizontal separator. |
+| [`MacTabView`](src/controls/tab_view.rs) | `NSTabView` | Tabbed container supporting top segmented tabs (`TopTabsBezelBorder`) or borderless pages. |
+| [`MacDisclosureGroup`](src/controls/disclosure_group.rs) | `NSButton` Disclosure | Collapsible section with an animated rotating disclosure triangle (`CASpring`). |
+
+### Controls & Data Views (`src/controls/`)
+
+| Component | macOS AppKit Equivalent | What It Does |
+| :--- | :--- | :--- |
+| [`MacButton`](src/controls/button_cell.rs) / [`MacButtonCell`](src/controls/button_cell.rs) | `NSButton` | Push buttons, default action blue buttons, checkboxes, radio buttons, and icon buttons. |
+| [`MacToggle`](src/controls/toggle.rs) | `NSSwitch` | Animated pill switch with system green active fill. |
+| [`MacSegmentedControl`](src/controls/segmented.rs) | `NSSegmentedControl` | Multi-segment pill switcher with a sliding selection thumb. |
+| [`MacInputCell`](src/controls/input_cell.rs) | `NSTextField` | Single-line text and numeric input with focus ring, `Tab` cycling, `Enter` commit, and `Escape` cancel. |
+| [`MacSearchField`](src/controls/search_field.rs) | `NSSearchField` | Search input with leading magnifying glass icon and trailing clear (`×`) button. |
+| [`MacComboBox`](src/controls/combo_box.rs) | `NSComboBox` | Editable text field combined with a filterable dropdown list (`Alt+Down`, arrow keys, `Enter`). |
+| [`MacPopUpButton`](src/controls/popup_button.rs) | `NSPopUpButton` | Dropdown menu button with double-chevron indicator and screen-clamped popover. |
+| [`MacSlider`](src/controls/slider.rs) | `NSSlider` (Linear) | Horizontal slider with optional tick marks and keyboard arrow stepping. |
+| [`MacCircularSlider`](src/controls/circular_slider.rs) | `NSSlider` (Circular) | Rotary dial knob with drag tracking, angle indicator, and spring feedback. |
+| [`MacStepper`](src/controls/stepper.rs) | `NSStepper` | Up/down numeric increment buttons with range clamping. |
+| [`MacDatePicker`](src/controls/date_picker/mod.rs) | `NSDatePicker` | Date and time selector supporting both inline stepper fields and a month calendar + analog clock. |
+| [`MacColorWell`](src/controls/color_well.rs) | `NSColorWell` | Color swatch button with alpha checkerboard preview and popover color picker. |
+| [`MacProgressIndicator`](src/controls/progress_indicator.rs) | `NSProgressIndicator` | Determinate/indeterminate progress bars and 12-spoke spinning activity indicators. |
+| [`MacLevelIndicator`](src/controls/level_indicator.rs) | `NSLevelIndicator` | Continuous or discrete audio/capacity meter with green/yellow/red thresholds and peak hold. |
+| [`MacRatingIndicator`](src/controls/rating_indicator.rs) | `NSLevelIndicator` (Rating) | Interactive 5-star rating widget with optional half-star precision. |
+| [`MacTokenField`](src/controls/token_field.rs) | `NSTokenField` | Tag input that turns comma- or Enter-separated words into removable capsule pills. |
+| [`MacPathControl`](src/controls/path_control.rs) | `NSPathControl` | Interactive folder/file breadcrumb bar with clickable segments. |
+| [`MacOutlineView`](src/controls/outline_view.rs) | `NSOutlineView` | Collapsible tree view for sidebars and hierarchical lists. |
+| [`MacTableView`](src/controls/table_view/mod.rs) | `NSTableView` | Multi-column sortable table with alternating row fills, multi-selection, and viewport culling. |
+| [`MacCollectionView`](src/controls/collection_view.rs) | `NSCollectionView` | 2D grid view with flow layout, rubber-band marquee selection, arrow-key navigation, and viewport culling. |
+| [`MacRuleEditor`](src/controls/rule_editor.rs) | `NSRuleEditor` | Multi-row predicate filter builder with criterion pills and `[+]` / `[-]` row buttons. |
+| [`MacPlayerView`](src/controls/player_view/mod.rs) | `AVPlayerView` | Media player transport overlay supporting Floating HUD pod, Inline bar, and Minimal styles. |
+| [`MacTrimScrubber`](src/controls/trim_scrubber/mod.rs) | `AVPlayerView` Trim Bar | QuickTime-style timeline scrubber with waveform preview, yellow In/Out trim handles, and timecode badge. |
+
+### Navigation, Surfaces & State (`src/navigation/`, `src/surfaces/`, `src/state/`)
+
+| Component | macOS AppKit Equivalent | What It Does |
+| :--- | :--- | :--- |
+| [`MacToolbar`](src/navigation/toolbar.rs) | `NSToolbar` | Window titlebar with traffic light buttons (or Windows caption buttons), drag-to-move, and double-click maximize. |
+| [`MacMenuBar`](src/navigation/menu.rs) | `NSMenu` | Top menu bar with cascading submenus and keyboard shortcut handling. |
+| [`MacCommandPalette`](src/navigation/command_palette.rs) | Spotlight Overlay | `⌘K` / `Ctrl+K` modal command search bar with fuzzy matching. |
+| [`MacCanvasFooter`](src/navigation/footer.rs) | Status Bar | `24 pt` bottom status bar with breadcrumbs, cursor coordinates, and zoom presets. |
+| [`MacContextMenu`](src/feedback/context_menu.rs) | Context Menu | Right-click popup menu clamped to the window bounds. |
+| [`MacToastManager`](src/feedback/toast.rs) | HUD Notification | Non-blocking toast banners with spring entry/exit animations. |
+| [`MacPanel`](src/surfaces/mod.rs) / [`MacPopover`](src/surfaces/mod.rs) | `NSPanel` / `NSPopover` | Floating translucent utility panels, inspector cards ([`MacCard`](src/surfaces/card.rs)), and compact HUD boxes ([`MacFloatingInfoBox`](src/surfaces/floating_info_box.rs)). |
+| [`NSUndoManager`](src/state/undo.rs) | `NSUndoManager` | Bounded undo/redo history stack with duplicate-state filtering. |
+
+---
+
+## Quality & Testing
+
+Run the full test suite and linter with:
+
+```bash
+cargo test --all-targets
+cargo test --doc
+cargo clippy --all-targets -- -D warnings
+```
+
+- **22 integration test suites** and **30+ documentation tests** verify widget layout, keyboard navigation, undo/redo roundtrips, WCAG contrast ratios, and zero idle CPU usage.
+- **Design token architecture**: All dimensions, spacing, corner radii, and semantic colors live in [`tokens/design_tokens.json`](tokens/design_tokens.json) and are resolved through [`MacTheme`].
+
+---
+
+## License
 
 Dual-licensed under either of:
 - Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or <http://www.apache.org/licenses/LICENSE-2.0>)

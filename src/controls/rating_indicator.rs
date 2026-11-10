@@ -10,7 +10,7 @@ use egui::{
 };
 
 /// Precomputed 5-point unit star geometry (outer radius 1.0, inner radius 0.4).
-/// Formatted via integer fractions to avoid magic float literal guard violations (GL-1015).
+/// Formatted via integer fractions to avoid magic float literal guard violations.
 #[allow(clippy::unnecessary_cast)]
 pub const UNIT_STAR: [(f32, f32); 10] = [
     (0.0, -1.0),

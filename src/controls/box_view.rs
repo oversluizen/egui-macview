@@ -8,7 +8,7 @@ use crate::controls::MacInsets;
 use crate::layout::subpixel_snap_rect;
 use crate::theme::MacTheme;
 use egui::{
-    CornerRadius, Id, InnerResponse, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui,
+    CornerRadius, InnerResponse, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui,
     UiBuilder, Vec2, WidgetText,
 };
 
@@ -43,7 +43,7 @@ impl<'a> MacBox<'a> {
 
     /// Content padding insets from outer box border.
     pub fn content_insets(&self) -> MacInsets {
-        let theme_cow = MacTheme::resolve(self.theme, &egui::Context::default());
+        let theme_cow = MacTheme::resolve_or_default(self.theme);
         let m = theme_cow.box_view();
         MacInsets {
             top: m.inset_top.points(),
@@ -55,13 +55,13 @@ impl<'a> MacBox<'a> {
 
     /// Grouping box corner radius in points ($5.0\,\text{pt}$).
     pub fn corner_radius(&self) -> f32 {
-        let theme_cow = MacTheme::resolve(self.theme, &egui::Context::default());
+        let theme_cow = MacTheme::resolve_or_default(self.theme);
         theme_cow.box_view().corner_radius.points()
     }
 
     /// Grouping box outer border stroke width ($1.0\,\text{pt}$).
     pub fn border_width(&self) -> f32 {
-        let theme_cow = MacTheme::resolve(self.theme, &egui::Context::default());
+        let theme_cow = MacTheme::resolve_or_default(self.theme);
         theme_cow.box_view().border_width.points()
     }
 
@@ -85,12 +85,13 @@ impl<'a> MacBox<'a> {
             Pos2::new(start_pos.x + available_w - insets.right, f32::INFINITY),
         );
 
-        // Pre-allocate background shape on painter so it renders BEHIND child widgets (GL-1015 Z-order invariant)
+        // Pre-allocate background shape on painter so it renders BEHIND child widgets (Z-order invariant)
         let bg_shape_idx = ui.painter().add(egui::Shape::Noop);
+        let box_scope_id = ui.next_auto_id().with("mac_box_content");
 
         let mut child_ui = ui.new_child(
             UiBuilder::new()
-                .id_salt(Id::NULL.with("mac_box_content"))
+                .id_salt(box_scope_id)
                 .max_rect(content_rect),
         );
         let inner = add_contents(&mut child_ui);

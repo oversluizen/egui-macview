@@ -1,6 +1,6 @@
 //! COTS Red Baseline Tests for Authentic AppKit Finder & Table View Navigation.
 //!
-//! Grounded in GL-1015 (failing red COTS test assertions first, zero unused dependencies,
+//! Grounded in Test-Driven Development (failing red baseline test assertions first, zero unused dependencies,
 //! file size ceilings, authentic AppKit doubleAction & NSPathControl invariants).
 
 #[allow(dead_code)]
@@ -15,32 +15,32 @@ use std::path::PathBuf;
 
 #[test]
 fn test_cots_windows_drive_root_parent_chain() {
-    let test_path = PathBuf::from(r"D:\Programmeren\egui-macview");
+    let test_path = PathBuf::from(r"C:\Projects\egui-macview");
     let (dir_parents, path_titles) = build_parent_chain(&Some(test_path.clone()));
 
     let parents = dir_parents.expect("dir_parents must be Some");
     assert_eq!(
         parents.len(),
         3,
-        "Chain length must be 3 for D:\\Programmeren\\egui-macview"
+        "Chain length must be 3 for C:\\Projects\\egui-macview"
     );
-    assert_eq!(parents[0], PathBuf::from(r"D:\"));
-    assert_eq!(parents[1], PathBuf::from(r"D:\Programmeren"));
+    assert_eq!(parents[0], PathBuf::from(r"C:\"));
+    assert_eq!(parents[1], PathBuf::from(r"C:\Projects"));
     assert_eq!(parents[2], test_path);
 
-    // Root segment MUST be 'D:' rather than empty, 'D:\' or None
+    // Root segment MUST be 'C:' rather than empty, 'C:\' or None
     assert_eq!(
         path_titles,
-        vec!["D:", "Programmeren", "egui-macview"],
-        "Path titles must display clean drive volume 'D:' at index 0"
+        vec!["C:", "Projects", "egui-macview"],
+        "Path titles must display clean drive volume 'C:' at index 0"
     );
 
-    // Drive root only test: D:\
-    let (drive_parents, drive_titles) = build_parent_chain(&Some(PathBuf::from(r"D:\")));
+    // Drive root only test: C:\
+    let (drive_parents, drive_titles) = build_parent_chain(&Some(PathBuf::from(r"C:\")));
     let d_parents = drive_parents.expect("drive root parents must be Some");
     assert_eq!(d_parents.len(), 1);
-    assert_eq!(d_parents[0], PathBuf::from(r"D:\"));
-    assert_eq!(drive_titles, vec!["D:"]);
+    assert_eq!(d_parents[0], PathBuf::from(r"C:\"));
+    assert_eq!(drive_titles, vec!["C:"]);
 }
 
 #[test]
@@ -175,9 +175,9 @@ fn test_cots_color_well_id_salt_and_picker_interaction() {
 
 #[test]
 fn test_cots_finder_parent_directory_row_pinned() {
-    let test_dir = PathBuf::from(r"D:\Programmeren\egui-macview");
+    let test_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let tokens: [Vec<String>; 6] = std::array::from_fn(|_| Vec::new());
-    let rows = finder_data::collect_finder_rows(&Some(test_dir), &[], &[4; 6], &tokens);
+    let rows = finder_data::collect_finder_rows(&Some(test_dir.clone()), &[], &[4; 6], &tokens);
 
     assert!(
         !rows.is_empty(),
@@ -192,7 +192,7 @@ fn test_cots_finder_parent_directory_row_pinned() {
         parent_row.is_dir,
         "Parent directory row must be is_dir = true"
     );
-    assert_eq!(parent_row.dir_path, Some(PathBuf::from(r"D:\Programmeren")));
+    assert_eq!(parent_row.dir_path, test_dir.parent().map(|p| p.to_path_buf()));
 
     // When sorted descending by size or name, '..' must remain pinned at index 0
     let sorted_desc =
@@ -220,9 +220,9 @@ fn test_cots_finder_default_directory_and_selection_path_bar() {
     assert!(parents.is_some());
 
     // Verify parent chain without truncation when navigating deeper
-    let base = PathBuf::from(r"D:\Programmeren\egui-macview");
+    let base = PathBuf::from(r"C:\Projects\egui-macview");
     let (parents_base, titles_base) = build_parent_chain(&Some(base.clone()));
-    assert_eq!(titles_base, vec!["D:", "Programmeren", "egui-macview"]);
+    assert_eq!(titles_base, vec!["C:", "Projects", "egui-macview"]);
     assert_eq!(parents_base.unwrap().len(), 3);
 
     // Deeper subfolder 'src/controls'
@@ -230,7 +230,7 @@ fn test_cots_finder_default_directory_and_selection_path_bar() {
     let (parents_deep, titles_deep) = build_parent_chain(&Some(deeper.clone()));
     assert_eq!(
         titles_deep,
-        vec!["D:", "Programmeren", "egui-macview", "src", "controls"],
+        vec!["C:", "Projects", "egui-macview", "src", "controls"],
         "Path chain must never be truncated when navigating into subfolders"
     );
     assert_eq!(parents_deep.unwrap().len(), 5);

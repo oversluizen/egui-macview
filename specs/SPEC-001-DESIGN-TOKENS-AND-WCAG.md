@@ -26,7 +26,7 @@
 
 This specification governs the design token pipeline, color space resolution, typographic optical tracking, and accessibility contrast requirements for `egui-macview`:
 - **W3C Design Tokens Community Group (DTCG):** 100% data-driven token definitions stored in `tokens/design_tokens.json` and `tokens/typography.json`.
-- **Zero Hardcoding Invariant (GL-1015):** Direct numeric float literals (e.g. `18.0`, `22.0`, `44.0`) or hex color codes (`#FFFFFF`, `Color32::from_rgb`) are strictly forbidden in UI components.
+- **Zero Hardcoding Invariant (Design Token Driven Architecture):** Direct numeric float literals (e.g. `18.0`, `22.0`, `44.0`) or hex color codes (`#FFFFFF`, `Color32::from_rgb`) are strictly forbidden in UI components.
 - **W3C WCAG 2.1 §1.4.3 (Level AA):** Minimum contrast ratio of $\ge 4.5:1$ for normal text and $\ge 3.0:1$ for large text across both `Aqua` (light) and `DarkAqua` (dark) appearances.
 
 ---

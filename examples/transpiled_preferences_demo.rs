@@ -1,6 +1,6 @@
 //! `transpiled_preferences_demo` — Standalone macOS Preferences Window.
 //!
-//! Grounded in Apple macOS AppKit Human Interface Guidelines (HIG), GL-1015, GL-1016, and GL-1017.
+//! Grounded in Apple macOS AppKit Human Interface Guidelines (HIG) and automated architecture fitness standards.
 //! Directly executes the deterministically transpiled Rust code from macOS NIBs:
 //! 1. `GSAppearancePreferences` (macOS Settings Dialog)
 //! 2. `PanelViewStrokeSettings` (macOS Inspector Panel)

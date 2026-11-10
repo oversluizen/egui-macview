@@ -32,7 +32,7 @@ Modern macOS media production, non-linear editing, audio mastering, and structur
 5. **`MacTrimScrubber` (`AVPlayerView` / QuickTime In–Out Scrubber):** Combined normalized waveform timeline, named semantic zones, draggable In/Out trim handles with outside dimming and accent selection frame, and draggable playhead with `MM:SS.d` timecode badge.
 6. **`MacPathControl` (`NSPathControl`):** Interactive breadcrumb navigation bar with vector folder/document iconography, `ChevronRight` separators, per-segment click feedback, and optional trailing `Choose...` action button.
 
-All six controls SHALL be 100% domain-agnostic and 100% data-driven from `tokens/design_tokens.json` via `MacTheme`, adhering strictly to GL-1015 (Zero Hardcoded Constants, Zero Cross-Component Token Borrowing, and Modularity Ceilings $< 400$ eSLOC / $< 599$ physical lines).
+All six controls SHALL be 100% domain-agnostic and 100% data-driven from `tokens/design_tokens.json` via `MacTheme`, adhering strictly to Design Token Driven Architecture (Zero Magic Numbers, Zero Cross-Component Token Borrowing, and Modularity Ceilings $< 400$ eSLOC / $< 599$ physical lines).
 
 ---
 

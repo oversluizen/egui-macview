@@ -103,6 +103,15 @@ impl MacTheme {
         }
     }
 
+    /// Resolves an optional borrowed [`MacTheme`], falling back to the cached [`MacTheme::default`]
+    /// without allocating an [`egui::Context`].
+    pub fn resolve_or_default<'a>(theme: Option<&'a Self>) -> std::borrow::Cow<'a, Self> {
+        match theme {
+            Some(t) => std::borrow::Cow::Borrowed(t),
+            None => std::borrow::Cow::Owned(Self::default()),
+        }
+    }
+
     /// Sets the window controls presentation style (Strategy 2).
     pub fn with_window_controls_style(mut self, style: WindowControlsStyle) -> Self {
         self.window_controls_style = style;

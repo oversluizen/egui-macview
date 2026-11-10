@@ -111,6 +111,7 @@ pub struct CenterState {
     pub advanced_grid_selection: BTreeSet<usize>,
     pub advanced_player_playing: bool,
     pub advanced_player_progress: f32,
+    pub advanced_rules: Vec<egui_macview::controls::MacRuleRow>,
 }
 
 impl Default for CenterState {
@@ -208,6 +209,10 @@ impl Default for CenterState {
             advanced_grid_selection: BTreeSet::new(),
             advanced_player_playing: false,
             advanced_player_progress: 0.35,
+            advanced_rules: vec![
+                egui_macview::controls::MacRuleRow::new(vec![0, 0]),
+                egui_macview::controls::MacRuleRow::new(vec![1, 1]),
+            ],
         }
     }
 }

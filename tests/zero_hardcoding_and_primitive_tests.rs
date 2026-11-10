@@ -1,6 +1,6 @@
 //! ISO/IEC/IEEE 29119-3:2021 Zero-Hardcoding Compliance & Primitive Suite Tests.
 //!
-//! Normative reference: GL-1015 (Regel 11/13: Zero Hardcoded Constants).
+//! Normative reference: Design Token Driven Architecture (Zero Magic Numbers & Zero Hardcoded Constants).
 //! Verifies:
 //! 1. All semantic NSColor and layout geometry tokens resolve dynamically from W3C DTCG catalog.
 //! 2. Light (Aqua) and Dark (DarkAqua) appearances yield mathematically exact sRGB values.

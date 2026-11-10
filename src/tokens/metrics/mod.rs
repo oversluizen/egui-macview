@@ -9,7 +9,7 @@ pub use controls::{
     ComboBoxMetrics, DatePickerMetrics, DisclosureGroupMetrics, FocusRingMetrics,
     LevelIndicatorMetrics, MacControlMetrics, OutlineViewMetrics, PathControlMetrics,
     PlayerViewMetrics, PopUpButtonMetrics, ProgressIndicatorMetrics, ProgressSizeMetrics,
-    SearchFieldMetrics, SegmentedMetrics, SegmentedSizeMetrics, SliderMetrics, StepperMetrics,
+    RuleEditorMetrics, SearchFieldMetrics, SegmentedMetrics, SegmentedSizeMetrics, SliderMetrics, StepperMetrics,
     TableViewMetrics, TabViewMetrics, TextFieldMetrics, TextFieldSizeMetrics, ThumbnailCellMetrics,
     ToggleMetrics, TokenFieldMetrics, TrimScrubberMetrics,
 };

@@ -1,7 +1,7 @@
 //! Authentic macOS fuzzy subsequence search, ranking algorithm, and command palette item models.
 //!
 //! Normative Reference: SPEC-007 §4.
-//! Grounded in Single Responsibility Principle to maintain GL-1015 modularity ceilings.
+//! Grounded in Single Responsibility Principle to maintain modularity ceilings.
 
 use super::item::MacKeyboardShortcut;
 

@@ -1,4 +1,4 @@
-//! Static analysis helper functions for `architecture_guard_tests.rs` (GL-1015 Golden Master).
+//! Static analysis helper functions for architecture fitness guards.
 
 use std::collections::BTreeSet;
 use std::fs;
@@ -278,7 +278,7 @@ pub fn check_uibuilder_id_salt_in_source(file_label: &str, source: &str) -> Vec<
     violations
 }
 
-/// Verifies GL-1015 §3.3 Windows GUI Subsystem & Safe `eframe` Startup invariants on GUI entrypoints.
+/// Verifies Windows GUI Subsystem & Safe `eframe` Startup invariants on GUI entrypoints.
 pub fn check_gui_entrypoint_safety(file_label: &str, source: &str) -> Vec<String> {
     let stripped = strip_comments_and_strings(source);
     if !stripped.contains("fn main") {
@@ -293,7 +293,7 @@ pub fn check_gui_entrypoint_safety(file_label: &str, source: &str) -> Vec<String
     if stripped.contains("eframe::run_native") || stripped.contains("NativeOptions") {
         if stripped.contains("NativeOptions::default()") {
             violations.push(format!(
-                "{file_label} -> bare `NativeOptions::default()` is forbidden by GL-1015 §3.3"
+                "{file_label} -> bare `NativeOptions::default()` is forbidden (Safe eframe Startup Guard)"
             ));
         }
         for required in [
@@ -312,7 +312,7 @@ pub fn check_gui_entrypoint_safety(file_label: &str, source: &str) -> Vec<String
     violations
 }
 
-/// Forbids `allow(dead_code)` in `src/` production modules (GL-1015 Anti-Spookcode Guard).
+/// Forbids `allow(dead_code)` in `src/` production modules (Anti-Spookcode Guard).
 pub fn check_anti_spookcode_in_source(file_label: &str, source: &str) -> Vec<String> {
     let stripped = strip_comments_and_strings(source);
     let mut violations = Vec::new();

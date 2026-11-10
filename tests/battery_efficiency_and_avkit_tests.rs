@@ -1,6 +1,6 @@
 //! Integration and unit tests for Battery Efficiency (7 leaks) and AVKit Audio Loop Sync.
 //!
-//! Grounded in GL-1015 (failing red COTS test assertions first, zero unused dependencies,
+//! Grounded in Test-Driven Development (failing red baseline test assertions first, zero unused dependencies,
 //! file size ceilings, zero idle repaint invariant, and robust edge-case verification).
 
 #[allow(dead_code)]
@@ -105,7 +105,7 @@ fn test_indeterminate_progress_unfocused_minimized_zero_repaint() {
     assert_eq!(
         delay_unfocused,
         Duration::MAX,
-        "GL-1015 Leak 3: Unfocused window must not schedule 33ms indeterminate repaints"
+        "Leak 3: Unfocused window must not schedule 33ms indeterminate repaints"
     );
 
     // 2. Minimized window with spinning indicator: MUST NOT request repaints
@@ -141,7 +141,7 @@ fn test_indeterminate_progress_unfocused_minimized_zero_repaint() {
     assert_eq!(
         delay_minimized,
         Duration::MAX,
-        "GL-1015 Leak 3: Minimized window must not schedule spinning indicator repaints"
+        "Leak 3: Minimized window must not schedule spinning indicator repaints"
     );
 
     // 3. Focused & visible window: MUST request animation repaints (< 100ms)
@@ -192,7 +192,7 @@ fn test_avkit_playback_does_not_flood_undo_stack() {
     assert_eq!(
         app.center.avkit_undo.undo_count(),
         0,
-        "GL-1015 Leak 2: 60fps playhead motion must not flood NSUndoManager (found {} snapshots)",
+        "Leak 2: 60fps playhead motion must not flood NSUndoManager (found {} snapshots)",
         app.center.avkit_undo.undo_count()
     );
 
@@ -243,7 +243,7 @@ fn test_table_view_viewport_row_culling() {
     let total_invocations = cell_invocation_count.load(Ordering::SeqCst);
     assert!(
         total_invocations <= 30,
-        "GL-1015 Leak 4: Table with 1000 rows in 100pt clip_rect must cull offscreen rows (got {total_invocations} cell calls)"
+        "Leak 4: Table with 1000 rows in 100pt clip_rect must cull offscreen rows (got {total_invocations} cell calls)"
     );
 }
 
@@ -256,7 +256,7 @@ fn test_avkit_audio_track_duration_1_to_1_and_loop_restart() {
     let sample_duration = track.samples_mono.len() as f64 / track.sample_rate as f64;
     assert!(
         (sample_duration - track.duration_secs).abs() < 0.25,
-        "GL-1015 AVKit Bug: Procedural audio buffer ({sample_duration:.1}s) must match track duration ({:.1}s) 1-to-1",
+        "AVKit Bug: Procedural audio buffer ({sample_duration:.1}s) must match track duration ({:.1}s) 1-to-1",
         track.duration_secs
     );
 
@@ -288,7 +288,7 @@ fn test_avkit_audio_track_duration_1_to_1_and_loop_restart() {
 
     assert!(
         app.center.media_playhead < 25.0,
-        "GL-1015 AVKit Bug: Playhead must loop back to in_point (got playhead={})",
+        "AVKit Bug: Playhead must loop back to in_point (got playhead={})",
         app.center.media_playhead
     );
     assert!(
@@ -374,7 +374,7 @@ fn test_finder_display_rows_are_cached_at_rest() {
     let _ = run_app_frame(&ctx, &mut app, t, true, false);
     assert!(
         !app.center.finder_cached_rows.is_empty(),
-        "GL-1015 Leak 1: Finder display rows must be populated in finder_cached_rows"
+        "Leak 1: Finder display rows must be populated in finder_cached_rows"
     );
     let initial_len = app.center.finder_cached_rows.len();
 

@@ -6,7 +6,7 @@
 //! - SPEC-001 §4.13.B: Default NIB Document Inspector (260pt).
 //! - SPEC-001 §4.13.C: Expanded Pro Inspector (380pt with multi-deck tabs).
 //! - SPEC-001 §4.14: Authentic AppKit Vector Rendering Oracles.
-//! - GL-1015: Regel 0 (De Verankeringswet) & Regel 7 (ISO/IEC/IEEE 29119 Spec-First).
+//! - Test-Driven Development (TDD / Specification-Driven Verification) & ISO/IEC/IEEE 29119 Spec-First.
 
 use egui::{Context, Event, Modifiers, PointerButton, Pos2, RawInput};
 use egui_macview::{

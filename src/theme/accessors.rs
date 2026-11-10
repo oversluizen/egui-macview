@@ -7,7 +7,7 @@ use crate::tokens::{
     LayoutMetrics, LevelIndicatorMetrics, MacControlMetrics, MacMotionTokens, MacTypographyTokens,
     MenuBarMetrics, NavigationMetrics, OutlineViewMetrics, PaletteMetrics, PathControlMetrics,
     PlayerViewMetrics, PopUpButtonMetrics, PopoverMetrics, ProgressIndicatorMetrics,
-    ScrollViewMetrics, SearchFieldMetrics, SegmentedMetrics, SliderMetrics, SplitViewMetrics,
+    RuleEditorMetrics, ScrollViewMetrics, SearchFieldMetrics, SegmentedMetrics, SliderMetrics, SplitViewMetrics,
     StackViewMetrics, StepperMetrics, TableViewMetrics, TabViewMetrics, TextFieldMetrics,
     ThumbnailCellMetrics, ToastMetrics, ToggleMetrics, TokenFieldMetrics, ToolbarMetrics,
     TrimScrubberMetrics,
@@ -173,6 +173,11 @@ impl MacTheme {
     /// Resolves box view container and separator metrics.
     pub fn box_view(&self) -> &BoxViewMetrics {
         self.tokens().box_view_metrics()
+    }
+
+    /// Resolves rule editor layout and button metrics.
+    pub fn rule_editor(&self) -> &RuleEditorMetrics {
+        self.tokens().rule_editor_metrics()
     }
 
     /// Resolves navigation and feedback metrics collection.

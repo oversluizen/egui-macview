@@ -1,7 +1,7 @@
 //! ISO/IEC/IEEE 29119-4:2021 High-Assurance Property-Based Invariant Test Suite.
 //!
 //! Normative references:
-//! - SPEC-001 Section 1, 2.1, 4.1 & GL-1015 (High-Assurance Testing Cadans).
+//! - SPEC-001 Section 1, 2.1, 4.1 & High-Assurance Property-Based Verification.
 //! - ISO/IEC/IEEE 29119-4: Combinatorial, Invariant, and Generative Domain Verification.
 //! - DO-178C Level A/B: Mathematical Determinism and Absence of Numerical Anomalies.
 //!

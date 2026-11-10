@@ -2,6 +2,15 @@
 //!
 //! Grounded in Apple AppKit `NSDatePickerStyleClockAndCalendar` with Month Calendar
 //! ($139.0 \times 148.0\,\text{pt}$) and Analog Clock Face ($122.0 \times 123.0\,\text{pt}$).
+//!
+//! # Separation of Concerns: Calendar Grid & Clock Face
+//!
+//! This module encapsulates all 2D calendar matrix math and clock hand rendering:
+//! - **Zeller Calendar Grid**: Calculates weekday offsets via [`MacDate::first_weekday_of_month`],
+//!   distributing 28..31 day cells across a strict 6-row $\times$ 7-column grid with
+//!   $18.0\,\text{pt}$ cell pitch, header month stepping, and direct day selection.
+//! - **Analog Clock Face**: Renders circular boundary ($119.0\,\text{pt}$ diameter), center pip,
+//!   and trigonometry-driven hour and minute hands.
 
 use crate::controls::date_picker::{MacDate, MacDatePicker, MacDatePickerElementFlags};
 use crate::theme::MacTheme;
@@ -22,7 +31,8 @@ pub fn paint_clock_and_calendar(
     if elements == MacDatePickerElementFlags::DateOnly || elements == MacDatePickerElementFlags::DateAndTime {
         let cal_sz = MacDatePicker::calendar_matrix_size();
         let cal_rect = Rect::from_min_size(rect.min, cal_sz);
-        let header_h = metrics.datetime_regular_height.points();
+        let header_h = metrics.calendar_header_height.points();
+        let weekday_h = metrics.calendar_weekday_height.points();
         let header_rect = Rect::from_min_size(cal_rect.min, Vec2::new(cal_rect.width(), header_h));
 
         // Month & year title
@@ -78,12 +88,27 @@ pub fn paint_clock_and_calendar(
             }
         }
 
-        // Calendar days matrix
-        let grid_origin = Pos2::new(cal_rect.min.x, header_rect.max.y);
+        // Weekday header row (["S", "M", "T", "W", "T", "F", "S"])
         let cols_count = 7;
-        let rows_count = 6;
         let cell_w = cal_rect.width() / (cols_count as f32);
-        let cell_h = (cal_rect.height() - header_h) / (rows_count as f32);
+        let weekdays = ["S", "M", "T", "W", "T", "F", "S"];
+        let small_style = ui.style().text_styles.get(&egui::TextStyle::Small).cloned().unwrap_or_default();
+        for (c, &day_name) in weekdays.iter().enumerate() {
+            let wk_rect = Rect::from_min_size(
+                Pos2::new(cal_rect.min.x + (c as f32) * cell_w, cal_rect.min.y + header_h),
+                Vec2::new(cell_w, weekday_h),
+            );
+            let g = painter.layout_no_wrap(day_name.to_string(), small_style.clone(), theme.secondary_label());
+            painter.galley(
+                Pos2::new(wk_rect.center().x - g.size().x * 0.5, wk_rect.center().y - g.size().y * 0.5),
+                g,
+                theme.secondary_label(),
+            );
+        }
+
+        // Calendar days 6x7 matrix
+        let grid_origin = Pos2::new(cal_rect.min.x, cal_rect.min.y + header_h + weekday_h);
+        let cell_h = metrics.calendar_cell_height.points();
         let first_dow = date.first_weekday_of_month();
         let days_count = date.days_in_month();
 
@@ -139,11 +164,22 @@ pub fn paint_clock_and_calendar(
         let radius = metrics.clock_size.points() * 0.5;
 
         painter.circle_stroke(clock_center, radius, Stroke::new(1.0, theme.separator()));
+
+        // 12 subtle hour tick marks around perimeter (radius - 3.0 to radius)
+        let clock_hours = 12;
+        let clock_minutes = 60;
+        let tick_len = metrics.corner_radius_mini.points();
+        for h in 0..clock_hours {
+            let angle = (h as f32) * (std::f32::consts::TAU / (clock_hours as f32)) - std::f32::consts::FRAC_PI_2;
+            let (sin, cos) = angle.sin_cos();
+            let p_outer = Pos2::new(clock_center.x + cos * radius, clock_center.y + sin * radius);
+            let p_inner = Pos2::new(clock_center.x + cos * (radius - tick_len), clock_center.y + sin * (radius - tick_len));
+            painter.line_segment([p_inner, p_outer], Stroke::new(1.0, theme.separator()));
+        }
+
         painter.circle_filled(clock_center, 2.0, theme.control_accent());
 
         // Dynamic hour and minute hands
-        let clock_hours = 12;
-        let clock_minutes = 60;
         let hr_val = (date.hour % clock_hours) as f32 + (date.minute as f32) / (clock_minutes as f32);
         let hr_angle = hr_val * (std::f32::consts::TAU / (clock_hours as f32)) - std::f32::consts::FRAC_PI_2;
         let min_angle = (date.minute as f32 / (clock_minutes as f32)) * std::f32::consts::TAU - std::f32::consts::FRAC_PI_2;
@@ -156,5 +192,23 @@ pub fn paint_clock_and_calendar(
 
         let min_tip = Pos2::new(clock_center.x + min_angle.cos() * min_len, clock_center.y + min_angle.sin() * min_len);
         painter.line_segment([clock_center, min_tip], Stroke::new(1.0, theme.label()));
+
+        // Interactive click-to-set-minute
+        if response.clicked() {
+            if let Some(pos) = ui.input(|i| i.pointer.interact_pos()) {
+                if clock_rect.contains(pos) {
+                    let dx = pos.x - clock_center.x;
+                    let dy = pos.y - clock_center.y;
+                    let mut angle = dy.atan2(dx) + std::f32::consts::FRAC_PI_2;
+                    if angle < 0.0 {
+                        angle += std::f32::consts::TAU;
+                    }
+                    let minute_frac = angle / std::f32::consts::TAU;
+                    let minute = ((minute_frac * (clock_minutes as f32)).round() as u32) % (clock_minutes as u32);
+                    date.minute = minute;
+                    response.mark_changed();
+                }
+            }
+        }
     }
 }

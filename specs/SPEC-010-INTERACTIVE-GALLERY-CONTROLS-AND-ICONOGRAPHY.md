@@ -10,7 +10,7 @@
 | **Target Host** | Standalone crate `egui-macview` (Rust, egui 0.37) |
 | **Author** | Jaco Oversluizen / `egui-macview` contributors |
 | **Normative Test Suites** | `tests/micro_animations_and_hud_tests.rs`, `tests/symbol_tests.rs`, `tests/appkit_primitives_tests.rs` |
-| **Normative Standards** | ISO/IEC/IEEE 42010:2011, ISO/IEC/IEEE 29119-3:2021, RFC 2119/8174, Apple macOS HIG, W3C DTCG, GL-1015 |
+| **Normative Standards** | ISO/IEC/IEEE 42010:2011, ISO/IEC/IEEE 29119-3:2021, RFC 2119/8174, Apple macOS HIG, W3C DTCG |
 
 ---
 
@@ -18,8 +18,8 @@
 
 | Version | Date | Author | Description / Milestone |
 | :--- | :--- | :--- | :--- |
-| `0.1.0` | 2026-11-05 | Jaco Oversluizen / AI Team | Initial Specification: Functional Binding and Cross-Platform Shortcut Parity |
-| `0.3.1` | 2026-11-06 | Jaco Oversluizen / AI Team | Normative Release: Bidirectional Presets, Live Vector Transforms & SF Symbols |
+| `0.1.0` | 2026-11-05 | Jaco Oversluizen / `egui-macview` contributors | Initial Specification: Functional Binding and Cross-Platform Shortcut Parity |
+| `0.3.1` | 2026-11-06 | Jaco Oversluizen / `egui-macview` contributors | Normative Release: Bidirectional Presets, Live Vector Transforms & SF Symbols |
 
 ---
 
@@ -28,7 +28,7 @@
 ### 1.1 Problem Statement & Architectural Justification
 In desktop framework showcases, UI controls frequently degenerate into superficial visual mocks where sliders, steppers, and popup buttons render aesthetically but fail to alter underlying application state or execute promised actions ("dead UI"). Furthermore, macOS keyboard shortcuts (such as `⌘K`) fail on Windows platforms where no `Command` key exists, and pure text buttons reduce visual affordance and scanability.
 
-To fulfill **GL-1015** (Zero Mock Policy / High Engineering Integrity) and Apple Human Interface Guidelines (HIG):
+To fulfill **Specification-Driven Verification** (Zero Mock Policy / High Engineering Integrity) and Apple Human Interface Guidelines (HIG):
 1. **Zero Dead Controls:** Every interactive control presented in `macview_gallery` MUST be bidirectionally bound to live application state and trigger genuine real-time transformations.
 2. **Cross-Platform Shortcut Parity:** Global shortcuts MUST adapt dynamically to the host operating system, binding `⌘K` on macOS and `Ctrl+K` (with fallback to `Win+K`) on Windows and Linux.
 3. **Optically Scaled SF Symbols:** Pure text labels in segmented controls, action buttons, and navigation bars MUST be augmented with authentic vector glyphs from the embedded `CupertinoIcons` engine (`MacSymbol`), maintaining strict compliance with the crate's Anti-Emoji Guard.
@@ -98,4 +98,4 @@ To fulfill **GL-1015** (Zero Mock Policy / High Engineering Integrity) and Apple
 | `TC-1005-ANTI-EMOJI-GUARD` | `tests/symbol_tests.rs` | Verifies zero host emoji occurrences across the codebase |
 
 ---
-*Normative specification accepted and verified under GL-1015.*
+*Normative specification accepted and verified under Automated Architecture Fitness Standards.*

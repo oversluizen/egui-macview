@@ -1,8 +1,8 @@
-//! Automated Architecture Guard Suite (GL-1015 Golden Master Fitness Functions).
+//! Automated Architecture Guard Suite (Golden Master Fitness Functions).
 //!
-//! Normative reference: GL-1015 (Zero Hardcoding, Zero Token Cheating, Domain-Agnostic Separation,
-//! Documentation Completeness, File Size Ceilings, Windows GUI Subsystem & Safe `eframe` Startup,
-//! Anti-Spookcode & Zero Unused Dependencies, and State-Invariant Roundtrip Verification).
+//! Normative reference: Automated Architecture Fitness Guards (Zero Hardcoding, Zero Token Cheating,
+//! Domain-Agnostic Separation, Documentation Completeness, File Size Ceilings, Windows GUI Subsystem
+//! & Safe `eframe` Startup, Anti-Spookcode & Zero Unused Dependencies, and State-Invariant Roundtrip Verification).
 
 mod guard_helpers;
 
@@ -71,7 +71,7 @@ fn test_guard_zero_token_arithmetic_and_domain_purity() {
     assert!(domain_v.is_empty(), "Domain Purity Guard:\n{domain_v:#?}");
     assert!(
         salt_v.is_empty(),
-        "UiBuilder id_salt Guard (GL-1015 §3.4):\n{salt_v:#?}"
+        "UiBuilder id_salt Guard:\n{salt_v:#?}"
     );
 }
 
@@ -157,6 +157,7 @@ fn test_guard_zero_cross_component_token_borrowing_and_self_check() {
         "popover_metrics",
         "popup_button",
         "progress_indicator",
+        "rule_editor",
         "scroll_view",
         "search_field",
         "segmented",
@@ -193,10 +194,11 @@ fn test_guard_zero_cross_component_token_borrowing_and_self_check() {
             (_, "level_indicator.rs") => &["level_indicator"],
             (_, "outline_view.rs") => &["outline_view", "thumbnail"],
             (_, "path_control.rs") => &["path_control"],
-            (_, "player_view.rs") => &["player_view"],
+            (_, "player_view.rs") | ("player_view", _) => &["player_view"],
             (_, "popup_button.rs") => &["popup_button"],
             (_, "progress_indicator.rs") => &["progress_indicator"],
             (_, "rating_indicator.rs") => &["level_indicator"],
+            (_, "rule_editor.rs") => &["rule_editor"],
             (_, "search_field.rs") => &["search_field"],
             (_, "segmented.rs") => &["segmented"],
             (_, "slider.rs") => &["slider"],
@@ -267,7 +269,7 @@ fn test_guard_windows_gui_subsystem_and_safe_eframe_startup() {
     );
     assert!(
         violations.is_empty(),
-        "Windows GUI Subsystem & Safe eframe Startup Guard (GL-1015 §3.3):\n{violations:#?}"
+        "Windows GUI Subsystem & Safe eframe Startup Guard:\n{violations:#?}"
     );
 
     // Self-check: bare NativeOptions::default() without windows_subsystem or safe flags must fail
@@ -326,12 +328,12 @@ fn test_guard_anti_spookcode_and_zero_unused_dependencies() {
         "Zero Unused Dependencies Guard: crates in [dependencies] unused in `src/`:\n{unused_deps:#?}"
     );
 
-    // State-Invariant & Undo/Redo Roundtrip + Cold-Start Smoke Guard (GL-1015 §3.3, §3.4 & §3.5)
+    // State-Invariant & Undo/Redo Roundtrip + Cold-Start Smoke Guard
     let undo_src =
         fs::read_to_string(manifest_dir.join("src/state/undo.rs")).expect("read undo.rs");
     assert!(
         undo_src.contains("pub fn validate_invariants("),
-        "NSUndoManager in `src/state/undo.rs` must expose `pub fn validate_invariants(&self)` (GL-1015 §3.5)"
+        "NSUndoManager in `src/state/undo.rs` must expose `pub fn validate_invariants(&self)`"
     );
     let hygiene_test =
         fs::read_to_string(manifest_dir.join("tests/runtime_hygiene_and_invariants_tests.rs"))
@@ -345,3 +347,89 @@ fn test_guard_anti_spookcode_and_zero_unused_dependencies() {
         "Integration suite must verify Cold-Start (<500ms), Zero Idle Repaint Leak, and Action->Undo->Redo invariants"
     );
 }
+
+#[test]
+fn test_guard_zero_vault_leakage_and_de_ai_ification() {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let forbidden_terms: Vec<String> = vec![
+        format!("{}-{}", "GL", "1015"),
+        format!("{}-{}", "GL", "1005"),
+        format!("{}-{}", "GL", "1016"),
+        format!("{}-{}", "GL", "1017"),
+        format!("{}-{}", "SOP", "1016"),
+        format!("{} {}", "De", "Verankeringswet"),
+        format!("{} {}", "06", "AI Team"),
+        format!("{}:/{}", "D", "Programmeren"),
+        format!("{}:\\{}", "D", "Programmeren"),
+        format!("{}:/{}", "G", "My Drive"),
+        format!("{}-{}", "Jacos", "Air"),
+        format!("{} {}", "Damped Harmonic Oscillator", "Tensor Manifold"),
+        format!(
+            "{} {}",
+            "Mathematical Layout Determinism", "with Subpixel Snap Rasterization"
+        ),
+        format!("{} {}", "Polymorphic transactional", "VC state machines"),
+    ];
+
+    let mut violations = Vec::new();
+    let scan_dirs = ["src", "tests", "specs", "examples"];
+    for dir in &scan_dirs {
+        for file in collect_rs_files(&manifest_dir.join(dir)) {
+            let rel = file
+                .strip_prefix(manifest_dir)
+                .unwrap_or(&file)
+                .to_string_lossy();
+            let content = fs::read_to_string(&file).expect("read file");
+            for term in &forbidden_terms {
+                if content.contains(term.as_str()) {
+                    violations.push(format!("{rel} contains forbidden term `{term}`"));
+                }
+            }
+        }
+    }
+
+    let md_files = [
+        manifest_dir.join("README.md"),
+        manifest_dir.join("ARCHITECTURE.md"),
+        manifest_dir.join("CHANGELOG.md"),
+        manifest_dir.join("SPEC-001-APPKIT-PRIMITIVES-AND-LAYOUT.md"),
+    ];
+    for path in &md_files {
+        if path.exists() {
+            let rel = path
+                .strip_prefix(manifest_dir)
+                .unwrap_or(path)
+                .to_string_lossy();
+            let content = fs::read_to_string(path).expect("read file");
+            for term in &forbidden_terms {
+                if content.contains(term.as_str()) {
+                    violations.push(format!("{rel} contains forbidden term `{term}`"));
+                }
+            }
+        }
+    }
+
+    if let Ok(entries) = fs::read_dir(manifest_dir.join("specs")) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|s| s.to_str()) == Some("md") {
+                let rel = path
+                    .strip_prefix(manifest_dir)
+                    .unwrap_or(&path)
+                    .to_string_lossy();
+                let content = fs::read_to_string(&path).expect("read file");
+                for term in &forbidden_terms {
+                    if content.contains(term.as_str()) {
+                        violations.push(format!("{rel} contains forbidden term `{term}`"));
+                    }
+                }
+            }
+        }
+    }
+
+    assert!(
+        violations.is_empty(),
+        "Vault Leakage, Local Path & Pseudo-Academic Jargon Violations:\n{violations:#?}"
+    );
+}
+

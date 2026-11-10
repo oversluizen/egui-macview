@@ -1,7 +1,7 @@
 //! ISO/IEC/IEEE 29119-3:2021 Integration Test Suite for SPEC-012 Advanced Controls.
 //!
 //! Grounded in Apple AppKit/AVKit Sonoma 14.8.9 hardware inspection (Darwin 23.6.0).
-//! Normative references: SPEC-012 (`REQ-012-01` through `REQ-012-07`) and GL-1015.
+//! Normative references: SPEC-012 (`REQ-012-01` through `REQ-012-07`) and Architecture Fitness Guards.
 
 use egui::{Context, Id, Key, Modifiers, Pos2, RawInput, Rect, Vec2};
 use egui_macview::controls::{
@@ -121,6 +121,29 @@ fn test_spec012_combo_box_geometry_and_popover_filtering() {
     let open_id = Id::NULL.with("cb_live").with("popover_open");
     let is_open = ctx.data_mut(|d| d.get_temp::<bool>(open_id).unwrap_or(false));
     assert!(is_open, "Alt+Down must open combo box popover");
+
+    // 4. Keyboard navigation & filtering: Enter selects highlighted item, and dynamic list contraction clamps sel_idx
+    let mut cb_text = "App".to_string();
+    let mut enter_input = RawInput::default();
+    enter_input.events.push(egui::Event::Key {
+        key: Key::Enter,
+        physical_key: None,
+        pressed: true,
+        repeat: false,
+        modifiers: Modifiers::NONE,
+    });
+    let test_open_id = Id::NULL.with("cb_filter_test").with("popover_open");
+    let test_sel_id = Id::NULL.with("cb_filter_test").with("popover_sel_idx");
+    ctx.data_mut(|d| {
+        d.insert_temp(test_open_id, true);
+        d.insert_temp(test_sel_id, 8usize);
+    });
+    run_pass(&ctx, enter_input, |ui| {
+        MacComboBox::new("cb_filter_test", &mut cb_text, &items)
+            .theme(&theme)
+            .show(ui);
+    });
+    assert_eq!(cb_text, "Apple", "Enter with clamped sel_idx must select the valid filtered item");
 }
 
 /// TC-012-04: Validates MacTabView MacBook insets, flipped coordinates, dynamic container sizing and tab switching.
@@ -233,24 +256,9 @@ fn test_spec012_date_picker_stepper_and_calendar_matrix() {
 
     // 2. Exact frame dimensions across sizes & flags
     for (flags, reg, small, mini) in [
-        (
-            MacDatePickerElementFlags::DateAndTime,
-            Vec2::new(161.0, 28.0),
-            Vec2::new(157.0, 22.0),
-            Vec2::new(155.0, 21.0),
-        ),
-        (
-            MacDatePickerElementFlags::DateOnly,
-            Vec2::new(97.0, 28.0),
-            Vec2::new(93.0, 22.0),
-            Vec2::new(91.0, 21.0),
-        ),
-        (
-            MacDatePickerElementFlags::TimeOnly,
-            Vec2::new(81.0, 28.0),
-            Vec2::new(77.0, 22.0),
-            Vec2::new(75.0, 21.0),
-        ),
+        (MacDatePickerElementFlags::DateAndTime, Vec2::new(161.0, 28.0), Vec2::new(157.0, 22.0), Vec2::new(155.0, 21.0)),
+        (MacDatePickerElementFlags::DateOnly, Vec2::new(97.0, 28.0), Vec2::new(93.0, 22.0), Vec2::new(91.0, 21.0)),
+        (MacDatePickerElementFlags::TimeOnly, Vec2::new(81.0, 28.0), Vec2::new(77.0, 22.0), Vec2::new(75.0, 21.0)),
     ] {
         assert_eq!(MacDatePicker::dimensions(flags, MacControlSize::Regular), reg);
         assert_eq!(MacDatePicker::dimensions(flags, MacControlSize::Small), small);
@@ -263,14 +271,7 @@ fn test_spec012_date_picker_stepper_and_calendar_matrix() {
     assert_eq!(MacDatePicker::clock_intrinsic_size(), Vec2::new(119.0, 119.0));
 
     // 4. Stepper date mutation interaction
-    let mut test_date = MacDate {
-        year: 2026,
-        month: 11,
-        day: 10,
-        hour: 10,
-        minute: 14,
-        second: 30,
-    };
+    let mut test_date = MacDate { year: 2026, month: 11, day: 10, hour: 10, minute: 14, second: 30 };
     test_date.step_segment(0, MacDatePickerElementFlags::DateOnly, 1);
     assert_eq!(test_date.year, 2027);
 
@@ -278,14 +279,7 @@ fn test_spec012_date_picker_stepper_and_calendar_matrix() {
     assert_eq!(test_date.month, 1); // Nov (11) + 2 wraps to Jan (1)
 
     // Leap-year boundary stepping invariant: 2024-02-29 + 1 year must clamp day to 28
-    let mut leap_date = MacDate {
-        year: 2024,
-        month: 2,
-        day: 29,
-        hour: 12,
-        minute: 0,
-        second: 0,
-    };
+    let mut leap_date = MacDate { year: 2024, month: 2, day: 29, hour: 12, minute: 0, second: 0 };
     leap_date.step_segment(0, MacDatePickerElementFlags::DateOnly, 1);
     assert_eq!(leap_date.year, 2025);
     assert_eq!(
@@ -294,14 +288,7 @@ fn test_spec012_date_picker_stepper_and_calendar_matrix() {
     );
 
     // Century leap-year boundary: year 2000 is leap, year 1900 is non-leap
-    let mut century_date = MacDate {
-        year: 2000,
-        month: 2,
-        day: 29,
-        hour: 12,
-        minute: 0,
-        second: 0,
-    };
+    let mut century_date = MacDate { year: 2000, month: 2, day: 29, hour: 12, minute: 0, second: 0 };
     century_date.step_segment(0, MacDatePickerElementFlags::DateOnly, -100);
     assert_eq!(century_date.year, 1900);
     assert_eq!(
@@ -387,29 +374,34 @@ fn test_spec012_player_view_hud_pod_and_inline_transport() {
 
     // 4. Render HUD pod in pass
     run_pass(&ctx, RawInput::default(), |ui| {
-        ui.add(
-            MacPlayerView::new()
-                .controls_style(MacPlayerControlsStyle::Floating)
-                .is_playing(true)
-                .progress(0.42)
-                .theme(&theme),
-        );
+        ui.add(MacPlayerView::new().controls_style(MacPlayerControlsStyle::Floating).is_playing(true).progress(0.42).theme(&theme));
     });
 
     // 5. Two-way mutable state binding
     let mut live_playing = false;
     let mut live_progress = 0.15f32;
     run_pass(&ctx, RawInput::default(), |ui| {
-        ui.add(
-            MacPlayerView::new()
-                .controls_style(MacPlayerControlsStyle::Floating)
-                .is_playing_mut(&mut live_playing)
-                .progress_mut(&mut live_progress)
-                .theme(&theme),
-        );
+        ui.add(MacPlayerView::new().controls_style(MacPlayerControlsStyle::Floating).is_playing_mut(&mut live_playing).progress_mut(&mut live_progress).theme(&theme));
     });
     assert!(!live_playing);
     assert!((live_progress - 0.15).abs() < 1e-4);
+
+    // 6. Multi-hour AVKit timecode formatting and scrubber clearance (> 36,000s)
+    use egui_macview::controls::{format_remaining_timecode, format_timecode};
+    assert_eq!(format_timecode(125, 200.0), "02:05");
+    assert_eq!(format_remaining_timecode(75, 200.0), "-01:15");
+    assert_eq!(format_timecode(3672, 7200.0), "01:01:12");
+    assert_eq!(format_remaining_timecode(3528, 7200.0), "-00:58:48");
+    assert_eq!(format_timecode(36000, 36000.0), "10:00:00");
+
+    let long_pv = MacPlayerView::new()
+        .controls_style(MacPlayerControlsStyle::Floating)
+        .duration_secs(36000.0)
+        .theme(&theme);
+    let geom = long_pv.compute_geometry(Rect::from_min_size(Pos2::ZERO, Vec2::new(600.0, 400.0)));
+    assert!(geom.scrubber_track_rect.width() > 100.0, "Scrubber track must retain adequate width under multi-hour duration");
+    assert!(geom.elapsed_pos.x + 48.0 <= geom.scrubber_track_rect.min.x, "Elapsed time label must not overlap scrubber track");
+    assert!(geom.scrubber_track_rect.max.x <= geom.remaining_pos.x, "Scrubber track must not overlap remaining time label");
 }
 
 /// TC-012-07: Validates MacBox container insets and separator primitive.

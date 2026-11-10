@@ -7,10 +7,10 @@
 | **Document Version** | `0.3.0` |
 | **Status** | Accepted / Normative |
 | **Target Milestone** | Milestone 0.3.0 (Parity Verification Gate) |
-| **Target Ecosystem** | Standalone crate `egui-macview`, Patrix, and future cross-platform workspace projects |
-| **Author** | Jaco Oversluizen / AI Team Architecture |
+| **Target Ecosystem** | Standalone crate `egui-macview` and cross-platform desktop applications |
+| **Author** | Jaco Oversluizen / `egui-macview` contributors |
 | **Normative Test Suite** | `tests/macbook_parity_differential_tests.rs` |
-| **Normative Standards** | ISO/IEC 25010:2023, ISO/IEC/IEEE 29119-3:2021, CIE DE2000, GL-1005, GL-1015, GL-1016, SOP-1016 |
+| **Normative Standards** | ISO/IEC 25010:2023, ISO/IEC/IEEE 29119-3:2021, CIE DE2000, Continuous Integration & Automated Parity Testing |
 
 ---
 
@@ -26,9 +26,9 @@
 
 ## 1. Scope & System Architecture
 
-When engineering applications in Rust (`egui`) intended to look, feel, and behave indistinguishably from native macOS software, visual inspection ("vibecoding") is strictly prohibited by [[GL-1015-industry-software-and-testing-standards|GL-1015]] and [[GL-1016-remote-parity-and-differential-testing|GL-1016]].
+When engineering applications in Rust (`egui`) intended to look, feel, and behave indistinguishably from native macOS software, visual inspection ("vibecoding") is strictly replaced by automated specification-driven verification and differential visual regression testing.
 
-SPEC-009 implements and binds the vault-wide [[GL-1016-remote-parity-and-differential-testing|GL-1016]] (UDP-01) standard to `egui-macview`, connecting:
+SPEC-009 establishes automated remote differential parity testing for `egui-macview`, connecting:
 1. **Local Developer Host (Windows / Linux):** Headless rendering of `egui` components into uncompressed 32-bit RGBA framebuffers.
 2. **Physical macOS Reference Host (MacBook Air via SSH):** Native AppKit / Quartz offscreen rendering into reference PNGs and geometry ground-truth JSONs.
 3. **Automated Mathematical Comparator (`macbook-diff.py`):** Pure-Python deterministic engine enforcing ISO 25010 structural similarity ($\text{SSIM} \ge 0.990$) and CIE DE2000 color parities ($\Delta E_{00} \le 1.5$).
@@ -41,10 +41,10 @@ flowchart TD
     end
 
     subgraph RemoteHost["Physical Reference Host (MacBook Air via SSH)"]
-        D["Native AppKit Runner\n(render_native_appkit_golden.py)"] --> E["Quartz Framebuffer\n(~/patrix_macbook_runner/golden_master/)"]
+        D["Native AppKit Runner\n(render_native_appkit_golden.py)"] --> E["Quartz Framebuffer\n(~/macview_parity_runner/golden_master/)"]
     end
 
-    C --> F["Differential Comparator\n(06 AI Team/Scripts/macbook-diff.py)"]
+    C --> F["Differential Comparator\n(scripts/macbook-diff.py)"]
     E -->|SCP Transfer| F
 
     F --> G{"Evaluation Gate\nSSIM >= 0.990\nDelta E00 <= 1.5"}
@@ -124,7 +124,7 @@ full_output.textures_delta.clear();
 ```
 
 ### 4.2 Remote macOS AppKit Runner Contract
-The remote host executes `render_native_appkit_golden.py` using its virtual environment (`~/.patrix_mac_venv/bin/python`).
+The remote host executes `render_native_appkit_golden.py` using its Python virtual environment (`~/.macview_venv/bin/python`).
 1. Views are instantiated using exact `NSMakeRect(0, 0, width, height)`.
 2. Explicit appearance is applied via `NSAppearance.appearanceNamed_(NSAppearanceNameAqua)` or `NSAppearanceNameDarkAqua`.
 3. Rendering uses `cacheDisplayInRect_toBitmapImageRep_` into 32-bit `NSCalibratedRGBColorSpace`.
@@ -142,6 +142,6 @@ When a differential test fails ($\text{SSIM} < 0.990$):
 2. **Root Cause Classification:**
    - **Type A (Specification Error):** The token value in `design_tokens.json` was derived from outdated HIG documentation. Fix: Update spec and token JSON.
    - **Type B (Implementation Bug):** The Rust widget has an off-by-one pixel rounding error or incorrect stroke centering. Fix: Correct Rust rendering logic.
-   - **Type C (Subpixel Rendering):** The difference is purely subpixel font smoothing. Fix: Apply the 1px boundary mask per GL-1016 §2.1.
+   - **Type C (Subpixel Rendering):** The difference is purely subpixel font smoothing. Fix: Apply the 1px boundary mask per the differential testing specification.
 3. **Strict Ban on Tolerance Inflation:**
-   Lowering the threshold from $0.990$ to "make the test pass" without mathematical justification is a violation of GL-1015 Rule 0 (De Verankeringswet).
+   Lowering the threshold from $0.990$ to "make the test pass" without mathematical justification violates Specification-Driven Verification and Test-Driven Development.

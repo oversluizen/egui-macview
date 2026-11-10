@@ -114,4 +114,8 @@ path = "tests/appkit_finder_and_table_tests.rs"
 name = "spec012_advanced_controls_tests"
 path = "tests/spec012_advanced_controls_tests.rs"
 
+[[test]]
+name = "spec012_appkit_and_battery_parity_tests"
+path = "tests/spec012_appkit_and_battery_parity_tests.rs"
+
 

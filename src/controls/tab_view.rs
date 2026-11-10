@@ -8,7 +8,7 @@ use crate::controls::MacControlSize;
 use crate::layout::subpixel_snap_rect;
 use crate::theme::MacTheme;
 use egui::{
-    CornerRadius, Id, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, UiBuilder,
+    CornerRadius, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, UiBuilder,
     Vec2, WidgetText,
 };
 
@@ -99,7 +99,7 @@ impl<'a> MacTabView<'a> {
         if self.style == MacTabStyle::NoTabsNoBorder {
             return 0.0;
         }
-        let theme_cow = MacTheme::resolve(self.theme, &egui::Context::default());
+        let theme_cow = MacTheme::resolve_or_default(self.theme);
         let m = theme_cow.tab_view();
         match self.control_size {
             MacControlSize::Regular | MacControlSize::Large => m.regular_bar_height.points(),
@@ -118,7 +118,7 @@ impl<'a> MacTabView<'a> {
                 right: 0.0,
             };
         }
-        let theme_cow = MacTheme::resolve(self.theme, &egui::Context::default());
+        let theme_cow = MacTheme::resolve_or_default(self.theme);
         let m = theme_cow.tab_view();
         match self.control_size {
             MacControlSize::Regular | MacControlSize::Large => MacInsets {
@@ -142,31 +142,76 @@ impl<'a> MacTabView<'a> {
         }
     }
 
+    /// Resolves MacBook minimum container dimensions across control sizes.
+    pub fn min_container_size(&self) -> Vec2 {
+        let theme_cow = MacTheme::resolve_or_default(self.theme);
+        let m = theme_cow.tab_view();
+        match self.control_size {
+            MacControlSize::Regular | MacControlSize::Large => {
+                Vec2::new(m.regular_min_width.points(), m.regular_min_height.points())
+            }
+            MacControlSize::Small | MacControlSize::CompactInfobox => {
+                Vec2::new(m.small_min_width.points(), m.small_min_height.points())
+            }
+            MacControlSize::Mini => {
+                Vec2::new(m.mini_min_width.points(), m.mini_min_height.points())
+            }
+        }
+    }
+
+    /// Computes the layout rectangle of the top segmented tab bar within a container.
+    pub fn tab_bar_rect(&self, container_rect: Rect, ui: &Ui) -> Rect {
+        let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
+        let metrics = theme_cow.tab_view();
+        let bar_h = self.tab_bar_height();
+        let min_size = self.min_container_size();
+        let pad = metrics.tab_padding_horizontal.points();
+        let mut total_intrinsic_w = 0.0f32;
+        for tab in &self.tabs {
+            let g = tab.title.clone().into_galley(
+                ui,
+                Some(egui::TextWrapMode::Extend),
+                f32::INFINITY,
+                egui::TextStyle::Button,
+            );
+            total_intrinsic_w += g.size().x + pad;
+        }
+        let bar_w = total_intrinsic_w.clamp(min_size.x.min(container_rect.width()), container_rect.width());
+        Rect::from_center_size(
+            Pos2::new(container_rect.center().x, container_rect.min.y + bar_h * 0.5),
+            Vec2::new(bar_w, bar_h),
+        )
+    }
+
     /// Shows the tab view layout with tab bar and selected content panel.
     pub fn show(mut self, ui: &mut Ui) -> Response {
         let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
         let theme: &MacTheme = &theme_cow;
+        let metrics = theme.tab_view();
 
         let available_w = ui.available_width();
         let start_pos = ui.cursor().min;
         let bar_h = self.tab_bar_height();
         let insets = self.content_insets();
+        let min_size = self.min_container_size();
 
         let tab_count = self.tabs.len();
         let active_idx = *self.selected_index;
 
+        let container_w = available_w.max(min_size.x);
         let content_start_y = start_pos.y + insets.top;
         let content_rect = Rect::from_min_max(
             Pos2::new(start_pos.x + insets.left, content_start_y),
-            Pos2::new(start_pos.x + available_w - insets.right, f32::INFINITY),
+            Pos2::new(start_pos.x + container_w - insets.right, f32::INFINITY),
         );
 
-        // Pre-allocate background shape on ui painter so it renders BEHIND tab child content (GL-1015 Z-order invariant)
+        // Pre-allocate background shape on ui painter so it renders BEHIND tab child content (Z-order invariant)
         let bg_shape_idx = ui.painter().add(egui::Shape::Noop);
+        let tab_scope_id = ui.next_auto_id().with("tab_content").with(active_idx);
 
         let mut child_ui = ui.new_child(
             UiBuilder::new()
-                .id_salt(Id::NULL.with("tab_content").with(active_idx))
+                .id_salt(tab_scope_id)
                 .max_rect(content_rect),
         );
 
@@ -183,19 +228,19 @@ impl<'a> MacTabView<'a> {
             0.0
         };
 
-        let container_h = if self.style == MacTabStyle::TopTabsBezelBorder {
+        let container_h = (if self.style == MacTabStyle::TopTabsBezelBorder {
             insets.top + content_h + insets.bottom
         } else {
             content_h
-        };
+        }).max(min_size.y);
 
-        let container_rect = Rect::from_min_size(start_pos, Vec2::new(available_w, container_h));
+        let container_rect = Rect::from_min_size(start_pos, Vec2::new(container_w, container_h));
         let container_rect = subpixel_snap_rect(container_rect, ui.ctx().pixels_per_point());
 
         let (rect, mut response) = ui.allocate_exact_size(container_rect.size(), Sense::click());
 
         if self.style == MacTabStyle::TopTabsBezelBorder {
-            let corner_r = theme.tab_view().corner_radius.points();
+            let corner_r = metrics.corner_radius.points();
 
             // Bezel border frame below tab bar pre-allocated BEHIND child content
             let body_rect = Rect::from_min_max(
@@ -215,12 +260,21 @@ impl<'a> MacTabView<'a> {
 
             let painter = ui.painter_at(rect);
 
-            // Tab bar segments
+            // Centered segmented tab bar segments
             if tab_count > 0 {
-                let tab_w = available_w / (tab_count as f32);
+                let bar_rect = self.tab_bar_rect(rect, ui);
+                painter.rect(
+                    bar_rect,
+                    CornerRadius::same(corner_r as u8),
+                    theme.window_background(),
+                    Stroke::new(1.0, theme.separator()),
+                    StrokeKind::Inside,
+                );
+
+                let tab_w = bar_rect.width() / (tab_count as f32);
                 for i in 0..tab_count {
                     let tab_rect = Rect::from_min_size(
-                        Pos2::new(rect.min.x + (i as f32) * tab_w, rect.min.y),
+                        Pos2::new(bar_rect.min.x + (i as f32) * tab_w, bar_rect.min.y),
                         Vec2::new(tab_w, bar_h),
                     );
                     let tab_hovered = ui
@@ -228,26 +282,21 @@ impl<'a> MacTabView<'a> {
                         .is_some_and(|p| tab_rect.contains(p));
 
                     let is_active = *self.selected_index == i;
-                    let tab_fill = if is_active {
-                        theme.control_background()
-                    } else if tab_hovered {
-                        theme.control()
-                    } else {
-                        theme.window_background()
-                    };
+                    if is_active || tab_hovered {
+                        let tab_fill = if is_active {
+                            theme.control_background()
+                        } else {
+                            theme.control()
+                        };
 
-                    painter.rect(
-                        tab_rect,
-                        CornerRadius {
-                            nw: corner_r as u8,
-                            ne: corner_r as u8,
-                            sw: 0,
-                            se: 0,
-                        },
-                        tab_fill,
-                        Stroke::new(1.0, theme.separator()),
-                        StrokeKind::Inside,
-                    );
+                        painter.rect(
+                            tab_rect,
+                            CornerRadius::same(corner_r as u8),
+                            tab_fill,
+                            Stroke::new(1.0, theme.separator()),
+                            StrokeKind::Inside,
+                        );
+                    }
 
                     let galley = self.tabs[i].title.clone().into_galley(
                         ui,

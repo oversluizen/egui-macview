@@ -8,7 +8,7 @@ pub mod studio;
 
 pub use advanced::{
     BoxViewMetrics, CollectionViewMetrics, ComboBoxMetrics, DatePickerMetrics,
-    DisclosureGroupMetrics, PlayerViewMetrics, TabViewMetrics,
+    DisclosureGroupMetrics, PlayerViewMetrics, RuleEditorMetrics, TabViewMetrics,
 };
 pub use basic::{
     default_border_width, ButtonMetrics, ButtonSizeMetrics, FocusRingMetrics, SegmentedMetrics,
@@ -107,4 +107,7 @@ pub struct MacControlMetrics {
     /// Box view metrics.
     #[serde(default)]
     pub box_view: BoxViewMetrics,
+    /// Rule editor metrics.
+    #[serde(default)]
+    pub rule_editor: RuleEditorMetrics,
 }

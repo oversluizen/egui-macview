@@ -8,7 +8,8 @@ use egui_macview::{
     controls::{
         MacBox, MacCollectionView, MacCollectionViewFlowLayout, MacComboBox, MacControlSize,
         MacDatePicker, MacDatePickerElementFlags, MacDatePickerStyle, MacDisclosureButton,
-        MacDisclosureGroup, MacPlayerControlsStyle, MacPlayerView, MacTabStyle, MacTabView,
+        MacDisclosureGroup, MacPlayerControlsStyle, MacPlayerView, MacRuleEditor, MacTabStyle,
+        MacTabView,
     },
     theme::MacTheme,
     MacToastManager,
@@ -100,8 +101,16 @@ impl CenterState {
                             .tab("NSCollectionView Flow Layout Grid", |tab_ui| {
                                 tab_ui.vertical(|ui| {
                                     ui.label("2D Viewport-Culled Grid with Rubber-Band Marquee Selection:");
-                                    let grid_items: Vec<usize> = (0..60).collect();
-                                    MacCollectionView::new(&grid_items, &mut self.advanced_grid_selection)
+                                    const GRID_ITEMS: [usize; 60] = {
+                                        let mut arr = [0; 60];
+                                        let mut i = 0;
+                                        while i < 60 {
+                                            arr[i] = i;
+                                            i += 1;
+                                        }
+                                        arr
+                                    };
+                                    MacCollectionView::new(&GRID_ITEMS, &mut self.advanced_grid_selection)
                                         .layout(MacCollectionViewFlowLayout::default())
                                         .theme(theme)
                                         .show_with_item_tracker(ui, |item_ui, item| {
@@ -124,6 +133,20 @@ impl CenterState {
                                 });
                             })
                             .show(ui);
+
+                        MacBox::separator(ui);
+
+                        // 4. Rule Editor (NSRuleEditor)
+                        ui.vertical(|r_ui| {
+                            r_ui.label("Filter Criteria Predicate Editor (NSRuleEditor):");
+                            const RULE_CRITERIA: &[&[&str]] = &[
+                                &["Name", "Kind", "Created Date", "File Size"],
+                                &["contains", "is exactly", "begins with", "ends with"],
+                            ];
+                            MacRuleEditor::new("gallery_rule_editor", &mut self.advanced_rules, RULE_CRITERIA)
+                                .theme(theme)
+                                .show(r_ui);
+                        });
                     });
                 });
         });

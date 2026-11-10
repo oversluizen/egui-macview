@@ -1,6 +1,6 @@
 //! ISO/IEC/IEEE 29119-3:2021 Red COTS Test Baseline for Sprint 1.
 //!
-//! Normative reference: SPEC-001 Section 1, 2.1, 4.1 & GL-1015.
+//! Normative reference: SPEC-001 Section 1, 2.1, 4.1 & Architecture Fitness Standards.
 //! Verifies:
 //! 1. W3C DTCG Token Catalog Deserialization into strongly typed models.
 //! 2. CASpring CoreAnimation Physics analytical precision and decay bounds.

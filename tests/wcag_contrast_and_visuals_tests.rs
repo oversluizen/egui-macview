@@ -3,7 +3,7 @@
 //! Normative References:
 //! - WCAG 2.1 §1.4.3: Contrast (Minimum) Level AA (>= 4.5:1 for normal text, >= 3.0:1 for large text).
 //! - Apple HIG: Dark Mode typography and semantic colors (NSColor.labelColor, NSColor.secondaryLabelColor).
-//! - GL-1015: Regel 0 (De Verankeringswet) & Regel 7 (ISO/IEC/IEEE 29119 Spec-First).
+//! - Test-Driven Development (TDD / Specification-Driven Verification) & ISO/IEC/IEEE 29119 Spec-First.
 
 use egui::{Color32, Context};
 use egui_macview::surfaces::MacCard;

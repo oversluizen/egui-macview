@@ -3,33 +3,33 @@
 - **Document ID:** SPEC-001
 - **Status:** Approved / Normative
 - **Version:** 0.2.0
-- **Scope:** Standalone crate `egui-macview` and its integration into consumer applications on Windows 11.
+- **Scope:** Standalone crate `egui-macview` and its integration into consumer applications on Windows 11, macOS, and Linux.
 - **Normative Standards:** ISO/IEC/IEEE 42010:2011, ISO/IEC/IEEE 29119-3:2021, RFC 2119/8174, Apple macOS HIG, W3C DTCG Specification, ITU-T/IEEE SSIM, SemVer 2.0.0.
 
 ---
 
-## 1. Normatieve Industriestandaarden & Decompositie
+## 1. Normative Industry Standards & Decomposition
 
-Dit document definieert het overkoepelende specificatiekader voor `egui-macview`. De formele deelspecificaties zijn ondergebracht in de modulaire specificatiesuite onder `specs/`:
+This document defines the overarching specification framework for `egui-macview`. The formal modular sub-specifications are organized in the `specs/` directory:
 
 1. [**SPEC-001**](specs/SPEC-001-DESIGN-TOKENS-AND-WCAG.md): Design Tokens, Optical Tracking & WCAG AA Contrast.
 2. [**SPEC-002**](specs/SPEC-002-CONTROLS-AND-MICRO-ANIMATIONS.md): Authentic AppKit Controls & Micro-Animation Oracles.
-3. [**SPEC-003**](specs/SPEC-003-LAYOUT-ENGINES.md): Deterministic Layout Engines & Subpixel Snap Rasterization.
+3. [**SPEC-003**](specs/SPEC-003-LAYOUT-ENGINES.md): Deterministic Layout Engines & Pixel-Accurate macOS Window Framing.
 4. [**SPEC-004**](specs/SPEC-004-CORE-ANIMATION-PHYSICS.md): CoreAnimation Spring Physics Runtime (`CASpring`).
 5. [**SPEC-005**](specs/SPEC-005-WINDOW-FRAMING-AND-CONTROLS.md): Window Framing, Drag Handling & Configurable Caption Controls.
 6. [**SPEC-006**](specs/SPEC-006-INSPECTOR-ARCHITECTURE.md): Three-Tier Inspector Architecture & Floating Surfaces.
 
 ---
 
-## 2. Systeemarchitectuur & MVC Datamodel
+## 2. System Architecture & MVC Data Model
 
-De architectuur splitst de presentatielaag rigoureus in drie gescheiden verantwoordelijkheden:
+The presentation architecture is decoupled into three distinct responsibilities:
 
 ```
 +------------------------------------------------------------------------+
 |                            MODEL (State)                              |
 |  - MacControlState: enabled, hovered, pressed, focused, window_state   |
-|  - LocalEditBuffer: actieve tekstbuffer, dirty-flag, validatiestatus   |
+|  - LocalEditBuffer: active text buffer, dirty flag, validation status  |
 |  - WindowControlsStyle: AppleTrafficLights, WindowsCaptionButtons,      |
 |                         NativeHost                                     |
 +------------------------------------------------------------------------+
@@ -38,7 +38,7 @@ De architectuur splitst de presentatielaag rigoureus in drie gescheiden verantwo
 +------------------------------------------------------------------------+
 |                         CONTROLLER (Layout)                            |
 |  - MacFixedView / MacRow / MacStackView: AppKit layout engines         |
-|  - TabFocusChain: deterministische focus-cyclus tussen invoervelden    |
+|  - TabFocusChain: deterministic focus navigation across input fields   |
 |  - Window drag handling & corner-fling hit areas (Fitts's Law)         |
 +------------------------------------------------------------------------+
                                     |
@@ -46,17 +46,17 @@ De architectuur splitst de presentatielaag rigoureus in drie gescheiden verantwo
 +------------------------------------------------------------------------+
 |                          VIEW (Rendering)                              |
 |  - Background: 1px border stroke, subpixel antialiasing                |
-|  - Content: SF Pro / Inter typografie met optische tracking tabellen   |
-|  - Caption Controls: Apple traffic lights links of Windows rechts      |
+|  - Content: SF Pro / Inter typography with optical tracking tables     |
+|  - Caption Controls: Apple traffic lights (left) or Windows (right)    |
 |  - Overlay: Window-level focus ring (NSFocusRingPlacementOutside)       |
 +------------------------------------------------------------------------+
 ```
 
 ---
 
-## 3. Strategie 2: Configureerbare Window Controls (`WindowControlsStyle`)
+## 3. Configurable Window Controls (`WindowControlsStyle`)
 
-Window caption controls volgen **Strategie 2 (Token-Driven / Configureerbare Presentatie)**, waarmee dynamisch geschakeld kan worden tussen macOS traffic lights, Windows 11 caption buttons of OS-managed vensterdecoraties:
+Window caption controls follow a token-driven presentation model, dynamically switching between macOS traffic lights, Windows 11 caption buttons, or OS-managed decorations:
 
 ```rust
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -68,40 +68,40 @@ pub enum WindowControlsStyle {
 }
 ```
 
-### 3.1 `AppleTrafficLights` (Leading / Linkerzijde macOS Stijl)
-- **Plaatsing & Marges:**
-  - Verankerd aan de linkerzijde met $18.0\,\text{pt}$ inset (`toolbar.traffic_lights_inset` = 70.0pt totale marge inclusief cluster).
-  - Verticaal gecentreerd in de unified toolbar ($38.0\,\text{pt}$ / $52.0\,\text{pt}$).
-- **Schijfjes Geometrie:**
-  - Straal $r = 6.0\,\text{pt}$ (diameter $12.0\,\text{pt}$, token `toolbar.traffic_light_radius`).
-  - Onderlinge afstand $= 8.0\,\text{pt}$ (steek $20.0\,\text{pt}$, token `toolbar.traffic_light_spacing`).
-  - Totale clusterbreedte: $52.0\,\text{pt}$.
-- **Semantische Kleuren:**
+### 3.1 `AppleTrafficLights` (Leading / Left-Anchored macOS Style)
+- **Placement & Margins:**
+  - Anchored on the leading left edge with $18.0\,\text{pt}$ inset (`toolbar.traffic_lights_inset` = 70.0pt total margin including cluster).
+  - Vertically centered inside the unified toolbar ($38.0\,\text{pt}$ / $52.0\,\text{pt}$).
+- **Geometry Metrics:**
+  - Radius $r = 6.0\,\text{pt}$ (diameter $12.0\,\text{pt}$, token `toolbar.traffic_light_radius`).
+  - Spacing $= 8.0\,\text{pt}$ (pitch $20.0\,\text{pt}$, token `toolbar.traffic_light_spacing`).
+  - Total cluster width: $52.0\,\text{pt}$.
+- **Semantic Colors:**
   - Close: Fill `traffic_light_close` (`#FF5F56`), stroke $0.5\,\text{pt}$ `traffic_light_close_border` (`#E0443E`).
   - Minimize: Fill `traffic_light_minimize` (`#FFBD2E`), stroke $0.5\,\text{pt}$ `traffic_light_minimize_border` (`#DEA123`).
   - Zoom: Fill `traffic_light_zoom` (`#27C93F`), stroke $0.5\,\text{pt}$ `traffic_light_zoom_border` (`#1AAB29`).
-- **Cluster-Brede Hover Affordance:**
-  - Hoveren over enig deel van de cluster onthult gelijktijdig de symbolen op alle drie de knoppen.
-  - Close: Diagonaal kruis `✕`, span $5.0\,\text{pt}$, stroke $1.0\,\text{pt}$.
-  - Minimize: Horizontale balk `—`, span $5.6\,\text{pt}$, stroke $1.1\,\text{pt}$.
-  - Zoom: Plusteken `+`, span $5.0\,\text{pt}$, stroke $1.0\,\text{pt}$.
+- **Cluster-Wide Hover Affordance:**
+  - Hovering over any part of the cluster reveals symbols simultaneously on all three buttons.
+  - Close: Diagonal cross `✕`, span $5.0\,\text{pt}$, stroke $1.0\,\text{pt}$.
+  - Minimize: Horizontal bar `—`, span $5.6\,\text{pt}$, stroke $1.1\,\text{pt}$.
+  - Zoom: Plus sign `+`, span $5.0\,\text{pt}$, stroke $1.0\,\text{pt}$.
 
-### 3.2 `WindowsCaptionButtons` (Trailing / Rechterzijde Fluent Stijl)
-- **Plaatsing & Fitts's Law:**
-  - Verankerd aan de rechterzijde met $0.0\,\text{pt}$ marge: de buitenste rand van de Sluitknop raakt direct de vensterrand ($x = W_{\text{window}}$) ter ondersteuning van hoek-kliks volgens de wet van Fitts.
-  - Volgorde: Minimaliseren (`—`), Maximaliseren/Herstellen (`□` / `❐`), Sluiten (`✕`).
-- **Dimensies:**
-  - Knopbreedte: $46.0\,\text{pt}$ (`toolbar.caption_button_width`).
-  - Knophoogte: Beslaat de volledige hoogte van de titelbalk.
-  - Totale groepbreedte: $138.0\,\text{pt}$.
-- **Hover & Actieve Statussen:**
-  - Minimaliseren / Maximaliseren: Neutrale hover-achtergrond (`rgba(255, 255, 255, 0.08)` donker, `rgba(0, 0, 0, 0.06)` licht).
-  - Sluitknop: Karmozijnrode hover-achtergrond `#E81123`. Bij hover kleurt het kruissymbool helder wit (`#FFFFFF`).
+### 3.2 `WindowsCaptionButtons` (Trailing / Right-Anchored Fluent Style)
+- **Placement & Fitts's Law:**
+  - Anchored on the trailing right edge with $0.0\,\text{pt}$ margin: the outer edge of the Close button touches the window edge ($x = W_{\text{window}}$) supporting corner clicks per Fitts's law.
+  - Order: Minimize (`—`), Maximize/Restore (`□` / `❐`), Close (`✕`).
+- **Dimensions:**
+  - Button width: $46.0\,\text{pt}$ (`toolbar.caption_button_width`).
+  - Button height: Spans the full height of the title bar.
+  - Total group width: $138.0\,\text{pt}$.
+- **Hover & Active States:**
+  - Minimize / Maximize: Neutral hover background (`rgba(255, 255, 255, 0.08)` dark, `rgba(0, 0, 0, 0.06)` light).
+  - Close button: Crimson hover background `#E81123`. On hover, cross glyph renders crisp white (`#FFFFFF`).
 - **Vector Glyphs:**
-  - Minimaliseren: Horizontale lijn `—`, span $10.0\,\text{pt}$, stroke $1.0\,\text{pt}$.
-  - Maximaliseren: Vierkante omtrek `□`, $10.0 \times 10.0\,\text{pt}$, stroke $1.0\,\text{pt}$. Herstelmodus toont twee overlappende vierkanten van $8.0\,\text{pt}$.
-  - Sluiten: $45^\circ$ diagonaal kruis `✕`, $10.0 \times 10.0\,\text{pt}$, stroke $1.0\,\text{pt}$.
+  - Minimize: Horizontal line `—`, span $10.0\,\text{pt}$, stroke $1.0\,\text{pt}$.
+  - Maximize: Square outline `□`, $10.0 \times 10.0\,\text{pt}$, stroke $1.0\,\text{pt}$. Restore mode displays two overlapping $8.0\,\text{pt}$ squares.
+  - Close: $45^\circ$ diagonal cross `✕`, $10.0 \times 10.0\,\text{pt}$, stroke $1.0\,\text{pt}$.
 
 ### 3.3 `NativeHost`
-- Schakelt synthetische vensterknoppen volledig uit.
-- Besturingssysteem levert de decoraties.
+- Disables synthetic window buttons entirely.
+- The host operating system provides native decorations.

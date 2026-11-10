@@ -149,6 +149,20 @@ pub struct TabViewMetrics {
     pub mini_inset_horizontal: DimensionValue,
     /// Tab bezel corner radius (5.0 pt).
     pub corner_radius: DimensionValue,
+    /// Regular minimum width (150.0 pt).
+    pub regular_min_width: DimensionValue,
+    /// Regular minimum height (36.0 pt).
+    pub regular_min_height: DimensionValue,
+    /// Small minimum width (122.0 pt).
+    pub small_min_width: DimensionValue,
+    /// Small minimum height (28.0 pt).
+    pub small_min_height: DimensionValue,
+    /// Mini minimum width (107.0 pt).
+    pub mini_min_width: DimensionValue,
+    /// Mini minimum height (22.0 pt).
+    pub mini_min_height: DimensionValue,
+    /// Tab padding horizontal (24.0 pt).
+    pub tab_padding_horizontal: DimensionValue,
 }
 
 impl Default for TabViewMetrics {
@@ -167,6 +181,13 @@ impl Default for TabViewMetrics {
             mini_inset_bottom: DimensionValue::from_pt(13.0),
             mini_inset_horizontal: DimensionValue::from_pt(10.0),
             corner_radius: DimensionValue::from_pt(5.0),
+            regular_min_width: DimensionValue::from_pt(150.0),
+            regular_min_height: DimensionValue::from_pt(36.0),
+            small_min_width: DimensionValue::from_pt(122.0),
+            small_min_height: DimensionValue::from_pt(28.0),
+            mini_min_width: DimensionValue::from_pt(107.0),
+            mini_min_height: DimensionValue::from_pt(22.0),
+            tab_padding_horizontal: DimensionValue::from_pt(24.0),
         }
     }
 }
@@ -232,6 +253,14 @@ pub struct DatePickerMetrics {
     pub clock_face_height: DimensionValue,
     /// Analog Clock intrinsic circle diameter (119.0 pt).
     pub clock_size: DimensionValue,
+    /// Calendar navigation header height (24.0 pt).
+    pub calendar_header_height: DimensionValue,
+    /// Calendar weekday header height (16.0 pt).
+    pub calendar_weekday_height: DimensionValue,
+    /// Calendar days matrix height (108.0 pt).
+    pub calendar_matrix_height: DimensionValue,
+    /// Calendar single day cell height (18.0 pt).
+    pub calendar_cell_height: DimensionValue,
 }
 
 impl Default for DatePickerMetrics {
@@ -263,6 +292,10 @@ impl Default for DatePickerMetrics {
             time_only_mini_height: DimensionValue::from_pt(21.0),
             calendar_width: DimensionValue::from_pt(139.0),
             calendar_height: DimensionValue::from_pt(148.0),
+            calendar_header_height: DimensionValue::from_pt(24.0),
+            calendar_weekday_height: DimensionValue::from_pt(16.0),
+            calendar_matrix_height: DimensionValue::from_pt(108.0),
+            calendar_cell_height: DimensionValue::from_pt(18.0),
             clock_face_width: DimensionValue::from_pt(122.0),
             clock_face_height: DimensionValue::from_pt(123.0),
             clock_size: DimensionValue::from_pt(119.0),
@@ -333,6 +366,54 @@ pub struct PlayerViewMetrics {
     pub inline_height: DimensionValue,
     /// Inline control bar corner radius (0.0 pt).
     pub inline_corner_radius: DimensionValue,
+    /// Minimal circular transport width (29.0 pt).
+    pub minimal_width: DimensionValue,
+    /// Minimal circular transport height (18.0 pt).
+    pub minimal_height: DimensionValue,
+    /// Skip 15s button width (25.0 pt).
+    pub skip_button_width: DimensionValue,
+    /// Skip 15s button height (15.0 pt).
+    pub skip_button_height: DimensionValue,
+    /// Frame step button width (19.0 pt).
+    pub step_button_width: DimensionValue,
+    /// Frame step button height (21.0 pt).
+    pub step_button_height: DimensionValue,
+    /// Mute button width (24.0 pt).
+    pub mute_button_width: DimensionValue,
+    /// Mute button height (17.0 pt).
+    pub mute_button_height: DimensionValue,
+    /// Volume slider track width (125.0 pt).
+    pub volume_slider_width: DimensionValue,
+    /// Volume slider track height (18.0 pt).
+    pub volume_slider_height: DimensionValue,
+    /// Center transport play button width (29.0 pt).
+    pub play_button_width: DimensionValue,
+    /// Center transport play button height (34.0 pt).
+    pub play_button_height: DimensionValue,
+    /// Auxiliary AirPlay / PiP button size (20.0 pt).
+    pub aux_button_size: DimensionValue,
+    /// Inter-button horizontal spacing in HUD (6.0 pt).
+    pub button_spacing: DimensionValue,
+    /// Playback speed button width (36.0 pt).
+    pub speed_button_width: DimensionValue,
+    /// Playback speed button height (18.0 pt).
+    pub speed_button_height: DimensionValue,
+    /// HUD transport icon glyph size (8.0 pt).
+    pub icon_size: DimensionValue,
+    /// Skip 15s duration in seconds (15.0 s).
+    pub skip_duration_seconds: DimensionValue,
+    /// Frame stepping frame-rate in FPS (30.0 fps).
+    pub frame_step_fps: DimensionValue,
+    /// Default fallback duration in seconds (100.0 s).
+    pub default_duration_seconds: DimensionValue,
+    /// Minimum repaint delay in seconds (0.05 s).
+    pub min_repaint_delay_seconds: DimensionValue,
+    /// Timeline scrubber buffered range fill opacity alpha (0.28).
+    pub buffered_fill_alpha: DimensionValue,
+    /// Inline control bar play button width (20.0 pt).
+    pub inline_play_button_width: DimensionValue,
+    /// Inline control bar play button horizontal inset (8.0 pt).
+    pub inline_play_button_inset: DimensionValue,
 }
 
 impl Default for PlayerViewMetrics {
@@ -346,10 +427,55 @@ impl Default for PlayerViewMetrics {
             top_row_height: DimensionValue::from_pt(34.0),
             scrubber_height: DimensionValue::from_pt(22.5),
             scrubber_track_height: DimensionValue::from_pt(3.5),
-            scrubber_track_corner_radius: DimensionValue::from_pt(1.75),
+            scrubber_track_corner_radius: DimensionValue::from_pt(1.8),
             scrubber_knob_size: DimensionValue::from_pt(8.0),
             inline_height: DimensionValue::from_pt(24.0),
             inline_corner_radius: DimensionValue::from_pt(0.0),
+            minimal_width: DimensionValue::from_pt(29.0),
+            minimal_height: DimensionValue::from_pt(18.0),
+            skip_button_width: DimensionValue::from_pt(25.0),
+            skip_button_height: DimensionValue::from_pt(15.0),
+            step_button_width: DimensionValue::from_pt(19.0),
+            step_button_height: DimensionValue::from_pt(21.0),
+            mute_button_width: DimensionValue::from_pt(24.0),
+            mute_button_height: DimensionValue::from_pt(17.0),
+            volume_slider_width: DimensionValue::from_pt(125.0),
+            volume_slider_height: DimensionValue::from_pt(18.0),
+            play_button_width: DimensionValue::from_pt(29.0),
+            play_button_height: DimensionValue::from_pt(34.0),
+            aux_button_size: DimensionValue::from_pt(20.0),
+            button_spacing: DimensionValue::from_pt(6.0),
+            speed_button_width: DimensionValue::from_pt(36.0),
+            speed_button_height: DimensionValue::from_pt(18.0),
+            icon_size: DimensionValue::from_pt(8.0),
+            skip_duration_seconds: DimensionValue::from_pt(15.0),
+            frame_step_fps: DimensionValue::from_pt(30.0),
+            default_duration_seconds: DimensionValue::from_pt(100.0),
+            min_repaint_delay_seconds: DimensionValue::from_pt(0.05),
+            buffered_fill_alpha: DimensionValue::from_pt(0.28),
+            inline_play_button_width: DimensionValue::from_pt(20.0),
+            inline_play_button_inset: DimensionValue::from_pt(8.0),
+        }
+    }
+}
+
+/// `MacRuleEditor` layout and button metrics.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RuleEditorMetrics {
+    /// Predicate row height (32.0 pt).
+    pub row_height: DimensionValue,
+    /// Action [+] / [-] button size (20.0 pt).
+    pub add_remove_button_size: DimensionValue,
+    /// Spacing between rule clauses (8.0 pt).
+    pub row_horizontal_spacing: DimensionValue,
+}
+
+impl Default for RuleEditorMetrics {
+    fn default() -> Self {
+        Self {
+            row_height: DimensionValue::from_pt(32.0),
+            add_remove_button_size: DimensionValue::from_pt(20.0),
+            row_horizontal_spacing: DimensionValue::from_pt(8.0),
         }
     }
 }

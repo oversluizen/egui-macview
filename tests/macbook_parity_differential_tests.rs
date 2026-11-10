@@ -1,8 +1,8 @@
 //! Automated MacBook AppKit Differential & Parity Verification Tests.
 //!
 //! Ground-truth verification comparing `egui-macview` directly against
-//! golden master bitmaps and metric extractions rendered live on Jaco's MacBook Air
-//! (Darwin 23.6.0, macOS Sonoma 14.8.9, Apple clang 16.0.0, native AppKit/Quartz).
+//! golden master bitmaps and metric extractions rendered on physical Apple Silicon
+//! MacBook Air hardware (Darwin 23.6.0, macOS Sonoma 14.8.9, Apple clang 16.0.0, native AppKit/Quartz).
 
 use egui_macview::{theme::MacTheme, CASpring};
 use std::fs;
@@ -200,7 +200,7 @@ fn test_macbook_symbol_search_parity_differential() {
     );
 }
 
-/// Tier 2 Live Parity Test: Connects to Jaco's physical MacBook Air via SSH
+/// Tier 2 Live Parity Test: Connects to a physical macOS reference host via SSH
 /// and validates the remote PyObjC / AppKit ground-truth rendering engine.
 ///
 /// Run explicitly with:
@@ -218,7 +218,7 @@ fn test_live_macbook_ssh_connectivity_and_parity_harness() {
             "-o",
             "ConnectTimeout=5",
             "macbook",
-            "uname -sm && ~/.patrix_mac_venv/bin/python --version",
+            "uname -sm && python3 --version",
         ])
         .output()
         .expect("Failed to execute ssh command. Is OpenSSH on local PATH?");

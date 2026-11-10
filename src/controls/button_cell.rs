@@ -36,6 +36,9 @@ pub struct MacButtonCell<'a> {
     corner_radius: Option<f32>,
 }
 
+/// Convenience alias for [`MacButtonCell`].
+pub type MacButton<'a> = MacButtonCell<'a>;
+
 impl<'a> MacButtonCell<'a> {
     /// Creates a new button with label `text`.
     pub fn new(text: &'a str) -> Self {
