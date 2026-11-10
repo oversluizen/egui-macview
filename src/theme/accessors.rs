@@ -2,13 +2,15 @@
 
 use crate::theme::{MacBackgroundStyle, MacTheme};
 use crate::tokens::{
-    ButtonMetrics, ColorWellMetrics, ContextMenuMetrics, FocusRingMetrics, FooterMetrics,
+    BoxViewMetrics, ButtonMetrics, CollectionViewMetrics, ColorWellMetrics, ComboBoxMetrics,
+    ContextMenuMetrics, DatePickerMetrics, DisclosureGroupMetrics, FocusRingMetrics, FooterMetrics,
     LayoutMetrics, LevelIndicatorMetrics, MacControlMetrics, MacMotionTokens, MacTypographyTokens,
     MenuBarMetrics, NavigationMetrics, OutlineViewMetrics, PaletteMetrics, PathControlMetrics,
-    PopUpButtonMetrics, PopoverMetrics, ProgressIndicatorMetrics, ScrollViewMetrics,
-    SearchFieldMetrics, SegmentedMetrics, SliderMetrics, SplitViewMetrics, StackViewMetrics,
-    StepperMetrics, TableViewMetrics, TextFieldMetrics, ThumbnailCellMetrics, ToastMetrics,
-    ToggleMetrics, TokenFieldMetrics, ToolbarMetrics, TrimScrubberMetrics,
+    PlayerViewMetrics, PopUpButtonMetrics, PopoverMetrics, ProgressIndicatorMetrics,
+    ScrollViewMetrics, SearchFieldMetrics, SegmentedMetrics, SliderMetrics, SplitViewMetrics,
+    StackViewMetrics, StepperMetrics, TableViewMetrics, TabViewMetrics, TextFieldMetrics,
+    ThumbnailCellMetrics, ToastMetrics, ToggleMetrics, TokenFieldMetrics, ToolbarMetrics,
+    TrimScrubberMetrics,
 };
 use egui::Color32;
 
@@ -136,6 +138,41 @@ impl MacTheme {
     /// Resolves path control breadcrumb geometry metrics.
     pub fn path_control(&self) -> &PathControlMetrics {
         self.tokens().path_control_metrics()
+    }
+
+    /// Resolves disclosure group and button geometry metrics.
+    pub fn disclosure_group(&self) -> &DisclosureGroupMetrics {
+        self.tokens().disclosure_group_metrics()
+    }
+
+    /// Resolves combo box geometry metrics.
+    pub fn combo_box(&self) -> &ComboBoxMetrics {
+        self.tokens().combo_box_metrics()
+    }
+
+    /// Resolves tab view layout and content insets metrics.
+    pub fn tab_view(&self) -> &TabViewMetrics {
+        self.tokens().tab_view_metrics()
+    }
+
+    /// Resolves date picker geometry metrics.
+    pub fn date_picker(&self) -> &DatePickerMetrics {
+        self.tokens().date_picker_metrics()
+    }
+
+    /// Resolves collection view flow layout and selection metrics.
+    pub fn collection_view(&self) -> &CollectionViewMetrics {
+        self.tokens().collection_view_metrics()
+    }
+
+    /// Resolves player view media presentation metrics.
+    pub fn player_view(&self) -> &PlayerViewMetrics {
+        self.tokens().player_view_metrics()
+    }
+
+    /// Resolves box view container and separator metrics.
+    pub fn box_view(&self) -> &BoxViewMetrics {
+        self.tokens().box_view_metrics()
     }
 
     /// Resolves navigation and feedback metrics collection.

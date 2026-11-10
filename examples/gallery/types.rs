@@ -118,15 +118,17 @@ pub enum GalleryScreen {
     DesignTokensWcag = 2,
     FinderDataBrowser = 3,
     AvKitMediaStudio = 4,
+    AdvancedControls = 5,
 }
 
 impl GalleryScreen {
-    pub const ALL: [Self; 5] = [
+    pub const ALL: [Self; 6] = [
         Self::CanvasPhysics,
         Self::VectorAssets,
         Self::DesignTokensWcag,
         Self::FinderDataBrowser,
         Self::AvKitMediaStudio,
+        Self::AdvancedControls,
     ];
 
     pub fn title(&self) -> &'static str {
@@ -136,6 +138,7 @@ impl GalleryScreen {
             Self::DesignTokensWcag => "v0.4–v0.4.1: Command & State Lab",
             Self::FinderDataBrowser => "v0.5: Finder & Publishing Browser",
             Self::AvKitMediaStudio => "v0.5: AVKit Media & Timeline Studio",
+            Self::AdvancedControls => "v0.6: Advanced Media, Scheduling & Grid Controls",
         }
     }
 
@@ -146,6 +149,7 @@ impl GalleryScreen {
             Self::DesignTokensWcag => "3. Command & State (v0.4)",
             Self::FinderDataBrowser => "4. Finder & Publish (v0.5)",
             Self::AvKitMediaStudio => "5. AVKit Timeline (v0.5)",
+            Self::AdvancedControls => "6. Advanced Controls (v0.6)",
         }
     }
 
@@ -158,6 +162,9 @@ impl GalleryScreen {
                 "Filter v0.5 table assets by name, codec, or NSTokenField tag..."
             }
             Self::AvKitMediaStudio => "Search AVKit timeline scenes and audio channels...",
+            Self::AdvancedControls => {
+                "Filter advanced controls (combo, date, tab, collection, player, box)..."
+            }
         }
     }
 
@@ -174,6 +181,7 @@ impl GalleryScreen {
             }
             Self::FinderDataBrowser => ["macview_gallery", "State 4 (v0.5)", "Finder & Publishing"],
             Self::AvKitMediaStudio => ["macview_gallery", "State 5 (v0.5)", "AVKit Media Timeline"],
+            Self::AdvancedControls => ["macview_gallery", "State 6 (v0.6)", "Advanced Controls"],
         }
     }
 }

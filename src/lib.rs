@@ -80,14 +80,17 @@ pub use theme::{
 };
 
 pub use controls::{
-    calculate_pan_weights, MacButtonCell, MacCircularSlider, MacColorWell, MacControlSize,
+    calculate_pan_weights, MacBox, MacButtonCell, MacCircularSlider, MacCollectionView,
+    MacCollectionViewFlowLayout, MacColorWell, MacComboBox, MacControlSize, MacDate, MacDatePicker,
+    MacDatePickerElementFlags, MacDatePickerStyle, MacDisclosureButton, MacDisclosureGroup,
     MacInputCell, MacLevelIndicator, MacLevelIndicatorStyle, MacLevelOrientation, MacOutlineRow,
     MacOutlineRowResponse, MacOutlineTree, MacOutlineView, MacPathComponent, MacPathControl,
-    MacPathControlResponse, MacPopUpButton, MacProgressControlSize, MacProgressIndicator,
-    MacProgressStyle, MacRatingIndicator, MacSearchField, MacSegmentedControl, MacSlider,
-    MacSortDirection, MacStepper, MacTableColumn, MacTableView, MacTableViewOutput,
-    MacTableViewResponse, MacThumbnailCell, MacTimelineZone, MacToggle, MacTokenField,
-    MacTrimScrubber, MacTrimScrubberResponse, UNIT_STAR,
+    MacPathControlResponse, MacPlayerControlsStyle, MacPlayerView, MacPopUpButton,
+    MacProgressControlSize, MacProgressIndicator, MacProgressStyle, MacRatingIndicator,
+    MacSearchField, MacSegmentedControl, MacSlider, MacSortDirection, MacStepper, MacTabItem,
+    MacTabStyle, MacTabView, MacTableColumn, MacTableView, MacTableViewOutput, MacTableViewResponse,
+    MacThumbnailCell, MacTimelineZone, MacToggle, MacTokenField, MacTrimScrubber,
+    MacTrimScrubberResponse, UNIT_STAR, MacInsets,
 };
 pub use feedback::{clamp_menu_rect, MacContextMenu, MacToast, MacToastManager, ToastLevel};
 pub use layout::{

@@ -5,6 +5,24 @@ All notable changes to the `egui-macview` crate will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-11-10
+
+### Added
+- **Advanced Media, Scheduling & Grid Controls (`SPEC-012`)**:
+  - `MacPlayerView`: Authentic AVKit media player suite featuring QuickTime floating HUD transport pod (`AVPlayerViewControlsStyleFloating`), inline bottom bar (`AVPlayerViewControlsStyleInline`), minimal circular transport (`AVPlayerViewControlsStyleMinimal`), and 3.0s auto-hide timing.
+  - `MacDatePicker`: Dual date/time picker supporting text-field with integrated stepper (`19.0 pt` width, `9.0 pt` chevron pitch), 12-hour analog clock face (`122x123 pt`), and month calendar matrix grid (`139x148 pt`) across `Regular`, `Small`, and `Mini` control sizes (`REQ-012-02`).
+  - `MacComboBox`: Hybrid editable text field with trailing dropdown chevron trigger and viewport-clamped filterable popover list (`18.0 pt` row height, 5 visible items, `90.0 pt` viewport) with case-insensitive substring matching (`REQ-012-03`).
+  - `MacTabView`: Multi-pane segmented container with flipped coordinate system (`isFlipped == 1`), bezel bordered tabs (`NSTopTabsBezelBorder`), and borderless card switching (`NSNoTabsNoBorder`) with exact Apple content insets (`REQ-012-04`).
+  - `MacDisclosureGroup` & `MacDisclosureButton`: Collapsible content container with `13.0 pt` triangular disclosure chevron, analytical `CASpring` rotation physics, and standalone rounded pill disclosure button across `Regular`, `Small`, and `Mini` sizes (`REQ-012-05`).
+  - `MacCollectionView`: High-performance 2D grid layout engine (`NSCollectionViewFlowLayout`) with 2D viewport culling (`ui.clip_rect()`), multi-selection, and 2D spatial keyboard navigation (`REQ-012-06`).
+  - `MacBox`: Grouping container (`NSBox`) with title badge, `5.0 pt` corner radius, and standardized AppKit content insets (`top: 20.0 pt`, `bottom: 10.0 pt`, `left/right: 9.0 pt`) (`REQ-012-07`).
+- **Interactive 6-State Gallery Showcase (`examples/macview_gallery.rs`, `examples/gallery/`)**: Added State 6 (`GalleryScreen::AdvancedControls`) with live interactive demonstrations of all SPEC-012 controls and copyable Rust snippet generation.
+- **SPEC-012 Integration Test Suite (`tests/spec012_advanced_controls_tests.rs`)**: 7 comprehensive integration tests covering geometry, CASpring dynamics, viewport culling, and keyboard interactions across all 7 controls.
+
+### Changed
+- Bumped crate version to `0.6.0` in `Cargo.toml`, `src/lib.rs`, and `tokens/design_tokens.json`.
+- Promoted `SPEC-012` and `SPEC-INDEX` to `Accepted / Normative` (`0.6.0`).
+
 ## [0.5.2] - 2026-11-10
 
 ### Added

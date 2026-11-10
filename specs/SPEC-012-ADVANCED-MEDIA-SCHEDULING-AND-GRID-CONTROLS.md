@@ -5,12 +5,12 @@
 | **Document ID** | SPEC-012 |
 | **Document Title** | Advanced Media, Scheduling, and Grid Controls |
 | **Document Version** | `0.6.0` |
-| **Status** | Specified / Planned for v0.6.0 |
+| **Status** | Accepted / Normative |
 | **Target Milestone** | Milestone 0.6.0 |
 | **Target Host** | Standalone crate `egui-macview` (Rust, egui 0.37) |
 | **Author** | Jaco Oversluizen / `egui-macview` contributors |
 | **Hardware Ground Truth** | Apple MacBook Air (`Jacos-Air.home`, macOS Sonoma `14.8.9`, SDK `14`, 291 AppKit headers, 11 AVKit headers) |
-| **Normative Test Suite** | `tests/studio_controls_v05_tests.rs`, `tests/cots_red_baseline_tests.rs`, `tests/architecture_guard_tests.rs` |
+| **Normative Test Suite** | `tests/spec012_advanced_controls_tests.rs`, `tests/cots_red_baseline_tests.rs`, `tests/architecture_guard_tests.rs` |
 | **Normative Standards** | ISO/IEC/IEEE 42010:2011, ISO/IEC/IEEE 29119-3:2021, RFC 2119/8174, Apple macOS HIG, Apple AppKit / AVKit Reference, W3C DTCG, SemVer 2.0.0 |
 
 ---
@@ -20,7 +20,7 @@
 | Version | Date | Author | Description / Milestone |
 | :--- | :--- | :--- | :--- |
 | `0.1.0` | 2026-11-05 | Architecture Team | Initial `egui-macview` specification suite baseline. |
-| `0.6.0` | 2026-11-10 | Architecture Team | Milestone 0.6.0 Planning & Architecture Specification: Advanced Media, Scheduling, and Grid Controls (`MacPlayerView`, `MacDatePicker`, `MacComboBox`, `MacTabView`, `MacDisclosureGroup`, `MacCollectionView`, `MacBox`, `MacRuleEditor`) grounded in live macOS Sonoma 14.8.9 hardware inspection. |
+| `0.6.0` | 2026-11-10 | Architecture Team | Milestone 0.6.0 Release: Advanced Media, Scheduling, and Grid Controls (`MacPlayerView`, `MacDatePicker`, `MacComboBox`, `MacTabView`, `MacDisclosureGroup`, `MacCollectionView`, `MacBox`, `MacRuleEditor`) grounded in live macOS Sonoma 14.8.9 hardware inspection, verified with `spec012_advanced_controls_tests.rs`. |
 
 ---
 

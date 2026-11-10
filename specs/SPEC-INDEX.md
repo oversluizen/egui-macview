@@ -4,9 +4,9 @@
 | :--- | :--- |
 | **Document ID** | SPEC-INDEX |
 | **Document Title** | Specification Suite Index & Version Matrix |
-| **Document Version** | `0.5.2` |
+| **Document Version** | `0.6.0` |
 | **Status** | Accepted / Normative |
-| **Target Milestone** | Milestone 0.5.2 |
+| **Target Milestone** | Milestone 0.6.0 |
 | **Target Host** | Standalone crate `egui-macview` (Rust, egui 0.37) |
 | **Author** | Jaco Oversluizen / `egui-macview` contributors |
 | **Normative Standards** | ISO/IEC/IEEE 42010:2011, ISO/IEC/IEEE 29119-3:2021, RFC 2119/8174, Apple macOS HIG, W3C DTCG, SemVer 2.0.0 |
@@ -24,12 +24,13 @@
 | `0.5.0` | 2026-11-08 | Architecture Team | Milestone 0.5.0 Release: Studio & AVKit Media, Timeline and Publishing Controls (`SPEC-011`) |
 | `0.5.1` | 2026-11-08 | Architecture Team | Milestone 0.5.1 Hardening Release: GL-1015 Golden Master Guards, Hybrid-GPU Safe `eframe` Startup, Single-Pass Galley Reuse & Runtime Invariants |
 | `0.5.2` | 2026-11-10 | Architecture Team | Milestone 0.5.2 Release: Circular Dial, Star Rating, Audio/Video Gallery, Finder Root Navigation & Registration of `SPEC-012` |
+| `0.6.0` | 2026-11-10 | Architecture Team | Milestone 0.6.0 Release: Advanced Media, Scheduling, and Grid Controls (`SPEC-012`), 6-State Studio Gallery & Release 0.6.0 |
 
 ---
 
 ## 1. Specification Suite Structure
 
-The `egui-macview` specification suite provides the formal normative requirements, mathematical foundations, MVC abstractions, and test oracles for the entire crate. Every specification in this directory runs strictly in lockstep with the crate release version (`0.5.0`).
+The `egui-macview` specification suite provides the formal normative requirements, mathematical foundations, MVC abstractions, and test oracles for the entire crate. Every specification in this directory runs strictly in lockstep with the crate release version (`0.6.0`).
 
 | Spec ID | Document Title | Version | Status | Primary Test Suite |
 | :--- | :--- | :--- | :--- | :--- |
@@ -46,7 +47,7 @@ The `egui-macview` specification suite provides the formal normative requirement
 | [**SPEC-009**](SPEC-009-CROSS-PLATFORM-DIFFERENTIAL-HARNESS.md) | Cross-Platform Parity and Remote Differential Testing Harness | `0.3.0` | Accepted / Normative | `tests/macbook_parity_differential_tests.rs` |
 | [**SPEC-010**](SPEC-010-INTERACTIVE-GALLERY-CONTROLS-AND-ICONOGRAPHY.md) | Interactive Gallery Controls, Bidirectional State Binding & Iconography Parity | `0.3.1` | Accepted / Normative | `tests/micro_animations_and_hud_tests.rs`, `tests/symbol_tests.rs` |
 | [**SPEC-011**](SPEC-011-STUDIO-AND-AVKIT-CONTROLS.md) | Studio & AVKit Media, Timeline and Publishing Controls | `0.5.0` | Accepted / Normative | `tests/studio_controls_v05_tests.rs`, `tests/zero_hardcoding_and_primitive_tests.rs` |
-| [**SPEC-012**](SPEC-012-ADVANCED-MEDIA-SCHEDULING-AND-GRID-CONTROLS.md) | Advanced Media, Scheduling, and Grid Controls | `0.6.0` | Specified / Planned for v0.6.0 | `tests/studio_controls_v05_tests.rs`, `tests/cots_red_baseline_tests.rs` |
+| [**SPEC-012**](SPEC-012-ADVANCED-MEDIA-SCHEDULING-AND-GRID-CONTROLS.md) | Advanced Media, Scheduling, and Grid Controls | `0.6.0` | Accepted / Normative | `tests/spec012_advanced_controls_tests.rs`, `tests/cots_red_baseline_tests.rs` |
 
 ---
 
@@ -63,7 +64,7 @@ The roadmap coordinates modular capability additions across designated release m
 | **Milestone 0.3.0** | `v0.3.0` (2026-11-06) | Desktop Navigation, 24pt Canvas Footer & Spotlight Command Palette | Released | SPEC-007 (`0.3.0`) |
 | **Milestone 0.4.0** | `v0.4.0` (2026-11-07) | State Integrity (`NSUndoManager`), Context Menus & Micro-Feedback | Released | SPEC-008 (`0.4.0`) |
 | **Milestone 0.5.0** | `v0.5.0` (2026-11-08) | Studio & AVKit Media, Timeline and Publishing Controls | Released | SPEC-011 (`0.5.0`) |
-| **Milestone 0.6.0** | `v0.6.0` (Planned) | Advanced Media, Scheduling, and Grid Controls | Specified / Planned for v0.6.0 | SPEC-012 (`0.6.0`) |
+| **Milestone 0.6.0** | `v0.6.0` (2026-11-10) | Advanced Media, Scheduling, and Grid Controls | Released | SPEC-012 (`0.6.0`) |
 
 ### 2.2 Functional Capability Matrix
 
@@ -84,14 +85,14 @@ The roadmap coordinates modular capability additions across designated release m
 | `MacLevelIndicator` (`NSLevelIndicator`) | `src/controls/` | Milestone 0.5.0 | SPEC-011 | `tests/studio_controls_v05_tests.rs` | Released / Normative |
 | `MacTrimScrubber` (`AVPlayerView` Trim Bar) | `src/controls/trim_scrubber/` | Milestone 0.5.0 | SPEC-011 | `tests/studio_controls_v05_tests.rs` | Released / Normative |
 | `MacPathControl` (`NSPathControl`) | `src/controls/` | Milestone 0.5.0 | SPEC-011 | `tests/studio_controls_v05_tests.rs` | Released / Normative |
-| `MacPlayerView` (`AVPlayerView` Suite) | `src/controls/` | Milestone 0.6.0 | SPEC-012 | `tests/studio_controls_v05_tests.rs` | Specified / Planned for v0.6.0 |
-| `MacDatePicker` (`NSDatePicker`) | `src/controls/` | Milestone 0.6.0 | SPEC-012 | `tests/studio_controls_v05_tests.rs` | Specified / Planned for v0.6.0 |
-| `MacComboBox` (`NSComboBox`) | `src/controls/` | Milestone 0.6.0 | SPEC-012 | `tests/studio_controls_v05_tests.rs` | Specified / Planned for v0.6.0 |
-| `MacTabView` (`NSTabView`) | `src/controls/` | Milestone 0.6.0 | SPEC-012 | `tests/studio_controls_v05_tests.rs` | Specified / Planned for v0.6.0 |
-| `MacDisclosureGroup` (`NSButton` Disclosure) | `src/controls/` | Milestone 0.6.0 | SPEC-012 | `tests/studio_controls_v05_tests.rs` | Specified / Planned for v0.6.0 |
-| `MacCollectionView` (`NSCollectionView`) | `src/controls/` | Milestone 0.6.0 | SPEC-012 | `tests/studio_controls_v05_tests.rs` | Specified / Planned for v0.6.0 |
-| `MacBox` (`NSBox`) | `src/layout/` | Milestone 0.6.0 | SPEC-012 | `tests/studio_controls_v05_tests.rs` | Specified / Planned for v0.6.0 |
-| `MacRuleEditor` (`NSRuleEditor`) | `src/controls/` | Milestone 0.6.0 | SPEC-012 | `tests/studio_controls_v05_tests.rs` | Specified / Planned for v0.6.0 |
+| `MacPlayerView` (`AVPlayerView` Suite) | `src/controls/` | Milestone 0.6.0 | SPEC-012 | `tests/spec012_advanced_controls_tests.rs` | Released / Normative |
+| `MacDatePicker` (`NSDatePicker`) | `src/controls/` | Milestone 0.6.0 | SPEC-012 | `tests/spec012_advanced_controls_tests.rs` | Released / Normative |
+| `MacComboBox` (`NSComboBox`) | `src/controls/` | Milestone 0.6.0 | SPEC-012 | `tests/spec012_advanced_controls_tests.rs` | Released / Normative |
+| `MacTabView` (`NSTabView`) | `src/controls/` | Milestone 0.6.0 | SPEC-012 | `tests/spec012_advanced_controls_tests.rs` | Released / Normative |
+| `MacDisclosureGroup` (`NSButton` Disclosure) | `src/controls/` | Milestone 0.6.0 | SPEC-012 | `tests/spec012_advanced_controls_tests.rs` | Released / Normative |
+| `MacCollectionView` (`NSCollectionView`) | `src/controls/` | Milestone 0.6.0 | SPEC-012 | `tests/spec012_advanced_controls_tests.rs` | Released / Normative |
+| `MacBox` (`NSBox`) | `src/layout/` | Milestone 0.6.0 | SPEC-012 | `tests/spec012_advanced_controls_tests.rs` | Released / Normative |
+| `MacRuleEditor` (`NSRuleEditor`) | `src/controls/` | Milestone 0.6.0 | SPEC-012 | `tests/spec012_advanced_controls_tests.rs` | Specified / Planned for v0.6.0 |
 
 ---
 
@@ -110,6 +111,7 @@ All core specifications in this repository maintain exact version parity with th
 | **v0.5.0** | `0.5.0` | 2026-11-08 | Milestone 0.5.0 release: Promoted SPEC-011 (Studio & AVKit Controls) to official release status. Six domain-agnostic studio, media, timeline, and publishing controls: `MacProgressIndicator` (`Bar` determinate/indeterminate + `Spinning` 12-spoke fin indicator across `Regular`/`Small`/`Mini`), `MacTableView` (multi-column `NSTableView` + `NSTableHeaderView` with sort chevrons, alternating rows, single/range/multi selection, and consumed arrow-key navigation), `MacTokenField` (flow-wrapping `NSTokenField` pill editor with comma/Enter commit, Backspace/`×` removal, and character counter), `MacLevelIndicator` (continuous/discrete horizontal/vertical audio & signal meter with warning/critical thresholds and peak hold), `MacTrimScrubber` (QuickTime/AVKit waveform timeline with named zones, In/Out trim handles, and `MM:SS.d` playhead badge), and `MacPathControl` (clickable `NSPathControl` breadcrumb bar with `Choose...` button); plus unmultiplied RGBA DTCG token parsing. |
 | **v0.5.1** | `0.5.1` | 2026-11-08 | Milestone 0.5.1 hardening release: GL-1015 Golden Master Architecture Guards (`tests/architecture_guard_tests.rs`), hybrid-GPU safe `eframe` startup (`glow`), consolidated single-pass `Arc<Galley>` reuse and `egui::Memory` lookups, and runtime hygiene/invariants test suites. |
 | **v0.5.2** | `0.5.2` | 2026-11-10 | Milestone 0.5.2 release: Added `MacCircularSlider` and `MacRatingIndicator` primitives, live AVKit audio/video synthesis with 30 FPS video canvas, authentic Finder browsing with pinned parent directory (`..`) and Windows drive root chain (`C:\`, `D:\`), interactive Rust snippet generator, WCAG AA contrast refinement, zero-idle battery efficiency, and formal specification of `SPEC-012` for Milestone 0.6.0. |
+| **v0.6.0** | `0.6.0` | 2026-11-10 | Milestone 0.6.0 release: Promoted SPEC-012 (Advanced Media, Scheduling, and Grid Controls) to official release status. Seven advanced AppKit/AVKit controls: `MacPlayerView` (QuickTime floating HUD pod, inline transport, minimal circular transport), `MacDatePicker` (text-field with stepper, clock face, calendar matrix), `MacComboBox` (editable input with dropdown trigger and viewport-clamped popover), `MacTabView` (bezel and borderless segmented tab container with flipped coordinates), `MacDisclosureGroup` & `MacDisclosureButton` (hierarchical collapsible toggle with CASpring rotation and pill button), `MacCollectionView` (2D grid engine with 2D viewport culling and spatial keyboard navigation), and `MacBox` (container framing with title badge and content insets); plus 6-state interactive gallery showcase (`macview_gallery`). |
 
 ---
 

@@ -2,8 +2,8 @@
 
 use super::{
     audio_media::NativeAudioOutput, state5_meters::render_rotary_studio_bar,
-    state5_meters::render_stereo_meters, video_scene::render_procedural_video_viewport,
-    CenterState,
+    state5_meters::render_stereo_meters, types::AvKitStudioSnapshot,
+    video_scene::render_procedural_video_viewport, CenterState,
 };
 use egui::{FontId, Ui};
 use egui_macview::{
@@ -328,5 +328,70 @@ impl CenterState {
 
         self.checkpoint_avkit_if_changed();
         content_ui.add_space(16.0);
+    }
+
+    pub fn current_avkit_snapshot(&self) -> AvKitStudioSnapshot {
+        AvKitStudioSnapshot {
+            in_point: self.media_in_point,
+            out_point: self.media_out_point,
+            playhead: self.media_playhead,
+            gain: self.media_gain,
+            pan: self.media_pan,
+            exposure: self.media_exposure,
+            contrast: self.media_contrast,
+            zoom: self.media_zoom,
+            rating: self.media_rating,
+        }
+    }
+
+    pub fn apply_avkit_snapshot(&mut self, snap: &AvKitStudioSnapshot) {
+        self.media_in_point = snap.in_point;
+        self.media_out_point = snap.out_point;
+        self.media_playhead = snap.playhead.clamp(snap.in_point, snap.out_point);
+        self.media_gain = snap.gain;
+        self.media_pan = snap.pan;
+        self.media_exposure = snap.exposure;
+        self.media_contrast = snap.contrast;
+        self.media_zoom = snap.zoom;
+        self.media_rating = snap.rating;
+    }
+
+    pub fn undo_avkit(&mut self) -> bool {
+        let mut cur = self.current_avkit_snapshot();
+        if self.avkit_undo.undo(&mut cur) {
+            self.apply_avkit_snapshot(&cur);
+            self.last_stable_avkit = Some(cur);
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn redo_avkit(&mut self) -> bool {
+        let mut cur = self.current_avkit_snapshot();
+        if self.avkit_undo.redo(&mut cur) {
+            self.apply_avkit_snapshot(&cur);
+            self.last_stable_avkit = Some(cur);
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn checkpoint_avkit_if_changed(&mut self) {
+        let cur = self.current_avkit_snapshot();
+        if let Some(ref prev) = self.last_stable_avkit {
+            let changed = if self.media_playing {
+                prev.params_differ(&cur)
+            } else {
+                prev.params_differ(&cur) || (prev.playhead - cur.playhead).abs() > 0.05
+            };
+            if changed {
+                self.avkit_undo.push_snapshot(*prev);
+                self.last_stable_avkit = Some(cur);
+            }
+        } else {
+            self.last_stable_avkit = Some(cur);
+        }
     }
 }

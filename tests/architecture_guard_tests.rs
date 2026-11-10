@@ -143,11 +143,17 @@ fn test_guard_documentation_and_file_size_ceilings() {
 fn test_guard_zero_cross_component_token_borrowing_and_self_check() {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     let methods = [
+        "box_view",
         "button",
+        "collection_view",
         "color_well",
+        "combo_box",
+        "date_picker",
+        "disclosure_group",
         "level_indicator",
         "outline_view",
         "path_control",
+        "player_view",
         "popover_metrics",
         "popup_button",
         "progress_indicator",
@@ -158,6 +164,7 @@ fn test_guard_zero_cross_component_token_borrowing_and_self_check() {
         "split_view",
         "stack_view",
         "stepper",
+        "tab_view",
         "table_view",
         "thumbnail",
         "toggle",
@@ -175,12 +182,18 @@ fn test_guard_zero_cross_component_token_borrowing_and_self_check() {
             continue;
         }
         let allowed: &[&str] = match (pname, fname) {
+            (_, "box_view.rs") => &["box_view"],
             (_, "button_cell.rs") => &["button"],
             (_, "circular_slider.rs") => &["slider"],
+            (_, "collection_view.rs") => &["collection_view"],
             (_, "color_well.rs") => &["color_well"],
+            (_, "combo_box.rs") => &["combo_box"],
+            (_, "date_picker.rs") | ("date_picker", _) => &["date_picker"],
+            (_, "disclosure_group.rs") => &["disclosure_group"],
             (_, "level_indicator.rs") => &["level_indicator"],
             (_, "outline_view.rs") => &["outline_view", "thumbnail"],
             (_, "path_control.rs") => &["path_control"],
+            (_, "player_view.rs") => &["player_view"],
             (_, "popup_button.rs") => &["popup_button"],
             (_, "progress_indicator.rs") => &["progress_indicator"],
             (_, "rating_indicator.rs") => &["level_indicator"],
@@ -188,6 +201,7 @@ fn test_guard_zero_cross_component_token_borrowing_and_self_check() {
             (_, "segmented.rs") => &["segmented"],
             (_, "slider.rs") => &["slider"],
             (_, "stepper.rs") => &["stepper"],
+            (_, "tab_view.rs") => &["tab_view"],
             ("table_view", _) => &["table_view"],
             (_, "thumbnail_cell.rs") => &["thumbnail"],
             (_, "toggle.rs") => &["toggle"],

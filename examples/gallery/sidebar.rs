@@ -71,6 +71,7 @@ impl SidebarState {
                             GalleryScreen::DesignTokensWcag => "node_screen_tokens",
                             GalleryScreen::FinderDataBrowser => "node_screen_finder",
                             GalleryScreen::AvKitMediaStudio => "node_screen_avkit",
+                            GalleryScreen::AdvancedControls => "node_screen_advanced",
                         };
                         let resp = tree.row(node_id, 1, false, &mut false, is_sel, |row| {
                             let bg_style = theme.selected_control_background_style();
@@ -88,6 +89,7 @@ impl SidebarState {
                                         GalleryScreen::AvKitMediaStudio => {
                                             theme.traffic_light_close().0
                                         }
+                                        GalleryScreen::AdvancedControls => theme.system_orange(),
                                     }
                                 };
                                 painter.rect_stroke(

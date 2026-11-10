@@ -1,10 +1,15 @@
 //! AppKit Control geometry metrics tokens.
 
+pub mod advanced;
 pub mod basic;
 pub mod extended;
 pub mod selection_and_value;
 pub mod studio;
 
+pub use advanced::{
+    BoxViewMetrics, CollectionViewMetrics, ComboBoxMetrics, DatePickerMetrics,
+    DisclosureGroupMetrics, PlayerViewMetrics, TabViewMetrics,
+};
 pub use basic::{
     default_border_width, ButtonMetrics, ButtonSizeMetrics, FocusRingMetrics, SegmentedMetrics,
     SegmentedSizeMetrics, TextFieldMetrics, TextFieldSizeMetrics,
@@ -81,4 +86,25 @@ pub struct MacControlMetrics {
     /// Path control breadcrumb metrics.
     #[serde(default)]
     pub path_control: PathControlMetrics,
+    /// Disclosure group & button metrics.
+    #[serde(default)]
+    pub disclosure_group: DisclosureGroupMetrics,
+    /// Combo box metrics.
+    #[serde(default)]
+    pub combo_box: ComboBoxMetrics,
+    /// Tab view metrics.
+    #[serde(default)]
+    pub tab_view: TabViewMetrics,
+    /// Date picker metrics.
+    #[serde(default)]
+    pub date_picker: DatePickerMetrics,
+    /// Collection view metrics.
+    #[serde(default)]
+    pub collection_view: CollectionViewMetrics,
+    /// Player view metrics.
+    #[serde(default)]
+    pub player_view: PlayerViewMetrics,
+    /// Box view metrics.
+    #[serde(default)]
+    pub box_view: BoxViewMetrics,
 }

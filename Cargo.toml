@@ -1,6 +1,6 @@
 [package]
 name = "egui-macview"
-version = "0.5.2"
+version = "0.6.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 authors = ["Jaco Oversluizen", "egui-macview contributors"]
@@ -109,5 +109,9 @@ path = "tests/battery_efficiency_and_avkit_tests.rs"
 [[test]]
 name = "appkit_finder_and_table_tests"
 path = "tests/appkit_finder_and_table_tests.rs"
+
+[[test]]
+name = "spec012_advanced_controls_tests"
+path = "tests/spec012_advanced_controls_tests.rs"
 
 

@@ -180,6 +180,26 @@ MacRatingIndicator::new(&mut rating, 5).theme(&theme).show(ui);
             ctx.audio_level_l,
             ctx.audio_peak_l,
         ),
+        GalleryScreen::AdvancedControls => r#"// Milestone 0.6.0: Advanced Media, Scheduling & Grid Controls (SPEC-012)
+use egui_macview::{
+    MacBox, MacCollectionView, MacCollectionViewFlowLayout, MacComboBox,
+    MacDatePicker, MacDatePickerStyle, MacDisclosureButton, MacDisclosureGroup,
+    MacPlayerView, MacTabView, MacTheme,
+};
+
+let theme = MacTheme::default();
+let mut expanded = true;
+let mut combo_text = "Apple ProRes 422 HQ".to_string();
+let mut selected_tab = 0;
+
+MacBox::new("Inspector Group").theme(&theme).show(ui, |ui| {
+    MacDisclosureGroup::new("disc", "Media Settings", &mut expanded)
+        .theme(&theme)
+        .show(ui, |ui| {
+            MacComboBox::new("cb", &mut combo_text, &["ProRes 422", "H.265"]).theme(&theme).show(ui);
+        });
+});
+"#.to_string(),
     }
 }
 

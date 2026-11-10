@@ -12,15 +12,17 @@ pub mod typography;
 pub use color::{MacAppearanceColors, MacColorTokens};
 pub use dtcg::{ColorValue, DimensionValue};
 pub use metrics::{
-    ButtonMetrics, ButtonSizeMetrics, ColorWellMetrics, ContextMenuMetrics, FocusRingMetrics,
-    FooterMetrics, LayoutMetrics, LevelIndicatorMetrics, MacControlMetrics, MacMetricsTokens,
-    MenuBarMetrics, NavigationMetrics, OutlineViewMetrics, PaletteMetrics, PathControlMetrics,
-    PopUpButtonMetrics, PopoverMetrics, ProgressIndicatorMetrics, ProgressSizeMetrics,
-    ScrollViewMetrics, SearchFieldMetrics, SegmentedMetrics, SegmentedSizeMetrics, SliderMetrics,
-    SplitViewMetrics, StackViewMetrics, StepperMetrics, TableViewMetrics, TextFieldMetrics,
-    TextFieldSizeMetrics, ThumbnailCellMetrics, ToastMetrics, ToggleMetrics, TokenFieldMetrics,
-    ToolbarMetrics, TrimScrubberMetrics, CANVAS_FOOTER_HEIGHT, COMMAND_PALETTE_HEIGHT,
-    COMMAND_PALETTE_WIDTH, DEFAULT_TOAST_DURATION,
+    BoxViewMetrics, ButtonMetrics, ButtonSizeMetrics, CollectionViewMetrics, ColorWellMetrics,
+    ComboBoxMetrics, ContextMenuMetrics, DatePickerMetrics, DisclosureGroupMetrics,
+    FocusRingMetrics, FooterMetrics, LayoutMetrics, LevelIndicatorMetrics, MacControlMetrics,
+    MacMetricsTokens, MenuBarMetrics, NavigationMetrics, OutlineViewMetrics, PaletteMetrics,
+    PathControlMetrics, PlayerViewMetrics, PopUpButtonMetrics, PopoverMetrics,
+    ProgressIndicatorMetrics, ProgressSizeMetrics, ScrollViewMetrics, SearchFieldMetrics,
+    SegmentedMetrics, SegmentedSizeMetrics, SliderMetrics, SplitViewMetrics, StackViewMetrics,
+    StepperMetrics, TableViewMetrics, TabViewMetrics, TextFieldMetrics, TextFieldSizeMetrics,
+    ThumbnailCellMetrics, ToastMetrics, ToggleMetrics, TokenFieldMetrics, ToolbarMetrics,
+    TrimScrubberMetrics, CANVAS_FOOTER_HEIGHT, COMMAND_PALETTE_HEIGHT, COMMAND_PALETTE_WIDTH,
+    DEFAULT_TOAST_DURATION,
 };
 pub use motion::{MacMotionTokens, MotionPresetToken};
 pub use typography::{
@@ -242,6 +244,48 @@ impl MacDesignTokens {
     #[inline]
     pub fn path_control_metrics(&self) -> &PathControlMetrics {
         &self.macview.metrics.control.path_control
+    }
+
+    /// Accesses disclosure group metrics tokens.
+    #[inline]
+    pub fn disclosure_group_metrics(&self) -> &DisclosureGroupMetrics {
+        &self.macview.metrics.control.disclosure_group
+    }
+
+    /// Accesses combo box metrics tokens.
+    #[inline]
+    pub fn combo_box_metrics(&self) -> &ComboBoxMetrics {
+        &self.macview.metrics.control.combo_box
+    }
+
+    /// Accesses tab view metrics tokens.
+    #[inline]
+    pub fn tab_view_metrics(&self) -> &TabViewMetrics {
+        &self.macview.metrics.control.tab_view
+    }
+
+    /// Accesses date picker metrics tokens.
+    #[inline]
+    pub fn date_picker_metrics(&self) -> &DatePickerMetrics {
+        &self.macview.metrics.control.date_picker
+    }
+
+    /// Accesses collection view metrics tokens.
+    #[inline]
+    pub fn collection_view_metrics(&self) -> &CollectionViewMetrics {
+        &self.macview.metrics.control.collection_view
+    }
+
+    /// Accesses player view metrics tokens.
+    #[inline]
+    pub fn player_view_metrics(&self) -> &PlayerViewMetrics {
+        &self.macview.metrics.control.player_view
+    }
+
+    /// Accesses box view metrics tokens.
+    #[inline]
+    pub fn box_view_metrics(&self) -> &BoxViewMetrics {
+        &self.macview.metrics.control.box_view
     }
 
     /// Accesses semantic color tokens.

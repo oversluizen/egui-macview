@@ -5,7 +5,7 @@
 [![Crates.io](https://img.shields.io/crates/v/egui-macview.svg)](https://crates.io/crates/egui-macview)
 [![Documentation](https://docs.rs/egui-macview/badge.svg)](https://docs.rs/egui-macview)
 [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](https://opensource.org/licenses/MIT)
-[![Tests](https://img.shields.io/badge/tests-152%20passed%20(100%25%20green)-brightgreen.svg)](https://github.com/oversluizen/egui-macview)
+[![Tests](https://img.shields.io/badge/tests-159%20passed%20(100%25%20green)-brightgreen.svg)](https://github.com/oversluizen/egui-macview)
 
 ---
 
@@ -28,9 +28,9 @@ The crate includes an interactive capability showcase demonstrating all primitiv
 cargo run --example macview_gallery
 ```
 
-### The 4 Master-Detail Capability Screens
+### The 6 Master-Detail Capability Screens
 
-Clicking the **Screens** group in the left sidebar switches the central work area across 4 specialized AppKit capability screens:
+Clicking the **Screens** group in the left sidebar switches the central work area across 6 specialized AppKit capability screens:
 
 ```text
 ┌─────────────────┬──────────────────────────────────────────┬──────────────────┐
@@ -40,14 +40,17 @@ Clicking the **Screens** group in the left sidebar switches the central work are
 │   ├─ 1. Canvas  │    - 2D Affine Matrix live transforms    │   ├─ Default NIB │
 │   ├─ 2. Vectors │    - Damped CASpring pulse on clicks     │   ├─ Compact HUD │
 │   ├─ 3. Tokens  │ 2. Vector Assets Gallery                 │   └─ Expanded    │
-│   └─ 4. Layouts │    - 14 Cupertino true-vector glyphs     │ • Dimensions     │
-│                 │    - Live search filter (⌘K / Ctrl+K)    │ • Layout & Mask  │
-│ • Presets       │ 3. W3C Design Tokens & WCAG Engine       │   [L][ C ][R][F] │
-│   ├─ Default    │    - Token catalogue (colors/metrics)    │ • 2x2 Matrix     │
-│   ├─ Compact    │    - Real-time WCAG AA contrast tester   │ • Live Swatches  │
-│   └─ Expanded   │ 4. Layout Engines Playground             │                  │
-│                 │    - MacFixedView & live Raster Mask     │                  │
-│                 │    - MacRow container width budgeting    │                  │
+│   ├─ 4. Finder  │    - 14 Cupertino true-vector glyphs     │ • Dimensions     │
+│   ├─ 5. AVKit   │    - Live search filter (⌘K / Ctrl+K)    │ • Layout & Mask  │
+│   └─ 6. Controls│ 3. W3C Design Tokens & WCAG Engine       │   [L][ C ][R][F] │
+│                 │    - Token catalogue (colors/metrics)    │ • 2x2 Matrix     │
+│ • Presets       │    - Real-time WCAG AA contrast tester   │ • Live Swatches  │
+│   ├─ Default    │ 4. Finder & Publishing Data Browser      │                  │
+│   ├─ Compact    │    - NSPathControl breadcrumbs & table   │                  │
+│   └─ Expanded   │ 5. AVKit Media & Timeline Studio         │                  │
+│                 │    - Waveform scrubber & VU meters       │                  │
+│                 │ 6. Advanced Controls (SPEC-012)          │                  │
+│                 │    - Combo, Date, Tab, Grid, Player, Box │                  │
 └─────────────────┴──────────────────────────────────────────┴──────────────────┘
 ```
 
@@ -61,9 +64,22 @@ Clicking the **Screens** group in the left sidebar switches the central work are
 3. **Screen 3: W3C Design Tokens & WCAG Contrast Engine**
    - **DTCG Token Catalogue**: Direct visualization of tokenized colors, elevations, corner radii, and optical typography.
    - **Dynamic Contrast Engine**: Real-time evaluation of relative luminance ($L \le 0.179$) and contrast ratios against WCAG AA standards with pass/fail badges.
-4. **Screen 4: Layout Engines Playground**
-   - **`MacFixedView`**: Retained exact-point subview layout with hardware raster mask clipping (zero border bleed) and Core Animation cascading spring effects.
-   - **`MacRow` Auto-Budgeting**: Interactive container width slider demonstrating how compartments automatically allocate and budget available horizontal space.
+4. **Screen 4: Finder & Publishing Data Browser**
+   - **`MacPathControl`**: Interactive file system breadcrumb path bar with vector folder icons.
+   - **`MacTableView`**: Multi-column data table with alternating rows, keyboard navigation, and sort chevrons.
+   - **`MacTokenField`**: Capsule tagging pill input with comma/Enter commit and Backspace removal.
+5. **Screen 5: AVKit Media & Timeline Studio**
+   - **`MacTrimScrubber`**: QuickTime/AVKit media timeline trim bar with waveform bars, In/Out trim handles, and floating timecode badge.
+   - **`MacCircularSlider` & `MacLevelIndicator`**: Authentic continuous rotary dial and stereo VU meters with peak hold.
+   - **`MacRatingIndicator`**: 5-star rating control with half-star precision and precomputed geometry.
+6. **Screen 6: Advanced Media, Scheduling & Grid Controls (`SPEC-012`)**
+   - **`MacPlayerView`**: AVKit playback presentation layer with QuickTime floating HUD pod, inline transport, and auto-hide timing.
+   - **`MacDatePicker`**: Dual date/time picker with integrated stepper, 12-hour analog clock face, and calendar matrix grid.
+   - **`MacComboBox`**: Hybrid text input with trailing dropdown trigger and viewport-clamped filterable popover list.
+   - **`MacTabView`**: Flipped-coordinate tab container with bezel bordered tabs and borderless switching.
+   - **`MacDisclosureGroup`**: Collapsible container with triangular chevron, `CASpring` rotation, and pill buttons.
+   - **`MacCollectionView`**: High-performance 2D grid layout with viewport culling and spatial keyboard navigation.
+   - **`MacBox`**: Container grouping with title badge, rounded corners, and standardized AppKit insets.
 
 ---
 
@@ -78,6 +94,7 @@ Clicking the **Screens** group in the left sidebar switches the central work are
 | [`MacRow`](file:///D:/Programmeren/egui-macview/src/layout/row.rs) | Flexible Cell Row | Auto-budgeting horizontal cell layout with analytical $O(n)$ space distribution. |
 | [`MacScrollView`](file:///D:/Programmeren/egui-macview/src/layout/scroll_view.rs) | `NSScrollView` | Floating overlay scrollbars with zero gutter reservation and smooth auto-fade timers. |
 | [`MacStackView`](file:///D:/Programmeren/egui-macview/src/layout/stack_view.rs) | `NSStackView` | Auto-layout linear stacking container with token-governed spacing and section separators. |
+| [`MacBox`](file:///D:/Programmeren/egui-macview/src/controls/box_view.rs) | `NSBox` | Primary container grouping with title badge, rounded corners, and standardized content insets. |
 
 ### 3.2 Authentic Control Primitives
 
@@ -100,6 +117,12 @@ Clicking the **Screens** group in the left sidebar switches the central work are
 | [`MacPathControl`](file:///D:/Programmeren/egui-macview/src/controls/path_control.rs) | `NSPathControl` | Interactive file/folder breadcrumb bar with vector icons, chevron separators, clickable segments, and optional trailing `Choose...` button. |
 | [`MacMenuBar`](file:///D:/Programmeren/egui-macview/src/navigation/menu.rs) | `NSMenu` / App Menu | Authentic menu bar with cascading submenus, global keyboard shortcuts, and dynamic width auto-calculation guaranteeing $\ge 24\,\text{pt}$ clearance between titles and accelerators. |
 | [`MacCommandPalette`](file:///D:/Programmeren/egui-macview/src/navigation/command_palette.rs) | Spotlight / Quick Open | Floating modal command runner with fuzzy subsequence scoring, category badges, and keyboard navigation. |
+| [`MacPlayerView`](file:///D:/Programmeren/egui-macview/src/controls/player_view.rs) | `AVPlayerView` | AVKit media presentation layer with QuickTime floating HUD pod, inline transport bar, and circular transport controls. |
+| [`MacDatePicker`](file:///D:/Programmeren/egui-macview/src/controls/date_picker.rs) | `NSDatePicker` | Date/time scheduling control with stepper field, 12-hour analog clock face, and calendar matrix grid. |
+| [`MacComboBox`](file:///D:/Programmeren/egui-macview/src/controls/combo_box.rs) | `NSComboBox` | Hybrid text input with integrated dropdown button and viewport-clamped filterable popover list. |
+| [`MacTabView`](file:///D:/Programmeren/egui-macview/src/controls/tab_view.rs) | `NSTabView` | Flipped-coordinate segmented tab container supporting bezel bordered tabs and borderless card switching. |
+| [`MacDisclosureGroup`](file:///D:/Programmeren/egui-macview/src/controls/disclosure_group.rs) | `NSButton` Disclosure | Collapsible container with triangular disclosure chevron, `CASpring` rotation, and pill buttons. |
+| [`MacCollectionView`](file:///D:/Programmeren/egui-macview/src/controls/collection_view.rs) | `NSCollectionView` | High-performance 2D grid layout engine with 2D viewport culling and spatial keyboard navigation. |
 
 ### 3.3 CoreAnimation Physics (`CASpring`)
 
@@ -122,7 +145,7 @@ Add `egui-macview` to your `Cargo.toml`:
 ```toml
 [dependencies]
 egui = "0.37.0"
-egui-macview = "0.5.2"
+egui-macview = "0.6.0"
 ```
 
 ### Complete Code Example
