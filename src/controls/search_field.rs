@@ -260,7 +260,9 @@ impl<'a> Widget for MacSearchField<'a> {
         let is_text_focused = !surrendered_by_escape
             && (edit_response.has_focus() || ui.ctx().memory(|m| m.has_focus(text_id)));
         let is_focused = is_text_focused || (!surrendered_by_escape && response.has_focus());
-        ui.data_mut(|d| d.insert_temp(was_focused_id, is_focused));
+        if was_focused != is_focused {
+            ui.data_mut(|d| d.insert_temp(was_focused_id, is_focused));
+        }
 
         // 3. Draw trailing clear button if text is present
         if !self.text.is_empty() && clear_rect != Rect::NOTHING {

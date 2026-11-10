@@ -12,7 +12,7 @@ pub struct AudioTrack {
 
 impl Default for AudioTrack {
     fn default() -> Self {
-        Self::procedural_studio_track("AppKit_Master_Mix.wav", 120.0)
+        Self::procedural_studio_track("AppKit_Master_Mix.wav", 30.0)
     }
 }
 
@@ -20,7 +20,7 @@ impl AudioTrack {
     /// Generates an authentic multi-layer procedural studio audio track with melody and rhythm.
     pub fn procedural_studio_track(name: &str, duration_secs: f64) -> Self {
         let sample_rate = 22050u32;
-        let synth_duration = duration_secs.min(20.0);
+        let synth_duration = duration_secs.clamp(1.0, 120.0);
         let total_samples = (synth_duration * sample_rate as f64).round() as usize;
         let mut samples = Vec::with_capacity(total_samples);
 
@@ -49,7 +49,7 @@ impl AudioTrack {
         let peaks = compute_waveform_peaks(&samples, 96);
         Self {
             name: name.to_string(),
-            duration_secs,
+            duration_secs: synth_duration,
             sample_rate,
             samples_mono: samples,
             waveform_peaks: peaks,
@@ -200,9 +200,7 @@ impl AudioTrack {
         let rms = (sum_sq / (slice.len() as f32)).sqrt();
 
         // Pan weighting (-1.0=Left, 0.0=Center, 1.0=Right)
-        let pan_clamped = pan.clamp(-1.0, 1.0);
-        let pan_l = ((1.0 - pan_clamped) * 0.5).sqrt();
-        let pan_r = ((1.0 + pan_clamped) * 0.5).sqrt();
+        let (pan_l, pan_r) = calculate_pan_weights(pan);
 
         // Map to 0.0..=10.0 MacLevelIndicator scale (-48dBFS to +3dBFS)
         let to_vu = |amp: f32| -> f32 {
@@ -222,8 +220,14 @@ impl AudioTrack {
         (level_l, level_r, peak_l, peak_r)
     }
 
-    /// Encodes a portion of the track to standard 16-bit PCM WAV for native OS playback.
-    pub fn to_wav_bytes(&self, start_secs: f64, end_secs: f64) -> Vec<u8> {
+    /// Encodes a portion of the track to standard 16-bit PCM WAV for native OS playback with gain and stereo pan.
+    pub fn to_wav_bytes_mixed(
+        &self,
+        start_secs: f64,
+        end_secs: f64,
+        gain: f32,
+        pan: f32,
+    ) -> Vec<u8> {
         let (s_sec, e_sec) = if start_secs <= end_secs {
             (start_secs, end_secs)
         } else {
@@ -257,12 +261,23 @@ impl AudioTrack {
         out.extend_from_slice(b"data");
         out.extend_from_slice(&data_len.to_le_bytes());
 
+        let (pan_l, pan_r) = calculate_pan_weights(pan);
+
         for &sample in slice {
-            let pcm = (sample.clamp(-1.0, 1.0) * 32767.0).round() as i16;
-            out.extend_from_slice(&pcm.to_le_bytes());
-            out.extend_from_slice(&pcm.to_le_bytes());
+            let s_l = (sample * gain * pan_l).clamp(-1.0, 1.0);
+            let s_r = (sample * gain * pan_r).clamp(-1.0, 1.0);
+            let pcm_l = (s_l * 32767.0).round() as i16;
+            let pcm_r = (s_r * 32767.0).round() as i16;
+            out.extend_from_slice(&pcm_l.to_le_bytes());
+            out.extend_from_slice(&pcm_r.to_le_bytes());
         }
         out
+    }
+
+    /// Encodes a portion of the track to standard 16-bit PCM WAV for native OS playback at unity mix.
+    #[allow(dead_code)]
+    pub fn to_wav_bytes(&self, start_secs: f64, end_secs: f64) -> Vec<u8> {
+        self.to_wav_bytes_mixed(start_secs, end_secs, 1.0, 0.0)
     }
 }
 
@@ -348,4 +363,9 @@ impl NativeAudioOutput {
 
     #[cfg(not(windows))]
     pub fn stop() {}
+}
+
+/// Calculates stereo pan gain multipliers for left and right channels using equal-power panning.
+pub fn calculate_pan_weights(pan: f32) -> (f32, f32) {
+    egui_macview::calculate_pan_weights(pan)
 }

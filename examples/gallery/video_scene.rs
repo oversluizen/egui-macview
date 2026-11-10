@@ -54,15 +54,18 @@ pub fn render_procedural_video_viewport(
         let num_pts = wave.len().min(48);
         let step_x = (video_rect.width() - 32.0) / (num_pts as f32);
         let base_y = video_rect.bottom() - 28.0;
-        for i in 0..num_pts.saturating_sub(1) {
-            let y0 = base_y - wave[i] * 22.0 * state.media_gain;
-            let y1 = base_y - wave[i + 1] * 22.0 * state.media_gain;
-            let x0 = video_rect.left() + 16.0 + (i as f32) * step_x;
-            let x1 = x0 + step_x;
-            vp.line_segment(
-                [pos2(x0, y0), pos2(x1, y1)],
+        let pts: Vec<egui::Pos2> = (0..num_pts)
+            .map(|i| {
+                let y = base_y - wave[i] * 22.0 * state.media_gain;
+                let x = video_rect.left() + 16.0 + (i as f32) * step_x;
+                pos2(x, y)
+            })
+            .collect();
+        if pts.len() >= 2 {
+            vp.add(egui::Shape::line(
+                pts,
                 Stroke::new(1.0, theme.system_green().gamma_multiply(0.75)),
-            );
+            ));
         }
     }
 

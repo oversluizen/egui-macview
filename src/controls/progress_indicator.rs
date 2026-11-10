@@ -266,7 +266,7 @@ impl<'a> Widget for MacProgressIndicator<'a> {
                         Vec2::new(pill_w, bar_h),
                     );
                     painter.rect_filled(pill_rect, radius, fill_color);
-                    if self.time > 0.0 {
+                    if self.time > 0.0 && crate::layout::is_window_active(ui.ctx()) {
                         ui.ctx()
                             .request_repaint_after(std::time::Duration::from_millis(33));
                     }
@@ -324,7 +324,7 @@ impl<'a> Widget for MacProgressIndicator<'a> {
                     painter.circle_filled(p1, tip_r, spoke_color);
                 }
 
-                if self.time > 0.0 {
+                if self.time > 0.0 && crate::layout::is_window_active(ui.ctx()) {
                     let step_secs = (1.0 / (speed_hz * spoke_count as f64)).min(1.0) as f32;
                     ui.ctx().request_repaint_after_secs(step_secs);
                 }

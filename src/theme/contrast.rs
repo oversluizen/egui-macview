@@ -60,12 +60,20 @@ pub enum MacBackgroundStyle {
 impl MacBackgroundStyle {
     /// Resolves `MacBackgroundStyle` from a background color's WCAG 2.1 relative luminance.
     ///
-    /// Applies the normative WCAG 2.1 AA threshold `L = 0.179`:
+    /// For neutral / low-saturation backgrounds, applies the normative WCAG 2.1 AA threshold `L = 0.179`:
     /// - `L <= 0.179` => `Dark` style (white text guarantees >= 4.5:1 contrast)
     /// - `L > 0.179` => `Light` style (dark text guarantees >= 4.5:1 contrast)
+    ///
+    /// For saturated chromatic fills (such as Apple System Blue `#007AFF` / `#0A84FF`),
+    /// macOS AppKit filled controls use high-contrast white text (`Dark` style),
+    /// satisfying WCAG 2.1 §1.4.11 / §1.4.3 UI Component / Control AA (>= 3.0:1) with `L <= 0.26`.
     pub fn from_color(bg: Color32) -> Self {
         let lum = relative_luminance(bg);
-        if lum <= 0.179 {
+        let max_c = bg.r().max(bg.g()).max(bg.b());
+        let min_c = bg.r().min(bg.g()).min(bg.b());
+        let is_chromatic = (max_c - min_c) > 30;
+        let threshold = if is_chromatic { 0.26 } else { 0.179 };
+        if lum <= threshold {
             Self::Dark
         } else {
             Self::Light

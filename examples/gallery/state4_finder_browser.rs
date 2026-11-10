@@ -8,13 +8,46 @@ use super::{
 use egui::{FontId, Ui};
 use egui_macview::{
     theme::MacTheme, MacButtonCell, MacInputCell, MacPathComponent, MacPathControl,
-    MacProgressControlSize, MacProgressIndicator, MacRatingIndicator, MacSlider, MacTableColumn,
-    MacTableView, MacToastManager, MacToggle, MacTokenField,
+    MacRatingIndicator, MacTableColumn, MacTableView, MacToastManager, MacTokenField,
 };
 use std::cell::RefCell;
 use std::path::PathBuf;
 
 impl CenterState {
+    /// Loads a local WAV audio file into AVKit Studio and parses its waveform peaks.
+    pub fn load_wav_file(
+        &mut self,
+        path: &std::path::Path,
+        name: &str,
+        toasts: &RefCell<MacToastManager>,
+    ) -> bool {
+        match std::fs::read(path) {
+            Ok(bytes) => match AudioTrack::from_wav_bytes(name, &bytes) {
+                Ok(track) => {
+                    self.media_waveform = track.waveform_peaks.clone();
+                    self.media_out_point = track.duration_secs;
+                    self.audio_track = track;
+                    toasts
+                        .borrow_mut()
+                        .success(format!("Loaded WAV Audio into AVKit Studio: {name}"));
+                    true
+                }
+                Err(err) => {
+                    toasts
+                        .borrow_mut()
+                        .error(format!("Failed to parse WAV audio {name}: {err}"));
+                    false
+                }
+            },
+            Err(err) => {
+                toasts
+                    .borrow_mut()
+                    .error(format!("Failed to read file {name}: {err}"));
+                false
+            }
+        }
+    }
+
     pub fn render_state4_finder_browser(
         &mut self,
         content_ui: &mut Ui,
@@ -45,28 +78,7 @@ impl CenterState {
                     .map(|e| e.eq_ignore_ascii_case("wav"))
                     .unwrap_or(false);
                 if is_wav {
-                    match std::fs::read(&path) {
-                        Ok(bytes) => match AudioTrack::from_wav_bytes(&name, &bytes) {
-                            Ok(track) => {
-                                self.media_waveform = track.waveform_peaks.clone();
-                                self.media_out_point = track.duration_secs;
-                                self.audio_track = track;
-                                toasts
-                                    .borrow_mut()
-                                    .success(format!("Loaded WAV Audio into AVKit Studio: {name}"));
-                            }
-                            Err(err) => {
-                                toasts
-                                    .borrow_mut()
-                                    .error(format!("Failed to parse WAV audio {name}: {err}"));
-                            }
-                        },
-                        Err(err) => {
-                            toasts
-                                .borrow_mut()
-                                .error(format!("Failed to read file {name}: {err}"));
-                        }
-                    }
+                    self.load_wav_file(&path, &name, toasts);
                 } else {
                     toasts.borrow_mut().info(format!("Loaded: {name}"));
                 }
@@ -89,8 +101,7 @@ impl CenterState {
             }
         }
 
-        let window_active =
-            content_ui.input(|i| i.focused && !i.viewport().minimized.unwrap_or(false));
+        let window_active = egui_macview::is_window_active(content_ui.ctx());
         if self.is_publishing && window_active {
             content_ui
                 .ctx()
@@ -148,69 +159,153 @@ impl CenterState {
                     .clicked()
                 {
                     self.finder_current_dir = None;
-                    self.active_path_idx = 3;
+                    self.selected_table_rows.clear();
+                    self.selected_table_rows.insert(0);
                     toasts.borrow_mut().info("Reset to built-in studio assets");
+                }
+            } else {
+                ui.add_space(8.0);
+                if ui
+                    .add(MacButtonCell::new("Switch to Local Disk Browser").theme(theme))
+                    .clicked()
+                {
+                    self.finder_current_dir = std::env::current_dir().ok();
+                    self.selected_table_rows.clear();
+                    self.selected_table_rows.insert(0);
+                    toasts.borrow_mut().info("Switched to local disk browser");
                 }
             }
         });
         content_ui.add_space(6.0);
 
-        // 1. MacPathControl (NSPathControl) with dynamic real directory or built-in assets
+        // Gather table rows from filesystem/assets (memoized via finder_cached_rows to eliminate per-frame I/O)
+        let key_matches = if let Some(ref k) = self.finder_cache_key {
+            k.current_dir == self.finder_current_dir
+                && k.custom_len == self.finder_custom_entries.len()
+                && k.ratings == self.asset_ratings
+                && k.tokens.as_slice() == self.asset_tokens.as_slice()
+                && k.search_query == self.search_query
+                && k.sort_col == self.table_sort_col
+                && k.sort_dir == self.table_sort_dir
+        } else {
+            false
+        };
+
+        if !key_matches {
+            let all_rows = collect_finder_rows(
+                &self.finder_current_dir,
+                &self.finder_custom_entries,
+                &self.asset_ratings,
+                &self.asset_tokens,
+            );
+            self.finder_cached_rows = filter_and_sort_rows(
+                all_rows,
+                &self.search_query,
+                self.table_sort_col,
+                self.table_sort_dir,
+            );
+            self.finder_cache_key = Some(super::center_state::FinderCacheKey {
+                current_dir: self.finder_current_dir.clone(),
+                custom_len: self.finder_custom_entries.len(),
+                ratings: self.asset_ratings,
+                tokens: self.asset_tokens.to_vec(),
+                search_query: self.search_query.clone(),
+                sort_col: self.table_sort_col,
+                sort_dir: self.table_sort_dir,
+            });
+        }
+        let visible_rows = &self.finder_cached_rows;
+
+        // Keyboard ArrowUp / Backspace navigation to parent directory (Backspace only when not editing text)
+        let wants_kb = content_ui.ctx().egui_wants_keyboard_input();
+        let nav_up = content_ui.input_mut(|i| {
+            i.consume_key(egui::Modifiers::COMMAND, egui::Key::ArrowUp)
+                || i.consume_key(egui::Modifiers::CTRL, egui::Key::ArrowUp)
+                || (!wants_kb && i.consume_key(egui::Modifiers::NONE, egui::Key::Backspace))
+        });
+        if nav_up {
+            if let Some(ref cur) = self.finder_current_dir {
+                if let Some(parent) = cur.parent() {
+                    self.finder_current_dir = Some(parent.to_path_buf());
+                    self.selected_table_rows.clear();
+                    self.selected_table_rows.insert(0);
+                    toasts.borrow_mut().info("Navigated to parent directory");
+                }
+            }
+        }
+
+        // 1. MacPathControl (NSPathControl) with dynamic real directory + trailing selection
         let (dir_parents, path_titles) = build_parent_chain(&self.finder_current_dir);
-        let path_items: Vec<MacPathComponent> = path_titles
+        let mut path_items: Vec<MacPathComponent> = path_titles
             .iter()
             .map(|s| MacPathComponent::folder(s.as_str()))
             .collect();
+
+        // Authentic macOS Finder Path Bar: append selected item as final trailing component
+        let active_row_idx = self.selected_table_rows.iter().next().copied();
+        let selected_item = active_row_idx.and_then(|idx| visible_rows.get(idx));
+        let trailing_item = selected_item.filter(|item| item.name != "..");
+
+        if let Some(item) = trailing_item {
+            if item.is_dir {
+                path_items.push(MacPathComponent::folder(&item.name));
+            } else {
+                path_items.push(MacPathComponent::file(&item.name));
+            }
+        }
 
         if !path_items.is_empty() {
             content_ui.horizontal(|ui| {
                 ui.label(egui::RichText::new("Path:").size(11.0).strong());
                 let avail_w = (ui.available_width() - 24.0).max(260.0);
-                let active_idx = self.active_path_idx.min(path_items.len() - 1);
-                let out = MacPathControl::new("studio_path_v05", &path_items[..=active_idx])
+                let out = MacPathControl::new("studio_path_v05", &path_items)
                     .theme(theme)
                     .show_choose_button(true)
                     .width(avail_w)
                     .show(ui);
 
                 if let Some(clicked) = out.clicked_segment {
-                    if let Some(ref parents) = dir_parents {
-                        if let Some(target) = parents.get(clicked) {
-                            self.finder_current_dir = Some(target.clone());
+                    let dir_chain_len = path_titles.len();
+                    if clicked < dir_chain_len {
+                        if let Some(ref parents) = dir_parents {
+                            if let Some(target) = parents.get(clicked) {
+                                self.finder_current_dir = Some(target.clone());
+                                self.selected_table_rows.clear();
+                                self.selected_table_rows.insert(0);
+                            }
+                        } else {
                             self.active_path_idx = clicked;
                         }
-                    } else {
-                        self.active_path_idx = clicked;
-                    }
-                    if let Some(comp) = path_items.get(clicked) {
-                        toasts
-                            .borrow_mut()
-                            .info(format!("Navigated to {}", comp.title));
+                        if let Some(comp) = path_items.get(clicked) {
+                            toasts
+                                .borrow_mut()
+                                .info(format!("Navigated to {}", comp.title));
+                        }
+                    } else if clicked == dir_chain_len {
+                        if let Some(item) = trailing_item {
+                            if item.is_dir {
+                                if let Some(ref target_dir) = item.dir_path {
+                                    self.finder_current_dir = Some(target_dir.clone());
+                                    self.selected_table_rows.clear();
+                                    self.selected_table_rows.insert(0);
+                                    toasts
+                                        .borrow_mut()
+                                        .info(format!("Opened folder: {}", item.name));
+                                }
+                            }
+                        }
                     }
                 }
                 if out.choose_clicked {
                     let cur = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
                     self.finder_current_dir = Some(cur);
-                    self.active_path_idx = 100;
+                    self.selected_table_rows.clear();
+                    self.selected_table_rows.insert(0);
                     toasts.borrow_mut().info("Loaded current working directory");
                 }
             });
             content_ui.add_space(8.0);
         }
-
-        // Gather table rows from either real filesystem or built-in studio assets
-        let all_rows = collect_finder_rows(
-            &self.finder_current_dir,
-            &self.finder_custom_entries,
-            &self.asset_ratings,
-            &self.asset_tokens,
-        );
-        let visible_rows = filter_and_sort_rows(
-            all_rows,
-            &self.search_query,
-            self.table_sort_col,
-            self.table_sort_dir,
-        );
 
         // 2. MacTableView (NSTableView + NSTableHeaderView)
         let col_sort = |idx: usize| {
@@ -272,23 +367,24 @@ impl CenterState {
             self.table_sort_dir = dir;
         }
 
-        // If a directory row was selected/opened, allow navigating into it
-        let active_row_idx = self.selected_table_rows.iter().next().copied();
-        if let Some(r_idx) = active_row_idx {
-            if let Some(selected_item) = visible_rows.get(r_idx) {
-                if let Some(ref target_dir) = selected_item.dir_path {
-                    if selected_item.is_dir {
-                        content_ui.add_space(4.0);
-                        if content_ui
-                            .add(MacButtonCell::new("📂 Enter Selected Folder").theme(theme))
-                            .clicked()
-                        {
-                            self.finder_current_dir = Some(target_dir.clone());
-                            toasts
-                                .borrow_mut()
-                                .info(format!("Entered folder: {}", selected_item.name));
-                        }
-                    }
+        // Authentic macOS AppKit doubleAction / Key::Enter on table rows
+        let double_clicked_action = tbl_out.double_clicked_row.and_then(|dc_idx| {
+            visible_rows
+                .get(dc_idx)
+                .map(|item| (item.is_dir, item.name.clone(), item.dir_path.clone()))
+        });
+
+        if let Some((is_dir, name, dir_path)) = double_clicked_action {
+            if is_dir {
+                if let Some(target_dir) = dir_path {
+                    self.finder_current_dir = Some(target_dir);
+                    self.selected_table_rows.clear();
+                    self.selected_table_rows.insert(0);
+                    toasts.borrow_mut().info(format!("Opened folder: {name}"));
+                }
+            } else if name.to_lowercase().ends_with(".wav") {
+                if let Some(path) = dir_path {
+                    self.load_wav_file(&path, &name, toasts);
                 }
             }
         }
@@ -322,64 +418,6 @@ impl CenterState {
         .show(content_ui);
 
         // 4. MacProgressIndicator Publish Queue
-        content_ui.add_space(10.0);
-        content_ui.horizontal(|ui| {
-            let btn_label = if self.is_publishing {
-                "Pause Publish"
-            } else {
-                "Publish Selected Asset"
-            };
-            if ui
-                .add(
-                    MacButtonCell::new(btn_label)
-                        .theme(theme)
-                        .selected(self.is_publishing),
-                )
-                .clicked()
-            {
-                if !self.is_publishing && self.publish_progress >= 1.0 {
-                    self.publish_progress = 0.0;
-                }
-                self.is_publishing = !self.is_publishing;
-                toasts.borrow_mut().info(if self.is_publishing {
-                    "Publishing started..."
-                } else {
-                    "Publishing paused"
-                });
-            }
-
-            let mut bar = MacProgressIndicator::bar(self.publish_progress)
-                .theme(theme)
-                .control_size(MacProgressControlSize::Regular)
-                .show_percentage(true)
-                .width(180.0);
-            if self.publish_indeterminate {
-                bar = bar.indeterminate((t * 0.65).fract());
-            }
-            bar.show(ui);
-
-            let spin_t = if (self.is_publishing || self.publish_indeterminate) && window_active {
-                t.fract().max(1e-4)
-            } else {
-                0.0
-            };
-            MacProgressIndicator::spinning(spin_t)
-                .theme(theme)
-                .control_size(MacProgressControlSize::Regular)
-                .show(ui);
-        });
-
-        content_ui.add_space(6.0);
-        content_ui.horizontal(|ui| {
-            ui.label(egui::RichText::new("Manual Scrub:").size(11.0));
-            MacSlider::new(&mut self.publish_progress, 0.0..=1.0)
-                .theme(theme)
-                .width(140.0)
-                .show(ui);
-            ui.add_space(8.0);
-            ui.label(egui::RichText::new("Indeterminate:").size(11.0));
-            ui.add(MacToggle::new(&mut self.publish_indeterminate).theme(theme));
-        });
-        content_ui.add_space(14.0);
+        self.render_state4_publish_queue(content_ui, theme, toasts, window_active, t);
     }
 }

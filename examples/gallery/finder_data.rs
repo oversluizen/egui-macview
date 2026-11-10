@@ -82,6 +82,25 @@ pub struct FinderDisplayRow {
     pub dir_path: Option<PathBuf>,
 }
 
+/// Extracts clean segment name for a path component or volume root (e.g., `"D:"` on Windows, `"/"` on Unix).
+pub fn extract_segment_name(p: &std::path::Path) -> String {
+    if let Some(name) = p.file_name() {
+        let s = name.to_string_lossy().to_string();
+        if !s.is_empty() {
+            return s;
+        }
+    }
+    let s = p.to_string_lossy();
+    let trimmed = s.trim_end_matches(['\\', '/']);
+    if !trimmed.is_empty() {
+        trimmed.to_string()
+    } else if !s.is_empty() {
+        s.to_string()
+    } else {
+        "/".to_string()
+    }
+}
+
 /// Build parent chain of directories for `MacPathControl`.
 pub fn build_parent_chain(current_dir: &Option<PathBuf>) -> (Option<Vec<PathBuf>>, Vec<String>) {
     let dir_parents: Option<Vec<PathBuf>> = current_dir.as_ref().map(|cur_dir| {
@@ -96,14 +115,7 @@ pub fn build_parent_chain(current_dir: &Option<PathBuf>) -> (Option<Vec<PathBuf>
     });
 
     let path_titles: Vec<String> = if let Some(ref parents) = dir_parents {
-        parents
-            .iter()
-            .map(|p| {
-                p.file_name()
-                    .map(|n| n.to_string_lossy().to_string())
-                    .unwrap_or_else(|| p.to_string_lossy().to_string())
-            })
-            .collect()
+        parents.iter().map(|p| extract_segment_name(p)).collect()
     } else {
         vec![
             "Macintosh HD".to_string(),
@@ -125,6 +137,18 @@ pub fn collect_finder_rows(
 ) -> Vec<FinderDisplayRow> {
     if let Some(ref dir) = current_dir {
         let mut list = Vec::new();
+        if let Some(parent) = dir.parent() {
+            list.push(FinderDisplayRow {
+                name: "..".to_string(),
+                is_dir: true,
+                codec: "FOLDER".into(),
+                duration: "Parent Directory".into(),
+                size_mb: 0,
+                rating: 0,
+                tags: vec!["Parent".into()],
+                dir_path: Some(parent.to_path_buf()),
+            });
+        }
         if let Ok(entries) = std::fs::read_dir(dir) {
             for entry in entries.flatten() {
                 let path = entry.path();
@@ -154,7 +178,7 @@ pub fn collect_finder_rows(
                     size_mb,
                     rating: 4,
                     tags: vec![ext.to_string()],
-                    dir_path: if is_dir { Some(path) } else { None },
+                    dir_path: Some(path),
                 });
             }
         }
@@ -209,6 +233,12 @@ pub fn filter_and_sort_rows(
         .collect();
 
     visible.sort_by(|a, b| {
+        if a.name == ".." {
+            return std::cmp::Ordering::Less;
+        }
+        if b.name == ".." {
+            return std::cmp::Ordering::Greater;
+        }
         let ord = match sort_col {
             0 => a.name.cmp(&b.name),
             1 => a.codec.cmp(&b.codec),

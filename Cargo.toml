@@ -1,6 +1,6 @@
 [package]
 name = "egui-macview"
-version = "0.5.1"
+version = "0.5.2"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 authors = ["Jaco Oversluizen", "egui-macview contributors"]
@@ -101,4 +101,13 @@ path = "tests/runtime_hygiene_and_invariants_tests.rs"
 [[test]]
 name = "media_and_finder_interactive_boost_tests"
 path = "tests/media_and_finder_interactive_boost_tests.rs"
+
+[[test]]
+name = "battery_efficiency_and_avkit_tests"
+path = "tests/battery_efficiency_and_avkit_tests.rs"
+
+[[test]]
+name = "appkit_finder_and_table_tests"
+path = "tests/appkit_finder_and_table_tests.rs"
+
 

@@ -5,7 +5,7 @@
 //! directional needle indicator, vertical drag & keyboard stepping, and focus ring.
 
 use crate::theme::MacTheme;
-use egui::{Color32, Key, Modifiers, Response, Sense, Stroke, Ui, Vec2, Widget};
+use egui::{Color32, Key, Modifiers, Pos2, Response, Sense, Stroke, Ui, Vec2, Widget};
 use std::ops::RangeInclusive;
 
 /// Authentic macOS AppKit rotary circular slider (`NSSlider` circular style).
@@ -179,12 +179,14 @@ impl<'a> Widget for MacCircularSlider<'a> {
                 theme.selected_control_inactive().gamma_multiply(alpha)
             },
         );
-        for i in 0..active_steps {
-            let a0 = start_angle + (i as f32 / arc_steps as f32) * total_sweep;
-            let a1 = start_angle + ((i + 1) as f32 / arc_steps as f32) * total_sweep;
-            let p0 = center + Vec2::new(a0.cos() * arc_r, a0.sin() * arc_r);
-            let p1 = center + Vec2::new(a1.cos() * arc_r, a1.sin() * arc_r);
-            painter.line_segment([p0, p1], arc_stroke);
+        if active_steps > 0 {
+            let pts: Vec<Pos2> = (0..=active_steps)
+                .map(|i| {
+                    let a = start_angle + (i as f32 / arc_steps as f32) * total_sweep;
+                    center + Vec2::new(a.cos() * arc_r, a.sin() * arc_r)
+                })
+                .collect();
+            painter.add(egui::Shape::line(pts, arc_stroke));
         }
 
         // 4. Pointer needle indicator from dial center to outer rim

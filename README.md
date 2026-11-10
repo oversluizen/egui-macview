@@ -122,7 +122,7 @@ Add `egui-macview` to your `Cargo.toml`:
 ```toml
 [dependencies]
 egui = "0.37.0"
-egui-macview = "0.5.0"
+egui-macview = "0.5.2"
 ```
 
 ### Complete Code Example

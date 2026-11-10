@@ -181,6 +181,7 @@ impl CenterState {
             .show(h);
 
             MacColorWell::new(&mut self.showcase_color)
+                .id_salt("showcase_color_well")
                 .theme(theme)
                 .enabled(is_en)
                 .show(h);
@@ -214,28 +215,60 @@ impl CenterState {
         );
         eval_ui.horizontal(|h| {
             h.label(egui::RichText::new("FG:").size(11.0).strong());
-            h.add(MacColorWell::new(&mut self.wcag_fg).theme(theme));
+            h.add(
+                MacColorWell::new(&mut self.wcag_fg)
+                    .id_salt("wcag_fg_well")
+                    .theme(theme),
+            );
             h.add_space(8.0);
             h.label(egui::RichText::new("BG:").size(11.0).strong());
-            h.add(MacColorWell::new(&mut self.wcag_bg).theme(theme));
+            h.add(
+                MacColorWell::new(&mut self.wcag_bg)
+                    .id_salt("wcag_bg_well")
+                    .theme(theme),
+            );
             h.add_space(10.0);
-            if h.add(MacButtonCell::new("Label on Window").theme(theme))
-                .clicked()
-            {
-                self.wcag_fg = theme.label();
-                self.wcag_bg = theme.window_background();
-            }
-            if h.add(MacButtonCell::new("White on Accent").theme(theme))
-                .clicked()
+
+            let is_white_fg = self.wcag_fg == Color32::WHITE;
+            let is_dark_fg = self.wcag_fg == Color32::from_rgb(30, 30, 30);
+            let is_accent_bg = self.wcag_bg == theme.control_accent();
+            let is_default_bg = self.wcag_bg == theme.window_background();
+
+            if h.add(
+                MacButtonCell::new("White Text")
+                    .theme(theme)
+                    .selected(is_white_fg),
+            )
+            .clicked()
             {
                 self.wcag_fg = Color32::WHITE;
-                self.wcag_bg = theme.control_accent();
             }
-            if h.add(MacButtonCell::new("Dark on Accent").theme(theme))
-                .clicked()
+            if h.add(
+                MacButtonCell::new("Dark Text")
+                    .theme(theme)
+                    .selected(is_dark_fg),
+            )
+            .clicked()
             {
                 self.wcag_fg = Color32::from_rgb(30, 30, 30);
+            }
+            if h.add(
+                MacButtonCell::new("Accent BG")
+                    .theme(theme)
+                    .selected(is_accent_bg),
+            )
+            .clicked()
+            {
                 self.wcag_bg = theme.control_accent();
+            }
+            if h.add(
+                MacButtonCell::new("Default BG")
+                    .theme(theme)
+                    .selected(is_default_bg),
+            )
+            .clicked()
+            {
+                self.wcag_bg = theme.window_background();
             }
         });
         eval_ui.add_space(6.0);
@@ -244,10 +277,11 @@ impl CenterState {
         let l_bg = relative_luminance(self.wcag_bg);
         let ratio = contrast_ratio(self.wcag_fg, self.wcag_bg);
         let bg_style = MacBackgroundStyle::from_color(self.wcag_bg);
+        let normal_pass = if ratio >= 4.5 { "PASS ✓" } else { "FAIL ✗" };
+        let ui_pass = if ratio >= 3.0 { "PASS ✓" } else { "FAIL ✗" };
         eval_ui.label(
             egui::RichText::new(format!(
-                "L(fg)={l_fg:.4} | L(bg)={l_bg:.4} | Ratio={ratio:.2}:1 | Style={bg_style:?} (Normal AA: {})",
-                if ratio >= 4.5 { "PASS ✓" } else { "FAIL ✗" }
+                "L(fg)={l_fg:.4} | L(bg)={l_bg:.4} | Ratio={ratio:.2}:1 | Style={bg_style:?} | Text AA (≥4.5:1): {normal_pass} | UI/Control AA (≥3.0:1): {ui_pass}"
             ))
             .size(11.0)
             .strong(),

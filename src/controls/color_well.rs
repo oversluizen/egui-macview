@@ -34,6 +34,7 @@ use egui::{
 /// # output.textures_delta.clear();
 /// ```
 pub struct MacColorWell<'a> {
+    id: Option<egui::Id>,
     color: &'a mut Color32,
     theme: Option<&'a MacTheme>,
     width: Option<f32>,
@@ -48,6 +49,7 @@ impl<'a> MacColorWell<'a> {
     /// Creates a new color well bound to a mutable `Color32` reference.
     pub fn new(color: &'a mut Color32) -> Self {
         Self {
+            id: None,
             color,
             theme: None,
             width: None,
@@ -57,6 +59,14 @@ impl<'a> MacColorWell<'a> {
             show_alpha: true,
             enabled: true,
         }
+    }
+
+    /// Explicitly binds an ID salt for isolated popup and interaction state.
+    pub fn id_salt(mut self, salt: impl std::hash::Hash + std::fmt::Debug) -> Self {
+        #[allow(deprecated)]
+        let id = egui::Id::new(salt);
+        self.id = Some(id);
+        self
     }
 
     /// Sets the dynamic theme.
@@ -128,7 +138,13 @@ impl<'a> Widget for MacColorWell<'a> {
         } else {
             Sense::hover()
         };
-        let (raw_rect, mut response) = ui.allocate_exact_size(Vec2::new(width, height), sense);
+        let (raw_rect, mut response) = if let Some(explicit_id) = self.id {
+            let (r, _) = ui.allocate_exact_size(Vec2::new(width, height), Sense::hover());
+            let resp = ui.interact(r, explicit_id, sense);
+            (r, resp)
+        } else {
+            ui.allocate_exact_size(Vec2::new(width, height), sense)
+        };
         let rect = subpixel_snap_rect(raw_rect, ui.ctx().pixels_per_point());
 
         let alpha_factor = if self.enabled {
@@ -275,6 +291,7 @@ impl<'a> Widget for MacColorWell<'a> {
                     });
                 });
 
+            let pointer_pos = ui.input(|i| i.pointer.interact_pos().or(i.pointer.latest_pos()));
             if ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Escape)) {
                 ui.data_mut(|d| d.insert_temp(is_open_id, false));
             } else if ui.input(|i| i.pointer.button_clicked(egui::PointerButton::Primary))
@@ -284,7 +301,8 @@ impl<'a> Widget for MacColorWell<'a> {
                     .response
                     .rect
                     .union(Rect::from_min_size(popup_pos, picker_size));
-                if !ui.rect_contains_pointer(popup_rect) {
+                let inside_popup = pointer_pos.map(|p| popup_rect.contains(p)).unwrap_or(false);
+                if !inside_popup {
                     ui.data_mut(|d| d.insert_temp(is_open_id, false));
                 }
             }

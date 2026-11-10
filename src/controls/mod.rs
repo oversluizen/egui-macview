@@ -27,17 +27,21 @@ pub use button_cell::MacButtonCell;
 pub use circular_slider::MacCircularSlider;
 pub use color_well::MacColorWell;
 pub use input_cell::{MacControlSize, MacInputCell};
-pub use level_indicator::{MacLevelIndicator, MacLevelIndicatorStyle, MacLevelOrientation};
+pub use level_indicator::{
+    calculate_pan_weights, MacLevelIndicator, MacLevelIndicatorStyle, MacLevelOrientation,
+};
 pub use outline_view::{MacOutlineRow, MacOutlineRowResponse, MacOutlineTree, MacOutlineView};
 pub use path_control::{MacPathComponent, MacPathControl, MacPathControlResponse};
 pub use popup_button::MacPopUpButton;
 pub use progress_indicator::{MacProgressControlSize, MacProgressIndicator, MacProgressStyle};
-pub use rating_indicator::MacRatingIndicator;
+pub use rating_indicator::{MacRatingIndicator, UNIT_STAR};
 pub use search_field::MacSearchField;
 pub use segmented::MacSegmentedControl;
 pub use slider::MacSlider;
 pub use stepper::MacStepper;
-pub use table_view::{MacSortDirection, MacTableColumn, MacTableView, MacTableViewResponse};
+pub use table_view::{
+    MacSortDirection, MacTableColumn, MacTableView, MacTableViewOutput, MacTableViewResponse,
+};
 pub use thumbnail_cell::MacThumbnailCell;
 pub use toggle::MacToggle;
 pub use token_field::MacTokenField;

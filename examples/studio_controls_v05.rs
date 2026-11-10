@@ -81,7 +81,8 @@ impl StudioApp {
         let theme = MacTheme::new(self.appearance);
         theme.apply_to_egui(ui.ctx());
         let t = ui.input(|i| i.time);
-        let spin_t = if self.indeterminate {
+        let window_active = egui_macview::is_window_active(ui.ctx());
+        let spin_t = if self.indeterminate && window_active {
             t.fract().max(1e-4)
         } else {
             0.0
@@ -138,7 +139,12 @@ impl StudioApp {
                     .show_percentage(true)
                     .width(200.0);
                 if self.indeterminate {
-                    bar = bar.indeterminate((t * 0.6).fract());
+                    let indet_t = if window_active {
+                        (t * 0.6).fract()
+                    } else {
+                        0.0
+                    };
+                    bar = bar.indeterminate(indet_t);
                 }
                 bar.show(ui);
                 MacProgressIndicator::spinning(spin_t)
@@ -175,9 +181,7 @@ impl StudioApp {
             let frac = (self.playhead / 120.0).clamp(0.0, 1.0);
             let wave_idx = (frac * (self.waveform.len().saturating_sub(1) as f64)).round() as usize;
             let base_amp = self.waveform.get(wave_idx).copied().unwrap_or(0.5);
-            let pan_clamped = self.pan.clamp(-1.0, 1.0);
-            let pan_l = ((1.0 - pan_clamped) * 0.5).sqrt();
-            let pan_r = ((1.0 + pan_clamped) * 0.5).sqrt();
+            let (pan_l, pan_r) = egui_macview::calculate_pan_weights(self.pan);
             self.audio_level_l = (base_amp * self.gain * pan_l * 9.5).clamp(0.0, 10.0);
             self.audio_level_r = (base_amp * self.gain * pan_r * 9.5).clamp(0.0, 10.0);
 

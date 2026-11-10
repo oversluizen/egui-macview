@@ -6,7 +6,7 @@ use egui_macview::{theme::MacTheme, MacButtonCell, MacScrollView, MacSymbol, Mac
 use std::cell::RefCell;
 
 /// Lightweight snapshot of studio center state used for live code snippet generation.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SnippetContext {
     pub selected_symbol: MacSymbol,
     pub selected_table_row: usize,
@@ -23,9 +23,9 @@ impl Default for SnippetContext {
         Self {
             selected_symbol: MacSymbol::Search,
             selected_table_row: 0,
-            media_in_point: 15.0,
-            media_out_point: 92.0,
-            media_playhead: 36.0,
+            media_in_point: 4.0,
+            media_out_point: 26.0,
+            media_playhead: 4.0,
             media_gain: 1.0,
             audio_level_l: 7.4,
             audio_peak_l: 8.2,
@@ -56,7 +56,7 @@ pub fn generate_rust_snippet(
 ) -> String {
     match screen {
         GalleryScreen::CanvasPhysics => format!(
-            r#"// egui-macview v0.5.1: Vector Card & CASpring Physics
+            r#"// egui-macview v0.5.2: Vector Card & CASpring Physics
 use egui_macview::{{theme::MacTheme, CASpring, MacCard, MacSlider}};
 
 let theme = MacTheme::default();
@@ -85,7 +85,7 @@ MacCard::new("hero_vector_card")
             card.scale_pct,
         ),
         GalleryScreen::VectorAssets => format!(
-            r#"// egui-macview v0.5.1: Embedded Cupertino Vector Symbols & Fixed Layout
+            r#"// egui-macview v0.5.2: Embedded Cupertino Vector Symbols & Fixed Layout
 use egui_macview::{{theme::MacTheme, MacFixedView, MacRow, MacSymbol}};
 
 let theme = MacTheme::default();
@@ -105,7 +105,7 @@ MacRow::new("studio_symbol_row")
 "#,
             ctx.selected_symbol
         ),
-        GalleryScreen::DesignTokensWcag => r#"// egui-macview v0.5.1: Design Tokens, WCAG 2.1 AA Contrast & NSUndoManager
+        GalleryScreen::DesignTokensWcag => r#"// egui-macview v0.5.2: Design Tokens, WCAG 2.1 AA Contrast & NSUndoManager
 use egui_macview::{theme::MacTheme, contrast_ratio, MacAppearance, MacSegmentedControl, NSUndoManager};
 
 let theme = MacTheme::new(MacAppearance::Aqua);
@@ -116,7 +116,7 @@ let contrast = contrast_ratio(theme.label(), theme.window_background());
 assert!(contrast >= 4.5, "WCAG 2.1 AA compliance verified (ratio: {contrast:.2})");
 "#.to_string(),
         GalleryScreen::FinderDataBrowser => format!(
-            r#"// egui-macview v0.5.1: Finder Data Browser (NSPathControl, NSTableView, NSTokenField)
+            r#"// egui-macview v0.5.2: Finder Data Browser (NSPathControl, NSTableView, NSTokenField)
 use egui_macview::{{
     theme::MacTheme, MacPathComponent, MacPathControl, MacProgressControlSize,
     MacProgressIndicator, MacTableColumn, MacTableView, MacTokenField,
@@ -138,7 +138,7 @@ MacTokenField::new("asset_tags", &mut tags, &mut draft).theme(&theme).show(ui);
             ctx.selected_table_row
         ),
         GalleryScreen::AvKitMediaStudio => format!(
-            r#"// egui-macview v0.5.1: AVKit Media & Timeline Studio (MacTrimScrubber, MacCircularSlider & MacLevelIndicator)
+            r#"// egui-macview v0.5.2: AVKit Media & Timeline Studio (MacTrimScrubber, MacCircularSlider & MacLevelIndicator)
 use egui_macview::{{
     theme::MacTheme, MacCircularSlider, MacLevelIndicator, MacLevelIndicatorStyle,
     MacLevelOrientation, MacRatingIndicator, MacTimelineZone, MacTrimScrubber,
@@ -223,7 +223,20 @@ pub fn render_code_snippet_tab(
     );
     ui.add_space(8.0);
 
-    let snippet_text = generate_rust_snippet(screen, card, &ctx);
+    thread_local! {
+        static SNIPPET_CACHE: RefCell<Option<(GalleryScreen, CardModel, SnippetContext, String)>> = const { RefCell::new(None) };
+    }
+    let snippet_text = SNIPPET_CACHE.with(|cache| {
+        let mut c = cache.borrow_mut();
+        if let Some((cached_screen, ref cached_card, cached_ctx, ref cached_str)) = *c {
+            if cached_screen == screen && cached_card == card && cached_ctx == ctx {
+                return cached_str.clone();
+            }
+        }
+        let generated = generate_rust_snippet(screen, card, &ctx);
+        *c = Some((screen, card.clone(), ctx, generated.clone()));
+        generated
+    });
     let box_h = (ui.available_height() - 24.0).max(180.0);
     let box_w = (ui.available_width() - 8.0).max(220.0);
 

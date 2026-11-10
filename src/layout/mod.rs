@@ -196,3 +196,14 @@ impl MacRow {
         (self.container_width - self.cursor_x).max(0.0)
     }
 }
+
+/// Returns whether the host window and viewport are currently focused, active,
+/// and not minimized. Used across timers, animations, and audio synchronization
+/// to eliminate wasteful background repaints and battery drain.
+pub fn is_window_active(ctx: &egui::Context) -> bool {
+    ctx.input(|i| {
+        i.focused
+            && i.viewport().focused.unwrap_or(true)
+            && !i.viewport().minimized.unwrap_or(false)
+    })
+}

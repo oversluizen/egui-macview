@@ -294,3 +294,17 @@ pub struct AvKitStudioSnapshot {
     pub zoom: f32,
     pub rating: u32,
 }
+
+impl AvKitStudioSnapshot {
+    /// Compares studio tuning parameters, ignoring continuous playback playhead advancement.
+    pub fn params_differ(&self, other: &Self) -> bool {
+        (self.in_point - other.in_point).abs() > 1e-4
+            || (self.out_point - other.out_point).abs() > 1e-4
+            || (self.gain - other.gain).abs() > 1e-4
+            || (self.pan - other.pan).abs() > 1e-4
+            || (self.exposure - other.exposure).abs() > 1e-4
+            || (self.contrast - other.contrast).abs() > 1e-4
+            || (self.zoom - other.zoom).abs() > 1e-4
+            || self.rating != other.rating
+    }
+}

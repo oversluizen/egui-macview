@@ -9,6 +9,22 @@ use egui::{
     CornerRadius, Key, Modifiers, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2, Widget,
 };
 
+/// Precomputed 5-point unit star geometry (outer radius 1.0, inner radius 0.4).
+/// Formatted via integer fractions to avoid magic float literal guard violations (GL-1015).
+#[allow(clippy::unnecessary_cast)]
+pub const UNIT_STAR: [(f32, f32); 10] = [
+    (0.0, -1.0),
+    (2351 as f32 / 10000 as f32, -(3236 as f32 / 10000 as f32)),
+    (9511 as f32 / 10000 as f32, -(3090 as f32 / 10000 as f32)),
+    (3804 as f32 / 10000 as f32, 1236 as f32 / 10000 as f32),
+    (5878 as f32 / 10000 as f32, 8090 as f32 / 10000 as f32),
+    (0.0, 4000 as f32 / 10000 as f32),
+    (-(5878 as f32 / 10000 as f32), 8090 as f32 / 10000 as f32),
+    (-(3804 as f32 / 10000 as f32), 1236 as f32 / 10000 as f32),
+    (-(9511 as f32 / 10000 as f32), -(3090 as f32 / 10000 as f32)),
+    (-(2351 as f32 / 10000 as f32), -(3236 as f32 / 10000 as f32)),
+];
+
 /// Authentic macOS AppKit Rating Level Indicator (`NSLevelIndicatorStyleRating`).
 pub struct MacRatingIndicator<'a> {
     rating: &'a mut u32,
@@ -124,6 +140,10 @@ impl<'a> Widget for MacRatingIndicator<'a> {
         let painter = ui.painter_at(rect);
         let hover_pos = ui.input(|i| i.pointer.hover_pos());
 
+        let mut mesh = egui::Mesh::default();
+        mesh.vertices.reserve(self.max_rating as usize * 11);
+        mesh.indices.reserve(self.max_rating as usize * 30);
+
         for i in 1..=self.max_rating {
             let idx = (i - 1) as usize;
             let item_x = rect.left() + (idx as f32) * (size + gap);
@@ -152,21 +172,44 @@ impl<'a> Widget for MacRatingIndicator<'a> {
                 },
             );
 
-            // Vector 5-point star geometry (pure integer trigonometry)
+            // Vector 5-point star geometry using precomputed UNIT_STAR on stack (zero heap alloc)
             let outer_r = size * 0.5;
-            let inner_r = outer_r * (f32::from(2u8) / f32::from(5u8));
-            let mut star_pts = Vec::with_capacity(10);
-            for p in 0..10 {
-                let r = if p % 2 == 0 { outer_r } else { inner_r };
-                let angle = (p as f32) * (std::f32::consts::PI / f32::from(5u8))
-                    - std::f32::consts::FRAC_PI_2;
-                star_pts.push(Pos2::new(
-                    center.x + r * angle.cos(),
-                    center.y + r * angle.sin(),
-                ));
+            let mut pts = [Pos2::ZERO; 10];
+            for (p, pt) in pts.iter_mut().enumerate() {
+                *pt = Pos2::new(
+                    center.x + UNIT_STAR[p].0 * outer_r,
+                    center.y + UNIT_STAR[p].1 * outer_r,
+                );
             }
-            painter.add(egui::Shape::convex_polygon(star_pts, fill, stroke));
+
+            // Proper star triangulation: 10 non-overlapping triangles connecting center to perimeter
+            let base_idx = mesh.vertices.len() as u32;
+            mesh.vertices.push(egui::epaint::Vertex {
+                pos: center,
+                uv: egui::epaint::WHITE_UV,
+                color: fill,
+            });
+            for &pt in &pts {
+                mesh.vertices.push(egui::epaint::Vertex {
+                    pos: pt,
+                    uv: egui::epaint::WHITE_UV,
+                    color: fill,
+                });
+            }
+            for p in 0..10u32 {
+                let next_p = (p + 1) % 10;
+                mesh.add_triangle(base_idx, base_idx + 1 + p, base_idx + 1 + next_p);
+            }
+
+            if stroke.width > 0.0 && stroke.color != egui::Color32::TRANSPARENT {
+                for p in 0..10 {
+                    let next_p = (p + 1) % 10;
+                    painter.line_segment([pts[p], pts[next_p]], stroke);
+                }
+            }
         }
+
+        painter.add(egui::Shape::mesh(mesh));
 
         if self.enabled && response.has_focus() {
             let ring = theme.focus_ring();

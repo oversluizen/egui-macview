@@ -5,6 +5,20 @@ All notable changes to the `egui-macview` crate will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.2] - 2026-11-10
+
+### Added
+- **Circular Dial & Star Rating Controls (`MacCircularSlider`, `MacRatingIndicator`)**: Added authentic continuous radial dial knob with CASpring physics and discrete/continuous 5-star rating control with precomputed unit-star geometry (`tests/battery_efficiency_and_avkit_tests.rs`).
+- **Live AVKit Audio/Video Studio & Zero Idle Repaint**: Added real-time 30 FPS video canvas and multi-channel audio synthesis, unbuffered/buffered inspection, out-of-trim playhead navigation, and zero-repaint battery efficiency when unfocused or minimized.
+- **Finder Navigation & Directory Browsing**: Added authentic directory browsing with pinned parent directory (`..`), Windows drive root navigation (`C:\`, `D:\`), and `Cmd+Down`/`Enter` row activation (`tests/appkit_finder_and_table_tests.rs`).
+- **Interactive Rust Snippet Generator (`examples/gallery/snippet.rs`)**: Added copyable, self-contained Rust code generator for all 5 gallery states with toast notification feedback.
+- **SPEC-012 Normative Specification**: Formal specification for Milestone 0.6.0 (`specs/SPEC-012-ADVANCED-MEDIA-SCHEDULING-AND-GRID-CONTROLS.md`) covering `MacPlayerView`, `MacDatePicker`, `MacComboBox`, `MacTabView`, `MacDisclosureGroup`, `MacCollectionView`, `MacBox`, and `MacRuleEditor`.
+
+### Fixed
+- **Table View Focus & Arrow Key Interception**: Gated keyboard arrow navigation on explicit focus/hover to prevent key event theft across overlapping widgets.
+- **Scrubber Playhead Invariants**: Allowed playhead inspection outside trim range during scrubbing when clamp is disabled while preserving strict trim bounds on playback.
+- **Color Well Salt Deduplication**: Added unique ID salting to prevent color picker popup conflicts across duplicate property inspector rows.
+
 ## [0.5.1] - 2026-11-08
 
 ### Added

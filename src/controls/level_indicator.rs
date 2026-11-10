@@ -359,3 +359,11 @@ impl<'a> Widget for MacLevelIndicator<'a> {
         response
     }
 }
+
+/// Calculates stereo equal-power pan weights `(left_gain, right_gain)` for `pan in -1.0..=1.0`.
+pub fn calculate_pan_weights(pan: f32) -> (f32, f32) {
+    let pan_clamped = pan.clamp(-1.0, 1.0);
+    let pan_l = ((1.0 - pan_clamped) * 0.5).sqrt();
+    let pan_r = ((1.0 + pan_clamped) * 0.5).sqrt();
+    (pan_l, pan_r)
+}

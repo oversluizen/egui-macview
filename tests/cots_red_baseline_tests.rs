@@ -24,8 +24,8 @@ fn test_token_catalog_deserialization() {
 
     // Verify metadata
     assert_eq!(tokens.name, "egui-macview Design Tokens");
-    assert_eq!(tokens.version, "0.5.1");
-    assert_eq!(egui_macview::VERSION, "0.5.1");
+    assert_eq!(tokens.version, "0.5.2");
+    assert_eq!(egui_macview::VERSION, "0.5.2");
     assert!(!tokens.description.is_empty());
 
     // Verify Control Metrics
@@ -335,21 +335,22 @@ fn test_version_synchronization_invariants() {
     // 1. Cargo.toml version
     let cargo_toml = fs::read_to_string(manifest_dir.join("Cargo.toml")).expect("read Cargo.toml");
     assert!(
-        cargo_toml.contains("version = \"0.5.1\""),
-        "Cargo.toml must have version = \"0.5.1\""
+        cargo_toml.contains("version = \"0.5.2\""),
+        "Cargo.toml must have version = \"0.5.2\""
     );
 
     // 2. Exported crate version constant
-    assert_eq!(egui_macview::VERSION, "0.5.1");
+    assert_eq!(egui_macview::VERSION, "0.5.2");
 
     // 3. Design tokens version
     let tokens = MacDesignTokens::load_default();
-    assert_eq!(tokens.version, "0.5.1");
+    assert_eq!(tokens.version, "0.5.2");
 
     // 4. CHANGELOG.md strictly documents all released milestones
     let changelog =
         fs::read_to_string(manifest_dir.join("CHANGELOG.md")).expect("read CHANGELOG.md");
     for header in [
+        "## [0.5.2] - 2026-11-10",
         "## [0.5.1] - 2026-11-08",
         "## [0.5.0] - 2026-11-08",
         "## [0.4.1] - 2026-11-08",
@@ -384,8 +385,10 @@ fn test_version_synchronization_invariants() {
                     ("0.4.0", Some("Milestone 0.4.0"))
                 } else if file_name.starts_with("SPEC-011") {
                     ("0.5.0", Some("Milestone 0.5.0"))
+                } else if file_name.starts_with("SPEC-012") {
+                    ("0.6.0", Some("Milestone 0.6.0"))
                 } else if file_name.starts_with("SPEC-INDEX") {
-                    ("0.5.1", Some("Milestone 0.5.1"))
+                    ("0.5.2", Some("Milestone 0.5.2"))
                 } else {
                     ("0.2.0", None)
                 };

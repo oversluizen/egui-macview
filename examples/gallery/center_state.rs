@@ -2,7 +2,7 @@
 
 use super::{
     audio_media,
-    finder_data::FinderCustomEntry,
+    finder_data::{FinderCustomEntry, FinderDisplayRow},
     types::{AvKitStudioSnapshot, GalleryScreen, InspectorMode},
     CardModel,
 };
@@ -14,6 +14,18 @@ use egui_macview::{
 };
 use std::cell::RefCell;
 use std::collections::BTreeSet;
+
+/// Composite cache key to avoid per-frame disk scans and sorting in State 4 Finder.
+#[derive(Clone, PartialEq, Debug)]
+pub struct FinderCacheKey {
+    pub current_dir: Option<std::path::PathBuf>,
+    pub custom_len: usize,
+    pub ratings: [u32; 6],
+    pub tokens: Vec<Vec<String>>,
+    pub search_query: String,
+    pub sort_col: usize,
+    pub sort_dir: MacSortDirection,
+}
 
 /// Shared state across the 5 interactive Center Studio States (`v0.1` – `v0.5`).
 pub struct CenterState {
@@ -61,6 +73,8 @@ pub struct CenterState {
     pub finder_current_dir: Option<std::path::PathBuf>,
     pub finder_custom_entries: Vec<FinderCustomEntry>,
     pub finder_url_input: String,
+    pub finder_cached_rows: Vec<FinderDisplayRow>,
+    pub finder_cache_key: Option<FinderCacheKey>,
     // State 5 (v0.5 AVKit Media & Audio Timeline Studio)
     pub media_playing: bool,
     pub media_loop: bool,
@@ -82,7 +96,11 @@ pub struct CenterState {
     pub audio_level_r: f32,
     pub audio_peak_l: f32,
     pub audio_peak_r: f32,
+    pub audio_levels_cached: (f32, f32, f32, f32),
+    pub audio_levels_key: (f64, f32, f32),
     pub audio_track: audio_media::AudioTrack,
+    pub media_last_audio_restart: f64,
+    pub media_was_window_active: bool,
     pub avkit_undo: NSUndoManager<AvKitStudioSnapshot>,
     pub last_stable_avkit: Option<AvKitStudioSnapshot>,
 }
@@ -142,14 +160,16 @@ impl Default for CenterState {
             publish_progress: 0.68,
             publish_indeterminate: false,
             is_publishing: false,
-            finder_current_dir: None,
+            finder_current_dir: std::env::current_dir().ok(),
             finder_custom_entries: Vec::new(),
             finder_url_input: "https://github.com/oversluizen/egui-macview".to_string(),
+            finder_cached_rows: Vec::new(),
+            finder_cache_key: None,
             media_playing: false,
             media_loop: false,
-            media_in_point: 15.0,
-            media_out_point: 92.0,
-            media_playhead: 36.0,
+            media_in_point: 4.0,
+            media_out_point: 26.0,
+            media_playhead: 4.0,
             media_last_time: None,
             media_waveform: waveform,
             media_gain: 1.0,
@@ -165,7 +185,11 @@ impl Default for CenterState {
             audio_level_r: 8.6,
             audio_peak_l: 8.2,
             audio_peak_r: 9.1,
+            audio_levels_cached: (7.4, 8.6, 8.2, 9.1),
+            audio_levels_key: (4.0, 1.0, 0.0),
             audio_track: track,
+            media_last_audio_restart: 0.0,
+            media_was_window_active: true,
             avkit_undo: NSUndoManager::new(),
             last_stable_avkit: None,
         }
@@ -362,7 +386,12 @@ impl CenterState {
     pub fn checkpoint_avkit_if_changed(&mut self) {
         let cur = self.current_avkit_snapshot();
         if let Some(ref prev) = self.last_stable_avkit {
-            if prev != &cur {
+            let changed = if self.media_playing {
+                prev.params_differ(&cur)
+            } else {
+                prev.params_differ(&cur) || (prev.playhead - cur.playhead).abs() > 0.05
+            };
+            if changed {
                 self.avkit_undo.push_snapshot(*prev);
                 self.last_stable_avkit = Some(cur);
             }

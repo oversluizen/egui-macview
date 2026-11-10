@@ -12,7 +12,9 @@ pub mod state1_canvas;
 pub mod state2_symbols_layout;
 pub mod state3_command_state;
 pub mod state4_finder_browser;
+pub mod state4_publish;
 pub mod state5_avkit_media;
+pub mod state5_meters;
 pub mod types;
 pub mod video_scene;
 

@@ -80,20 +80,21 @@ pub use theme::{
 };
 
 pub use controls::{
-    MacButtonCell, MacCircularSlider, MacColorWell, MacControlSize, MacInputCell,
-    MacLevelIndicator, MacLevelIndicatorStyle, MacLevelOrientation, MacOutlineRow,
+    calculate_pan_weights, MacButtonCell, MacCircularSlider, MacColorWell, MacControlSize,
+    MacInputCell, MacLevelIndicator, MacLevelIndicatorStyle, MacLevelOrientation, MacOutlineRow,
     MacOutlineRowResponse, MacOutlineTree, MacOutlineView, MacPathComponent, MacPathControl,
     MacPathControlResponse, MacPopUpButton, MacProgressControlSize, MacProgressIndicator,
     MacProgressStyle, MacRatingIndicator, MacSearchField, MacSegmentedControl, MacSlider,
-    MacSortDirection, MacStepper, MacTableColumn, MacTableView, MacTableViewResponse,
-    MacThumbnailCell, MacTimelineZone, MacToggle, MacTokenField, MacTrimScrubber,
-    MacTrimScrubberResponse,
+    MacSortDirection, MacStepper, MacTableColumn, MacTableView, MacTableViewOutput,
+    MacTableViewResponse, MacThumbnailCell, MacTimelineZone, MacToggle, MacTokenField,
+    MacTrimScrubber, MacTrimScrubberResponse, UNIT_STAR,
 };
 pub use feedback::{clamp_menu_rect, MacContextMenu, MacToast, MacToastManager, ToastLevel};
 pub use layout::{
-    subpixel_snap, subpixel_snap_pos, subpixel_snap_rect, MacFixedView, MacForm, MacFormUi,
-    MacFrame, MacRow, MacScrollView, MacScrollViewOutput, MacSplitOrientation, MacSplitView,
-    MacStackAlignment, MacStackOrientation, MacStackUi, MacStackView, MacStackViewOutput,
+    is_window_active, subpixel_snap, subpixel_snap_pos, subpixel_snap_rect, MacFixedView, MacForm,
+    MacFormUi, MacFrame, MacRow, MacScrollView, MacScrollViewOutput, MacSplitOrientation,
+    MacSplitView, MacStackAlignment, MacStackOrientation, MacStackUi, MacStackView,
+    MacStackViewOutput,
 };
 pub use motion::CASpring;
 pub use navigation::{
