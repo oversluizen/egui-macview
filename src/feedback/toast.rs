@@ -99,6 +99,20 @@ impl MacToast {
 }
 
 /// Manager container orchestrating active toast notifications.
+///
+/// # Example
+/// ```rust
+/// use egui_macview::{MacAppearance, MacTheme, MacToastManager};
+///
+/// # let ctx = egui::Context::default();
+/// # let mut out = ctx.run_ui(egui::RawInput::default(), |_ui| {
+/// let theme = MacTheme::new(MacAppearance::DarkAqua);
+/// let mut toasts = MacToastManager::new();
+/// toasts.success("Project saved");
+/// toasts.show(&ctx, &theme);
+/// # });
+/// # out.textures_delta.clear();
+/// ```
 #[derive(Default)]
 pub struct MacToastManager {
     toasts: Vec<MacToast>,

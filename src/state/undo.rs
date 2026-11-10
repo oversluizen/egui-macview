@@ -10,6 +10,20 @@ use std::collections::VecDeque;
 pub const DEFAULT_UNDO_CAPACITY: usize = 50;
 
 /// Bounded ringbuffer undo/redo state manager (`NSUndoManager` equivalent).
+///
+/// # Example
+/// ```rust
+/// use egui_macview::NSUndoManager;
+///
+/// let mut undo_mgr = NSUndoManager::new();
+/// let mut canvas_zoom = 100u32;
+///
+/// undo_mgr.push_snapshot(canvas_zoom);
+/// canvas_zoom = 150;
+///
+/// assert!(undo_mgr.undo(&mut canvas_zoom));
+/// assert_eq!(canvas_zoom, 100);
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NSUndoManager<T> {
     undo_stack: VecDeque<T>,

@@ -13,6 +13,26 @@ pub use super::fuzzy::{CommandPaletteItem, IntoShortcutString};
 pub use crate::tokens::metrics::navigation::{COMMAND_PALETTE_HEIGHT, COMMAND_PALETTE_WIDTH};
 
 /// Floating modal command palette state and renderer.
+///
+/// # Example
+/// ```rust
+/// use egui_macview::{CommandPaletteItem, MacAppearance, MacCommandPalette, MacTheme};
+///
+/// # let ctx = egui::Context::default();
+/// # let mut out = ctx.run_ui(egui::RawInput::default(), |_ui| {
+/// let theme = MacTheme::new(MacAppearance::DarkAqua);
+/// let mut palette = MacCommandPalette::new(vec![
+///     CommandPaletteItem::new("toggle_theme", "Switch Theme").shortcut("⌘T"),
+///     CommandPaletteItem::new("export_pdf", "Export as PDF").shortcut("⌘E"),
+/// ])
+/// .open(true);
+///
+/// if let Some(cmd_id) = palette.show(&ctx, &theme) {
+///     // Handle triggered command `cmd_id`
+/// }
+/// # });
+/// # out.textures_delta.clear();
+/// ```
 pub struct MacCommandPalette {
     /// Whether the command palette is currently open/visible.
     pub open: bool,

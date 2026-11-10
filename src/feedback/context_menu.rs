@@ -33,6 +33,31 @@ pub fn clamp_menu_rect(click_pos: Pos2, menu_size: Vec2, viewport_rect: Rect) ->
 }
 
 /// Context Menu state and renderer.
+///
+/// # Example
+/// ```rust
+/// use egui_macview::{MacAppearance, MacContextMenu, MacTheme, NSMenuItem};
+///
+/// # let ctx = egui::Context::default();
+/// # let mut out = ctx.run_ui(egui::RawInput::default(), |ui| {
+/// let theme = MacTheme::new(MacAppearance::Aqua);
+/// let items = [
+///     NSMenuItem::action("duplicate", "Duplicate"),
+///     NSMenuItem::separator(),
+///     NSMenuItem::action("delete", "Delete"),
+/// ];
+/// let mut is_open = false;
+/// let mut spawn_pos = egui::Pos2::ZERO;
+/// let mut selected_idx = None;
+///
+/// let label_resp = ui.label("Right-click me");
+/// let mut menu = MacContextMenu::new(&items, &mut is_open, &mut spawn_pos, &mut selected_idx)
+///     .theme(&theme);
+/// menu.attach_to(&label_resp);
+/// menu.show(ui);
+/// # });
+/// # out.textures_delta.clear();
+/// ```
 pub struct MacContextMenu<'a> {
     /// Slice of menu items to display.
     pub items: &'a [NSMenuItem],

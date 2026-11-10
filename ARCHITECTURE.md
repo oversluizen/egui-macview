@@ -13,7 +13,7 @@ In standard `egui`, widgets size themselves dynamically from their content and p
 1. **Predictable Layout Containers (`src/layout/`)**:
    Containers such as `MacSplitView`, `MacStackView`, `MacForm`, `MacRow`, and `MacFixedView` compute exact rectangles before painting, and snap widget bounds to physical device pixels (`subpixel_snap_rect`) so 1px borders stay crisp at 100%, 125%, 150%, and 200% display scaling.
 2. **Design Tokens & Dynamic Theming (`tokens/design_tokens.json` & `src/theme/`)**:
-   Every control reads its dimensions, padding insets, corner radii, and colors from [`MacTheme`]. No magic numbers or hardcoded hex colors are scattered across widget code.
+   Every control reads its dimensions, padding insets, corner radii, and colors from [`MacTheme`](src/theme/mod.rs). No magic numbers or hardcoded hex colors are scattered across widget code.
 3. **3-Phase Control Pipeline (`src/controls/`)**:
    Complex controls separate their work into three easy-to-read steps:
    - **Compute geometry**: Calculate rectangles for the outer frame, sub-controls, and hit targets.
@@ -66,7 +66,7 @@ When rendering on fractional-DPI displays (such as 125% or 150% scaling on Windo
 
 ## 3. Spring Animations (`CASpring`)
 
-Instead of fixed linear timers or frame-dependent `pos += vel * dt` loops that behave differently at 60Hz vs. 120Hz ProMotion, [`CASpring`](src/motion/spring.rs) evaluates Apple's damped spring curve directly from elapsed time $t$:
+Instead of fixed linear timers or frame-dependent `pos += vel * dt` loops that behave differently at 60Hz vs. 120Hz ProMotion, [`CASpring`](src/motion/mod.rs) evaluates Apple's damped spring curve directly from elapsed time $t$:
 
 - **Consistent across refresh rates**: A toggle switch, disclosure chevron, or floating HUD fade takes the exact same real-world duration on a 60Hz monitor, a 120Hz MacBook, or a 144Hz desktop display.
 - **Automatic sleep**: Once the spring settles within epsilon of its target value, it stops requesting repaints so the CPU can sleep.
@@ -129,6 +129,7 @@ egui-macview/
 │   └── tokens/                             (Strongly typed token deserializers & accessors)
 ├── examples/
 │   ├── macview_gallery.rs                  (6-screen interactive showcase app)
-│   └── studio_controls_v05.rs              (Standalone studio & media demo)
-└── tests/                                  (22 integration & architectural guard test suites)
+│   ├── studio_controls_v05.rs              (Standalone studio & media demo)
+│   └── transpiled_preferences_demo.rs      (macOS preferences & settings demo)
+└── tests/                                  (23 integration & architectural guard test suites)
 ```

@@ -30,6 +30,24 @@ pub struct MacToolbarResponse {
 }
 
 /// Unified window header and toolbar (`SPEC-005`) with configurable `WindowControlsStyle`.
+///
+/// # Example
+/// ```rust
+/// use egui_macview::{MacAppearance, MacButton, MacTheme, MacToolbar, WindowControlsStyle};
+///
+/// # let ctx = egui::Context::default();
+/// # let mut out = ctx.run_ui(egui::RawInput::default(), |ui| {
+/// let theme = MacTheme::new(MacAppearance::DarkAqua);
+///
+/// MacToolbar::new("My Studio App")
+///     .window_controls_style(WindowControlsStyle::AppleTrafficLights)
+///     .theme(&theme)
+///     .show(ui, |toolbar_ui| {
+///         toolbar_ui.add(MacButton::new("Export").theme(&theme));
+///     });
+/// # });
+/// # out.textures_delta.clear();
+/// ```
 pub struct MacToolbar<'a> {
     id: Id,
     title: String,

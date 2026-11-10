@@ -98,6 +98,11 @@ fn test_guard_documentation_and_file_size_ceilings() {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     let lib_rs = fs::read_to_string(manifest_dir.join("src/lib.rs")).expect("read lib.rs");
     assert!(lib_rs.contains("#![deny(missing_docs)]"));
+    let readme = fs::read_to_string(manifest_dir.join("README.md")).expect("read README.md");
+    assert!(
+        !readme.contains("](src/"),
+        "README.md is embedded in src/lib.rs via include_str! and must use rustdoc intra-doc links [`Type`] instead of relative (src/...) file links that 404 on docs.rs"
+    );
     for file in collect_rs_files(&manifest_dir.join("src")) {
         let content = fs::read_to_string(&file).expect("read source");
         assert!(content

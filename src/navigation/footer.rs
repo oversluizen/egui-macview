@@ -21,6 +21,22 @@ pub enum MacCanvasFooterAction {
 }
 
 /// Canvas Footer container with deterministic 24.0pt budget.
+///
+/// # Example
+/// ```rust
+/// use egui_macview::{MacAppearance, MacCanvasFooter, MacTheme};
+///
+/// # let ctx = egui::Context::default();
+/// # let mut out = ctx.run_ui(egui::RawInput::default(), |ui| {
+/// let theme = MacTheme::new(MacAppearance::Aqua);
+/// let breadcrumbs = ["Workspace", "Scene 1", "Camera"];
+///
+/// MacCanvasFooter::new(&breadcrumbs, Some(egui::pos2(120.0, 84.0)), 1.0)
+///     .theme(&theme)
+///     .show(ui, 600.0);
+/// # });
+/// # out.textures_delta.clear();
+/// ```
 pub struct MacCanvasFooter<'a> {
     breadcrumbs: &'a [&'a str],
     cursor_pos: Option<Pos2>,

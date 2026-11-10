@@ -17,6 +17,15 @@ pub const CUPERTINO_ICONS_FONT_BYTES: &[u8] =
 pub const CUPERTINO_ICONS_FONT_NAME: &str = "cupertino_icons";
 
 /// Enumeration of monochrome AppKit vector symbols mapped to CupertinoIcons font codepoints.
+///
+/// # Example
+/// ```rust
+/// use egui_macview::{MacSymbol, setup_symbols_font};
+///
+/// let mut fonts = egui::FontDefinitions::default();
+/// setup_symbols_font(&mut fonts);
+/// assert_eq!(MacSymbol::Search.as_str(), "\u{f4a5}");
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum MacSymbol {
     /// Magnifying glass search icon (`\u{f4a5}`).

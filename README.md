@@ -535,56 +535,56 @@ ui.horizontal(|ui| {
 
 | Component | macOS AppKit Equivalent | What It Does |
 | :--- | :--- | :--- |
-| [`MacSplitView`](src/layout/split_view.rs) | `NSSplitView` | Resizable two-pane split container with min/max size constraints. |
-| [`MacStackView`](src/layout/stack_view.rs) | `NSStackView` | Horizontal or vertical linear stack with consistent spacing and optional dividers. |
-| [`MacScrollView`](src/layout/scroll_view.rs) | `NSScrollView` | Scroll container with overlay scrollbars that fade out when idle. |
-| [`MacForm`](src/layout/form.rs) | `NSGridView` / Form | Two-column form layout with right-aligned labels and left-aligned controls. |
-| [`MacRow`](src/layout/row.rs) | Auto-Layout Row | Single-line horizontal row that distributes width cleanly across child cells. |
-| [`MacFixedView`](src/layout/fixed_view.rs) | Retained Frame | Fixed-size coordinate container that prevents child widgets from overflowing. |
-| [`MacBox`](src/controls/box_view.rs) | `NSBox` | Grouped border box with an optional title and standard horizontal separator. |
-| [`MacTabView`](src/controls/tab_view.rs) | `NSTabView` | Tabbed container supporting top segmented tabs (`TopTabsBezelBorder`) or borderless pages. |
-| [`MacDisclosureGroup`](src/controls/disclosure_group.rs) | `NSButton` Disclosure | Collapsible section with an animated rotating disclosure triangle (`CASpring`). |
+| [`MacSplitView`] | `NSSplitView` | Resizable two-pane split container with min/max size constraints. |
+| [`MacStackView`] | `NSStackView` | Horizontal or vertical linear stack with consistent spacing and optional dividers. |
+| [`MacScrollView`] | `NSScrollView` | Scroll container with overlay scrollbars that fade out when idle. |
+| [`MacForm`] | `NSGridView` / Form | Two-column form layout with right-aligned labels and left-aligned controls. |
+| [`MacRow`] | Auto-Layout Row | Single-line horizontal row that distributes width cleanly across child cells. |
+| [`MacFixedView`] | Retained Frame | Fixed-size coordinate container that prevents child widgets from overflowing. |
+| [`MacBox`] | `NSBox` | Grouped border box with an optional title and standard horizontal separator. |
+| [`MacTabView`] | `NSTabView` | Tabbed container supporting top segmented tabs (`TopTabsBezelBorder`) or borderless pages. |
+| [`MacDisclosureGroup`] | `NSButton` Disclosure | Collapsible section with an animated rotating disclosure triangle (`CASpring`). |
 
 ### Controls & Data Views (`src/controls/`)
 
 | Component | macOS AppKit Equivalent | What It Does |
 | :--- | :--- | :--- |
-| [`MacButton`](src/controls/button_cell.rs) / [`MacButtonCell`](src/controls/button_cell.rs) | `NSButton` | Push buttons, default action blue buttons, checkboxes, radio buttons, and icon buttons. |
-| [`MacToggle`](src/controls/toggle.rs) | `NSSwitch` | Animated pill switch with system green active fill. |
-| [`MacSegmentedControl`](src/controls/segmented.rs) | `NSSegmentedControl` | Multi-segment pill switcher with a sliding selection thumb. |
-| [`MacInputCell`](src/controls/input_cell.rs) | `NSTextField` | Single-line text and numeric input with focus ring, `Tab` cycling, `Enter` commit, and `Escape` cancel. |
-| [`MacSearchField`](src/controls/search_field.rs) | `NSSearchField` | Search input with leading magnifying glass icon and trailing clear (`×`) button. |
-| [`MacComboBox`](src/controls/combo_box.rs) | `NSComboBox` | Editable text field combined with a filterable dropdown list (`Alt+Down`, arrow keys, `Enter`). |
-| [`MacPopUpButton`](src/controls/popup_button.rs) | `NSPopUpButton` | Dropdown menu button with double-chevron indicator and screen-clamped popover. |
-| [`MacSlider`](src/controls/slider.rs) | `NSSlider` (Linear) | Horizontal slider with optional tick marks and keyboard arrow stepping. |
-| [`MacCircularSlider`](src/controls/circular_slider.rs) | `NSSlider` (Circular) | Rotary dial knob with drag tracking, angle indicator, and spring feedback. |
-| [`MacStepper`](src/controls/stepper.rs) | `NSStepper` | Up/down numeric increment buttons with range clamping. |
-| [`MacDatePicker`](src/controls/date_picker/mod.rs) | `NSDatePicker` | Date and time selector supporting both inline stepper fields and a month calendar + analog clock. |
-| [`MacColorWell`](src/controls/color_well.rs) | `NSColorWell` | Color swatch button with alpha checkerboard preview and popover color picker. |
-| [`MacProgressIndicator`](src/controls/progress_indicator.rs) | `NSProgressIndicator` | Determinate/indeterminate progress bars and 12-spoke spinning activity indicators. |
-| [`MacLevelIndicator`](src/controls/level_indicator.rs) | `NSLevelIndicator` | Continuous or discrete audio/capacity meter with green/yellow/red thresholds and peak hold. |
-| [`MacRatingIndicator`](src/controls/rating_indicator.rs) | `NSLevelIndicator` (Rating) | Interactive 5-star rating widget with optional half-star precision. |
-| [`MacTokenField`](src/controls/token_field.rs) | `NSTokenField` | Tag input that turns comma- or Enter-separated words into removable capsule pills. |
-| [`MacPathControl`](src/controls/path_control.rs) | `NSPathControl` | Interactive folder/file breadcrumb bar with clickable segments. |
-| [`MacOutlineView`](src/controls/outline_view.rs) | `NSOutlineView` | Collapsible tree view for sidebars and hierarchical lists. |
-| [`MacTableView`](src/controls/table_view/mod.rs) | `NSTableView` | Multi-column sortable table with alternating row fills, multi-selection, and viewport culling. |
-| [`MacCollectionView`](src/controls/collection_view.rs) | `NSCollectionView` | 2D grid view with flow layout, rubber-band marquee selection, arrow-key navigation, and viewport culling. |
-| [`MacRuleEditor`](src/controls/rule_editor.rs) | `NSRuleEditor` | Multi-row predicate filter builder with criterion pills and `[+]` / `[-]` row buttons. |
-| [`MacPlayerView`](src/controls/player_view/mod.rs) | `AVPlayerView` | Media player transport overlay supporting Floating HUD pod, Inline bar, and Minimal styles. |
-| [`MacTrimScrubber`](src/controls/trim_scrubber/mod.rs) | `AVPlayerView` Trim Bar | QuickTime-style timeline scrubber with waveform preview, yellow In/Out trim handles, and timecode badge. |
+| [`MacButton`] / [`MacButtonCell`] | `NSButton` | Push buttons, default action blue buttons, checkboxes, radio buttons, and icon buttons. |
+| [`MacToggle`] | `NSSwitch` | Animated pill switch with system green active fill. |
+| [`MacSegmentedControl`] | `NSSegmentedControl` | Multi-segment pill switcher with a sliding selection thumb. |
+| [`MacInputCell`] | `NSTextField` | Single-line text and numeric input with focus ring, `Tab` cycling, `Enter` commit, and `Escape` cancel. |
+| [`MacSearchField`] | `NSSearchField` | Search input with leading magnifying glass icon and trailing clear (`×`) button. |
+| [`MacComboBox`] | `NSComboBox` | Editable text field combined with a filterable dropdown list (`Alt+Down`, arrow keys, `Enter`). |
+| [`MacPopUpButton`] | `NSPopUpButton` | Dropdown menu button with double-chevron indicator and screen-clamped popover. |
+| [`MacSlider`] | `NSSlider` (Linear) | Horizontal slider with optional tick marks and keyboard arrow stepping. |
+| [`MacCircularSlider`] | `NSSlider` (Circular) | Rotary dial knob with drag tracking, angle indicator, and spring feedback. |
+| [`MacStepper`] | `NSStepper` | Up/down numeric increment buttons with range clamping. |
+| [`MacDatePicker`] | `NSDatePicker` | Date and time selector supporting both inline stepper fields and a month calendar + analog clock. |
+| [`MacColorWell`] | `NSColorWell` | Color swatch button with alpha checkerboard preview and popover color picker. |
+| [`MacProgressIndicator`] | `NSProgressIndicator` | Determinate/indeterminate progress bars and 12-spoke spinning activity indicators. |
+| [`MacLevelIndicator`] | `NSLevelIndicator` | Continuous or discrete audio/capacity meter with green/yellow/red thresholds and peak hold. |
+| [`MacRatingIndicator`] | `NSLevelIndicator` (Rating) | Interactive 5-star rating widget with optional half-star precision. |
+| [`MacTokenField`] | `NSTokenField` | Tag input that turns comma- or Enter-separated words into removable capsule pills. |
+| [`MacPathControl`] | `NSPathControl` | Interactive folder/file breadcrumb bar with clickable segments. |
+| [`MacOutlineView`] | `NSOutlineView` | Collapsible tree view for sidebars and hierarchical lists. |
+| [`MacTableView`] | `NSTableView` | Multi-column sortable table with alternating row fills, multi-selection, and viewport culling. |
+| [`MacCollectionView`] | `NSCollectionView` | 2D grid view with flow layout, rubber-band marquee selection, arrow-key navigation, and viewport culling. |
+| [`MacRuleEditor`] | `NSRuleEditor` | Multi-row predicate filter builder with criterion pills and `[+]` / `[-]` row buttons. |
+| [`MacPlayerView`] | `AVPlayerView` | Media player transport overlay supporting Floating HUD pod, Inline bar, and Minimal styles. |
+| [`MacTrimScrubber`] | `AVPlayerView` Trim Bar | QuickTime-style timeline scrubber with waveform preview, yellow In/Out trim handles, and timecode badge. |
 
 ### Navigation, Surfaces & State (`src/navigation/`, `src/surfaces/`, `src/state/`)
 
 | Component | macOS AppKit Equivalent | What It Does |
 | :--- | :--- | :--- |
-| [`MacToolbar`](src/navigation/toolbar.rs) | `NSToolbar` | Window titlebar with traffic light buttons (or Windows caption buttons), drag-to-move, and double-click maximize. |
-| [`MacMenuBar`](src/navigation/menu.rs) | `NSMenu` | Top menu bar with cascading submenus and keyboard shortcut handling. |
-| [`MacCommandPalette`](src/navigation/command_palette.rs) | Spotlight Overlay | `⌘K` / `Ctrl+K` modal command search bar with fuzzy matching. |
-| [`MacCanvasFooter`](src/navigation/footer.rs) | Status Bar | `24 pt` bottom status bar with breadcrumbs, cursor coordinates, and zoom presets. |
-| [`MacContextMenu`](src/feedback/context_menu.rs) | Context Menu | Right-click popup menu clamped to the window bounds. |
-| [`MacToastManager`](src/feedback/toast.rs) | HUD Notification | Non-blocking toast banners with spring entry/exit animations. |
-| [`MacPanel`](src/surfaces/mod.rs) / [`MacPopover`](src/surfaces/mod.rs) | `NSPanel` / `NSPopover` | Floating translucent utility panels, inspector cards ([`MacCard`](src/surfaces/card.rs)), and compact HUD boxes ([`MacFloatingInfoBox`](src/surfaces/floating_info_box.rs)). |
-| [`NSUndoManager`](src/state/undo.rs) | `NSUndoManager` | Bounded undo/redo history stack with duplicate-state filtering. |
+| [`MacToolbar`] | `NSToolbar` | Window titlebar with traffic light buttons (or Windows caption buttons), drag-to-move, and double-click maximize. |
+| [`MacMenuBar`] | `NSMenu` | Top menu bar with cascading submenus and keyboard shortcut handling. |
+| [`MacCommandPalette`] | Spotlight Overlay | `⌘K` / `Ctrl+K` modal command search bar with fuzzy matching. |
+| [`MacCanvasFooter`] | Status Bar | `24 pt` bottom status bar with breadcrumbs, cursor coordinates, and zoom presets. |
+| [`MacContextMenu`] | Context Menu | Right-click popup menu clamped to the window bounds. |
+| [`MacToastManager`] | HUD Notification | Non-blocking toast banners with spring entry/exit animations. |
+| [`MacPanel`] / [`MacPopover`] | `NSPanel` / `NSPopover` | Floating translucent utility panels, inspector cards ([`MacCard`]), and compact HUD boxes ([`MacFloatingInfoBox`]). |
+| [`NSUndoManager`] | `NSUndoManager` | Bounded undo/redo history stack with duplicate-state filtering. |
 
 ---
 
@@ -596,35 +596,35 @@ Not sure which widget fits your screen best? Use these guidelines modeled after 
 
 | Control | Best For | Avoid When |
 | :--- | :--- | :--- |
-| **[`MacSegmentedControl`](src/controls/segmented.rs)** | Switching between **2 to 5 closely related views or modes** (e.g., `Grid \| List \| Columns`) where all options should be visible at a glance. | You have more than 5 options, or the labels are long phrases. Use `MacPopUpButton` instead. |
-| **[`MacPopUpButton`](src/controls/popup_button.rs)** | Picking **one option from a fixed list of 5 to 20 items** (e.g., file export format or color profile) where the user does not need to type custom values. | The list has dozens of items that need text filtering, or the user can enter a custom value. Use `MacComboBox` instead. |
-| **[`MacComboBox`](src/controls/combo_box.rs)** | Picking from a **searchable list OR typing a custom value** (e.g., choosing a font family or entering a custom zoom preset). | The user must only pick from a small, strictly fixed set of options. Use `MacPopUpButton` instead. |
+| **[`MacSegmentedControl`]** | Switching between **2 to 5 closely related views or modes** (e.g., `Grid \| List \| Columns`) where all options should be visible at a glance. | You have more than 5 options, or the labels are long phrases. Use [`MacPopUpButton`] instead. |
+| **[`MacPopUpButton`]** | Picking **one option from a fixed list of 5 to 20 items** (e.g., file export format or color profile) where the user does not need to type custom values. | The list has dozens of items that need text filtering, or the user can enter a custom value. Use [`MacComboBox`] instead. |
+| **[`MacComboBox`]** | Picking from a **searchable list OR typing a custom value** (e.g., choosing a font family or entering a custom zoom preset). | The user must only pick from a small, strictly fixed set of options. Use [`MacPopUpButton`] instead. |
 
 ### 2. Choosing a Data View
 
 | Control | Best For | Avoid When |
 | :--- | :--- | :--- |
-| **[`MacTableView`](src/controls/table_view/mod.rs)** | Displaying **structured records with multiple attributes** (e.g., Name, Date Modified, Size) that users sort by column header or navigate row-by-row. | Items are primarily visual (thumbnails, icons, color swatches). Use `MacCollectionView` instead. |
-| **[`MacOutlineView`](src/controls/outline_view.rs)** | Navigating **hierarchical trees** (e.g., folder trees, document outlines, scene graphs, or sidebar navigation) with collapsible parent nodes. | Your data is flat and has no parent-child hierarchy. Use `MacTableView` instead. |
-| **[`MacCollectionView`](src/controls/collection_view.rs)** | Browsing **visual 2D grids of tiles** (e.g., photo galleries, icon pickers, asset browsers) with rubber-band marquee selection and 2D arrow-key navigation. | Users need to compare text or numbers across multiple columns. Use `MacTableView` instead. |
+| **[`MacTableView`]** | Displaying **structured records with multiple attributes** (e.g., Name, Date Modified, Size) that users sort by column header or navigate row-by-row. | Items are primarily visual (thumbnails, icons, color swatches). Use [`MacCollectionView`] instead. |
+| **[`MacOutlineView`]** | Navigating **hierarchical trees** (e.g., folder trees, document outlines, scene graphs, or sidebar navigation) with collapsible parent nodes. | Your data is flat and has no parent-child hierarchy. Use [`MacTableView`] instead. |
+| **[`MacCollectionView`]** | Browsing **visual 2D grids of tiles** (e.g., photo galleries, icon pickers, asset browsers) with rubber-band marquee selection and 2D arrow-key navigation. | Users need to compare text or numbers across multiple columns. Use [`MacTableView`] instead. |
 
 ### 3. Choosing a Layout Container
 
 | Container | Best For | Avoid When |
 | :--- | :--- | :--- |
-| **[`MacSplitView`](src/layout/split_view.rs)** | Dividing a window into **resizable workspace panes** (e.g., a left navigation sidebar, a center canvas, and a right inspector). | Grouping small related controls inside a single pane. Use `MacBox` or `MacForm` instead. |
-| **[`MacTabView`](src/controls/tab_view.rs)** | Switching an entire pane between **peer pages** (e.g., `General`, `Shortcuts`, `Export` preference tabs) where only one page is visible at a time. | Hiding optional advanced settings on the same page. Use `MacDisclosureGroup` instead. |
-| **[`MacDisclosureGroup`](src/controls/disclosure_group.rs)** | Toggling **optional or advanced details** inline so the user can expand multiple sections simultaneously. | Top-level window navigation. Use `MacTabView` or `MacSplitView` instead. |
-| **[`MacBox`](src/controls/box_view.rs)** | Visually **grouping a cluster of related fields** under a subtle border and title label. | Aligning two-column `Label: Control` pairs. Put a [`MacForm`](src/layout/form.rs) inside the `MacBox` for alignment. |
+| **[`MacSplitView`]** | Dividing a window into **resizable workspace panes** (e.g., a left navigation sidebar, a center canvas, and a right inspector). | Grouping small related controls inside a single pane. Use [`MacBox`] or [`MacForm`] instead. |
+| **[`MacTabView`]** | Switching an entire pane between **peer pages** (e.g., `General`, `Shortcuts`, `Export` preference tabs) where only one page is visible at a time. | Hiding optional advanced settings on the same page. Use [`MacDisclosureGroup`] instead. |
+| **[`MacDisclosureGroup`]** | Toggling **optional or advanced details** inline so the user can expand multiple sections simultaneously. | Top-level window navigation. Use [`MacTabView`] or [`MacSplitView`] instead. |
+| **[`MacBox`]** | Visually **grouping a cluster of related fields** under a subtle border and title label. | Aligning two-column `Label: Control` pairs. Put a [`MacForm`] inside the [`MacBox`] for alignment. |
 
 ### 4. Choosing a Numeric Input
 
 | Control | Best For |
 | :--- | :--- |
-| **[`MacSlider`](src/controls/slider.rs)** | Adjusting a continuous value within a bounded range (e.g., Opacity `0%–100%` or Volume) where visual proportion matters more than exact digits. |
-| **[`MacStepper`](src/controls/stepper.rs)** | Nudging an exact numeric value up or down by fixed increments (e.g., `±1 px` border width or `±25%` zoom) next to a readout or text field. |
-| **[`MacCircularSlider`](src/controls/circular_slider.rs)** | Compact rotary dials in audio mixers, pan pots, or angle/rotation inspectors where vertical space is tight. |
-| **[`MacInputCell::numeric`](src/controls/input_cell.rs)** | Typing an exact number with keyboard arrow stepping (`Up`/`Down` for `±1×`, `Shift` for `±10×`, `Cmd`/`Ctrl` for `±100×`) and `Escape` rollback. |
+| **[`MacSlider`]** | Adjusting a continuous value within a bounded range (e.g., Opacity `0%–100%` or Volume) where visual proportion matters more than exact digits. |
+| **[`MacStepper`]** | Nudging an exact numeric value up or down by fixed increments (e.g., `±1 px` border width or `±25%` zoom) next to a readout or text field. |
+| **[`MacCircularSlider`]** | Compact rotary dials in audio mixers, pan pots, or angle/rotation inspectors where vertical space is tight. |
+| **[`MacInputCell::numeric`]** | Typing an exact number with keyboard arrow stepping (`Up`/`Down` for `±1×`, `Shift` for `±10×`, `Cmd`/`Ctrl` for `±100×`) and `Escape` rollback. |
 
 ---
 
@@ -697,15 +697,15 @@ cargo test --doc
 cargo clippy --all-targets -- -D warnings
 ```
 
-- **23 integration test suites** and **50+ documentation tests** verify widget layout, keyboard navigation, undo/redo roundtrips, WCAG contrast ratios, and zero idle CPU usage.
-- **Design token architecture**: All dimensions, spacing, corner radii, and semantic colors live in [`tokens/design_tokens.json`](tokens/design_tokens.json) and are resolved through [`MacTheme`].
+- **23 integration test suites** and **60+ documentation tests** verify widget layout, keyboard navigation, undo/redo roundtrips, WCAG contrast ratios, and zero idle CPU usage.
+- **Design token architecture**: All dimensions, spacing, corner radii, and semantic colors live in `tokens/design_tokens.json` ([`MacDesignTokens`]) and are resolved through [`MacTheme`].
 
 ---
 
 ## License
 
 Dual-licensed under either of:
-- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or <http://www.apache.org/licenses/LICENSE-2.0>)
-- MIT license ([LICENSE-MIT](LICENSE-MIT) or <http://opensource.org/licenses/MIT>)
+- Apache License, Version 2.0 (<https://www.apache.org/licenses/LICENSE-2.0>)
+- MIT license (<https://opensource.org/licenses/MIT>)
 
 at your option.

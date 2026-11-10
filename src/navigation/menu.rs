@@ -13,6 +13,27 @@ pub use super::item::{MacKeyboardShortcut, MacMenuItemKind, NSMenuItem};
 pub use super::model::NSMenu;
 
 /// Top application menu bar component.
+///
+/// # Example
+/// ```rust
+/// use egui_macview::{MacAppearance, MacMenuBar, MacTheme, NSMenu, NSMenuItem};
+///
+/// # let ctx = egui::Context::default();
+/// # let mut out = ctx.run_ui(egui::RawInput::default(), |ui| {
+/// let theme = MacTheme::new(MacAppearance::Aqua);
+/// let menus = [
+///     NSMenu::with_items("File", vec![NSMenuItem::action("new_doc", "New Document")]),
+///     NSMenu::with_items("Edit", vec![NSMenuItem::action("undo", "Undo")]),
+/// ];
+/// let mut open_menu = None;
+/// let mut highlighted_item = None;
+///
+/// MacMenuBar::new(&menus, &mut open_menu, &mut highlighted_item)
+///     .theme(&theme)
+///     .show(ui);
+/// # });
+/// # out.textures_delta.clear();
+/// ```
 pub struct MacMenuBar<'a> {
     /// Slice of top-level menus (e.g. File, Edit, View, Window, Help).
     pub menus: &'a [NSMenu],

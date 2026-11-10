@@ -13,6 +13,27 @@ use egui::{
 use std::hash::Hash;
 
 /// Floating `178x63pt` Compact HUD Palette (`NSPanelStyleMaskHUDWindow`) from `SPEC-006 §2.2`.
+///
+/// # Example
+/// ```rust
+/// use egui_macview::{MacAppearance, MacFloatingInfoBox, MacTheme};
+///
+/// # let ctx = egui::Context::default();
+/// # let mut out = ctx.run_ui(egui::RawInput::default(), |_ui| {
+/// let theme = MacTheme::new(MacAppearance::DarkAqua);
+/// let mut hud_pos = egui::pos2(24.0, 24.0);
+///
+/// MacFloatingInfoBox::new("transform_hud", &mut hud_pos)
+///     .title("Transform")
+///     .theme(&theme)
+///     .show(
+///         &ctx,
+///         |row1| { row1.label("X: 120 pt"); },
+///         |row2| { row2.label("Y: 80 pt"); },
+///     );
+/// # });
+/// # out.textures_delta.clear();
+/// ```
 pub struct MacFloatingInfoBox<'a> {
     id: Id,
     title: String,
