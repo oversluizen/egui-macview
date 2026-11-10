@@ -2,7 +2,7 @@
 //!
 //! Normative reference: Automated Architecture Fitness Guards (Zero Hardcoding, Zero Token Cheating,
 //! Domain-Agnostic Separation, Documentation Completeness, File Size Ceilings, Windows GUI Subsystem
-//! & Safe `eframe` Startup, Anti-Spookcode & Zero Unused Dependencies, and State-Invariant Roundtrip Verification).
+//! & Safe `eframe` Startup, Zero Dead Code & Zero Unused Dependencies, and State-Invariant Roundtrip Verification).
 
 mod guard_helpers;
 
@@ -287,9 +287,9 @@ fn test_guard_windows_gui_subsystem_and_safe_eframe_startup() {
 }
 
 #[test]
-fn test_guard_anti_spookcode_and_zero_unused_dependencies() {
+fn test_guard_zero_dead_code_and_zero_unused_dependencies() {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let mut spook_violations = Vec::new();
+    let mut dead_code_violations = Vec::new();
     let mut combined_src = String::new();
 
     for file in collect_rs_files(&manifest_dir.join("src")) {
@@ -298,16 +298,16 @@ fn test_guard_anti_spookcode_and_zero_unused_dependencies() {
             .unwrap_or(&file)
             .to_string_lossy();
         let content = fs::read_to_string(&file).expect("read src file");
-        spook_violations.extend(check_anti_spookcode_in_source(&rel, &content));
+        dead_code_violations.extend(check_zero_dead_code_in_source(&rel, &content));
         combined_src.push_str(&strip_comments_and_strings(&content));
         combined_src.push('\n');
     }
     assert!(
-        spook_violations.is_empty(),
-        "Anti-Spookcode Guard (`allow(dead_code)` forbidden in `src/`):\n{spook_violations:#?}"
+        dead_code_violations.is_empty(),
+        "Zero Dead Code Guard (`allow(dead_code)` forbidden in `src/`):\n{dead_code_violations:#?}"
     );
     assert!(
-        !check_anti_spookcode_in_source("src/bad.rs", "#[allow(dead_code)]\nstruct Ghost;")
+        !check_zero_dead_code_in_source("src/bad.rs", "#[allow(dead_code)]\nstruct Ghost;")
             .is_empty()
     );
 
@@ -356,85 +356,55 @@ fn test_guard_anti_spookcode_and_zero_unused_dependencies() {
 #[test]
 fn test_guard_zero_vault_leakage_and_de_ai_ification() {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let forbidden_terms: Vec<String> = vec![
-        format!("{}-{}", "GL", "1015"),
-        format!("{}-{}", "GL", "1005"),
-        format!("{}-{}", "GL", "1016"),
-        format!("{}-{}", "GL", "1017"),
-        format!("{}-{}", "SOP", "1016"),
-        format!("{} {}", "De", "Verankeringswet"),
-        format!("{} {}", "06", "AI Team"),
-        format!("{}:/{}", "D", "Programmeren"),
-        format!("{}:\\{}", "D", "Programmeren"),
-        format!("{}:/{}", "G", "My Drive"),
-        format!("{}-{}", "Jacos", "Air"),
-        format!("{} {}", "Damped Harmonic Oscillator", "Tensor Manifold"),
-        format!(
-            "{} {}",
-            "Mathematical Layout Determinism", "with Subpixel Snap Rasterization"
-        ),
-        format!("{} {}", "Polymorphic transactional", "VC state machines"),
-    ];
-
     let mut violations = Vec::new();
-    let scan_dirs = ["src", "tests", "specs", "examples"];
-    for dir in &scan_dirs {
+
+    for dir in &["src", "tests", "specs", "examples"] {
         for file in collect_rs_files(&manifest_dir.join(dir)) {
             let rel = file
                 .strip_prefix(manifest_dir)
                 .unwrap_or(&file)
                 .to_string_lossy();
             let content = fs::read_to_string(&file).expect("read file");
-            for term in &forbidden_terms {
-                if content.contains(term.as_str()) {
-                    violations.push(format!("{rel} contains forbidden term `{term}`"));
-                }
-            }
+            violations.extend(check_vault_leakage_and_dutch_in_text(&rel, &content));
         }
     }
 
-    let md_files = [
-        manifest_dir.join("README.md"),
-        manifest_dir.join("ARCHITECTURE.md"),
-        manifest_dir.join("CHANGELOG.md"),
-        manifest_dir.join("SPEC-001-APPKIT-PRIMITIVES-AND-LAYOUT.md"),
-    ];
-    for path in &md_files {
-        if path.exists() {
-            let rel = path
-                .strip_prefix(manifest_dir)
-                .unwrap_or(path)
-                .to_string_lossy();
-            let content = fs::read_to_string(path).expect("read file");
-            for term in &forbidden_terms {
-                if content.contains(term.as_str()) {
-                    violations.push(format!("{rel} contains forbidden term `{term}`"));
-                }
-            }
-        }
-    }
-
-    if let Ok(entries) = fs::read_dir(manifest_dir.join("specs")) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.extension().and_then(|s| s.to_str()) == Some("md") {
-                let rel = path
-                    .strip_prefix(manifest_dir)
-                    .unwrap_or(&path)
-                    .to_string_lossy();
-                let content = fs::read_to_string(&path).expect("read file");
-                for term in &forbidden_terms {
-                    if content.contains(term.as_str()) {
-                        violations.push(format!("{rel} contains forbidden term `{term}`"));
-                    }
+    for dir_path in [
+        manifest_dir.to_path_buf(),
+        manifest_dir.join("specs"),
+        manifest_dir.join("tokens"),
+    ] {
+        if let Ok(entries) = fs::read_dir(&dir_path) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_file()
+                    && matches!(
+                        path.extension().and_then(|s| s.to_str()),
+                        Some("md" | "toml" | "json" | "cmd")
+                    )
+                {
+                    let rel = path
+                        .strip_prefix(manifest_dir)
+                        .unwrap_or(&path)
+                        .to_string_lossy();
+                    let content = fs::read_to_string(&path).expect("read file");
+                    violations.extend(check_vault_leakage_and_dutch_in_text(&rel, &content));
                 }
             }
         }
     }
 
     assert!(
+        !check_vault_leakage_and_dutch_in_text(
+            "dutch_sample.rs",
+            &format!("// {}{} {}{}", "vo", "or", "kn", "op")
+        )
+        .is_empty(),
+        "Self-check must catch non-English (Dutch) comments"
+    );
+    assert!(
         violations.is_empty(),
-        "Vault Leakage, Local Path & Pseudo-Academic Jargon Violations:\n{violations:#?}"
+        "Vault Leakage, Local Path, Jargon & Non-English (Dutch) Guard:\n{violations:#?}"
     );
 }
 

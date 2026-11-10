@@ -26,7 +26,7 @@
 
 ## 1. Scope & System Architecture
 
-When engineering applications in Rust (`egui`) intended to look, feel, and behave indistinguishably from native macOS software, visual inspection ("vibecoding") is strictly replaced by automated specification-driven verification and differential visual regression testing.
+When engineering applications in Rust (`egui`) intended to look, feel, and behave indistinguishably from native macOS software, manual visual inspection is strictly replaced by automated specification-driven verification and differential visual regression testing.
 
 SPEC-009 establishes automated remote differential parity testing for `egui-macview`, connecting:
 1. **Local Developer Host (Windows / Linux):** Headless rendering of `egui` components into uncompressed 32-bit RGBA framebuffers.

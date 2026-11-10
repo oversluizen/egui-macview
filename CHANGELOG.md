@@ -5,6 +5,14 @@ All notable changes to the `egui-macview` crate will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.4] - 2026-11-10
+
+### Added
+- **Repository-Wide 100% English & Zero-Leakage Guard (`tests/architecture_guard_tests.rs`, `tests/guard_helpers/mod.rs`)**: Expanded `test_guard_zero_vault_leakage_and_de_ai_ification` to dynamically inspect all `.rs`, `.md`, `.toml`, `.json`, and `.cmd` files across the repository root, `src/`, `examples/`, `tests/`, `specs/`, and `tokens/` with word-boundary non-English (Dutch) detection and self-check verification.
+
+### Fixed
+- **100% English Comments, Identifiers & Packaged Files (`CHANGELOG.md`, `specs/SPEC-009-CROSS-PLATFORM-DIFFERENTIAL-HARNESS.md`, `tests/`, `start_gallery.cmd`)**: Removed the legacy Dutch `AUDIT-REFACTORING-REPORT.md` from version control, standardized `Zero Dead Code Guard` terminology (`check_zero_dead_code_in_source`), and replaced the hardcoded path in `start_gallery.cmd` with portable `%~dp0` resolution.
+
 ## [0.6.3] - 2026-11-10
 
 ### Added
@@ -76,7 +84,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.5.1] - 2026-11-08
 
 ### Added
-- **Automated Architecture Fitness Guards (`tests/architecture_guard_tests.rs`)**: Added Windows Desktop GUI Subsystem & Safe `eframe` Startup Guard (`#![cfg_attr(not(test), windows_subsystem = "windows")]`, `Renderer::Glow`, `InstanceFlags::empty()`, `system_font_fallback: false`, `persist_window: false`), Anti-Spookcode Guard (`allow(dead_code)` forbidden in `src/`), Zero Unused Dependencies Guard, and Central State-Invariant Guard (`NSUndoManager::validate_invariants`).
+- **Automated Architecture Fitness Guards (`tests/architecture_guard_tests.rs`)**: Added Windows Desktop GUI Subsystem & Safe `eframe` Startup Guard (`#![cfg_attr(not(test), windows_subsystem = "windows")]`, `Renderer::Glow`, `InstanceFlags::empty()`, `system_font_fallback: false`, `persist_window: false`), Zero Dead Code Guard (`allow(dead_code)` forbidden in `src/`), Zero Unused Dependencies Guard, and Central State-Invariant Guard (`NSUndoManager::validate_invariants`).
 - **Cold-Start, Zero-Idle-Repaint & State-Invariant Smoke Suite (`tests/runtime_hygiene_and_invariants_tests.rs`)**: Headless cold-start + first-frame latency verification (`< 500ms`), zero idle repaint leak verification (`repaint_delay > Duration::ZERO` after 2 rest frames) across all 5 `GalleryScreen` states (`Aqua` & `DarkAqua`) and `StudioApp`, `MacTrimScrubber` bounds invariants, `MacTableView` filtered selection invariants, and bit-exact `Action -> Undo -> Redo` roundtrips on `NSUndoManager`.
 
 ### Changed
@@ -200,6 +208,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - W3C DTCG design token catalog parser (`tokens/design_tokens.json`, `tokens/typography.json`).
 - Baseline test suite validating token deserialization, layout budgets, and physical spring properties.
 
+[0.6.4]: https://github.com/oversluizen/egui-macview/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/oversluizen/egui-macview/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/oversluizen/egui-macview/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/oversluizen/egui-macview/compare/v0.6.0...v0.6.1
