@@ -143,8 +143,8 @@ impl<'a> MacTableView<'a> {
         let total_w = cols_w.max(ui.available_width());
         let total_h = hdr_h + (self.row_count as f32) * row_h;
 
-        let (raw_rect, mut response) =
-            ui.allocate_exact_size(Vec2::new(total_w, total_h), Sense::hover());
+        let (raw_rect, _) = ui.allocate_exact_size(Vec2::new(total_w, total_h), Sense::hover());
+        let mut response = ui.interact(raw_rect, self.id, Sense::focusable_noninteractive());
         let rect = subpixel_snap_rect(raw_rect, ui.ctx().pixels_per_point());
 
         let painter = ui.painter_at(rect);
@@ -176,10 +176,11 @@ impl<'a> MacTableView<'a> {
             .or_else(|| self.selection.iter().next().copied())
             .unwrap_or(0);
 
-        // Keyboard ArrowUp / ArrowDown navigation only when this table is focused or hovered
+        // Keyboard ArrowUp / ArrowDown navigation only when this table is focused,
+        // or when no widget holds keyboard focus and the pointer hovers this table
         let is_focused_or_hovered = response.has_focus()
             || ui.memory(|m| m.has_focus(self.id))
-            || ui.rect_contains_pointer(rect);
+            || (ui.memory(|m| m.focused().is_none()) && ui.rect_contains_pointer(rect));
         if self.enabled && self.row_count > 0 {
             if is_focused_or_hovered
                 && ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::ArrowDown))
@@ -201,7 +202,9 @@ impl<'a> MacTableView<'a> {
                 selection_changed = true;
             } else if (is_focused_or_hovered
                 || (!self.selection.is_empty() && ui.memory(|m| m.focused().is_none())))
-                && ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Enter))
+                && (ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Enter))
+                    || ui.input_mut(|i| i.consume_key(Modifiers::COMMAND, Key::ArrowDown))
+                    || ui.input_mut(|i| i.consume_key(Modifiers::CTRL, Key::ArrowDown)))
             {
                 if let Some(&first_sel) = self.selection.iter().next() {
                     double_clicked_row = Some(first_sel);
