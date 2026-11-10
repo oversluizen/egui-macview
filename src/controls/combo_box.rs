@@ -63,6 +63,24 @@ pub struct ComboBoxPopoverGeometry {
 ///
 /// Features an editable text field coupled with a right-anchored dropdown trigger,
 /// keyboard navigation (Alt+Down, Up/Down arrows, Return, Escape), and a filterable popover list.
+///
+/// # Example
+/// ```rust
+/// use egui_macview::{MacAppearance, MacComboBox, MacTheme};
+///
+/// # let ctx = egui::Context::default();
+/// # let mut out = ctx.run_ui(egui::RawInput::default(), |ui| {
+/// let theme = MacTheme::new(MacAppearance::Aqua);
+/// let mut font_name = String::from("SF Pro Text");
+/// let fonts = ["Helvetica Neue", "Menlo", "SF Mono", "SF Pro Display", "SF Pro Text"];
+///
+/// MacComboBox::new("font_combo", &mut font_name, &fonts)
+///     .width(180.0)
+///     .theme(&theme)
+///     .show(ui);
+/// # });
+/// # out.textures_delta.clear();
+/// ```
 pub struct MacComboBox<'a, T: AsRef<str>> {
     id_salt: Id,
     text: &'a mut String,

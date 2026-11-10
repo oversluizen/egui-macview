@@ -53,6 +53,30 @@ use egui::{
 };
 
 /// Authentic macOS AVKit Media Player View (`AVPlayerView` equivalent).
+///
+/// # Example
+/// ```rust
+/// use egui_macview::{MacAppearance, MacPlayerControlsStyle, MacPlayerView, MacTheme};
+///
+/// # let ctx = egui::Context::default();
+/// # let mut out = ctx.run_ui(egui::RawInput::default(), |ui| {
+/// let theme = MacTheme::new(MacAppearance::DarkAqua);
+/// let mut is_playing = false;
+/// let mut progress = 0.25f32;
+/// let mut volume = 0.8f32;
+///
+/// ui.add(
+///     MacPlayerView::new()
+///         .controls_style(MacPlayerControlsStyle::Floating)
+///         .is_playing_mut(&mut is_playing)
+///         .progress_mut(&mut progress)
+///         .volume_mut(&mut volume)
+///         .duration_secs(120.0)
+///         .theme(&theme),
+/// );
+/// # });
+/// # out.textures_delta.clear();
+/// ```
 pub struct MacPlayerView<'a> {
     controls_style: MacPlayerControlsStyle,
     is_playing: bool,

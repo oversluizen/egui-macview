@@ -77,6 +77,28 @@ impl MacCollectionViewFlowLayout {
 }
 
 /// Authentic macOS Collection View (`NSCollectionView` equivalent).
+///
+/// # Example
+/// ```rust
+/// use std::collections::BTreeSet;
+/// use egui_macview::{MacAppearance, MacCollectionView, MacTheme};
+///
+/// # let ctx = egui::Context::default();
+/// # let mut out = ctx.run_ui(egui::RawInput::default(), |ui| {
+/// let theme = MacTheme::new(MacAppearance::Aqua);
+/// let items = ["Tile 1", "Tile 2", "Tile 3", "Tile 4"];
+/// let mut selected = BTreeSet::from([0usize]);
+///
+/// MacCollectionView::new(&items, &mut selected)
+///     .theme(&theme)
+///     .show_with_response(ui, |tile_ui, label| {
+///         tile_ui.centered_and_justified(|ui| {
+///             ui.label(*label);
+///         });
+///     });
+/// # });
+/// # out.textures_delta.clear();
+/// ```
 pub struct MacCollectionView<'a, T> {
     items: &'a [T],
     selected_indices: &'a mut BTreeSet<usize>,

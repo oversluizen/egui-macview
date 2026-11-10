@@ -47,6 +47,28 @@ pub struct MacTabItem<'a> {
 ///
 /// Features hardware-calibrated content insets, flipped coordinate layout,
 /// animated segment transitions, and bezel border strokes.
+///
+/// # Example
+/// ```rust
+/// use egui_macview::{MacAppearance, MacTabView, MacTheme};
+///
+/// # let ctx = egui::Context::default();
+/// # let mut out = ctx.run_ui(egui::RawInput::default(), |ui| {
+/// let theme = MacTheme::new(MacAppearance::Aqua);
+/// let mut active_tab = 0usize;
+///
+/// MacTabView::new(&mut active_tab)
+///     .theme(&theme)
+///     .tab("General", |ui| {
+///         ui.label("General preferences");
+///     })
+///     .tab("Advanced", |ui| {
+///         ui.label("Advanced settings");
+///     })
+///     .show(ui);
+/// # });
+/// # out.textures_delta.clear();
+/// ```
 pub struct MacTabView<'a> {
     selected_index: &'a mut usize,
     style: MacTabStyle,

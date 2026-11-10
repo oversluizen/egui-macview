@@ -13,6 +13,25 @@ use egui::{
 };
 
 /// Authentic macOS AppKit Grouping Box container (`NSBox` equivalent).
+///
+/// # Example
+/// ```rust
+/// use egui_macview::{MacAppearance, MacBox, MacTheme};
+///
+/// # let ctx = egui::Context::default();
+/// # let mut out = ctx.run_ui(egui::RawInput::default(), |ui| {
+/// let theme = MacTheme::new(MacAppearance::Aqua);
+///
+/// MacBox::new("Audio Output")
+///     .theme(&theme)
+///     .show(ui, |ui| {
+///         ui.label("Sample Rate: 48.0 kHz");
+///         MacBox::separator(ui);
+///         ui.label("Bit Depth: 24-bit");
+///     });
+/// # });
+/// # out.textures_delta.clear();
+/// ```
 pub struct MacBox<'a> {
     title: Option<WidgetText>,
     theme: Option<&'a MacTheme>,

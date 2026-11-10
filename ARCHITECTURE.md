@@ -24,6 +24,31 @@ In standard `egui`, widgets size themselves dynamically from their content and p
    - **Window focus awareness**: Continuous animations (such as indeterminate spinners or media timers) automatically pause when the window is unfocused or minimized (`is_window_active`).
    - **2D viewport culling**: `MacTableView` and `MacCollectionView` only allocate and paint rows or grid tiles that intersect `ui.clip_rect()`.
 
+### 1.1 Design Token & Theme Resolution Pipeline
+
+All widget dimensions, spacing, corner radii, and colors flow from a single JSON catalog (`tokens/design_tokens.json`) through `MacTheme` into each control:
+
+```mermaid
+flowchart LR
+    A["tokens/design_tokens.json"] --> B["MacDesignTokens Singleton (OnceLock)"]
+    B --> C["MacTheme (Aqua / DarkAqua / Anthracite)"]
+    C --> D["theme.apply_to_egui(ctx)"]
+    C --> E["Widget::theme(&theme) or MacTheme::resolve"]
+    D --> E
+    E --> F["Crisp Pixel-Snapped Rendering"]
+```
+
+### 1.2 3-Phase Widget Lifecycle
+
+Complex controls (`MacPlayerView`, `MacComboBox`, `MacDatePicker`, `MacTableView`, `MacCollectionView`) execute in three clean steps each frame so layout math, input state, and drawing never tangle:
+
+```mermaid
+flowchart LR
+    A["1. compute_geometry(available_rect)"] --> B["2. handle_input(ui, &geom, &mut state)"]
+    B --> C["3. paint(&painter, &geom, &state, &theme)"]
+    B --> D["Sleep at 0% CPU when idle"]
+```
+
 ---
 
 ## 2. Coordinate Spaces & Display Scaling

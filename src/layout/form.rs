@@ -7,6 +7,26 @@ use crate::theme::MacTheme;
 use egui::{vec2, Align, IdSalt, Layout, Response, Ui, Vec2, WidgetText};
 
 /// Authentic macOS AppKit 2-column Form container.
+///
+/// # Example
+/// ```rust
+/// use egui_macview::{MacAppearance, MacForm, MacTheme, MacToggle};
+///
+/// # let ctx = egui::Context::default();
+/// # let mut out = ctx.run_ui(egui::RawInput::default(), |ui| {
+/// let theme = MacTheme::new(MacAppearance::Aqua);
+/// let mut hardware_accel = true;
+///
+/// MacForm::new("preferences_form")
+///     .theme(&theme)
+///     .show(ui, |form| {
+///         form.row_label("Hardware Acceleration:", |ui| {
+///             ui.add(MacToggle::new(&mut hardware_accel).theme(&theme));
+///         });
+///     });
+/// # });
+/// # out.textures_delta.clear();
+/// ```
 pub struct MacForm<'a> {
     id_salt: IdSalt,
     theme: Option<&'a MacTheme>,

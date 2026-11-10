@@ -32,6 +32,24 @@ use std::hash::Hash;
 ///
 /// Features animated triangular chevron ($0^\circ \to 90^\circ$) powered by `CASpring` physics,
 /// invariant $13 \times 13\,\text{pt}$ hit bounds, and accessible keyboard toggle.
+///
+/// # Example
+/// ```rust
+/// use egui_macview::{MacAppearance, MacDisclosureGroup, MacTheme};
+///
+/// # let ctx = egui::Context::default();
+/// # let mut out = ctx.run_ui(egui::RawInput::default(), |ui| {
+/// let theme = MacTheme::new(MacAppearance::Aqua);
+/// let mut expanded = true;
+///
+/// MacDisclosureGroup::new("export_details", "Export Details", &mut expanded)
+///     .theme(&theme)
+///     .show(ui, |ui| {
+///         ui.label("Color Profile: Display P3");
+///     });
+/// # });
+/// # out.textures_delta.clear();
+/// ```
 pub struct MacDisclosureGroup<'a> {
     id_salt: Id,
     title: WidgetText,
@@ -190,6 +208,20 @@ impl<'a> MacDisclosureGroup<'a> {
 }
 
 /// Authentic macOS Rounded Pill Disclosure Button (`NSBezelStyleRoundedDisclosure`).
+///
+/// # Example
+/// ```rust
+/// use egui_macview::{MacAppearance, MacDisclosureButton, MacTheme};
+///
+/// # let ctx = egui::Context::default();
+/// # let mut out = ctx.run_ui(egui::RawInput::default(), |ui| {
+/// let theme = MacTheme::new(MacAppearance::Aqua);
+/// let mut expanded = false;
+///
+/// ui.add(MacDisclosureButton::new(&mut expanded).theme(&theme));
+/// # });
+/// # out.textures_delta.clear();
+/// ```
 pub struct MacDisclosureButton<'a> {
     is_expanded: &'a mut bool,
     size: MacControlSize,

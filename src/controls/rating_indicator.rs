@@ -26,6 +26,20 @@ pub const UNIT_STAR: [(f32, f32); 10] = [
 ];
 
 /// Authentic macOS AppKit Rating Level Indicator (`NSLevelIndicatorStyleRating`).
+///
+/// # Example
+/// ```rust
+/// use egui_macview::{MacAppearance, MacRatingIndicator, MacTheme};
+///
+/// # let ctx = egui::Context::default();
+/// # let mut out = ctx.run_ui(egui::RawInput::default(), |ui| {
+/// let theme = MacTheme::new(MacAppearance::Aqua);
+/// let mut stars = 4u32;
+///
+/// ui.add(MacRatingIndicator::new(&mut stars, 5).theme(&theme));
+/// # });
+/// # out.textures_delta.clear();
+/// ```
 pub struct MacRatingIndicator<'a> {
     rating: &'a mut u32,
     max_rating: u32,

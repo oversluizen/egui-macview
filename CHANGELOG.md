@@ -5,6 +5,15 @@ All notable changes to the `egui-macview` crate will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.2] - 2026-11-10
+
+### Added
+- **Standalone `eframe` Quickstart Application (`README.md`)**: Complete, copy-pasteable `src/main.rs` desktop application ("Your First App in 60 Seconds") demonstrating `eframe::App` wiring, `setup_symbols_font` registration, `MacTheme::apply_to_egui`, `MacToolbar`, `MacSplitView`, `MacBox`, and `MacForm`.
+- **Apple HIG Control Decision Guide (`README.md`)**: Practical "When to Use Which Control" comparison tables for selection controls (`MacSegmentedControl` vs `MacPopUpButton` vs `MacComboBox`), data views (`MacTableView` vs `MacOutlineView` vs `MacCollectionView`), layout containers (`MacSplitView` vs `MacTabView` vs `MacDisclosureGroup` vs `MacBox`), and numeric inputs (`MacSlider` vs `MacStepper` vs `MacCircularSlider` vs `MacInputCell::numeric`).
+- **Troubleshooting & FAQ Guide (`README.md`)**: Doc-tested answers and code recipes for symbol font setup, dynamic `Aqua` / `DarkAqua` / `Anthracite` theme switching, avoiding widget ID collisions inside loops, and battery-saving zero-idle-repaint behavior.
+- **IDE Hover `/// # Example` Rustdoc Blocks (`src/controls/`, `src/layout/`)**: Added runnable, doc-tested `/// # Example` blocks directly onto `MacPlayerView`, `MacDatePicker`, `MacComboBox`, `MacTabView`, `MacDisclosureGroup`, `MacDisclosureButton`, `MacCollectionView`, `MacBox`, `MacRuleEditor`, `MacCircularSlider`, `MacRatingIndicator`, `MacPathControl`, and `MacForm`.
+- **Visual Mermaid Architecture Diagrams (`ARCHITECTURE.md`)**: Added flowcharts illustrating the Design Token $\to$ `MacTheme` $\to$ Widget resolution pipeline and the 3-Phase Widget Lifecycle (`compute_geometry` $\to$ `handle_input` $\to$ `paint`).
+
 ## [0.6.1] - 2026-11-10
 
 ### Added
@@ -19,6 +28,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `MacCollectionView`: Upgraded both rendering and rubber-band marquee selection to $O(1)$ row-range slicing (`first_row..last_row`) and added keyboard focus acquisition on item click.
   - `MacDatePicker`: Replaced per-frame heap `Vec<String>` formatting in `TextFieldAndStepper` with a stack-allocated `[SegToken; 11]` buffer, added direct mouse click segment selection, added the `16.0 pt` weekday row (`S M T W T F S`), and added 12-hour analog clock tick marks + click-to-set-minute.
   - `MacTabView` & `MacDisclosureGroup`: Centered the top `NSTopTabsBezelBorder` segmented pill bar straddling the top bezel with MacBook minimum container bounds (`150x36`, `122x28`, `107x22 pt`), and gated disclosure `CASpring` animations on `is_rect_visible && is_window_active`.
+  - `MacTheme::resolve_or_default`: Eliminated 26 runtime `egui::Context::default()` heap allocations across control metric getters by resolving directly against the `OnceLock<Arc<MacDesignTokens>>` singleton.
+  - `MacBox` & `MacTabView`: Fixed child `UiBuilder::id_salt` generation via `ui.next_auto_id()` to prevent widget ID collisions when multiple containers are rendered in the same scope, and ensured background bezel shapes paint behind child widgets.
+- **English Documentation & Copy-Paste Quickstart Guide (`README.md`, `ARCHITECTURE.md`, `src/lib.rs`)**: Rewrote crate documentation in clear, approachable English with 7 copy-pasteable doc-tested examples covering all 35+ controls, layouts, and themes.
 
 ## [0.6.0] - 2026-11-10
 

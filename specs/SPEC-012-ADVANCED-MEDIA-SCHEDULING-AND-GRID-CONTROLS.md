@@ -4,9 +4,9 @@
 | :--- | :--- |
 | **Document ID** | SPEC-012 |
 | **Document Title** | Advanced Media, Scheduling, and Grid Controls |
-| **Document Version** | `0.6.0` |
+| **Document Version** | `0.6.2` |
 | **Status** | Accepted / Normative |
-| **Target Milestone** | Milestone 0.6.0 |
+| **Target Milestone** | Milestone 0.6.2 |
 | **Target Host** | Standalone crate `egui-macview` (Rust, egui 0.37) |
 | **Author** | Jaco Oversluizen / `egui-macview` contributors |
 | **Hardware Ground Truth** | Apple Silicon MacBook Air (macOS Sonoma `14.8.9`, SDK `14`, 291 AppKit headers, 11 AVKit headers) |
@@ -21,6 +21,8 @@
 | :--- | :--- | :--- | :--- |
 | `0.1.0` | 2026-11-05 | Architecture Team | Initial `egui-macview` specification suite baseline. |
 | `0.6.0` | 2026-11-10 | Architecture Team | Milestone 0.6.0 Release: Advanced Media, Scheduling, and Grid Controls (`MacPlayerView`, `MacDatePicker`, `MacComboBox`, `MacTabView`, `MacDisclosureGroup`, `MacCollectionView`, `MacBox`, `MacRuleEditor`) grounded in live macOS Sonoma 14.8.9 hardware inspection, verified with `spec012_advanced_controls_tests.rs`. |
+| `0.6.1` | 2026-11-10 | Architecture Team | Milestone 0.6.1 Release: Full AVKit transport/audio/speed controls, `MacRuleEditor` implementation, zero idle heap allocations (`MacTheme::resolve_or_default`), and `spec012_appkit_and_battery_parity_tests.rs`. |
+| `0.6.2` | 2026-11-10 | Architecture Team | Milestone 0.6.2 Release: Comprehensive developer documentation, HIG decision tables, standalone `eframe` quickstart, IDE hover `/// # Example` doc-tests, and architecture diagrams. |
 
 ---
 
@@ -205,12 +207,3 @@ All controls specified herein SHALL resolve styling exclusively via `MacTheme` b
 | `REQ-012-05` | `MacDisclosureGroup` | `TC-012-05` | Headless `egui` | Disclosure chevron $13 \times 13\,\text{pt}$ invariant; rounded disclosure $28 \times 26\,\text{pt}$ Regular; `CASpring` rotation smoothly interpolates $0^\circ \to 90^\circ$. |
 | `REQ-012-06` | `MacCollectionView` | `TC-012-06` | Headless `egui` + `proptest` | FlowLayout item size $50 \times 50\,\text{pt}$; spacing $10\,\text{pt}$; 2D marquee selection calculates correct AABB; items outside `clip_rect` culled. |
 | `REQ-012-07` | Supplementary Primitives | `TC-012-07` | Headless `egui` | `MacBox` content insets $\{20, 10, 9, 9\}\,\text{pt}$; separator $1.0\,\text{pt}$ in $5.0\,\text{pt}$ frame; `MacRuleEditor` slice row $32.0\,\text{pt}$. |
-
----
-
-## 5. Revision History
-
-| Version | Date | Author | Description |
-| :--- | :--- | :--- | :--- |
-| `0.1.0` | 2026-11-05 | AI Architecture Team | Initial `egui-macview` specification suite baseline. |
-| `0.6.0` | 2026-11-10 | AI Architecture Team | Formal normative specification for Milestone 0.6.0 Advanced Media, Scheduling, and Grid Controls. |

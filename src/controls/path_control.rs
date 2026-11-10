@@ -58,6 +58,30 @@ pub struct MacPathControlResponse {
 }
 
 /// Authentic macOS AppKit breadcrumb path bar (`NSPathControl` equivalent).
+///
+/// # Example
+/// ```rust
+/// use egui_macview::{MacAppearance, MacPathComponent, MacPathControl, MacTheme};
+///
+/// # let ctx = egui::Context::default();
+/// # let mut out = ctx.run_ui(egui::RawInput::default(), |ui| {
+/// let theme = MacTheme::new(MacAppearance::Aqua);
+/// let path = [
+///     MacPathComponent::folder("Users"),
+///     MacPathComponent::folder("Projects"),
+///     MacPathComponent::file("Cargo.toml"),
+/// ];
+///
+/// let res = MacPathControl::new("file_breadcrumbs", &path)
+///     .show_choose_button(true)
+///     .theme(&theme)
+///     .show(ui);
+/// if let Some(idx) = res.clicked_segment {
+///     // Navigated to segment `idx`
+/// }
+/// # });
+/// # out.textures_delta.clear();
+/// ```
 pub struct MacPathControl<'a> {
     id: Id,
     components: std::borrow::Cow<'a, [MacPathComponent<'a>]>,

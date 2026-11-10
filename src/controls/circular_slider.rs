@@ -9,6 +9,20 @@ use egui::{Color32, Key, Modifiers, Pos2, Response, Sense, Stroke, Ui, Vec2, Wid
 use std::ops::RangeInclusive;
 
 /// Authentic macOS AppKit rotary circular slider (`NSSlider` circular style).
+///
+/// # Example
+/// ```rust
+/// use egui_macview::{MacAppearance, MacCircularSlider, MacTheme};
+///
+/// # let ctx = egui::Context::default();
+/// # let mut out = ctx.run_ui(egui::RawInput::default(), |ui| {
+/// let theme = MacTheme::new(MacAppearance::DarkAqua);
+/// let mut pan = 0.0f32;
+///
+/// ui.add(MacCircularSlider::new(&mut pan, -1.0..=1.0).theme(&theme));
+/// # });
+/// # out.textures_delta.clear();
+/// ```
 pub struct MacCircularSlider<'a> {
     value: &'a mut f32,
     range: RangeInclusive<f32>,

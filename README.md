@@ -28,13 +28,126 @@ Add `egui-macview` to your `Cargo.toml`:
 ```toml
 [dependencies]
 egui = "0.37.0"
-egui-macview = "0.6.1"
+egui-macview = "0.6.2"
 ```
 
 To run the interactive showcase gallery included in this repository:
 
 ```bash
 cargo run --example macview_gallery
+```
+
+---
+
+## Your First App in 60 Seconds (`eframe`)
+
+Here is a complete, runnable desktop application (`src/main.rs`) with a macOS window toolbar, a resizable sidebar split view, and a two-column settings form:
+
+```rust,no_run
+use eframe::egui;
+use egui_macview::{
+    MacAppearance, MacBox, MacButton, MacForm, MacInputCell, MacSegmentedControl,
+    MacSplitOrientation, MacSplitView, MacTheme, MacToggle, MacToolbar, WindowControlsStyle,
+    setup_symbols_font,
+};
+
+struct MyMacApp {
+    appearance: MacAppearance,
+    sidebar_width: f32,
+    project_name: String,
+    auto_save: bool,
+    view_mode: usize,
+}
+
+impl Default for MyMacApp {
+    fn default() -> Self {
+        Self {
+            appearance: MacAppearance::DarkAqua,
+            sidebar_width: 200.0,
+            project_name: String::from("Untitled Studio Project"),
+            auto_save: true,
+            view_mode: 0,
+        }
+    }
+}
+
+impl eframe::App for MyMacApp {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        let theme = MacTheme::new(self.appearance);
+        theme.apply_to_egui(ui.ctx());
+
+        // Top window toolbar
+        MacToolbar::new("My Studio App")
+            .window_controls_style(WindowControlsStyle::AppleTrafficLights)
+            .theme(&theme)
+            .show(ui, |toolbar_ui| {
+                let modes = ["Editor", "Inspector"];
+                MacSegmentedControl::new(&modes, self.view_mode)
+                    .theme(&theme)
+                    .show(toolbar_ui, |idx| self.view_mode = idx);
+
+                let label = match self.appearance {
+                    MacAppearance::Aqua => "Switch to Dark",
+                    _ => "Switch to Light",
+                };
+                if toolbar_ui.add(MacButton::new(label).theme(&theme)).clicked() {
+                    self.appearance = match self.appearance {
+                        MacAppearance::Aqua => MacAppearance::DarkAqua,
+                        _ => MacAppearance::Aqua,
+                    };
+                }
+            });
+
+        // Main split view with sidebar and inspector form
+        MacSplitView::with_pos(
+            "workspace_split",
+            MacSplitOrientation::Horizontal,
+            &mut self.sidebar_width,
+        )
+        .min_first(150.0)
+        .max_first(320.0)
+        .theme(&theme)
+        .show(
+            ui,
+            |sidebar_ui| {
+                sidebar_ui.heading("Project Files");
+                sidebar_ui.label("• main.rs");
+                sidebar_ui.label("• Cargo.toml");
+            },
+            |content_ui| {
+                MacBox::new("Project Preferences")
+                    .theme(&theme)
+                    .show(content_ui, |box_ui| {
+                        MacForm::new("prefs_form").theme(&theme).show(box_ui, |form| {
+                            form.row_label("Project Name:", |ui| {
+                                MacInputCell::new("proj_name", &mut self.project_name)
+                                    .theme(&theme)
+                                    .show(ui);
+                            });
+                            form.row_label("Auto-Save:", |ui| {
+                                ui.add(MacToggle::new(&mut self.auto_save).theme(&theme));
+                            });
+                        });
+                    });
+            },
+        );
+    }
+}
+
+fn main() -> eframe::Result<()> {
+    let options = eframe::NativeOptions::default();
+    eframe::run_native(
+        "My Studio App",
+        options,
+        Box::new(|cc| {
+            // Register the embedded Cupertino vector icon font once at startup:
+            let mut fonts = egui::FontDefinitions::default();
+            setup_symbols_font(&mut fonts);
+            cc.egui_ctx.set_fonts(fonts);
+            Ok(Box::new(MyMacApp::default()))
+        }),
+    )
+}
 ```
 
 ---
@@ -116,7 +229,7 @@ MacForm::new("project_settings_form")
         form.row(
             |ui| { ui.label("Project Name:"); },
             |ui| {
-                MacInputCell::with_id(egui::Id::new("project_name_input"), &mut project_name)
+                MacInputCell::new("project_name_input", &mut project_name)
                     .theme(&theme)
                     .show(ui);
             },
@@ -475,6 +588,105 @@ ui.horizontal(|ui| {
 
 ---
 
+## When to Use Which Control (Decision Guide)
+
+Not sure which widget fits your screen best? Use these guidelines modeled after Apple's macOS Human Interface Guidelines:
+
+### 1. Choosing a Selection Control
+
+| Control | Best For | Avoid When |
+| :--- | :--- | :--- |
+| **[`MacSegmentedControl`](src/controls/segmented.rs)** | Switching between **2 to 5 closely related views or modes** (e.g., `Grid \| List \| Columns`) where all options should be visible at a glance. | You have more than 5 options, or the labels are long phrases. Use `MacPopUpButton` instead. |
+| **[`MacPopUpButton`](src/controls/popup_button.rs)** | Picking **one option from a fixed list of 5 to 20 items** (e.g., file export format or color profile) where the user does not need to type custom values. | The list has dozens of items that need text filtering, or the user can enter a custom value. Use `MacComboBox` instead. |
+| **[`MacComboBox`](src/controls/combo_box.rs)** | Picking from a **searchable list OR typing a custom value** (e.g., choosing a font family or entering a custom zoom preset). | The user must only pick from a small, strictly fixed set of options. Use `MacPopUpButton` instead. |
+
+### 2. Choosing a Data View
+
+| Control | Best For | Avoid When |
+| :--- | :--- | :--- |
+| **[`MacTableView`](src/controls/table_view/mod.rs)** | Displaying **structured records with multiple attributes** (e.g., Name, Date Modified, Size) that users sort by column header or navigate row-by-row. | Items are primarily visual (thumbnails, icons, color swatches). Use `MacCollectionView` instead. |
+| **[`MacOutlineView`](src/controls/outline_view.rs)** | Navigating **hierarchical trees** (e.g., folder trees, document outlines, scene graphs, or sidebar navigation) with collapsible parent nodes. | Your data is flat and has no parent-child hierarchy. Use `MacTableView` instead. |
+| **[`MacCollectionView`](src/controls/collection_view.rs)** | Browsing **visual 2D grids of tiles** (e.g., photo galleries, icon pickers, asset browsers) with rubber-band marquee selection and 2D arrow-key navigation. | Users need to compare text or numbers across multiple columns. Use `MacTableView` instead. |
+
+### 3. Choosing a Layout Container
+
+| Container | Best For | Avoid When |
+| :--- | :--- | :--- |
+| **[`MacSplitView`](src/layout/split_view.rs)** | Dividing a window into **resizable workspace panes** (e.g., a left navigation sidebar, a center canvas, and a right inspector). | Grouping small related controls inside a single pane. Use `MacBox` or `MacForm` instead. |
+| **[`MacTabView`](src/controls/tab_view.rs)** | Switching an entire pane between **peer pages** (e.g., `General`, `Shortcuts`, `Export` preference tabs) where only one page is visible at a time. | Hiding optional advanced settings on the same page. Use `MacDisclosureGroup` instead. |
+| **[`MacDisclosureGroup`](src/controls/disclosure_group.rs)** | Toggling **optional or advanced details** inline so the user can expand multiple sections simultaneously. | Top-level window navigation. Use `MacTabView` or `MacSplitView` instead. |
+| **[`MacBox`](src/controls/box_view.rs)** | Visually **grouping a cluster of related fields** under a subtle border and title label. | Aligning two-column `Label: Control` pairs. Put a [`MacForm`](src/layout/form.rs) inside the `MacBox` for alignment. |
+
+### 4. Choosing a Numeric Input
+
+| Control | Best For |
+| :--- | :--- |
+| **[`MacSlider`](src/controls/slider.rs)** | Adjusting a continuous value within a bounded range (e.g., Opacity `0%–100%` or Volume) where visual proportion matters more than exact digits. |
+| **[`MacStepper`](src/controls/stepper.rs)** | Nudging an exact numeric value up or down by fixed increments (e.g., `±1 px` border width or `±25%` zoom) next to a readout or text field. |
+| **[`MacCircularSlider`](src/controls/circular_slider.rs)** | Compact rotary dials in audio mixers, pan pots, or angle/rotation inspectors where vertical space is tight. |
+| **[`MacInputCell::numeric`](src/controls/input_cell.rs)** | Typing an exact number with keyboard arrow stepping (`Up`/`Down` for `±1×`, `Shift` for `±10×`, `Cmd`/`Ctrl` for `±100×`) and `Escape` rollback. |
+
+---
+
+## Troubleshooting & FAQ
+
+### 1. Why do icons or symbols show up as empty boxes (`□`)?
+`egui-macview` uses an embedded monochrome vector icon font (`CupertinoIcons.ttf`) so symbols render identically on Windows, macOS, Linux, and Web. You must register this font once on your `egui::Context` at startup:
+
+```rust
+use egui_macview::setup_symbols_font;
+
+# let ctx = egui::Context::default();
+let mut fonts = egui::FontDefinitions::default();
+setup_symbols_font(&mut fonts);
+ctx.set_fonts(fonts);
+```
+
+### 2. How do I switch dynamically between Light (`Aqua`), Dark (`DarkAqua`), and `Anthracite` themes?
+Create a [`MacTheme`] with your chosen [`MacAppearance`] and call `theme.apply_to_egui(ctx)`. Calling `apply_to_egui` updates `egui`'s background visuals and stores the theme inside `egui::Context` so every `egui-macview` widget automatically uses it:
+
+```rust
+use egui_macview::{MacAppearance, MacButton, MacTheme};
+
+# let ctx = egui::Context::default();
+let theme = MacTheme::new(MacAppearance::Anthracite);
+theme.apply_to_egui(&ctx);
+
+# let mut out = ctx.run_ui(egui::RawInput::default(), |ui| {
+// Because `apply_to_egui` was called, widgets automatically pick up `Anthracite`
+// even when you don't pass `.theme(&theme)` explicitly:
+ui.add(MacButton::new("Automatically Themed"));
+# });
+# out.textures_delta.clear();
+```
+
+### 3. How do I avoid widget ID collisions when rendering controls in a `for` loop?
+Just like standard `egui`, stateful controls (`MacComboBox`, `MacTableView`, `MacDisclosureGroup`, `MacInputCell`, `MacRuleEditor`) use an ID salt to store popup or focus state across frames. When rendering multiple instances in a loop, either pass a unique tuple `(name, index)` as the ID salt or wrap each iteration in `ui.push_id`:
+
+```rust
+use egui_macview::MacComboBox;
+
+# let ctx = egui::Context::default();
+# let mut out = ctx.run_ui(egui::RawInput::default(), |ui| {
+let options = ["None", "Fade", "Dissolve"];
+let mut row_values = vec![String::from("Fade"), String::from("None")];
+
+for (row_idx, val) in row_values.iter_mut().enumerate() {
+    // Pass `("transition_combo", row_idx)` so each row gets a distinct egui::Id:
+    MacComboBox::new(("transition_combo", row_idx), val, &options).show(ui);
+}
+# });
+# out.textures_delta.clear();
+```
+
+### 4. How does battery-saving idle repaint work?
+Immediate-mode GUIs often burn CPU and laptop battery by repainting at 60–120 FPS even when nothing is moving. `egui-macview` avoids this automatically:
+- **Spring animations (`CASpring`)** request repaints only while a transition is in flight. As soon as a toggle switch, segmented pill, or disclosure chevron settles at its target position, it stops requesting repaints (`0% CPU` at rest).
+- **Floating media HUD (`MacPlayerView`)** schedules a single wakeup timer (`request_repaint_after_secs`) for its 3.0-second auto-hide instead of polling every frame.
+- **Unfocused & minimized windows**: Continuous animations (such as indeterminate progress spinners) check `is_window_active(ctx)` and `ui.is_rect_visible(rect)` and pause automatically when your app window is in the background or minimized.
+
+---
+
 ## Quality & Testing
 
 Run the full test suite and linter with:
@@ -485,7 +697,7 @@ cargo test --doc
 cargo clippy --all-targets -- -D warnings
 ```
 
-- **22 integration test suites** and **30+ documentation tests** verify widget layout, keyboard navigation, undo/redo roundtrips, WCAG contrast ratios, and zero idle CPU usage.
+- **23 integration test suites** and **50+ documentation tests** verify widget layout, keyboard navigation, undo/redo roundtrips, WCAG contrast ratios, and zero idle CPU usage.
 - **Design token architecture**: All dimensions, spacing, corner radii, and semantic colors live in [`tokens/design_tokens.json`](tokens/design_tokens.json) and are resolved through [`MacTheme`].
 
 ---

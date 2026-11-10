@@ -38,6 +38,29 @@ pub use matrix::paint_clock_and_calendar;
 pub use types::{MacDate, MacDatePickerElementFlags, MacDatePickerStyle};
 
 /// Authentic macOS AppKit Date Picker (`NSDatePicker` equivalent).
+///
+/// # Example
+/// ```rust
+/// use egui_macview::{
+///     MacAppearance, MacDate, MacDatePicker, MacDatePickerElementFlags, MacDatePickerStyle,
+///     MacTheme,
+/// };
+///
+/// # let ctx = egui::Context::default();
+/// # let mut out = ctx.run_ui(egui::RawInput::default(), |ui| {
+/// let theme = MacTheme::new(MacAppearance::Aqua);
+/// let mut date = MacDate::default();
+///
+/// ui.add(
+///     MacDatePicker::new()
+///         .date(&mut date)
+///         .style(MacDatePickerStyle::TextFieldAndStepper)
+///         .elements(MacDatePickerElementFlags::DateAndTime)
+///         .theme(&theme),
+/// );
+/// # });
+/// # out.textures_delta.clear();
+/// ```
 pub struct MacDatePicker<'a> {
     date: Option<&'a mut MacDate>,
     style: MacDatePickerStyle,

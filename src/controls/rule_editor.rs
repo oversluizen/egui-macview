@@ -24,6 +24,27 @@ impl MacRuleRow {
 }
 
 /// Authentic macOS AppKit Rule Editor (`NSRuleEditor` equivalent).
+///
+/// # Example
+/// ```rust
+/// use egui_macview::{MacAppearance, MacRuleEditor, MacRuleRow, MacTheme};
+///
+/// # let ctx = egui::Context::default();
+/// # let mut out = ctx.run_ui(egui::RawInput::default(), |ui| {
+/// let theme = MacTheme::new(MacAppearance::Aqua);
+/// let mut rows = vec![MacRuleRow::new(vec![0, 0, 0])];
+/// let criteria: &[&[&str]] = &[
+///     &["Name", "Kind", "Size"],
+///     &["contains", "is", "begins with"],
+///     &["Document", "Image", "Audio"],
+/// ];
+///
+/// MacRuleEditor::new("filter_rules", &mut rows, criteria)
+///     .theme(&theme)
+///     .show(ui);
+/// # });
+/// # out.textures_delta.clear();
+/// ```
 pub struct MacRuleEditor<'a> {
     id_salt: Id,
     rows: &'a mut Vec<MacRuleRow>,
