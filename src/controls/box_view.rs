@@ -85,6 +85,9 @@ impl<'a> MacBox<'a> {
             Pos2::new(start_pos.x + available_w - insets.right, f32::INFINITY),
         );
 
+        // Pre-allocate background shape on painter so it renders BEHIND child widgets (GL-1015 Z-order invariant)
+        let bg_shape_idx = ui.painter().add(egui::Shape::Noop);
+
         let mut child_ui = ui.new_child(
             UiBuilder::new()
                 .id_salt(Id::NULL.with("mac_box_content"))
@@ -98,15 +101,17 @@ impl<'a> MacBox<'a> {
         let box_rect = subpixel_snap_rect(box_rect, ui.ctx().pixels_per_point());
 
         let (rect, response) = ui.allocate_exact_size(box_rect.size(), Sense::hover());
-        let painter = ui.painter_at(rect);
 
-        // Draw outer bezel frame
-        painter.rect(
-            rect,
-            CornerRadius::same(corner_r as u8),
-            theme.control_background(),
-            Stroke::new(border_w, theme.separator()),
-            StrokeKind::Inside,
+        // Update pre-allocated shape with outer bezel frame behind content
+        ui.painter().set(
+            bg_shape_idx,
+            egui::epaint::RectShape::new(
+                rect,
+                CornerRadius::same(corner_r as u8),
+                theme.control_background(),
+                Stroke::new(border_w, theme.separator()),
+                StrokeKind::Inside,
+            ),
         );
 
         // Draw title label in top-left inset if provided
@@ -118,7 +123,7 @@ impl<'a> MacBox<'a> {
                 egui::TextStyle::Body,
             );
             let title_pos = Pos2::new(rect.min.x + insets.left, rect.min.y + insets.top * 0.5 - galley.size().y * 0.5);
-            painter.galley(title_pos, galley, theme.label());
+            ui.painter().galley(title_pos, galley, theme.label());
         }
 
         InnerResponse::new(inner, response)

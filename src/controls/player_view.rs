@@ -27,7 +27,9 @@ pub enum MacPlayerControlsStyle {
 pub struct MacPlayerView<'a> {
     controls_style: MacPlayerControlsStyle,
     is_playing: bool,
+    is_playing_ref: Option<&'a mut bool>,
     progress: f32,
+    progress_ref: Option<&'a mut f32>,
     theme: Option<&'a MacTheme>,
 }
 
@@ -43,7 +45,9 @@ impl<'a> MacPlayerView<'a> {
         Self {
             controls_style: MacPlayerControlsStyle::Floating,
             is_playing: false,
+            is_playing_ref: None,
             progress: 0.0,
+            progress_ref: None,
             theme: None,
         }
     }
@@ -54,15 +58,29 @@ impl<'a> MacPlayerView<'a> {
         self
     }
 
-    /// Sets playback status.
+    /// Sets playback status by value.
     pub fn is_playing(mut self, playing: bool) -> Self {
         self.is_playing = playing;
         self
     }
 
-    /// Sets timeline playback progress in $[0.0, 1.0]$.
+    /// Binds mutable playback status reference for two-way state synchronization.
+    pub fn is_playing_mut(mut self, playing: &'a mut bool) -> Self {
+        self.is_playing = *playing;
+        self.is_playing_ref = Some(playing);
+        self
+    }
+
+    /// Sets timeline playback progress in $[0.0, 1.0]$ by value.
     pub fn progress(mut self, progress: f32) -> Self {
         self.progress = progress;
+        self
+    }
+
+    /// Binds mutable playback progress reference for two-way timeline scrubbing.
+    pub fn progress_mut(mut self, progress: &'a mut f32) -> Self {
+        self.progress = *progress;
+        self.progress_ref = Some(progress);
         self
     }
 
@@ -216,6 +234,9 @@ impl<'a> Widget for MacPlayerView<'a> {
                         if let Some(pos) = interact_pos {
                             let prog = ((pos.x - track_rect.min.x) / track_rect.width()).clamp(0.0, 1.0);
                             self.progress = prog;
+                            if let Some(ref mut p_ref) = self.progress_ref {
+                                **p_ref = prog;
+                            }
                             response.mark_changed();
                         }
                     }
@@ -261,6 +282,9 @@ impl<'a> Widget for MacPlayerView<'a> {
                     let play_hit = Rect::from_center_size(play_center, Vec2::new(knob_sz.x * 2.0, knob_sz.x * 2.0));
                     if interact_pos.is_some_and(|p| play_hit.contains(p)) && ui.input(|i| i.pointer.primary_clicked()) {
                         self.is_playing = !self.is_playing;
+                        if let Some(ref mut play_ref) = self.is_playing_ref {
+                            **play_ref = self.is_playing;
+                        }
                         response.mark_changed();
                     }
 

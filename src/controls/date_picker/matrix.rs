@@ -53,9 +53,13 @@ pub fn paint_clock_and_calendar(
                 if left_btn.contains(pos) {
                     if date.month <= 1 {
                         date.month = 12;
-                        date.year -= 1;
+                        date.year = (date.year - 1).max(1);
                     } else {
                         date.month -= 1;
+                    }
+                    let max_d = date.days_in_month();
+                    if date.day > max_d {
+                        date.day = max_d;
                     }
                     response.mark_changed();
                 } else if right_btn.contains(pos) {
@@ -64,6 +68,10 @@ pub fn paint_clock_and_calendar(
                         date.year += 1;
                     } else {
                         date.month += 1;
+                    }
+                    let max_d = date.days_in_month();
+                    if date.day > max_d {
+                        date.day = max_d;
                     }
                     response.mark_changed();
                 }

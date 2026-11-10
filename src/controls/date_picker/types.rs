@@ -85,20 +85,18 @@ impl MacDate {
         (h + 6) % 7
     }
 
-    /// Increments or decrements a specific date/time segment.
+    /// Increments or decrements a specific date/time segment with robust calendar invariants.
     pub fn step_segment(&mut self, segment: usize, flags: MacDatePickerElementFlags, delta: i32) {
-        let max_days = self.days_in_month() as i32;
         match (flags, segment) {
             (MacDatePickerElementFlags::DateAndTime, 0) | (MacDatePickerElementFlags::DateOnly, 0) => {
-                self.year += delta;
+                self.year = (self.year + delta).clamp(1, 9999);
+                let new_max = self.days_in_month();
+                if self.day > new_max {
+                    self.day = new_max;
+                }
             }
             (MacDatePickerElementFlags::DateAndTime, 1) | (MacDatePickerElementFlags::DateOnly, 1) => {
-                let mut m = self.month as i32 + delta;
-                if m < 1 {
-                    m = 12;
-                } else if m > 12 {
-                    m = 1;
-                }
+                let m = ((self.month as i32 - 1 + delta).rem_euclid(12)) + 1;
                 self.month = m as u32;
                 let new_max = self.days_in_month();
                 if self.day > new_max {
@@ -106,40 +104,18 @@ impl MacDate {
                 }
             }
             (MacDatePickerElementFlags::DateAndTime, 2) | (MacDatePickerElementFlags::DateOnly, 2) => {
-                let mut d = self.day as i32 + delta;
-                if d < 1 {
-                    d = max_days;
-                } else if d > max_days {
-                    d = 1;
-                }
+                let max_days = self.days_in_month() as i32;
+                let d = ((self.day as i32 - 1 + delta).rem_euclid(max_days)) + 1;
                 self.day = d as u32;
             }
             (MacDatePickerElementFlags::DateAndTime, 3) | (MacDatePickerElementFlags::TimeOnly, 0) => {
-                let mut h = self.hour as i32 + delta;
-                if h < 0 {
-                    h = 23;
-                } else if h > 23 {
-                    h = 0;
-                }
-                self.hour = h as u32;
+                self.hour = ((self.hour as i32 + delta).rem_euclid(24)) as u32;
             }
             (MacDatePickerElementFlags::DateAndTime, 4) | (MacDatePickerElementFlags::TimeOnly, 1) => {
-                let mut min = self.minute as i32 + delta;
-                if min < 0 {
-                    min = 59;
-                } else if min > 59 {
-                    min = 0;
-                }
-                self.minute = min as u32;
+                self.minute = ((self.minute as i32 + delta).rem_euclid(60)) as u32;
             }
             (MacDatePickerElementFlags::DateAndTime, 5) | (MacDatePickerElementFlags::TimeOnly, 2) => {
-                let mut s = self.second as i32 + delta;
-                if s < 0 {
-                    s = 59;
-                } else if s > 59 {
-                    s = 0;
-                }
-                self.second = s as u32;
+                self.second = ((self.second as i32 + delta).rem_euclid(60)) as u32;
             }
             _ => {}
         }

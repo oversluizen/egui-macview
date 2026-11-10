@@ -91,8 +91,8 @@ impl CenterState {
                                     ui.add(
                                         MacPlayerView::new()
                                             .controls_style(MacPlayerControlsStyle::Floating)
-                                            .is_playing(self.advanced_player_playing)
-                                            .progress(self.advanced_player_progress)
+                                            .is_playing_mut(&mut self.advanced_player_playing)
+                                            .progress_mut(&mut self.advanced_player_progress)
                                             .theme(theme),
                                     );
                                 });
@@ -118,7 +118,7 @@ impl CenterState {
                                         MacDatePicker::new()
                                             .date(&mut self.advanced_date)
                                             .style(MacDatePickerStyle::ClockAndCalendar)
-                                            .elements(MacDatePickerElementFlags::TimeOnly)
+                                            .elements(MacDatePickerElementFlags::DateAndTime)
                                             .theme(theme),
                                     );
                                 });

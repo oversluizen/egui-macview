@@ -179,6 +179,44 @@ fn test_spec012_tab_view_insets_and_flipped_layout() {
         "Tab view container must dynamically size to enclose content: {tab_resp_height}"
     );
     assert_eq!(selected_tab, 0);
+
+    // 4. Z-Order invariant: Tab body background must be painted BEHIND active tab child content
+    let tab_shapes = run_pass(&ctx, RawInput::default(), |ui| {
+        MacTabView::new(&mut selected_tab)
+            .theme(&theme)
+            .tab("First", |ui| {
+                ui.label("Tab Inside Child Text");
+            })
+            .show(ui);
+    });
+
+    let mut tab_bg_idx = None;
+    let mut tab_label_idx = None;
+
+    for (idx, clipped) in tab_shapes.iter().enumerate() {
+        match &clipped.shape {
+            egui::Shape::Rect(r) if r.fill == theme.control_background() => {
+                if tab_bg_idx.is_none() {
+                    tab_bg_idx = Some(idx);
+                }
+            }
+            egui::Shape::Text(t) if t.galley.text() == "Tab Inside Child Text" => {
+                tab_label_idx = Some(idx);
+            }
+            _ => {}
+        }
+    }
+
+    assert!(
+        tab_bg_idx.is_some() && tab_label_idx.is_some(),
+        "Both tab body background and tab child content label must be present"
+    );
+    assert!(
+        tab_bg_idx.unwrap() < tab_label_idx.unwrap(),
+        "Tab body background (idx {:?}) must be painted BEHIND tab child content (idx {:?})",
+        tab_bg_idx,
+        tab_label_idx
+    );
 }
 
 /// TC-012-02: Validates MacDatePicker stepper invariants, dimensions, stepping and calendar/clock matrices.
@@ -238,6 +276,38 @@ fn test_spec012_date_picker_stepper_and_calendar_matrix() {
 
     test_date.step_segment(1, MacDatePickerElementFlags::DateOnly, 2);
     assert_eq!(test_date.month, 1); // Nov (11) + 2 wraps to Jan (1)
+
+    // Leap-year boundary stepping invariant: 2024-02-29 + 1 year must clamp day to 28
+    let mut leap_date = MacDate {
+        year: 2024,
+        month: 2,
+        day: 29,
+        hour: 12,
+        minute: 0,
+        second: 0,
+    };
+    leap_date.step_segment(0, MacDatePickerElementFlags::DateOnly, 1);
+    assert_eq!(leap_date.year, 2025);
+    assert_eq!(
+        leap_date.day, 28,
+        "Stepping year from leap year to non-leap year must clamp Feb 29 to Feb 28"
+    );
+
+    // Century leap-year boundary: year 2000 is leap, year 1900 is non-leap
+    let mut century_date = MacDate {
+        year: 2000,
+        month: 2,
+        day: 29,
+        hour: 12,
+        minute: 0,
+        second: 0,
+    };
+    century_date.step_segment(0, MacDatePickerElementFlags::DateOnly, -100);
+    assert_eq!(century_date.year, 1900);
+    assert_eq!(
+        century_date.day, 28,
+        "Year 1900 is not a leap year, day must clamp to 28"
+    );
 
     // Render picker in UI
     run_pass(&ctx, RawInput::default(), |ui| {
@@ -325,6 +395,21 @@ fn test_spec012_player_view_hud_pod_and_inline_transport() {
                 .theme(&theme),
         );
     });
+
+    // 5. Two-way mutable state binding
+    let mut live_playing = false;
+    let mut live_progress = 0.15f32;
+    run_pass(&ctx, RawInput::default(), |ui| {
+        ui.add(
+            MacPlayerView::new()
+                .controls_style(MacPlayerControlsStyle::Floating)
+                .is_playing_mut(&mut live_playing)
+                .progress_mut(&mut live_progress)
+                .theme(&theme),
+        );
+    });
+    assert!(!live_playing);
+    assert!((live_progress - 0.15).abs() < 1e-4);
 }
 
 /// TC-012-07: Validates MacBox container insets and separator primitive.
@@ -342,7 +427,7 @@ fn test_spec012_box_view_insets_and_primitives() {
     assert_eq!(mac_box.border_width(), 1.0);
 
     // Render Box and Separator
-    run_pass(&ctx, RawInput::default(), |ui| {
+    let shapes = run_pass(&ctx, RawInput::default(), |ui| {
         MacBox::new("Enclosed Container")
             .theme(&theme)
             .show(ui, |b_ui| {
@@ -350,4 +435,32 @@ fn test_spec012_box_view_insets_and_primitives() {
                 MacBox::separator(b_ui);
             });
     });
+
+    let mut bg_rect_idx = None;
+    let mut label_text_idx = None;
+
+    for (idx, clipped) in shapes.iter().enumerate() {
+        match &clipped.shape {
+            egui::Shape::Rect(r) if r.fill == theme.control_background() => {
+                if bg_rect_idx.is_none() {
+                    bg_rect_idx = Some(idx);
+                }
+            }
+            egui::Shape::Text(t) if t.galley.text() == "Box Content" => {
+                label_text_idx = Some(idx);
+            }
+            _ => {}
+        }
+    }
+
+    assert!(
+        bg_rect_idx.is_some() && label_text_idx.is_some(),
+        "Both container background and child label must be in painter shapes"
+    );
+    assert!(
+        bg_rect_idx.unwrap() < label_text_idx.unwrap(),
+        "Container background (idx {:?}) must be painted BEHIND child content label (idx {:?})",
+        bg_rect_idx,
+        label_text_idx
+    );
 }

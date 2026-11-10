@@ -161,6 +161,9 @@ impl<'a> MacTabView<'a> {
             Pos2::new(start_pos.x + available_w - insets.right, f32::INFINITY),
         );
 
+        // Pre-allocate background shape on ui painter so it renders BEHIND tab child content (GL-1015 Z-order invariant)
+        let bg_shape_idx = ui.painter().add(egui::Shape::Noop);
+
         let mut child_ui = ui.new_child(
             UiBuilder::new()
                 .id_salt(Id::NULL.with("tab_content").with(active_idx))
@@ -192,21 +195,25 @@ impl<'a> MacTabView<'a> {
         let (rect, mut response) = ui.allocate_exact_size(container_rect.size(), Sense::click());
 
         if self.style == MacTabStyle::TopTabsBezelBorder {
-            let painter = ui.painter_at(rect);
             let corner_r = theme.tab_view().corner_radius.points();
 
-            // Bezel border frame below tab bar
+            // Bezel border frame below tab bar pre-allocated BEHIND child content
             let body_rect = Rect::from_min_max(
                 Pos2::new(rect.min.x, rect.min.y + bar_h * 0.5),
                 rect.max,
             );
-            painter.rect(
-                body_rect,
-                CornerRadius::same(corner_r as u8),
-                theme.control_background(),
-                Stroke::new(1.0, theme.separator()),
-                StrokeKind::Inside,
+            ui.painter().set(
+                bg_shape_idx,
+                egui::epaint::RectShape::new(
+                    body_rect,
+                    CornerRadius::same(corner_r as u8),
+                    theme.control_background(),
+                    Stroke::new(1.0, theme.separator()),
+                    StrokeKind::Inside,
+                ),
             );
+
+            let painter = ui.painter_at(rect);
 
             // Tab bar segments
             if tab_count > 0 {
