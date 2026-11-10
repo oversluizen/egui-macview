@@ -5,6 +5,15 @@ All notable changes to the `egui-macview` crate will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.3] - 2026-11-10
+
+### Added
+- **IDE Hover `/// # Example` Rustdoc Blocks (`src/navigation/`, `src/surfaces/`, `src/feedback/`, `src/state/`, `src/symbols.rs`)**: Added runnable, doc-tested `/// # Example` blocks onto `MacToolbar`, `MacMenuBar`, `MacCommandPalette`, `MacCanvasFooter`, `MacPopover`, `MacFloatingInfoBox`, `MacContextMenu`, `MacToastManager`, `NSUndoManager`, and `MacSymbol`.
+- **`README.md` Rustdoc Intra-Doc Link Guard (`tests/architecture_guard_tests.rs`)**: Added automated architecture guard asserting zero relative `](src/` file links in `README.md` so all API references resolve cleanly on `docs.rs`.
+
+### Fixed
+- **Zero Broken Links on `docs.rs` & GitHub (`README.md`, `ARCHITECTURE.md`, `CHANGELOG.md`)**: Converted 62 relative `(src/...)` file links in `README.md` API reference tables to rustdoc intra-doc links (`[`Type`]`), fixed the relative `SPEC-INDEX.md` path in `ARCHITECTURE.md`, and added `[0.4.1]`–`[0.6.3]` version comparison links in `CHANGELOG.md`.
+
 ## [0.6.2] - 2026-11-10
 
 ### Added
@@ -191,6 +200,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - W3C DTCG design token catalog parser (`tokens/design_tokens.json`, `tokens/typography.json`).
 - Baseline test suite validating token deserialization, layout budgets, and physical spring properties.
 
+[0.6.3]: https://github.com/oversluizen/egui-macview/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/oversluizen/egui-macview/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/oversluizen/egui-macview/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/oversluizen/egui-macview/compare/v0.5.2...v0.6.0

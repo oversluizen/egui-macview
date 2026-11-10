@@ -4,9 +4,9 @@
 | :--- | :--- |
 | **Document ID** | SPEC-012 |
 | **Document Title** | Advanced Media, Scheduling, and Grid Controls |
-| **Document Version** | `0.6.2` |
+| **Document Version** | `0.6.3` |
 | **Status** | Accepted / Normative |
-| **Target Milestone** | Milestone 0.6.2 |
+| **Target Milestone** | Milestone 0.6.3 |
 | **Target Host** | Standalone crate `egui-macview` (Rust, egui 0.37) |
 | **Author** | Jaco Oversluizen / `egui-macview` contributors |
 | **Hardware Ground Truth** | Apple Silicon MacBook Air (macOS Sonoma `14.8.9`, SDK `14`, 291 AppKit headers, 11 AVKit headers) |
@@ -23,6 +23,7 @@
 | `0.6.0` | 2026-11-10 | Architecture Team | Milestone 0.6.0 Release: Advanced Media, Scheduling, and Grid Controls (`MacPlayerView`, `MacDatePicker`, `MacComboBox`, `MacTabView`, `MacDisclosureGroup`, `MacCollectionView`, `MacBox`, `MacRuleEditor`) grounded in live macOS Sonoma 14.8.9 hardware inspection, verified with `spec012_advanced_controls_tests.rs`. |
 | `0.6.1` | 2026-11-10 | Architecture Team | Milestone 0.6.1 Release: Full AVKit transport/audio/speed controls, `MacRuleEditor` implementation, zero idle heap allocations (`MacTheme::resolve_or_default`), and `spec012_appkit_and_battery_parity_tests.rs`. |
 | `0.6.2` | 2026-11-10 | Architecture Team | Milestone 0.6.2 Release: Comprehensive developer documentation, HIG decision tables, standalone `eframe` quickstart, IDE hover `/// # Example` doc-tests, and architecture diagrams. |
+| `0.6.3` | 2026-11-10 | Architecture Team | Milestone 0.6.3 Release: Converted 62 `README.md` table links to rustdoc intra-doc links (`[`Type`]`) for `docs.rs`, added 9 `/// # Example` rustdoc blocks across Navigation, Surfaces, Feedback, State, and Symbols, and added `README.md` link guard. |
 
 ---
 
