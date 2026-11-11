@@ -260,7 +260,14 @@ impl<'a> Widget for MacInlineActionButton<'a> {
         };
 
         painter.circle(center, visual_radius, fill, Stroke::new(border_w, theme.separator().gamma_multiply(alpha)));
-        let fg = if response.hovered() && self.enabled { theme.label() } else { theme.secondary_label().gamma_multiply(alpha) };
+        let surface_bg = theme.active_surface(ui);
+        let fg = if !self.enabled {
+            theme.tertiary_label_on(surface_bg)
+        } else if response.hovered() {
+            theme.label_on(surface_bg)
+        } else {
+            theme.secondary_label_on(surface_bg)
+        };
         let galley = theme.layout_tracked_galley(ui, self.glyph, FontId::proportional(icon_sz), fg, f32::INFINITY);
         let pos = Align2::CENTER_CENTER.anchor_size(center, galley.size()).min;
         painter.galley(pos, galley, fg);

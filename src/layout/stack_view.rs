@@ -128,7 +128,9 @@ impl<'a> MacStackUi<'a> {
         self.section_count += 1;
 
         if let Some(title) = header {
-            let label_color = self.theme.secondary_label();
+            let label_color = self
+                .theme
+                .secondary_label_on(self.theme.active_surface(self.ui));
             let font_size = self.theme.stack_view().section_header_font_size.points();
             let font_id = FontId::proportional(font_size);
             self.ui.add(

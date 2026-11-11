@@ -347,13 +347,8 @@ fn test_v066_help_button_sizes_popup_accent_badge_and_zero_idle_repaint() {
     assert_eq!(MacHelpButton::new().theme(&theme).control_size(MacControlSize::Small).font_size(), 10.0);
     assert_eq!(MacHelpButton::new().theme(&theme).control_size(MacControlSize::Mini).font_size(), 9.0);
 
-    let (mut val, mut pop_idx, mut cb_val, mut chk, mut disc) = (
-        "1080".to_string(),
-        0usize,
-        "4K UHD".to_string(),
-        true,
-        true,
-    );
+    let (mut val, mut pop_idx, mut cb_val, mut chk, mut disc) =
+        ("1080".to_string(), 0usize, "4K UHD".to_string(), true, true);
 
     // Settle egui font/sizing caches and verify zero immediate repaints (Duration::MAX) at rest across all NIB controls
     let mut last_repaint_after = std::time::Duration::ZERO;
@@ -367,62 +362,37 @@ fn test_v066_help_button_sizes_popup_accent_badge_and_zero_idle_repaint() {
         let mut out = ctx.run_ui(raw, |ui| {
             MacLabel::new("Resolution:").theme(&theme).weight(MacFontWeight::Medium).show(ui);
             MacInputCell::new("nib_in", &mut val).theme(&theme).show(ui);
-            MacPopUpButton::new(&mut pop_idx, &["1080p Ultra Wide Cinema", "4K"])
-                .theme(&theme)
-                .width(90.0)
-                .accent_badge(true)
-                .show(ui);
+            MacPopUpButton::new(&mut pop_idx, &["1080p Ultra Wide Cinema", "4K"]).theme(&theme).width(90.0).accent_badge(true).show(ui);
             MacComboBox::new("nib_cb", &mut cb_val, &["4K UHD", "8K"]).theme(&theme).show(ui);
             MacCheckbox::new(&mut chk, "Preserve Aspect").theme(&theme).show(ui);
             MacBox::new("Group").theme(&theme).show(ui, |b_ui| {
                 MacLabel::new("Caption").theme(&theme).color(MacLabelColor::Secondary).show(b_ui);
             });
-            MacHelpButton::new()
-                .theme(&theme)
-                .control_size(MacControlSize::Regular)
-                .fixed_rect(Rect::from_min_size(Pos2::new(350.0, 20.0), Vec2::new(14.0, 14.0)))
-                .show(ui);
-            MacInlineActionButton::new("+")
-                .theme(&theme)
-                .fixed_rect(Rect::from_min_size(Pos2::new(300.0, 20.0), Vec2::new(24.0, 24.0)))
-                .show(ui);
-            MacDisclosureGroup::new("nib_disc", "Advanced", &mut disc)
-                .theme(&theme)
-                .with_trailing_add_button(true)
-                .show(ui, |d_ui| {
-                    MacLabel::new("Nested").theme(&theme).show(d_ui);
-                });
+            MacHelpButton::new().theme(&theme).control_size(MacControlSize::Regular).fixed_rect(Rect::from_min_size(Pos2::new(350.0, 20.0), Vec2::new(14.0, 14.0))).show(ui);
+            MacInlineActionButton::new("+").theme(&theme).fixed_rect(Rect::from_min_size(Pos2::new(300.0, 20.0), Vec2::new(24.0, 24.0))).show(ui);
+            MacDisclosureGroup::new("nib_disc", "Advanced", &mut disc).theme(&theme).with_trailing_add_button(true).show(ui, |d_ui| {
+                MacLabel::new("Nested").theme(&theme).show(d_ui);
+            });
         });
         out.textures_delta.clear();
-        last_repaint_after = out
-            .viewport_output
-            .get(&egui::ViewportId::ROOT)
-            .map(|v| v.repaint_delay)
-            .unwrap_or(std::time::Duration::MAX);
+        last_repaint_after = out.viewport_output.get(&egui::ViewportId::ROOT).map(|v| v.repaint_delay).unwrap_or(std::time::Duration::MAX);
         shapes = out.shapes;
     }
 
-    assert_eq!(
-        last_repaint_after,
-        std::time::Duration::MAX,
-        "All NIB controls at rest must request zero immediate repaints (Duration::MAX)"
-    );
+    assert_eq!(last_repaint_after, std::time::Duration::MAX);
 
-    // Verify MacInlineActionButton clamps visual circle radius to 8.0pt (16pt diameter) inside 24x24pt fixed_rect
     let inline_circles: Vec<_> = shapes.iter().filter_map(|cs| match &cs.shape {
         egui::Shape::Circle(c) if (c.center.x - 312.0).abs() < 1.0 => Some(c.radius),
         _ => None,
     }).collect();
     assert_eq!(inline_circles, vec![8.0]);
 
-    // Verify MacHelpButton clamps visual circle radius to 7.0pt (14pt diameter) inside 14x14pt fixed_rect
     let help_circles: Vec<_> = shapes.iter().filter_map(|cs| match &cs.shape {
         egui::Shape::Circle(c) if (c.center.x - 357.0).abs() < 1.0 => Some(c.radius),
         _ => None,
     }).collect();
     assert!(help_circles.iter().all(|&r| (r - 7.0).abs() < 0.01));
 
-    // Verify MacPopUpButton::accent_badge(true) paints the right accent badge and clips text before the badge
     let badge_rect = shapes.iter().find_map(|cs| match &cs.shape {
         egui::Shape::Rect(r) if r.fill == theme.control_accent() && (r.rect.width() - 16.0).abs() < 1.5 => Some(r.rect),
         _ => None,
@@ -432,4 +402,48 @@ fn test_v066_help_button_sizes_popup_accent_badge_and_zero_idle_repaint() {
         _ => None,
     }).expect("MacPopUpButton text shape");
     assert!(popup_text_clip.max.x <= badge_rect.min.x);
+}
+
+#[test]
+fn test_v067_mac_box_automatic_vibrancy_on_child_controls() {
+    let ctx = Context::default();
+    for appearance in [MacAppearance::Aqua, MacAppearance::DarkAqua, MacAppearance::Anthracite] {
+        let theme = MacTheme::new(appearance);
+        let (mut disc_win, mut disc_box, mut chk_box) = (true, true, false);
+
+        let shapes = run_pass(&ctx, RawInput::default(), |ui| {
+            MacLabel::new("WinSec").theme(&theme).color(MacLabelColor::Secondary).show(ui);
+            MacInlineActionButton::new("+").theme(&theme).show(ui);
+            MacDisclosureGroup::new("d_win", "WinDisc", &mut disc_win).theme(&theme).with_trailing_add_button(true).show(ui, |_| {});
+
+            MacBox::new("BoxContainer").theme(&theme).show(ui, |b_ui| {
+                assert_eq!(theme.active_surface(b_ui), theme.box_background());
+                MacLabel::new("BoxSec").theme(&theme).color(MacLabelColor::Secondary).show(b_ui);
+                MacInlineActionButton::new("-").theme(&theme).show(b_ui);
+                MacCheckbox::new(&mut chk_box, "BoxChk").theme(&theme).enabled(false).show(b_ui);
+                MacDisclosureGroup::new("d_box", "BoxDisc", &mut disc_box).theme(&theme).with_trailing_add_button(true).show(b_ui, |_| {});
+                egui_macview::MacStackView::vertical().theme(&theme).show(b_ui, |stack| {
+                    stack.add_section(Some("BoxStackHdr"), |s_ui| {
+                        s_ui.visuals_mut().panel_fill = theme.window_background();
+                        assert_eq!(theme.active_surface(s_ui), theme.window_background());
+                    });
+                });
+            });
+            assert_eq!(theme.active_surface(ui), theme.window_background());
+        });
+
+        let mut texts = Vec::new();
+        for cs in &shapes { collect_text_shapes(&cs.shape, &mut texts); }
+        let color_of = |label: &str| texts.iter().find(|t| t.galley.text() == label).unwrap().galley.job.sections[0].format.color;
+
+        let (win_sec, box_sec, win_btn, box_btn, box_chk) = (color_of("WinSec"), color_of("BoxSec"), color_of("+"), color_of("-"), color_of("BoxChk"));
+        assert_eq!((win_sec, box_sec), (theme.secondary_label_on(theme.window_background()), theme.secondary_label_on(theme.box_background())));
+        assert_eq!((win_btn, box_btn), (theme.secondary_label_on(theme.window_background()), theme.secondary_label_on(theme.box_background())));
+        assert_eq!(color_of("BoxStackHdr"), theme.secondary_label_on(theme.box_background()));
+        assert!(win_sec != box_sec && win_btn != box_btn);
+        assert!(egui_macview::contrast_ratio(box_sec, theme.box_background()) >= 4.5 && egui_macview::contrast_ratio(box_chk, theme.box_background()) >= 3.0);
+    }
+    let (aqua, dark) = (MacTheme::new(MacAppearance::Aqua), MacTheme::new(MacAppearance::DarkAqua));
+    aqua.apply_to_egui(&ctx);
+    let _ = run_pass(&ctx, RawInput::default(), |ui| assert_eq!(dark.active_surface(ui), dark.window_background()));
 }

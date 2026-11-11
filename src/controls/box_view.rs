@@ -113,18 +113,19 @@ impl<'a> MacBox<'a> {
 
         if let Some(ref title) = self.title {
             let font_id = FontId::proportional(m.title_font_size.points());
+            let title_fg = theme.label_on(theme.box_background());
             let galley = theme.layout_tracked_galley(
                 ui,
                 title.text(),
                 font_id,
-                theme.label(),
+                title_fg,
                 snapped.width(),
             );
             let title_pos = Pos2::new(
                 snapped.min.x + insets.left,
                 snapped.min.y + insets.top * 0.5 - galley.size().y * 0.5,
             );
-            ui.painter().galley(title_pos, galley, theme.label());
+            ui.painter().galley(title_pos, galley, title_fg);
         }
     }
 
@@ -161,7 +162,9 @@ impl<'a> MacBox<'a> {
                 .id_salt(box_scope_id)
                 .max_rect(content_rect),
         );
-        let inner = add_contents(&mut child_ui);
+        let box_bg = theme.box_background();
+        let entry_pf = child_ui.visuals().panel_fill;
+        let inner = theme.with_surface_scope(box_bg, Some(entry_pf), || add_contents(&mut child_ui));
         let content_min_rect = child_ui.min_rect();
 
         let (rect, response) = if let Some(fixed) = fixed_box_rect {
@@ -180,25 +183,26 @@ impl<'a> MacBox<'a> {
             egui::epaint::RectShape::new(
                 rect,
                 CornerRadius::same(corner_r as u8),
-                theme.box_background(),
+                box_bg,
                 Stroke::new(border_w, theme.box_border()),
                 StrokeKind::Inside,
             ),
         );
 
         if let Some(title) = self.title {
+            let title_fg = theme.label_on(box_bg);
             let galley = theme.layout_tracked_galley(
                 ui,
                 title.text(),
                 FontId::proportional(title_font_sz),
-                theme.label(),
+                title_fg,
                 available_w,
             );
             let title_pos = Pos2::new(
                 rect.min.x + insets.left,
                 rect.min.y + insets.top * 0.5 - galley.size().y * 0.5,
             );
-            ui.painter().galley(title_pos, galley, theme.label());
+            ui.painter().galley(title_pos, galley, title_fg);
         }
 
         InnerResponse::new(inner, response)

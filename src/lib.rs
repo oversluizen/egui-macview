@@ -25,8 +25,8 @@ pub use symbols::{
 };
 
 pub use theme::{
-    contrast_ratio, relative_luminance, MacAppearance, MacBackgroundStyle, MacTheme,
-    WindowControlsStyle,
+    alpha_composite, contrast_ratio, ensure_wcag_contrast, plus_darker, plus_lighter,
+    relative_luminance, MacAppearance, MacBackgroundStyle, MacTheme, WindowControlsStyle,
 };
 
 pub use controls::{

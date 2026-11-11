@@ -5,6 +5,12 @@ All notable changes to the `egui-macview` crate will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.7] - 2026-11-11
+
+### Added
+- **AppKit Vibrancy & Surface-Aware Contrast Engine (`plus_darker`, `plus_lighter`, `ensure_wcag_contrast`, `MacTheme::label_on`, `secondary_label_on`, `tertiary_label_on`)**: Added dynamic CoreGraphics/AppKit vibrancy compositing (`kCGBlendModePlusDarker` on light surfaces, `kCGBlendModePlusLighter` on dark surfaces) coupled with automatic binary-search WCAG 2.1 Level AA contrast clamping (`>= 4.5:1` for primary/secondary labels, `>= 3.0:1` for tertiary/disabled labels) against any container surface color.
+- **Zero-Allocation Container Surface Scope (`MacTheme::active_surface`, `MacTheme::with_surface`, `MacLabel::resolved_color_on`)**: Wired `MacBox`, `MacCard`, `MacLabel`, `MacDisclosureGroup`, `MacCheckbox`, and `MacInlineActionButton` to automatically resolve vibrant, WCAG-compliant foreground tints against their enclosing surface (`window_background`, `box_background`, or custom container fill) with zero per-frame heap allocations.
+
 ## [0.6.6] - 2026-11-11
 
 ### Added
@@ -233,6 +239,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - W3C DTCG design token catalog parser (`tokens/design_tokens.json`, `tokens/typography.json`).
 - Baseline test suite validating token deserialization, layout budgets, and physical spring properties.
 
+[0.6.7]: https://github.com/oversluizen/egui-macview/compare/v0.6.6...v0.6.7
 [0.6.6]: https://github.com/oversluizen/egui-macview/compare/v0.6.5...v0.6.6
 [0.6.5]: https://github.com/oversluizen/egui-macview/compare/v0.6.4...v0.6.5
 [0.6.4]: https://github.com/oversluizen/egui-macview/compare/v0.6.3...v0.6.4

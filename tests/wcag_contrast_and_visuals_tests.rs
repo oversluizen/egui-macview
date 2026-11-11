@@ -8,8 +8,9 @@
 use egui::{Color32, Context};
 use egui_macview::surfaces::MacCard;
 use egui_macview::theme::{
-    contrast_ratio as crate_contrast_ratio, relative_luminance as crate_relative_luminance,
-    srgb_channel_to_linear, MacAppearance, MacBackgroundStyle, MacTheme,
+    contrast_ratio as crate_contrast_ratio, ensure_wcag_contrast, plus_darker, plus_lighter,
+    relative_luminance as crate_relative_luminance, srgb_channel_to_linear, MacAppearance,
+    MacBackgroundStyle, MacTheme,
 };
 
 /// Calculates linear luminance component for an sRGB channel in 0.0..=1.0.
@@ -404,5 +405,84 @@ fn test_wcag_contrast_on_mac_box_surfaces_all_appearances() {
             sec_on_win >= 4.5,
             "WCAG 2.1 AA violation in {appearance:?}: secondary_label on window_background = {sec_on_win:.2}:1 (< 4.5:1)"
         );
+    }
+}
+
+#[test]
+fn test_v067_appkit_vibrancy_plus_darker_plus_lighter_and_wcag_clamping() {
+    let aqua = MacTheme::new(MacAppearance::Aqua);
+    let dark = MacTheme::new(MacAppearance::DarkAqua);
+    let anth = MacTheme::new(MacAppearance::Anthracite);
+
+    // 1. On window_background, surface-aware methods preserve exact base tokens
+    assert_eq!(aqua.label_on(aqua.window_background()), aqua.label());
+    assert_eq!(
+        aqua.secondary_label_on(aqua.window_background()),
+        aqua.secondary_label()
+    );
+    assert_eq!(dark.label_on(dark.window_background()), dark.label());
+    assert_eq!(
+        dark.secondary_label_on(dark.window_background()),
+        dark.secondary_label()
+    );
+    assert_eq!(anth.label_on(anth.window_background()), anth.label());
+    assert_eq!(
+        anth.secondary_label_on(anth.window_background()),
+        anth.secondary_label()
+    );
+
+    // 2. In Aqua (Light mode), PlusDarker makes labels on box_background strictly darker than on window_background
+    let aqua_sec_win = aqua.secondary_label_on(aqua.window_background());
+    let aqua_sec_box = aqua.secondary_label_on(aqua.box_background());
+    assert!(
+        crate_relative_luminance(aqua_sec_box) < crate_relative_luminance(aqua_sec_win),
+        "Aqua secondary_label_on(box_background) must be darker (PlusDarker) than on window_background"
+    );
+    assert!(crate_contrast_ratio(aqua_sec_box, aqua.box_background()) >= 4.5);
+
+    // 3. In DarkAqua & Anthracite (Dark mode), PlusLighter makes labels on box_background strictly lighter than on window_background
+    let dark_sec_win = dark.secondary_label_on(dark.window_background());
+    let dark_sec_box = dark.secondary_label_on(dark.box_background());
+    assert!(
+        crate_relative_luminance(dark_sec_box) > crate_relative_luminance(dark_sec_win),
+        "DarkAqua secondary_label_on(box_background) must be lighter (PlusLighter) than on window_background"
+    );
+    assert!(crate_contrast_ratio(dark_sec_box, dark.box_background()) >= 4.5);
+
+    let anth_sec_win = anth.secondary_label_on(anth.window_background());
+    let anth_sec_box = anth.secondary_label_on(anth.box_background());
+    assert!(
+        crate_relative_luminance(anth_sec_box) > crate_relative_luminance(anth_sec_win),
+        "Anthracite secondary_label_on(box_background) must be lighter (PlusLighter) than on window_background"
+    );
+    assert!(crate_contrast_ratio(anth_sec_box, anth.box_background()) >= 4.5);
+
+    // 4. Direct plus_darker / plus_lighter / ensure_wcag_contrast guarantees across arbitrary custom surfaces
+    let darker_fg = plus_darker(
+        Color32::from_rgb(110, 110, 115),
+        Color32::from_rgb(220, 220, 220),
+        Color32::from_rgb(236, 236, 236),
+        1.0,
+    );
+    assert!(darker_fg.r() < 110);
+    let lighter_fg = plus_lighter(
+        Color32::from_rgb(160, 160, 165),
+        Color32::from_rgb(35, 35, 38),
+        Color32::from_rgb(50, 50, 50),
+        1.0,
+    );
+    assert!(lighter_fg.r() > 160);
+
+    for gray in (0u8..=255).step_by(5) {
+        let custom_bg = Color32::from_rgb(gray, gray, gray);
+        let clamped = ensure_wcag_contrast(Color32::from_rgb(120, 120, 120), custom_bg, 4.5);
+        assert!(
+            crate_contrast_ratio(clamped, custom_bg) >= 4.5,
+            "ensure_wcag_contrast failed on gray={gray}: contrast={:.2}",
+            crate_contrast_ratio(clamped, custom_bg)
+        );
+        assert!(crate_contrast_ratio(aqua.label_on(custom_bg), custom_bg) >= 4.5);
+        assert!(crate_contrast_ratio(aqua.secondary_label_on(custom_bg), custom_bg) >= 4.5);
+        assert!(crate_contrast_ratio(aqua.tertiary_label_on(custom_bg), custom_bg) >= 3.0);
     }
 }

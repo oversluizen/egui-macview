@@ -137,6 +137,27 @@ pub struct LabelMetrics {
     pub semibold_stroke_boost: DimensionValue,
     /// Subpixel faux-bold offset for Bold weight (`0.55pt`).
     pub bold_stroke_boost: DimensionValue,
+    /// WCAG 2.1 Level AA minimum contrast ratio for primary and secondary labels (`4.5`).
+    #[serde(default = "default_wcag_aa_normal_ratio")]
+    pub wcag_aa_normal_ratio: DimensionValue,
+    /// WCAG 2.1 Level AA minimum contrast ratio for tertiary and disabled labels (`3.0`).
+    #[serde(default = "default_wcag_aa_large_ratio")]
+    pub wcag_aa_large_ratio: DimensionValue,
+    /// AppKit `PlusDarker` / `PlusLighter` surface delta gain factor (`1.0`).
+    #[serde(default = "default_vibrancy_gain")]
+    pub vibrancy_gain: DimensionValue,
+}
+
+fn default_wcag_aa_normal_ratio() -> DimensionValue {
+    DimensionValue::from_pt(4.5)
+}
+
+fn default_wcag_aa_large_ratio() -> DimensionValue {
+    DimensionValue::from_pt(3.0)
+}
+
+fn default_vibrancy_gain() -> DimensionValue {
+    DimensionValue::from_pt(1.0)
 }
 
 impl Default for LabelMetrics {
@@ -165,6 +186,9 @@ impl Default for LabelMetrics {
             mini_cap_height: DimensionValue::from_pt(6.34),
             semibold_stroke_boost: DimensionValue::from_pt(0.35),
             bold_stroke_boost: DimensionValue::from_pt(0.55),
+            wcag_aa_normal_ratio: default_wcag_aa_normal_ratio(),
+            wcag_aa_large_ratio: default_wcag_aa_large_ratio(),
+            vibrancy_gain: default_vibrancy_gain(),
         }
     }
 }

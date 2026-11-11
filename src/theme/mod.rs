@@ -7,7 +7,8 @@ use std::sync::{Arc, OnceLock};
 pub mod accessors;
 pub mod contrast;
 pub use contrast::{
-    contrast_ratio, relative_luminance, srgb_channel_to_linear, MacBackgroundStyle,
+    alpha_composite, contrast_ratio, ensure_wcag_contrast, plus_darker, plus_lighter,
+    relative_luminance, srgb_channel_to_linear, MacBackgroundStyle,
 };
 
 static DEFAULT_TOKENS: OnceLock<Arc<MacDesignTokens>> = OnceLock::new();

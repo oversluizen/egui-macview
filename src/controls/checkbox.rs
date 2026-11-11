@@ -142,7 +142,12 @@ impl<'a> Widget for MacCheckbox<'a> {
         } else {
             theme.disabled_opacity()
         };
-        let text_color = theme.label().gamma_multiply(alpha);
+        let surface_bg = theme.active_surface(ui);
+        let text_color = if self.enabled {
+            theme.label_on(surface_bg)
+        } else {
+            theme.tertiary_label_on(surface_bg)
+        };
         let label_str = self.label.text();
         let galley = if label_str.is_empty() {
             None

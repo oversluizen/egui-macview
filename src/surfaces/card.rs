@@ -154,7 +154,8 @@ impl<'a> MacCard<'a> {
                 .max_rect(content_rect)
                 .layout(egui::Layout::top_down(egui::Align::Min)),
         );
-        let ret = add_contents(&mut child_ui, bg_style);
+        let entry_pf = child_ui.visuals().panel_fill;
+        let ret = theme.with_surface_scope(bg_fill, Some(entry_pf), || add_contents(&mut child_ui, bg_style));
 
         (resp, ret)
     }

@@ -4,9 +4,9 @@
 | :--- | :--- |
 | **Document ID** | SPEC-INDEX |
 | **Document Title** | Specification Suite Index & Version Matrix |
-| **Document Version** | `0.6.6` |
+| **Document Version** | `0.6.7` |
 | **Status** | Accepted / Normative |
-| **Target Milestone** | Milestone 0.6.6 |
+| **Target Milestone** | Milestone 0.6.7 |
 | **Target Host** | Standalone crate `egui-macview` (Rust, egui 0.37) |
 | **Author** | Jaco Oversluizen / `egui-macview` contributors |
 | **Normative Standards** | ISO/IEC/IEEE 42010:2011, ISO/IEC/IEEE 29119-3:2021, RFC 2119/8174, Apple macOS HIG, W3C DTCG, SemVer 2.0.0 |
@@ -31,12 +31,13 @@
 | `0.6.4` | 2026-11-10 | Architecture Team | Milestone 0.6.4 Release: Repository-Wide 100% English Comment & Prose Guard, Removal of Legacy Dutch Audit File & Portable Launcher Script |
 | `0.6.5` | 2026-11-11 | Architecture Team | Milestone 0.6.5 Release: AppKit NIB Parity (`MacCheckbox`, `MacLabel`, `MacHelpButton`, `MacInlineActionButton`), Universal Optical Tracking, Cross-Platform Baseline Anchoring & Bundled Open-Source `Inter` Font |
 | `0.6.6` | 2026-11-11 | Architecture Team | Milestone 0.6.6 Release: MacBook Air `NSTextFieldSquareBezel` Corner-Radius Parity (`2.0pt`/`1.5pt`), WCAG 2.1 AA Aqua `secondary_label` Contrast Hardening (`#5A5A5F`), `MacPopUpButton::accent_badge(bool)` & Zero-Allocation Typography Lookup |
+| `0.6.7` | 2026-11-11 | Architecture Team | Milestone 0.6.7 Release: Dynamic AppKit Vibrancy (`plus_darker` / `plus_lighter`) & Surface-Aware WCAG 2.1 AA Contrast Engine (`ensure_wcag_contrast`, `label_on`, `secondary_label_on`, `tertiary_label_on`, `active_surface`, `with_surface`) |
 
 ---
 
 ## 1. Specification Suite Structure
 
-The `egui-macview` specification suite provides the formal normative requirements, mathematical foundations, MVC abstractions, and test oracles for the entire crate. Every specification in this directory runs strictly in lockstep with the crate release version (`0.6.6`).
+The `egui-macview` specification suite provides the formal normative requirements, mathematical foundations, MVC abstractions, and test oracles for the entire crate. Every specification in this directory runs strictly in lockstep with the crate release version (`0.6.7`).
 
 | Spec ID | Document Title | Version | Status | Primary Test Suite |
 | :--- | :--- | :--- | :--- | :--- |
@@ -53,7 +54,7 @@ The `egui-macview` specification suite provides the formal normative requirement
 | [**SPEC-009**](SPEC-009-CROSS-PLATFORM-DIFFERENTIAL-HARNESS.md) | Cross-Platform Parity and Remote Differential Testing Harness | `0.3.0` | Accepted / Normative | `tests/macbook_parity_differential_tests.rs` |
 | [**SPEC-010**](SPEC-010-INTERACTIVE-GALLERY-CONTROLS-AND-ICONOGRAPHY.md) | Interactive Gallery Controls, Bidirectional State Binding & Iconography Parity | `0.3.1` | Accepted / Normative | `tests/micro_animations_and_hud_tests.rs`, `tests/symbol_tests.rs` |
 | [**SPEC-011**](SPEC-011-STUDIO-AND-AVKIT-CONTROLS.md) | Studio & AVKit Media, Timeline and Publishing Controls | `0.5.0` | Accepted / Normative | `tests/studio_controls_v05_tests.rs`, `tests/zero_hardcoding_and_primitive_tests.rs` |
-| [**SPEC-012**](SPEC-012-ADVANCED-MEDIA-SCHEDULING-AND-GRID-CONTROLS.md) | Advanced Media, Scheduling, and Grid Controls | `0.6.6` | Accepted / Normative | `tests/spec012_advanced_controls_tests.rs`, `tests/spec012_appkit_and_battery_parity_tests.rs`, `tests/appkit_v065_nib_parity_tests.rs` |
+| [**SPEC-012**](SPEC-012-ADVANCED-MEDIA-SCHEDULING-AND-GRID-CONTROLS.md) | Advanced Media, Scheduling, and Grid Controls | `0.6.7` | Accepted / Normative | `tests/spec012_advanced_controls_tests.rs`, `tests/spec012_appkit_and_battery_parity_tests.rs`, `tests/appkit_v065_nib_parity_tests.rs` |
 
 ---
 
@@ -124,6 +125,7 @@ All core specifications in this repository maintain exact version parity with th
 | **v0.6.4** | `0.6.4` | 2026-11-10 | Milestone 0.6.4 release: Repository-wide 100% English comment/prose/package verification guard (`check_vault_leakage_and_dutch_in_text`), removal of legacy `AUDIT-REFACTORING-REPORT.md` from version control, standardized `Zero Dead Code Guard` terminology, and portable `%~dp0` resolution in `start_gallery.cmd`. |
 | **v0.6.5** | `0.6.5` | 2026-11-11 | Milestone 0.6.5 release: Authentic AppKit NIB parity (`MacCheckbox`, `MacLabel`, `MacHelpButton`, `MacInlineActionButton`), universal optical letter-spacing tracking across all text-rendering controls, cross-platform baseline anchoring (`first_baseline_offset_from_top - ascender`), and bundled open-source `Inter` font (`register_macview_fonts`). |
 | **v0.6.6** | `0.6.6` | 2026-11-11 | Milestone 0.6.6 release: Physical MacBook Air (`macOS Sonoma 14.8.9`) `NSTextFieldSquareBezel` corner-radius parity (`2.0pt` for `Regular`/`Small`/`CompactInfobox`, `1.5pt` for `Mini`), WCAG 2.1 AA Aqua `secondary_label` contrast hardening (`#5A5A5F`, `5.48:1` on `MacBox`), `MacHelpButton` (`12pt`/`10pt`/`9pt` `Inter-SemiBold`), `MacPopUpButton::accent_badge(bool)`, and zero-allocation `tracking_for_font_size` & `semibold_font_id` lookups. |
+| **v0.6.7** | `0.6.7` | 2026-11-11 | Milestone 0.6.7 release: Dynamic AppKit Vibrancy (`plus_darker` in Light mode / `plus_lighter` in Dark mode) & Surface-Aware WCAG 2.1 AA Contrast Engine (`ensure_wcag_contrast`, `MacTheme::label_on`, `secondary_label_on`, `tertiary_label_on`, `active_surface`, `with_surface`) automatically resolving `MacLabel`, `MacDisclosureGroup`, `MacCheckbox`, and `MacInlineActionButton` foreground colors on `MacBox` (`box_background`), `MacCard`, and custom container surfaces with zero per-frame heap allocations. |
 
 ---
 

@@ -1,6 +1,6 @@
 {
   "$name": "egui-macview Design Tokens",
-  "$version": "0.6.6",
+  "$version": "0.6.7",
   "$description": "W3C DTCG-compliant design token catalog for egui-macview. Fully grounded in Apple AppKit, macOS Human Interface Guidelines, Apple Typography specifications, and CoreAnimation spring physics.",
   "macview": {
     "metrics": {
@@ -2282,7 +2282,10 @@
           "mini_descender": { "$type": "dimension", "$value": "-1.90pt" },
           "mini_cap_height": { "$type": "dimension", "$value": "6.34pt" },
           "semibold_stroke_boost": { "$type": "dimension", "$value": "0.35pt" },
-          "bold_stroke_boost": { "$type": "dimension", "$value": "0.55pt" }
+          "bold_stroke_boost": { "$type": "dimension", "$value": "0.55pt" },
+          "wcag_aa_normal_ratio": { "$type": "dimension", "$value": "4.5pt" },
+          "wcag_aa_large_ratio": { "$type": "dimension", "$value": "3.0pt" },
+          "vibrancy_gain": { "$type": "dimension", "$value": "1.0pt" }
         },
         "help_button": {
           "diameter": { "$type": "dimension", "$value": "20.0pt" },

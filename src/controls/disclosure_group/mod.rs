@@ -139,12 +139,16 @@ impl<'a> MacDisclosureGroup<'a> {
         );
         let spring_key = self.id_salt.with("chevron_rot");
 
+        let surface_bg = theme.active_surface(ui);
+        let primary_fg = theme.label_on(surface_bg);
+        let secondary_fg = theme.secondary_label_on(surface_bg);
+
         let (font_id, has_semibold_family) = theme.semibold_font_id(ui, header_font_sz);
         let galley = theme.layout_tracked_galley(
             ui,
             self.title.text(),
             font_id,
-            theme.label(),
+            primary_fg,
             f32::INFINITY,
         );
 
@@ -179,9 +183,9 @@ impl<'a> MacDisclosureGroup<'a> {
                 let p = ui.painter_at(plus_rect);
                 let c = plus_rect.center();
                 let col = if plus_resp.hovered() {
-                    theme.label()
+                    primary_fg
                 } else {
-                    theme.secondary_label()
+                    secondary_fg
                 };
                 let stroke = Stroke::new(plus_stroke_w, col);
                 p.line_segment([Pos2::new(c.x - plus_half, c.y), Pos2::new(c.x + plus_half, c.y)], stroke);
@@ -234,9 +238,9 @@ impl<'a> MacDisclosureGroup<'a> {
             let p3 = rotate(half_w, 0.0);
 
             let glyph_color = if response.hovered() {
-                theme.label()
+                primary_fg
             } else {
-                theme.secondary_label()
+                secondary_fg
             };
             painter.add(Shape::convex_polygon(
                 vec![p1, p2, p3],
@@ -248,12 +252,12 @@ impl<'a> MacDisclosureGroup<'a> {
                 header_rect.min.x + chevron_sz + gap,
                 header_rect.min.y + (header_h - galley.size().y) * 0.5,
             );
-            painter.galley(label_pos, galley.clone(), theme.label());
+            painter.galley(label_pos, galley.clone(), primary_fg);
             if !has_semibold_family {
                 painter.galley(
                     Pos2::new(label_pos.x + semibold_boost, label_pos.y),
                     galley,
-                    theme.label(),
+                    primary_fg,
                 );
             }
         }

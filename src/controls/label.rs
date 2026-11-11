@@ -130,12 +130,21 @@ impl<'a> MacLabel<'a> {
         }
     }
 
-    /// Resolves the semantic [`Color32`] from `theme`.
+    /// Resolves the semantic [`Color32`] from `theme` on the default window background.
     pub fn resolved_color(&self, theme: &MacTheme) -> Color32 {
         match self.color {
             MacLabelColor::Primary => theme.label(),
             MacLabelColor::Secondary => theme.secondary_label(),
             MacLabelColor::Tertiary => theme.tertiary_label(),
+        }
+    }
+
+    /// Resolves the vibrant, WCAG-clamped semantic [`Color32`] from `theme` on `surface_bg`.
+    pub fn resolved_color_on(&self, theme: &MacTheme, surface_bg: Color32) -> Color32 {
+        match self.color {
+            MacLabelColor::Primary => theme.label_on(surface_bg),
+            MacLabelColor::Secondary => theme.secondary_label_on(surface_bg),
+            MacLabelColor::Tertiary => theme.tertiary_label_on(surface_bg),
         }
     }
 
@@ -172,7 +181,8 @@ impl<'a> Widget for MacLabel<'a> {
             ),
         };
 
-        let text_color = self.resolved_color(theme);
+        let surface_bg = theme.active_surface(ui);
+        let text_color = self.resolved_color_on(theme, surface_bg);
         let is_heavy = matches!(
             self.weight,
             MacFontWeight::Medium | MacFontWeight::Semibold | MacFontWeight::Bold

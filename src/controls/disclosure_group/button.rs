@@ -148,9 +148,9 @@ impl<'a> Widget for MacDisclosureButton<'a> {
             let p3 = rotate(chevron_sz, 0.0);
 
             let glyph_color = if response.hovered() {
-                theme.label()
+                theme.label_on(fill)
             } else {
-                theme.secondary_label()
+                theme.secondary_label_on(fill)
             };
             painter.add(Shape::convex_polygon(
                 vec![p1, p2, p3],
