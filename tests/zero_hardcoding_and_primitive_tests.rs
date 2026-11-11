@@ -107,7 +107,7 @@ fn test_theme_dynamic_geometry_metrics() {
     assert_eq!(theme.popup_button().height.points(), 22.0);
     assert_eq!(theme.popup_button().corner_radius.points(), 5.0);
     assert_eq!(theme.popup_button().chevron_size.points(), 8.0);
-    assert_eq!(theme.popup_button().chevron_stroke_width.points(), 1.2);
+    assert_eq!(theme.popup_button().chevron_stroke_width.points(), 1.25);
 
     // Segmented metrics
     assert_eq!(theme.segmented().item_width.points(), 36.0);

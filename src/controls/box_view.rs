@@ -2,13 +2,13 @@
 //!
 //! Grounded in Apple AppKit `NSBox` with primary grouped border insets
 //! (`{top: 20.0, bottom: 10.0, left: 9.0, right: 9.0} pt`), $5.0\,\text{pt}$ corner radius,
-//! and $1.0\,\text{pt}$ hairline separator primitive.
+//! subtle grouped box background (`theme.box_background()`), and $1.0\,\text{pt}$ hairline separator.
 
 use crate::controls::MacInsets;
 use crate::layout::subpixel_snap_rect;
 use crate::theme::MacTheme;
 use egui::{
-    CornerRadius, InnerResponse, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui,
+    CornerRadius, FontId, InnerResponse, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui,
     UiBuilder, Vec2, WidgetText,
 };
 
@@ -35,6 +35,7 @@ use egui::{
 pub struct MacBox<'a> {
     title: Option<WidgetText>,
     theme: Option<&'a MacTheme>,
+    fixed_rect: Option<Rect>,
 }
 
 impl<'a> MacBox<'a> {
@@ -43,6 +44,7 @@ impl<'a> MacBox<'a> {
         Self {
             title: Some(title.into()),
             theme: None,
+            fixed_rect: None,
         }
     }
 
@@ -51,12 +53,19 @@ impl<'a> MacBox<'a> {
         Self {
             title: None,
             theme: None,
+            fixed_rect: None,
         }
     }
 
     /// Injects dynamic theme.
     pub fn theme(mut self, theme: &'a MacTheme) -> Self {
         self.theme = Some(theme);
+        self
+    }
+
+    /// Pins the grouping box to an exact NIB coordinate rectangle.
+    pub fn fixed_rect(mut self, rect: Rect) -> Self {
+        self.fixed_rect = Some(rect);
         self
     }
 
@@ -84,6 +93,41 @@ impl<'a> MacBox<'a> {
         theme_cow.box_view().border_width.points()
     }
 
+    /// Paints the grouping box background, border, and optional title at `rect` without allocating flow space.
+    pub fn paint_at(&self, ui: &mut Ui, rect: Rect) {
+        let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
+        let theme: &MacTheme = &theme_cow;
+        let insets = self.content_insets();
+        let corner_r = self.corner_radius();
+        let border_w = self.border_width();
+        let m = theme.box_view();
+        let snapped = subpixel_snap_rect(rect, ui.ctx().pixels_per_point());
+
+        ui.painter().add(egui::epaint::RectShape::new(
+            snapped,
+            CornerRadius::same(corner_r as u8),
+            theme.box_background(),
+            Stroke::new(border_w, theme.box_border()),
+            StrokeKind::Inside,
+        ));
+
+        if let Some(ref title) = self.title {
+            let font_id = FontId::proportional(m.title_font_size.points());
+            let galley = theme.layout_tracked_galley(
+                ui,
+                title.text(),
+                font_id,
+                theme.label(),
+                snapped.width(),
+            );
+            let title_pos = Pos2::new(
+                snapped.min.x + insets.left,
+                snapped.min.y + insets.top * 0.5 - galley.size().y * 0.5,
+            );
+            ui.painter().galley(title_pos, galley, theme.label());
+        }
+    }
+
     /// Shows the grouping box container enclosing inner content.
     pub fn show<R>(
         self,
@@ -95,16 +139,20 @@ impl<'a> MacBox<'a> {
         let insets = self.content_insets();
         let corner_r = self.corner_radius();
         let border_w = self.border_width();
+        let title_font_sz = theme.box_view().title_font_size.points();
 
-        let available_w = ui.available_width();
-        let start_pos = ui.cursor().min;
+        let (start_pos, available_w, fixed_box_rect) = if let Some(fixed) = self.fixed_rect {
+            (fixed.min, fixed.width(), Some(fixed))
+        } else {
+            (ui.cursor().min, ui.available_width(), None)
+        };
 
+        let content_max_y = fixed_box_rect.map_or(f32::INFINITY, |r| r.max.y - insets.bottom);
         let content_rect = Rect::from_min_max(
             Pos2::new(start_pos.x + insets.left, start_pos.y + insets.top),
-            Pos2::new(start_pos.x + available_w - insets.right, f32::INFINITY),
+            Pos2::new(start_pos.x + available_w - insets.right, content_max_y),
         );
 
-        // Pre-allocate background shape on painter so it renders BEHIND child widgets (Z-order invariant)
         let bg_shape_idx = ui.painter().add(egui::Shape::Noop);
         let box_scope_id = ui.next_auto_id().with("mac_box_content");
 
@@ -116,33 +164,40 @@ impl<'a> MacBox<'a> {
         let inner = add_contents(&mut child_ui);
         let content_min_rect = child_ui.min_rect();
 
-        let box_h = insets.top + content_min_rect.height() + insets.bottom;
-        let box_rect = Rect::from_min_size(start_pos, Vec2::new(available_w, box_h));
-        let box_rect = subpixel_snap_rect(box_rect, ui.ctx().pixels_per_point());
+        let (rect, response) = if let Some(fixed) = fixed_box_rect {
+            let r = subpixel_snap_rect(fixed, ui.ctx().pixels_per_point());
+            let resp = ui.interact(r, box_scope_id.with("fixed_box"), Sense::hover());
+            (r, resp)
+        } else {
+            let box_h = insets.top + content_min_rect.height() + insets.bottom;
+            let box_rect = Rect::from_min_size(start_pos, Vec2::new(available_w, box_h));
+            let box_rect = subpixel_snap_rect(box_rect, ui.ctx().pixels_per_point());
+            ui.allocate_exact_size(box_rect.size(), Sense::hover())
+        };
 
-        let (rect, response) = ui.allocate_exact_size(box_rect.size(), Sense::hover());
-
-        // Update pre-allocated shape with outer bezel frame behind content
         ui.painter().set(
             bg_shape_idx,
             egui::epaint::RectShape::new(
                 rect,
                 CornerRadius::same(corner_r as u8),
-                theme.control_background(),
-                Stroke::new(border_w, theme.separator()),
+                theme.box_background(),
+                Stroke::new(border_w, theme.box_border()),
                 StrokeKind::Inside,
             ),
         );
 
-        // Draw title label in top-left inset if provided
         if let Some(title) = self.title {
-            let galley = title.into_galley(
+            let galley = theme.layout_tracked_galley(
                 ui,
-                Some(egui::TextWrapMode::Extend),
+                title.text(),
+                FontId::proportional(title_font_sz),
+                theme.label(),
                 available_w,
-                egui::TextStyle::Body,
             );
-            let title_pos = Pos2::new(rect.min.x + insets.left, rect.min.y + insets.top * 0.5 - galley.size().y * 0.5);
+            let title_pos = Pos2::new(
+                rect.min.x + insets.left,
+                rect.min.y + insets.top * 0.5 - galley.size().y * 0.5,
+            );
             ui.painter().galley(title_pos, galley, theme.label());
         }
 
@@ -155,7 +210,8 @@ impl<'a> MacBox<'a> {
         let frame_h = theme.box_view().separator_frame_height.points();
         let border_w = theme.box_view().border_width.points();
 
-        let (rect, response) = ui.allocate_exact_size(Vec2::new(ui.available_width(), frame_h), Sense::hover());
+        let (rect, response) =
+            ui.allocate_exact_size(Vec2::new(ui.available_width(), frame_h), Sense::hover());
         let painter = ui.painter_at(rect);
         let cy = rect.center().y;
 

@@ -1,6 +1,6 @@
 {
   "$name": "egui-macview Design Tokens",
-  "$version": "0.6.4",
+  "$version": "0.6.5",
   "$description": "W3C DTCG-compliant design token catalog for egui-macview. Fully grounded in Apple AppKit, macOS Human Interface Guidelines, Apple Typography specifications, and CoreAnimation spring physics.",
   "macview": {
     "metrics": {
@@ -72,6 +72,26 @@
               "$extensions": {
                 "apple_citation": "WebKit RenderThemeMac.mm NSTextFieldCell metrics"
               }
+            },
+            "first_baseline_offset_from_top": {
+              "$type": "dimension",
+              "$value": "15.0pt",
+              "$description": "AppKit firstBaselineOffsetFromTop for Regular NSTextField (macOS Sonoma 14.8.9)."
+            },
+            "baseline_offset_from_bottom": {
+              "$type": "dimension",
+              "$value": "6.0pt",
+              "$description": "AppKit baselineOffsetFromBottom for Regular NSTextField (macOS Sonoma 14.8.9)."
+            },
+            "default_width": {
+              "$type": "dimension",
+              "$value": "76.0pt",
+              "$description": "Default intrinsic width for Regular NSTextField cells."
+            },
+            "border_width": {
+              "$type": "dimension",
+              "$value": "1.0pt",
+              "$description": "Bezel stroke border width for Regular NSTextField."
             }
           },
           "small": {
@@ -101,8 +121,8 @@
             },
             "padding_horizontal": {
               "$type": "dimension",
-              "$value": "4.0pt",
-              "$description": "Compact horizontal text container inset.",
+              "$value": "5.0pt",
+              "$description": "Compact horizontal text container inset for NSControlSizeSmall.",
               "$extensions": {
                 "apple_citation": "NSTextFieldCell small control size drawing bounds"
               }
@@ -114,6 +134,26 @@
               "$extensions": {
                 "apple_citation": "WebKit RenderThemeMac.mm small text field metrics"
               }
+            },
+            "first_baseline_offset_from_top": {
+              "$type": "dimension",
+              "$value": "14.0pt",
+              "$description": "AppKit firstBaselineOffsetFromTop for Small NSTextField (macOS Sonoma 14.8.9)."
+            },
+            "baseline_offset_from_bottom": {
+              "$type": "dimension",
+              "$value": "5.0pt",
+              "$description": "AppKit baselineOffsetFromBottom for Small NSTextField (macOS Sonoma 14.8.9)."
+            },
+            "default_width": {
+              "$type": "dimension",
+              "$value": "60.0pt",
+              "$description": "Default intrinsic width for Small NSTextField cells."
+            },
+            "border_width": {
+              "$type": "dimension",
+              "$value": "1.0pt",
+              "$description": "Bezel stroke border width for Small NSTextField."
             }
           },
           "compact_infobox": {
@@ -157,6 +197,16 @@
                 "apple_citation": "SPEC-001 Section 4.1 Zero-Clipping Guarantee"
               }
             },
+            "first_baseline_offset_from_top": {
+              "$type": "dimension",
+              "$value": "13.5pt",
+              "$description": "Baseline offset from top for 18pt CompactInfobox cell."
+            },
+            "baseline_offset_from_bottom": {
+              "$type": "dimension",
+              "$value": "4.5pt",
+              "$description": "Baseline offset from bottom for 18pt CompactInfobox cell."
+            },
             "default_width": {
               "$type": "dimension",
               "$value": "44.0pt",
@@ -198,6 +248,36 @@
               "$extensions": {
                 "apple_citation": "AppKit NSControlSizeMini Bezel Style"
               }
+            },
+            "padding_horizontal": {
+              "$type": "dimension",
+              "$value": "4.0pt",
+              "$description": "Horizontal text inset for NSControlSizeMini text fields."
+            },
+            "padding_vertical": {
+              "$type": "dimension",
+              "$value": "1.0pt",
+              "$description": "Vertical text inset for NSControlSizeMini text fields."
+            },
+            "first_baseline_offset_from_top": {
+              "$type": "dimension",
+              "$value": "12.0pt",
+              "$description": "AppKit firstBaselineOffsetFromTop for Mini NSTextField (macOS Sonoma 14.8.9)."
+            },
+            "baseline_offset_from_bottom": {
+              "$type": "dimension",
+              "$value": "4.0pt",
+              "$description": "AppKit baselineOffsetFromBottom for Mini NSTextField (macOS Sonoma 14.8.9)."
+            },
+            "default_width": {
+              "$type": "dimension",
+              "$value": "44.0pt",
+              "$description": "Default intrinsic width for Mini NSTextField cells."
+            },
+            "border_width": {
+              "$type": "dimension",
+              "$value": "1.0pt",
+              "$description": "Bezel stroke border width for Mini NSTextField."
             }
           },
           "large": {
@@ -224,7 +304,52 @@
               "$extensions": {
                 "apple_citation": "macOS HIG Large Control Styling"
               }
+            },
+            "padding_horizontal": {
+              "$type": "dimension",
+              "$value": "8.0pt",
+              "$description": "Horizontal text inset for NSControlSizeLarge text fields."
+            },
+            "padding_vertical": {
+              "$type": "dimension",
+              "$value": "3.0pt",
+              "$description": "Vertical text inset for NSControlSizeLarge text fields."
+            },
+            "first_baseline_offset_from_top": {
+              "$type": "dimension",
+              "$value": "19.0pt",
+              "$description": "Baseline offset from top for Large NSTextField."
+            },
+            "baseline_offset_from_bottom": {
+              "$type": "dimension",
+              "$value": "7.0pt",
+              "$description": "Baseline offset from bottom for Large NSTextField."
+            },
+            "default_width": {
+              "$type": "dimension",
+              "$value": "96.0pt",
+              "$description": "Default intrinsic width for Large NSTextField cells."
+            },
+            "border_width": {
+              "$type": "dimension",
+              "$value": "1.0pt",
+              "$description": "Bezel stroke border width for Large NSTextField."
             }
+          },
+          "auto_size_regular_min_height": {
+            "$type": "dimension",
+            "$value": "21.0pt",
+            "$description": "Minimum fixed_rect height threshold that resolves to MacControlSize::Regular."
+          },
+          "auto_size_small_min_height": {
+            "$type": "dimension",
+            "$value": "18.5pt",
+            "$description": "Minimum fixed_rect height threshold that resolves to MacControlSize::Small."
+          },
+          "auto_size_compact_min_height": {
+            "$type": "dimension",
+            "$value": "17.0pt",
+            "$description": "Minimum fixed_rect height threshold that resolves to MacControlSize::CompactInfobox."
           }
         },
         "button": {
@@ -664,11 +789,59 @@
           },
           "chevron_stroke_width": {
             "$type": "dimension",
-            "$value": "1.2pt",
-            "$description": "Stroke width of indicator chevrons.",
+            "$value": "1.25pt",
+            "$description": "Stroke width of indicator chevrons (macOS Sonoma AppKit ground truth 1.25pt).",
             "$extensions": {
               "apple_citation": "AppKit NSPopUpButton indicator stroke"
             }
+          },
+          "chevron_gap_vertical": {
+            "$type": "dimension",
+            "$value": "1.75pt",
+            "$description": "Half-gap vertical separation from vertical center to each chevron base.",
+            "$extensions": {
+              "apple_citation": "AppKit NSPopUpButtonCell separated double chevron geometry"
+            }
+          },
+          "chevron_half_width": {
+            "$type": "dimension",
+            "$value": "2.5pt",
+            "$description": "Horizontal half-width of each NSPopUpButton chevron."
+          },
+          "chevron_height": {
+            "$type": "dimension",
+            "$value": "2.25pt",
+            "$description": "Vertical height of each NSPopUpButton chevron from base to apex."
+          },
+          "regular_first_baseline_offset": {
+            "$type": "dimension",
+            "$value": "14.0pt",
+            "$description": "AppKit firstBaselineOffsetFromTop for Regular NSPopUpButton."
+          },
+          "small_first_baseline_offset": {
+            "$type": "dimension",
+            "$value": "12.0pt",
+            "$description": "AppKit firstBaselineOffsetFromTop for Small NSPopUpButton."
+          },
+          "mini_first_baseline_offset": {
+            "$type": "dimension",
+            "$value": "10.0pt",
+            "$description": "AppKit firstBaselineOffsetFromTop for Mini NSPopUpButton."
+          },
+          "regular_visual_height": {
+            "$type": "dimension",
+            "$value": "20.0pt",
+            "$description": "AppKit NSPopUpButton visual bezel height inside a 25.0pt NIB frame."
+          },
+          "small_visual_height": {
+            "$type": "dimension",
+            "$value": "16.0pt",
+            "$description": "AppKit NSPopUpButton Small visual bezel height inside a 22.0pt NIB frame."
+          },
+          "mini_visual_height": {
+            "$type": "dimension",
+            "$value": "13.0pt",
+            "$description": "AppKit NSPopUpButton Mini visual bezel height inside a 16.0pt NIB frame."
           },
           "chevron_spacing": {
             "$type": "dimension",
@@ -1895,7 +2068,11 @@
           "button_mini_intrinsic": { "$type": "dimension", "$value": "13.0pt" },
           "spring_mass": { "$type": "dimension", "$value": "1.0pt" },
           "spring_stiffness": { "$type": "dimension", "$value": "300.0pt" },
-          "spring_damping": { "$type": "dimension", "$value": "25.0pt" }
+          "spring_damping": { "$type": "dimension", "$value": "25.0pt" },
+          "header_font_size": { "$type": "dimension", "$value": "12.0pt" },
+          "trailing_button_size": { "$type": "dimension", "$value": "16.0pt" },
+          "trailing_plus_half_span": { "$type": "dimension", "$value": "4.0pt" },
+          "trailing_plus_stroke_width": { "$type": "dimension", "$value": "1.4pt" }
         },
         "combo_box": {
           "regular_height": { "$type": "dimension", "$value": "23.0pt" },
@@ -1913,7 +2090,19 @@
           "item_height": { "$type": "dimension", "$value": "18.0pt" },
           "visible_items": { "$type": "dimension", "$value": "5.0pt" },
           "intercell_spacing_x": { "$type": "dimension", "$value": "3.0pt" },
-          "intercell_spacing_y": { "$type": "dimension", "$value": "2.0pt" }
+          "intercell_spacing_y": { "$type": "dimension", "$value": "2.0pt" },
+          "badge_button_width": { "$type": "dimension", "$value": "17.0pt" },
+          "button_inset": { "$type": "dimension", "$value": "2.0pt" },
+          "button_corner_radius": { "$type": "dimension", "$value": "4.0pt" },
+          "chevron_half_width": { "$type": "dimension", "$value": "2.5pt" },
+          "chevron_half_height": { "$type": "dimension", "$value": "1.5pt" },
+          "chevron_stroke_width": { "$type": "dimension", "$value": "1.3pt" },
+          "regular_first_baseline_offset": { "$type": "dimension", "$value": "15.0pt" },
+          "small_first_baseline_offset": { "$type": "dimension", "$value": "12.0pt" },
+          "mini_first_baseline_offset": { "$type": "dimension", "$value": "11.0pt" },
+          "regular_visual_height": { "$type": "dimension", "$value": "20.0pt" },
+          "small_visual_height": { "$type": "dimension", "$value": "16.0pt" },
+          "mini_visual_height": { "$type": "dimension", "$value": "13.0pt" }
         },
         "tab_view": {
           "regular_bar_height": { "$type": "dimension", "$value": "24.0pt" },
@@ -2032,7 +2221,82 @@
           "inset_right": { "$type": "dimension", "$value": "9.0pt" },
           "corner_radius": { "$type": "dimension", "$value": "5.0pt" },
           "border_width": { "$type": "dimension", "$value": "1.0pt" },
-          "separator_frame_height": { "$type": "dimension", "$value": "5.0pt" }
+          "separator_frame_height": { "$type": "dimension", "$value": "5.0pt" },
+          "title_height": { "$type": "dimension", "$value": "14.0pt" },
+          "title_font_size": { "$type": "dimension", "$value": "11.0pt" }
+        },
+        "checkbox": {
+          "regular": {
+            "box_size": { "$type": "dimension", "$value": "14.0pt" },
+            "corner_radius": { "$type": "dimension", "$value": "3.5pt" },
+            "label_gap": { "$type": "dimension", "$value": "6.0pt" },
+            "font_size": { "$type": "dimension", "$value": "13.0pt" },
+            "checkmark_stroke": { "$type": "dimension", "$value": "1.6pt" },
+            "first_baseline_offset_from_top": { "$type": "dimension", "$value": "13.0pt" }
+          },
+          "small": {
+            "box_size": { "$type": "dimension", "$value": "12.0pt" },
+            "corner_radius": { "$type": "dimension", "$value": "3.0pt" },
+            "label_gap": { "$type": "dimension", "$value": "5.0pt" },
+            "font_size": { "$type": "dimension", "$value": "11.0pt" },
+            "checkmark_stroke": { "$type": "dimension", "$value": "1.4pt" },
+            "first_baseline_offset_from_top": { "$type": "dimension", "$value": "11.0pt" }
+          },
+          "mini": {
+            "box_size": { "$type": "dimension", "$value": "10.0pt" },
+            "corner_radius": { "$type": "dimension", "$value": "2.5pt" },
+            "label_gap": { "$type": "dimension", "$value": "4.0pt" },
+            "font_size": { "$type": "dimension", "$value": "9.0pt" },
+            "checkmark_stroke": { "$type": "dimension", "$value": "1.2pt" },
+            "first_baseline_offset_from_top": { "$type": "dimension", "$value": "9.0pt" }
+          },
+          "border_width": { "$type": "dimension", "$value": "1.0pt" },
+          "check_p1_x": { "$type": "dimension", "$value": "0.24pt" },
+          "check_p1_y": { "$type": "dimension", "$value": "0.52pt" },
+          "check_p2_x": { "$type": "dimension", "$value": "0.43pt" },
+          "check_p2_y": { "$type": "dimension", "$value": "0.72pt" },
+          "check_p3_x": { "$type": "dimension", "$value": "0.76pt" },
+          "check_p3_y": { "$type": "dimension", "$value": "0.28pt" },
+          "mixed_bar_inset_ratio": { "$type": "dimension", "$value": "0.24pt" }
+        },
+        "label": {
+          "regular_font_size": { "$type": "dimension", "$value": "13.0pt" },
+          "regular_height": { "$type": "dimension", "$value": "16.0pt" },
+          "regular_baseline_from_top": { "$type": "dimension", "$value": "13.0pt" },
+          "regular_baseline_from_bottom": { "$type": "dimension", "$value": "3.0pt" },
+          "regular_ascender": { "$type": "dimension", "$value": "12.57pt" },
+          "regular_descender": { "$type": "dimension", "$value": "-2.74pt" },
+          "regular_cap_height": { "$type": "dimension", "$value": "9.16pt" },
+          "small_font_size": { "$type": "dimension", "$value": "11.0pt" },
+          "small_height": { "$type": "dimension", "$value": "14.0pt" },
+          "small_baseline_from_top": { "$type": "dimension", "$value": "11.0pt" },
+          "small_baseline_from_bottom": { "$type": "dimension", "$value": "3.0pt" },
+          "small_ascender": { "$type": "dimension", "$value": "10.63pt" },
+          "small_descender": { "$type": "dimension", "$value": "-2.32pt" },
+          "small_cap_height": { "$type": "dimension", "$value": "7.75pt" },
+          "mini_font_size": { "$type": "dimension", "$value": "9.0pt" },
+          "mini_height": { "$type": "dimension", "$value": "11.0pt" },
+          "mini_baseline_from_top": { "$type": "dimension", "$value": "10.0pt" },
+          "mini_baseline_from_bottom": { "$type": "dimension", "$value": "2.0pt" },
+          "mini_ascender": { "$type": "dimension", "$value": "8.70pt" },
+          "mini_descender": { "$type": "dimension", "$value": "-1.90pt" },
+          "mini_cap_height": { "$type": "dimension", "$value": "6.34pt" },
+          "semibold_stroke_boost": { "$type": "dimension", "$value": "0.35pt" },
+          "bold_stroke_boost": { "$type": "dimension", "$value": "0.55pt" }
+        },
+        "help_button": {
+          "diameter": { "$type": "dimension", "$value": "20.0pt" },
+          "small_diameter": { "$type": "dimension", "$value": "16.0pt" },
+          "mini_diameter": { "$type": "dimension", "$value": "13.0pt" },
+          "font_size": { "$type": "dimension", "$value": "12.0pt" },
+          "border_width": { "$type": "dimension", "$value": "1.0pt" },
+          "shadow_offset_y": { "$type": "dimension", "$value": "1.0pt" }
+        },
+        "inline_action_button": {
+          "diameter": { "$type": "dimension", "$value": "16.0pt" },
+          "icon_size": { "$type": "dimension", "$value": "10.0pt" },
+          "border_width": { "$type": "dimension", "$value": "1.0pt" },
+          "icon_stroke_width": { "$type": "dimension", "$value": "1.3pt" }
         }
       },
       "toolbar": {
@@ -3045,6 +3309,21 @@
           "$type": "color",
           "$value": "rgba(0, 0, 0, 0.70)",
           "$description": "Overlay scrollbar thumb hovered/dragged color in Aqua."
+        },
+        "tertiary_label": {
+          "$type": "color",
+          "$value": "rgba(0, 0, 0, 0.30)",
+          "$description": "Tertiary label text color in Aqua Light mode (NSColor.tertiaryLabelColor)."
+        },
+        "box_background": {
+          "$type": "color",
+          "$value": "#E5E5E5",
+          "$description": "Subtle recessed container surface color for NSBoxPrimary in Aqua Light mode."
+        },
+        "box_border": {
+          "$type": "color",
+          "$value": "#D8D8D8",
+          "$description": "Perimeter hairline border color for NSBoxPrimary in Aqua Light mode."
         }
       },
       "dark_aqua": {
@@ -3338,6 +3617,21 @@
           "$type": "color",
           "$value": "rgba(255, 255, 255, 0.70)",
           "$description": "Overlay scrollbar thumb hovered/dragged color in DarkAqua."
+        },
+        "tertiary_label": {
+          "$type": "color",
+          "$value": "rgba(255, 255, 255, 0.30)",
+          "$description": "Tertiary label text color in DarkAqua mode (NSColor.tertiaryLabelColor)."
+        },
+        "box_background": {
+          "$type": "color",
+          "$value": "#232528",
+          "$description": "Subtle recessed container surface color for NSBoxPrimary in DarkAqua mode."
+        },
+        "box_border": {
+          "$type": "color",
+          "$value": "#3A3D42",
+          "$description": "Perimeter hairline border color for NSBoxPrimary in DarkAqua mode."
         }
       },
       "anthracite": {
@@ -3631,6 +3925,21 @@
           "$type": "color",
           "$value": "rgba(255, 255, 255, 0.70)",
           "$description": "Overlay scrollbar thumb hovered/dragged color in DarkAqua."
+        },
+        "tertiary_label": {
+          "$type": "color",
+          "$value": "rgba(255, 255, 255, 0.35)",
+          "$description": "Tertiary label text color in Anthracite Studio mode."
+        },
+        "box_background": {
+          "$type": "color",
+          "$value": "#2B2E35",
+          "$description": "Subtle recessed container surface color for NSBoxPrimary in Anthracite mode."
+        },
+        "box_border": {
+          "$type": "color",
+          "$value": "#424650",
+          "$description": "Perimeter hairline border color for NSBoxPrimary in Anthracite mode."
         }
       }
     },

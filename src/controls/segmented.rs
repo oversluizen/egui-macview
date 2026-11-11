@@ -91,9 +91,13 @@ impl<'a> MacSegmentedControl<'a> {
         let mut max_content_w = min_item_w;
         let mut galleys = Vec::with_capacity(self.options.len());
         for &opt in self.options {
-            let galley =
-                ui.painter()
-                    .layout_no_wrap(opt.to_owned(), font_id.clone(), Color32::PLACEHOLDER);
+            let galley = theme.layout_tracked_galley(
+                ui,
+                opt,
+                font_id.clone(),
+                Color32::PLACEHOLDER,
+                f32::INFINITY,
+            );
             let padded_w = galley.size().x + padding_h * 2.0;
             if padded_w > max_content_w {
                 max_content_w = padded_w;

@@ -1,4 +1,4 @@
-//! State 6 (`v0.6`): Advanced Media, Scheduling, and Grid Controls (`SPEC-012`).
+//! State 6 (`v0.6` – `v0.6.5`): Advanced Media, Scheduling, Grid & AppKit NIB Primitives (`SPEC-012`).
 //!
 //! Grounded in Apple AppKit/AVKit Sonoma 14.8.9 hardware inspection (Darwin 23.6.0).
 
@@ -6,10 +6,11 @@ use super::CenterState;
 use egui::Ui;
 use egui_macview::{
     controls::{
-        MacBox, MacCollectionView, MacCollectionViewFlowLayout, MacComboBox, MacControlSize,
-        MacDatePicker, MacDatePickerElementFlags, MacDatePickerStyle, MacDisclosureButton,
-        MacDisclosureGroup, MacPlayerControlsStyle, MacPlayerView, MacRuleEditor, MacTabStyle,
-        MacTabView,
+        MacBox, MacCheckbox, MacCollectionView, MacCollectionViewFlowLayout, MacComboBox,
+        MacControlSize, MacDatePicker, MacDatePickerElementFlags, MacDatePickerStyle,
+        MacDisclosureButton, MacDisclosureGroup, MacFontWeight, MacHelpButton,
+        MacInlineActionButton, MacLabel, MacLabelColor, MacPlayerControlsStyle, MacPlayerView,
+        MacRuleEditor, MacTabStyle, MacTabView,
     },
     theme::MacTheme,
     MacToastManager,
@@ -17,39 +18,79 @@ use egui_macview::{
 use std::cell::RefCell;
 
 impl CenterState {
-    /// Renders State 6 showcasing Milestone 0.6.0 advanced media, scheduling, and grid controls.
+    /// Renders State 6 showcasing Milestone 0.6.0–0.6.5 advanced media, scheduling, grid, and NIB primitives.
     pub fn render_state6_advanced_controls(
         &mut self,
         content_ui: &mut Ui,
         theme: &MacTheme,
-        _toasts: &RefCell<MacToastManager>,
+        toasts: &RefCell<MacToastManager>,
     ) {
         content_ui.vertical(|ui| {
-            MacBox::new("Advanced Media, Scheduling & Grid Controls Suite (SPEC-012)")
+            MacBox::new("Advanced Media, Scheduling, Grid & AppKit NIB Primitives (SPEC-012 / v0.6.5)")
                 .theme(theme)
                 .show(ui, |box_ui| {
                     let combo_text = &mut self.advanced_combo_text;
                     let button_open = &mut self.advanced_button_open;
 
                     box_ui.vertical(|ui| {
-                        // 1. Disclosure Group & Button
-                        MacDisclosureGroup::new(
+                        // 1. v0.6.5 AppKit NIB Primitives: MacCheckbox, MacLabel, MacHelpButton, MacInlineActionButton
+                        let disc_resp = MacDisclosureGroup::new(
                             "gallery_disc_group",
-                            "Encoding & Codec Settings (NSBezelStyleDisclosure)",
+                            "AppKit NIB Primitives & Optical Typography (v0.6.5)",
                             &mut self.advanced_disclosure_open,
                         )
                         .theme(theme)
+                        .with_trailing_add_button(true)
                         .show(ui, |disc_ui| {
                             disc_ui.horizontal(|h_ui| {
-                                h_ui.label("Pill Disclosure Button:");
+                                MacLabel::new("Checkboxes:")
+                                    .weight(MacFontWeight::Semibold)
+                                    .color(MacLabelColor::Primary)
+                                    .theme(theme)
+                                    .show(h_ui);
+                                MacCheckbox::new(&mut self.v065_check_regular, "Regular (14pt)")
+                                    .control_size(MacControlSize::Regular)
+                                    .theme(theme)
+                                    .show(h_ui);
+                                MacCheckbox::new(&mut self.v065_check_small, "Small (12pt)")
+                                    .control_size(MacControlSize::Small)
+                                    .theme(theme)
+                                    .show(h_ui);
+                                let is_mixed = !self.v065_check_mini_mixed;
+                                MacCheckbox::new(&mut self.v065_check_mini_mixed, "Mini Mixed (10pt)")
+                                    .control_size(MacControlSize::Mini)
+                                    .mixed(is_mixed)
+                                    .theme(theme)
+                                    .show(h_ui);
+                            });
+
+                            disc_ui.add_space(4.0);
+                            disc_ui.horizontal(|h_ui| {
+                                MacLabel::new("Labels & Actions:")
+                                    .weight(MacFontWeight::Semibold)
+                                    .theme(theme)
+                                    .show(h_ui);
+                                MacLabel::new(format!("Axes ({})", self.v065_axis_count))
+                                    .control_size(MacControlSize::Small)
+                                    .color(MacLabelColor::Secondary)
+                                    .theme(theme)
+                                    .show(h_ui);
+                                if MacInlineActionButton::new("+").theme(theme).show(h_ui).clicked() {
+                                    self.v065_axis_count = self.v065_axis_count.saturating_add(1);
+                                    toasts.borrow_mut().info("Added font axis");
+                                }
+                                if MacHelpButton::new().theme(theme).show(h_ui).clicked() {
+                                    toasts.borrow_mut().info("AppKit NSBezelStyleHelpButton (20x20pt)");
+                                }
+                                h_ui.add_space(12.0);
+                                h_ui.label("Pill Disclosure:");
                                 h_ui.add(
                                     MacDisclosureButton::new(button_open)
                                         .control_size(MacControlSize::Regular)
                                         .theme(theme),
                                 );
-
-                                h_ui.add_space(16.0);
-                                h_ui.label("Video Codec:");
+                                h_ui.add_space(12.0);
+                                h_ui.label("Codec:");
                                 let items = [
                                     "Apple ProRes 422 HQ",
                                     "Apple ProRes 4444 XQ",
@@ -63,6 +104,10 @@ impl CenterState {
                                     .show(h_ui);
                             });
                         });
+                        if disc_resp.trailing_clicked {
+                            self.v065_axis_count = self.v065_axis_count.saturating_add(1);
+                            toasts.borrow_mut().success("Disclosure header trailing '+' clicked");
+                        }
 
                         MacBox::separator(ui);
 

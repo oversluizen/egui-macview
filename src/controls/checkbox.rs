@@ -1,0 +1,266 @@
+//! Authentic macOS AppKit Square Checkbox (`NSButtonTypeSwitch`, `v0.6.5`).
+//!
+//! Grounded in macOS Sonoma 14.8.9 AppKit `NSButton(checkboxWithTitle:)` ground-truth metrics
+//! and W3C DTCG tokens via [`MacTheme`].
+//!
+//! Unlike [`crate::MacToggle`] (`NSSwitch`, a `26x15pt` sliding pill), `MacCheckbox` renders
+//! the native AppKit square rounded checkbox (`14x14pt` Regular, `12x12pt` Small, `10x10pt` Mini)
+//! with a vector checkmark (or mixed `-` dash) and optical-tracked label aligned on the AppKit baseline.
+
+use crate::controls::MacControlSize;
+use crate::layout::{subpixel_snap, subpixel_snap_rect};
+use crate::theme::MacTheme;
+use egui::{
+    CornerRadius, FontId, Key, Modifiers, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui,
+    Vec2, Widget, WidgetText,
+};
+
+/// Authentic macOS AppKit Square Checkbox (`NSButtonTypeSwitch`).
+///
+/// # Example
+/// ```rust
+/// use egui_macview::{MacAppearance, MacCheckbox, MacControlSize, MacTheme};
+///
+/// # let ctx = egui::Context::default();
+/// # let mut out = ctx.run_ui(egui::RawInput::default(), |ui| {
+/// let theme = MacTheme::new(MacAppearance::Aqua);
+/// let mut checked = true;
+///
+/// MacCheckbox::new(&mut checked, "Show Grid Lines")
+///     .control_size(MacControlSize::Regular)
+///     .theme(&theme)
+///     .show(ui);
+/// # });
+/// # out.textures_delta.clear();
+/// ```
+pub struct MacCheckbox<'a> {
+    checked: &'a mut bool,
+    label: WidgetText,
+    mixed: bool,
+    control_size: MacControlSize,
+    fixed_rect: Option<Rect>,
+    enabled: bool,
+    theme: Option<&'a MacTheme>,
+}
+
+impl<'a> MacCheckbox<'a> {
+    /// Creates a new AppKit square checkbox bound to `checked` with `label`.
+    pub fn new(checked: &'a mut bool, label: impl Into<WidgetText>) -> Self {
+        Self {
+            checked,
+            label: label.into(),
+            mixed: false,
+            control_size: MacControlSize::Regular,
+            fixed_rect: None,
+            enabled: true,
+            theme: None,
+        }
+    }
+
+    /// Sets the AppKit indeterminate / mixed state (`NSMixedState`, horizontal `-` dash).
+    pub fn mixed(mut self, mixed: bool) -> Self {
+        self.mixed = mixed;
+        self
+    }
+
+    /// Sets the AppKit control size (`Regular` `14x14pt`, `Small` `12x12pt`, `Mini` `10x10pt`).
+    pub fn control_size(mut self, size: MacControlSize) -> Self {
+        self.control_size = size;
+        self
+    }
+
+    /// Pins the checkbox to an exact NIB rectangle.
+    pub fn fixed_rect(mut self, rect: Rect) -> Self {
+        self.fixed_rect = Some(rect);
+        self
+    }
+
+    /// Enables or disables interaction.
+    pub fn enabled(mut self, enabled: bool) -> Self {
+        self.enabled = enabled;
+        self
+    }
+
+    /// Injects dynamic [`MacTheme`].
+    pub fn theme(mut self, theme: &'a MacTheme) -> Self {
+        self.theme = Some(theme);
+        self
+    }
+
+    /// Resolves the square indicator box dimension (`14.0pt`, `12.0pt`, or `10.0pt`).
+    pub fn box_size(&self) -> f32 {
+        let theme_cow = MacTheme::resolve_or_default(self.theme);
+        let cm = theme_cow.checkbox();
+        match self.control_size {
+            MacControlSize::Regular | MacControlSize::Large => cm.regular.box_size.points(),
+            MacControlSize::Small | MacControlSize::CompactInfobox => cm.small.box_size.points(),
+            MacControlSize::Mini => cm.mini.box_size.points(),
+        }
+    }
+
+    /// Renders the checkbox into `ui`.
+    pub fn show(self, ui: &mut Ui) -> Response {
+        ui.add(self)
+    }
+}
+
+impl<'a> Widget for MacCheckbox<'a> {
+    fn ui(self, ui: &mut Ui) -> Response {
+        let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
+        let theme: &MacTheme = &theme_cow;
+        let cm = theme.checkbox();
+        let lm = theme.label_metrics();
+
+        let (sz_metrics, ascender, cell_h) = match self.control_size {
+            MacControlSize::Regular | MacControlSize::Large => (
+                &cm.regular,
+                lm.regular_ascender.points(),
+                lm.regular_height.points(),
+            ),
+            MacControlSize::Small | MacControlSize::CompactInfobox => (
+                &cm.small,
+                lm.small_ascender.points(),
+                lm.small_height.points(),
+            ),
+            MacControlSize::Mini => (
+                &cm.mini,
+                lm.mini_ascender.points(),
+                lm.mini_height.points(),
+            ),
+        };
+
+        let box_sz = sz_metrics.box_size.points();
+        let corner_r = sz_metrics.corner_radius.points();
+        let gap = sz_metrics.label_gap.points();
+        let font_sz = sz_metrics.font_size.points();
+        let check_stroke_w = sz_metrics.checkmark_stroke.points();
+        let baseline_from_top = sz_metrics.first_baseline_offset_from_top.points();
+        let border_w = cm.border_width.points();
+
+        let alpha = if self.enabled {
+            1.0
+        } else {
+            theme.disabled_opacity()
+        };
+        let text_color = theme.label().gamma_multiply(alpha);
+        let label_str = self.label.text();
+        let galley = if label_str.is_empty() {
+            None
+        } else {
+            Some(theme.layout_tracked_galley(
+                ui,
+                label_str,
+                FontId::proportional(font_sz),
+                text_color,
+                f32::INFINITY,
+            ))
+        };
+
+        let desired_w = match (&self.fixed_rect, &galley) {
+            (Some(r), _) => r.width(),
+            (None, Some(g)) => box_sz + gap + g.size().x,
+            (None, None) => box_sz,
+        };
+        let desired_h = self
+            .fixed_rect
+            .map(|r| r.height())
+            .unwrap_or_else(|| box_sz.max(cell_h));
+
+        let sense = if self.enabled {
+            Sense::click()
+        } else {
+            Sense::hover()
+        };
+        let ppp = ui.ctx().pixels_per_point();
+        let (rect, mut response) = if let Some(fixed) = self.fixed_rect {
+            let snapped = subpixel_snap_rect(fixed, ppp);
+            let id = ui.next_auto_id().with("mac_checkbox_fixed");
+            let resp = ui.interact(snapped, id, sense);
+            (snapped, resp)
+        } else {
+            let (r, resp) = ui.allocate_exact_size(Vec2::new(desired_w, desired_h), sense);
+            (subpixel_snap_rect(r, ppp), resp)
+        };
+
+        if self.enabled {
+            let key_toggle = response.has_focus()
+                && ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Space));
+            if response.clicked() || key_toggle {
+                *self.checked = !*self.checked;
+                response.mark_changed();
+            }
+        }
+
+        let painter = ui.painter_at(rect);
+        let box_rect = subpixel_snap_rect(
+            Rect::from_min_size(
+                Pos2::new(rect.left(), rect.center().y - box_sz * 0.5),
+                Vec2::splat(box_sz),
+            ),
+            ppp,
+        );
+
+        if self.enabled && response.has_focus() {
+            theme.paint_focus_ring(&painter, box_rect, corner_r);
+        }
+
+        let is_active = *self.checked || self.mixed;
+        let fill_color = if is_active {
+            theme.control_accent().gamma_multiply(alpha)
+        } else if response.is_pointer_button_down_on() && self.enabled {
+            theme.control().gamma_multiply(alpha)
+        } else {
+            theme.control_background().gamma_multiply(alpha)
+        };
+
+        let stroke = if is_active {
+            Stroke::NONE
+        } else {
+            Stroke::new(border_w, theme.separator().gamma_multiply(alpha))
+        };
+
+        painter.rect(
+            box_rect,
+            CornerRadius::same(corner_r.round() as u8),
+            fill_color,
+            stroke,
+            StrokeKind::Inside,
+        );
+
+        let glyph_stroke = Stroke::new(check_stroke_w, theme.on_accent_text().gamma_multiply(alpha));
+        if self.mixed {
+            let inset = box_sz * cm.mixed_bar_inset_ratio.points();
+            let cy = box_rect.center().y;
+            painter.line_segment(
+                [
+                    Pos2::new(box_rect.left() + inset, cy),
+                    Pos2::new(box_rect.right() - inset, cy),
+                ],
+                glyph_stroke,
+            );
+        } else if *self.checked {
+            let p1 = Pos2::new(
+                box_rect.left() + box_sz * cm.check_p1_x.points(),
+                box_rect.top() + box_sz * cm.check_p1_y.points(),
+            );
+            let p2 = Pos2::new(
+                box_rect.left() + box_sz * cm.check_p2_x.points(),
+                box_rect.top() + box_sz * cm.check_p2_y.points(),
+            );
+            let p3 = Pos2::new(
+                box_rect.left() + box_sz * cm.check_p3_x.points(),
+                box_rect.top() + box_sz * cm.check_p3_y.points(),
+            );
+            painter.line_segment([p1, p2], glyph_stroke);
+            painter.line_segment([p2, p3], glyph_stroke);
+        }
+
+        if let Some(galley) = galley {
+            let text_y = subpixel_snap(rect.top() + (baseline_from_top - ascender).max(0.0), ppp);
+            let text_pos = Pos2::new(box_rect.right() + gap, text_y);
+            painter.galley(text_pos, galley, text_color);
+        }
+
+        response
+    }
+}

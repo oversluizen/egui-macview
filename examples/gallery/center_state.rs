@@ -112,6 +112,10 @@ pub struct CenterState {
     pub advanced_player_playing: bool,
     pub advanced_player_progress: f32,
     pub advanced_rules: Vec<egui_macview::controls::MacRuleRow>,
+    pub v065_check_regular: bool,
+    pub v065_check_small: bool,
+    pub v065_check_mini_mixed: bool,
+    pub v065_axis_count: usize,
 }
 
 impl Default for CenterState {
@@ -213,6 +217,10 @@ impl Default for CenterState {
                 egui_macview::controls::MacRuleRow::new(vec![0, 0]),
                 egui_macview::controls::MacRuleRow::new(vec![1, 1]),
             ],
+            v065_check_regular: true,
+            v065_check_small: false,
+            v065_check_mini_mixed: false,
+            v065_axis_count: 2,
         }
     }
 }

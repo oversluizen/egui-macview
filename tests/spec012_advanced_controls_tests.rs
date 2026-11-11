@@ -433,7 +433,7 @@ fn test_spec012_box_view_insets_and_primitives() {
 
     for (idx, clipped) in shapes.iter().enumerate() {
         match &clipped.shape {
-            egui::Shape::Rect(r) if r.fill == theme.control_background() => {
+            egui::Shape::Rect(r) if r.fill == theme.box_background() => {
                 if bg_rect_idx.is_none() {
                     bg_rect_idx = Some(idx);
                 }

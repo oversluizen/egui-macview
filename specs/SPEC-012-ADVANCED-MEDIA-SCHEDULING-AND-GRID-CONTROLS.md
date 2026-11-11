@@ -4,9 +4,9 @@
 | :--- | :--- |
 | **Document ID** | SPEC-012 |
 | **Document Title** | Advanced Media, Scheduling, and Grid Controls |
-| **Document Version** | `0.6.4` |
+| **Document Version** | `0.6.5` |
 | **Status** | Accepted / Normative |
-| **Target Milestone** | Milestone 0.6.4 |
+| **Target Milestone** | Milestone 0.6.5 |
 | **Target Host** | Standalone crate `egui-macview` (Rust, egui 0.37) |
 | **Author** | Jaco Oversluizen / `egui-macview` contributors |
 | **Hardware Ground Truth** | Apple Silicon MacBook Air (macOS Sonoma `14.8.9`, SDK `14`, 291 AppKit headers, 11 AVKit headers) |
@@ -25,6 +25,7 @@
 | `0.6.2` | 2026-11-10 | Architecture Team | Milestone 0.6.2 Release: Comprehensive developer documentation, HIG decision tables, standalone `eframe` quickstart, IDE hover `/// # Example` doc-tests, and architecture diagrams. |
 | `0.6.3` | 2026-11-10 | Architecture Team | Milestone 0.6.3 Release: Converted 62 `README.md` table links to rustdoc intra-doc links (`[`Type`]`) for `docs.rs`, added 9 `/// # Example` rustdoc blocks across Navigation, Surfaces, Feedback, State, and Symbols, and added `README.md` link guard. |
 | `0.6.4` | 2026-11-10 | Architecture Team | Milestone 0.6.4 Release: Repository-wide 100% English comment/prose/package verification guard (`check_vault_leakage_and_dutch_in_text`), removal of legacy `AUDIT-REFACTORING-REPORT.md`, and portable `start_gallery.cmd`. |
+| `0.6.5` | 2026-11-11 | Architecture Team | Milestone 0.6.5 Release: AppKit NIB parity (`MacCheckbox`, `MacLabel`, `MacHelpButton`, `MacInlineActionButton`), universal optical tracking (`layout_tracked_galley`), cross-platform baseline anchoring (`firstBaselineOffsetFromTop`), NIB `frame_rect` vs `visual_rect` bezel clamping, recessed `MacBox` surface tokens (`box_background`, `box_border`), `MacComboBox` right accent badge, `MacDisclosureGroup` trailing `+` action, and bundled open-source `Inter` font. |
 
 ---
 

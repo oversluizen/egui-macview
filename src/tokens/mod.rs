@@ -12,17 +12,18 @@ pub mod typography;
 pub use color::{MacAppearanceColors, MacColorTokens};
 pub use dtcg::{ColorValue, DimensionValue};
 pub use metrics::{
-    BoxViewMetrics, ButtonMetrics, ButtonSizeMetrics, CollectionViewMetrics, ColorWellMetrics,
-    ComboBoxMetrics, ContextMenuMetrics, DatePickerMetrics, DisclosureGroupMetrics,
-    FocusRingMetrics, FooterMetrics, LayoutMetrics, LevelIndicatorMetrics, MacControlMetrics,
-    MacMetricsTokens, MenuBarMetrics, NavigationMetrics, OutlineViewMetrics, PaletteMetrics,
-    PathControlMetrics, PlayerViewMetrics, PopUpButtonMetrics, PopoverMetrics,
-    ProgressIndicatorMetrics, ProgressSizeMetrics, RuleEditorMetrics, ScrollViewMetrics, SearchFieldMetrics,
-    SegmentedMetrics, SegmentedSizeMetrics, SliderMetrics, SplitViewMetrics, StackViewMetrics,
-    StepperMetrics, TableViewMetrics, TabViewMetrics, TextFieldMetrics, TextFieldSizeMetrics,
-    ThumbnailCellMetrics, ToastMetrics, ToggleMetrics, TokenFieldMetrics, ToolbarMetrics,
-    TrimScrubberMetrics, CANVAS_FOOTER_HEIGHT, COMMAND_PALETTE_HEIGHT, COMMAND_PALETTE_WIDTH,
-    DEFAULT_TOAST_DURATION,
+    BoxViewMetrics, ButtonMetrics, ButtonSizeMetrics, CheckboxMetrics, CheckboxSizeMetrics,
+    CollectionViewMetrics, ColorWellMetrics, ComboBoxMetrics, ContextMenuMetrics,
+    DatePickerMetrics, DisclosureGroupMetrics, FocusRingMetrics, FooterMetrics, HelpButtonMetrics,
+    InlineActionButtonMetrics, LabelMetrics, LayoutMetrics, LevelIndicatorMetrics,
+    MacControlMetrics, MacMetricsTokens, MenuBarMetrics, NavigationMetrics, OutlineViewMetrics,
+    PaletteMetrics, PathControlMetrics, PlayerViewMetrics, PopUpButtonMetrics, PopoverMetrics,
+    ProgressIndicatorMetrics, ProgressSizeMetrics, RuleEditorMetrics, ScrollViewMetrics,
+    SearchFieldMetrics, SegmentedMetrics, SegmentedSizeMetrics, SliderMetrics, SplitViewMetrics,
+    StackViewMetrics, StepperMetrics, TabViewMetrics, TableViewMetrics, TextFieldMetrics,
+    TextFieldSizeMetrics, ThumbnailCellMetrics, ToastMetrics, ToggleMetrics, TokenFieldMetrics,
+    ToolbarMetrics, TrimScrubberMetrics, CANVAS_FOOTER_HEIGHT, COMMAND_PALETTE_HEIGHT,
+    COMMAND_PALETTE_WIDTH, DEFAULT_TOAST_DURATION,
 };
 pub use motion::{MacMotionTokens, MotionPresetToken};
 pub use typography::{
@@ -63,9 +64,6 @@ pub struct MacDesignTokens {
 
 impl MacDesignTokens {
     /// Loads default design tokens from embedded `tokens/design_tokens.json`.
-    ///
-    /// Executes parsing within a dedicated stack thread (4MB) to guarantee immunity
-    /// against stack overflows on platforms with restricted default main stacks.
     pub fn load_default() -> Self {
         std::thread::Builder::new()
             .name("mac_token_loader".into())
@@ -86,229 +84,128 @@ impl MacDesignTokens {
 
     /// Accesses control metrics tokens.
     #[inline]
-    pub fn control_metrics(&self) -> &MacControlMetrics {
-        &self.macview.metrics.control
-    }
-
+    pub fn control_metrics(&self) -> &MacControlMetrics { &self.macview.metrics.control }
     /// Accesses toolbar metrics tokens.
     #[inline]
-    pub fn toolbar_metrics(&self) -> &ToolbarMetrics {
-        &self.macview.metrics.toolbar
-    }
-
+    pub fn toolbar_metrics(&self) -> &ToolbarMetrics { &self.macview.metrics.toolbar }
     /// Accesses popover and panel metrics tokens.
     #[inline]
-    pub fn popover_metrics(&self) -> &PopoverMetrics {
-        &self.macview.metrics.popover
-    }
-
+    pub fn popover_metrics(&self) -> &PopoverMetrics { &self.macview.metrics.popover }
     /// Accesses split view metrics tokens.
     #[inline]
-    pub fn split_view_metrics(&self) -> &SplitViewMetrics {
-        &self.macview.metrics.split_view
-    }
-
+    pub fn split_view_metrics(&self) -> &SplitViewMetrics { &self.macview.metrics.split_view }
     /// Accesses layout container metrics tokens.
     #[inline]
-    pub fn layout_metrics(&self) -> &LayoutMetrics {
-        &self.macview.metrics.layout
-    }
-
+    pub fn layout_metrics(&self) -> &LayoutMetrics { &self.macview.metrics.layout }
     /// Accesses scroll view metrics tokens.
     #[inline]
-    pub fn scroll_view_metrics(&self) -> &ScrollViewMetrics {
-        &self.macview.metrics.layout.scroll_view
-    }
-
+    pub fn scroll_view_metrics(&self) -> &ScrollViewMetrics { &self.macview.metrics.layout.scroll_view }
     /// Accesses stack view metrics tokens.
     #[inline]
-    pub fn stack_view_metrics(&self) -> &StackViewMetrics {
-        &self.macview.metrics.layout.stack_view
-    }
-
+    pub fn stack_view_metrics(&self) -> &StackViewMetrics { &self.macview.metrics.layout.stack_view }
     /// Accesses outline view metrics tokens.
     #[inline]
-    pub fn outline_view_metrics(&self) -> &OutlineViewMetrics {
-        &self.macview.metrics.control.outline_view
-    }
-
+    pub fn outline_view_metrics(&self) -> &OutlineViewMetrics { &self.macview.metrics.control.outline_view }
     /// Accesses slider metrics tokens.
     #[inline]
-    pub fn slider_metrics(&self) -> &SliderMetrics {
-        &self.macview.metrics.control.slider
-    }
-
+    pub fn slider_metrics(&self) -> &SliderMetrics { &self.macview.metrics.control.slider }
     /// Accesses thumbnail metrics tokens.
     #[inline]
-    pub fn thumbnail_metrics(&self) -> &ThumbnailCellMetrics {
-        &self.macview.metrics.control.thumbnail
-    }
-
+    pub fn thumbnail_metrics(&self) -> &ThumbnailCellMetrics { &self.macview.metrics.control.thumbnail }
     /// Accesses popup button metrics tokens.
     #[inline]
-    pub fn popup_button_metrics(&self) -> &PopUpButtonMetrics {
-        &self.macview.metrics.control.popup_button
-    }
-
+    pub fn popup_button_metrics(&self) -> &PopUpButtonMetrics { &self.macview.metrics.control.popup_button }
     /// Accesses search field metrics tokens.
     #[inline]
-    pub fn search_field_metrics(&self) -> &SearchFieldMetrics {
-        &self.macview.metrics.control.search_field
-    }
-
+    pub fn search_field_metrics(&self) -> &SearchFieldMetrics { &self.macview.metrics.control.search_field }
     /// Accesses stepper metrics tokens.
     #[inline]
-    pub fn stepper_metrics(&self) -> &StepperMetrics {
-        &self.macview.metrics.control.stepper
-    }
-
+    pub fn stepper_metrics(&self) -> &StepperMetrics { &self.macview.metrics.control.stepper }
     /// Accesses color well metrics tokens.
     #[inline]
-    pub fn color_well_metrics(&self) -> &ColorWellMetrics {
-        &self.macview.metrics.control.color_well
-    }
-
+    pub fn color_well_metrics(&self) -> &ColorWellMetrics { &self.macview.metrics.control.color_well }
     /// Accesses toggle switch metrics tokens.
     #[inline]
-    pub fn toggle_metrics(&self) -> &ToggleMetrics {
-        &self.macview.metrics.control.toggle
-    }
-
+    pub fn toggle_metrics(&self) -> &ToggleMetrics { &self.macview.metrics.control.toggle }
     /// Accesses navigation and feedback metrics tokens.
     #[inline]
-    pub fn navigation_metrics(&self) -> &NavigationMetrics {
-        &self.macview.metrics.navigation
-    }
-
+    pub fn navigation_metrics(&self) -> &NavigationMetrics { &self.macview.metrics.navigation }
     /// Accesses menu bar metrics tokens.
     #[inline]
-    pub fn menu_bar_metrics(&self) -> &MenuBarMetrics {
-        &self.macview.metrics.navigation.menu_bar
-    }
-
+    pub fn menu_bar_metrics(&self) -> &MenuBarMetrics { &self.macview.metrics.navigation.menu_bar }
     /// Accesses canvas footer metrics tokens.
     #[inline]
-    pub fn footer_metrics(&self) -> &FooterMetrics {
-        &self.macview.metrics.navigation.footer
-    }
-
+    pub fn footer_metrics(&self) -> &FooterMetrics { &self.macview.metrics.navigation.footer }
     /// Accesses command palette metrics tokens.
     #[inline]
-    pub fn palette_metrics(&self) -> &PaletteMetrics {
-        &self.macview.metrics.navigation.palette
-    }
-
+    pub fn palette_metrics(&self) -> &PaletteMetrics { &self.macview.metrics.navigation.palette }
     /// Accesses context menu metrics tokens.
     #[inline]
-    pub fn context_menu_metrics(&self) -> &ContextMenuMetrics {
-        &self.macview.metrics.navigation.context_menu
-    }
-
+    pub fn context_menu_metrics(&self) -> &ContextMenuMetrics { &self.macview.metrics.navigation.context_menu }
     /// Accesses toast notification metrics tokens.
     #[inline]
-    pub fn toast_metrics(&self) -> &ToastMetrics {
-        &self.macview.metrics.navigation.toast
-    }
-
+    pub fn toast_metrics(&self) -> &ToastMetrics { &self.macview.metrics.navigation.toast }
     /// Accesses progress indicator metrics tokens.
     #[inline]
-    pub fn progress_indicator_metrics(&self) -> &ProgressIndicatorMetrics {
-        &self.macview.metrics.control.progress_indicator
-    }
-
+    pub fn progress_indicator_metrics(&self) -> &ProgressIndicatorMetrics { &self.macview.metrics.control.progress_indicator }
     /// Accesses table view metrics tokens.
     #[inline]
-    pub fn table_view_metrics(&self) -> &TableViewMetrics {
-        &self.macview.metrics.control.table_view
-    }
-
+    pub fn table_view_metrics(&self) -> &TableViewMetrics { &self.macview.metrics.control.table_view }
     /// Accesses token field metrics tokens.
     #[inline]
-    pub fn token_field_metrics(&self) -> &TokenFieldMetrics {
-        &self.macview.metrics.control.token_field
-    }
-
+    pub fn token_field_metrics(&self) -> &TokenFieldMetrics { &self.macview.metrics.control.token_field }
     /// Accesses level indicator metrics tokens.
     #[inline]
-    pub fn level_indicator_metrics(&self) -> &LevelIndicatorMetrics {
-        &self.macview.metrics.control.level_indicator
-    }
-
+    pub fn level_indicator_metrics(&self) -> &LevelIndicatorMetrics { &self.macview.metrics.control.level_indicator }
     /// Accesses trim scrubber metrics tokens.
     #[inline]
-    pub fn trim_scrubber_metrics(&self) -> &TrimScrubberMetrics {
-        &self.macview.metrics.control.trim_scrubber
-    }
-
+    pub fn trim_scrubber_metrics(&self) -> &TrimScrubberMetrics { &self.macview.metrics.control.trim_scrubber }
     /// Accesses path control metrics tokens.
     #[inline]
-    pub fn path_control_metrics(&self) -> &PathControlMetrics {
-        &self.macview.metrics.control.path_control
-    }
-
+    pub fn path_control_metrics(&self) -> &PathControlMetrics { &self.macview.metrics.control.path_control }
     /// Accesses disclosure group metrics tokens.
     #[inline]
-    pub fn disclosure_group_metrics(&self) -> &DisclosureGroupMetrics {
-        &self.macview.metrics.control.disclosure_group
-    }
-
+    pub fn disclosure_group_metrics(&self) -> &DisclosureGroupMetrics { &self.macview.metrics.control.disclosure_group }
     /// Accesses combo box metrics tokens.
     #[inline]
-    pub fn combo_box_metrics(&self) -> &ComboBoxMetrics {
-        &self.macview.metrics.control.combo_box
-    }
-
+    pub fn combo_box_metrics(&self) -> &ComboBoxMetrics { &self.macview.metrics.control.combo_box }
     /// Accesses tab view metrics tokens.
     #[inline]
-    pub fn tab_view_metrics(&self) -> &TabViewMetrics {
-        &self.macview.metrics.control.tab_view
-    }
-
+    pub fn tab_view_metrics(&self) -> &TabViewMetrics { &self.macview.metrics.control.tab_view }
     /// Accesses date picker metrics tokens.
     #[inline]
-    pub fn date_picker_metrics(&self) -> &DatePickerMetrics {
-        &self.macview.metrics.control.date_picker
-    }
-
+    pub fn date_picker_metrics(&self) -> &DatePickerMetrics { &self.macview.metrics.control.date_picker }
     /// Accesses collection view metrics tokens.
     #[inline]
-    pub fn collection_view_metrics(&self) -> &CollectionViewMetrics {
-        &self.macview.metrics.control.collection_view
-    }
-
+    pub fn collection_view_metrics(&self) -> &CollectionViewMetrics { &self.macview.metrics.control.collection_view }
     /// Accesses player view metrics tokens.
     #[inline]
-    pub fn player_view_metrics(&self) -> &PlayerViewMetrics {
-        &self.macview.metrics.control.player_view
-    }
-
+    pub fn player_view_metrics(&self) -> &PlayerViewMetrics { &self.macview.metrics.control.player_view }
     /// Accesses box view metrics tokens.
     #[inline]
-    pub fn box_view_metrics(&self) -> &BoxViewMetrics {
-        &self.macview.metrics.control.box_view
-    }
-
+    pub fn box_view_metrics(&self) -> &BoxViewMetrics { &self.macview.metrics.control.box_view }
     /// Accesses rule editor metrics tokens.
     #[inline]
-    pub fn rule_editor_metrics(&self) -> &RuleEditorMetrics {
-        &self.macview.metrics.control.rule_editor
-    }
-
+    pub fn rule_editor_metrics(&self) -> &RuleEditorMetrics { &self.macview.metrics.control.rule_editor }
+    /// Accesses checkbox metrics tokens.
+    #[inline]
+    pub fn checkbox_metrics(&self) -> &CheckboxMetrics { &self.macview.metrics.control.checkbox }
+    /// Accesses label metrics tokens.
+    #[inline]
+    pub fn label_metrics(&self) -> &LabelMetrics { &self.macview.metrics.control.label }
+    /// Accesses help button metrics tokens.
+    #[inline]
+    pub fn help_button_metrics(&self) -> &HelpButtonMetrics { &self.macview.metrics.control.help_button }
+    /// Accesses inline action button metrics tokens.
+    #[inline]
+    pub fn inline_action_button_metrics(&self) -> &InlineActionButtonMetrics { &self.macview.metrics.control.inline_action_button }
     /// Accesses semantic color tokens.
     #[inline]
-    pub fn colors(&self) -> &MacColorTokens {
-        &self.macview.color
-    }
-
+    pub fn colors(&self) -> &MacColorTokens { &self.macview.color }
     /// Accesses typography and optical tracking tokens.
     #[inline]
-    pub fn typography(&self) -> &MacTypographyTokens {
-        &self.macview.typography
-    }
-
+    pub fn typography(&self) -> &MacTypographyTokens { &self.macview.typography }
     /// Accesses CoreAnimation motion preset tokens.
     #[inline]
-    pub fn motion(&self) -> &MacMotionTokens {
-        &self.macview.motion
-    }
+    pub fn motion(&self) -> &MacMotionTokens { &self.macview.motion }
 }

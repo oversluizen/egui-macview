@@ -1,14 +1,14 @@
-//! Authentic macOS AppKit Hierarchical Outline View (NSOutlineView equivalent).
+//! Authentic macOS AppKit Hierarchical Outline View (`NSOutlineView` equivalent).
 //!
 //! Grounded in macOS HIG and W3C DTCG tokens via `MacTheme`.
 //! Fully data-driven: zero hardcoded colors or dimensions.
 
-use crate::controls::thumbnail_cell::MacThumbnailCell;
+pub mod row;
+
+pub use row::MacOutlineRow;
+
 use crate::theme::MacTheme;
-use egui::{
-    Align2, CornerRadius, FontId, Id, Painter, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui,
-    Vec2,
-};
+use egui::{CornerRadius, Id, Pos2, Rect, Sense, Stroke, StrokeKind, Ui, Vec2};
 use std::fmt::Debug;
 use std::hash::Hash;
 
@@ -150,7 +150,6 @@ impl<'t> MacOutlineTree<'t> {
         let corner_radius = metrics.corner_radius.points();
         let painter = self.ui.painter_at(row_rect);
 
-        // 1. Row selection or hover background
         if selected {
             painter.rect(
                 row_rect,
@@ -169,7 +168,6 @@ impl<'t> MacOutlineTree<'t> {
             );
         }
 
-        // 2. Hierarchical indentation and animated disclosure chevron
         let indent_offset = depth as f32 * self.indent_step;
         let disc_size = metrics.disclosure_size.points();
         let disc_margin = metrics.disclosure_margin.points();
@@ -189,7 +187,6 @@ impl<'t> MacOutlineTree<'t> {
                 disclosure_clicked = true;
             }
 
-            // CASpring rotation interpolation between 0 rad (right) and pi/2 rad (down)
             let spring = self.theme.motion().swiftui_snappy.to_spring();
             let state_key = row_id.with("disc_spring_state");
             let target_frac = if *expanded { 1.0f32 } else { 0.0f32 };
@@ -224,20 +221,18 @@ impl<'t> MacOutlineTree<'t> {
             painter.line_segment([p_tip, p_bot], chevron_stroke);
         }
 
-        // 3. Row content & accessories
         let content_spacing = metrics.content_spacing.points();
         let accessory_spacing = metrics.accessory_spacing.points();
         let content_left = disc_x + disc_size + content_spacing;
-        let mut row_builder = MacOutlineRow {
-            ui: self.ui,
-            theme: self.theme,
+        let mut row_builder = MacOutlineRow::new(
+            self.ui,
+            self.theme,
             row_id,
             row_rect,
-            cursor_x: content_left,
-            accessory_cursor_right: row_rect.right() - accessory_spacing,
+            content_left,
+            row_rect.right() - accessory_spacing,
             selected,
-            accessory_clicked: false,
-        };
+        );
 
         content(&mut row_builder);
 
@@ -248,132 +243,5 @@ impl<'t> MacOutlineTree<'t> {
             is_expanded: *expanded,
             is_selected: selected,
         }
-    }
-}
-
-/// Outline row content context for custom thumbnail, label, and generic accessory slots.
-pub struct MacOutlineRow<'a> {
-    /// Underlying egui `Ui` context.
-    pub ui: &'a mut Ui,
-    /// Injected macOS theme.
-    pub theme: &'a MacTheme,
-    row_id: Id,
-    row_rect: Rect,
-    cursor_x: f32,
-    accessory_cursor_right: f32,
-    selected: bool,
-    accessory_clicked: bool,
-}
-
-impl<'a> MacOutlineRow<'a> {
-    /// Renders a thumbnail preview cell in the row.
-    pub fn thumbnail(&mut self, drawer: impl FnOnce(&Painter, Rect)) {
-        let size = self.theme.thumbnail().size.points();
-        let rect = Rect::from_center_size(
-            Pos2::new(self.cursor_x + size * 0.5, self.row_rect.center().y),
-            Vec2::splat(size),
-        );
-        let painter = self.ui.painter_at(rect);
-        MacThumbnailCell::new()
-            .theme(self.theme)
-            .custom_draw(drawer)
-            .paint_in_rect(&painter, rect, false);
-        self.cursor_x += size + self.theme.outline_view().content_spacing.points();
-    }
-
-    /// Renders the primary text label of the row with graceful text layout and elision.
-    pub fn label(&mut self, text: &str) {
-        let spacing = self.theme.outline_view().content_spacing.points();
-        let avail_w = (self.accessory_cursor_right - self.cursor_x - spacing).max(0.0);
-        let label_rect = Rect::from_min_size(
-            Pos2::new(self.cursor_x, self.row_rect.top()),
-            Vec2::new(avail_w, self.row_rect.height()),
-        );
-        let painter = self.ui.painter_at(label_rect);
-        let font_size = self.theme.outline_view().font_size.points();
-        let font_id = FontId::proportional(font_size);
-        let text_color = if self.selected {
-            let bg_style = self.theme.selected_control_background_style();
-            bg_style.primary_text_color(self.theme)
-        } else {
-            self.theme.label()
-        };
-
-        let format = egui::TextFormat {
-            font_id,
-            color: text_color,
-            ..Default::default()
-        };
-        let mut job = egui::text::LayoutJob::single_section(text.to_string(), format);
-        job.wrap.max_width = avail_w;
-        job.wrap.max_rows = 1;
-        job.wrap.break_anywhere = false;
-        job.wrap.overflow_character = Some('…');
-        let galley = painter.layout_job(job);
-        let pos = Pos2::new(
-            label_rect.left(),
-            label_rect.center().y - galley.size().y * 0.5,
-        );
-        painter.galley(pos, galley, text_color);
-    }
-
-    /// Renders an AppKit Small Caps section header (uppercase with tracking and secondary label tint).
-    pub fn header(&mut self, text: &str) {
-        let spacing = self.theme.outline_view().content_spacing.points();
-        let avail_w = (self.accessory_cursor_right - self.cursor_x - spacing).max(0.0);
-        let label_rect = Rect::from_min_size(
-            Pos2::new(self.cursor_x, self.row_rect.top()),
-            Vec2::new(avail_w, self.row_rect.height()),
-        );
-        let painter = self.ui.painter_at(label_rect);
-        let font_size = self.theme.outline_view().header_font_size.points();
-        let font_id = FontId::proportional(font_size);
-        let text_color = self.theme.secondary_label();
-        let upper = text.to_uppercase();
-        painter.text(
-            Pos2::new(label_rect.left(), label_rect.center().y),
-            Align2::LEFT_CENTER,
-            upper,
-            font_id,
-            text_color,
-        );
-    }
-
-    /// Renders a generic, program-agnostic trailing accessory slot aligned to the right.
-    /// Consumers supply their own vector drawer callbacks.
-    pub fn accessory_custom(
-        &mut self,
-        id_source: impl Hash + Debug,
-        active: &mut bool,
-        drawer: impl FnOnce(&Painter, Rect, bool),
-    ) -> Response {
-        let metrics = self.theme.outline_view();
-        let size = metrics.accessory_size.points();
-        let spacing = metrics.accessory_spacing.points();
-
-        self.accessory_cursor_right -= size;
-        let rect = Rect::from_center_size(
-            Pos2::new(
-                self.accessory_cursor_right + size * 0.5,
-                self.row_rect.center().y,
-            ),
-            Vec2::splat(size),
-        );
-        self.accessory_cursor_right -= spacing;
-
-        let resp = self
-            .ui
-            .interact(rect, self.row_id.with(id_source), Sense::click());
-        if resp.clicked() {
-            *active = !*active;
-            self.accessory_clicked = true;
-        } else if resp.is_pointer_button_down_on() {
-            self.accessory_clicked = true;
-        }
-
-        let painter = self.ui.painter_at(rect);
-        drawer(&painter, rect, *active);
-
-        resp
     }
 }

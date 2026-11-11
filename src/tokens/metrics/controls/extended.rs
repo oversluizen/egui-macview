@@ -38,25 +38,11 @@ pub struct SliderMetrics {
     pub thumb_press_scale: DimensionValue,
 }
 
-fn default_slider_thumb_press_scale() -> DimensionValue {
-    DimensionValue::from_pt(1.15)
-}
-
-fn default_slider_thumb_stroke_width() -> DimensionValue {
-    DimensionValue::from_pt(1.0)
-}
-
-fn default_slider_shadow_offset_y() -> DimensionValue {
-    DimensionValue::from_pt(1.5)
-}
-
-fn default_slider_default_width() -> DimensionValue {
-    DimensionValue::from_pt(120.0)
-}
-
-fn default_slider_key_step_fraction() -> DimensionValue {
-    DimensionValue::from_pt(0.05)
-}
+fn default_slider_thumb_press_scale() -> DimensionValue { DimensionValue::from_pt(1.15) }
+fn default_slider_thumb_stroke_width() -> DimensionValue { DimensionValue::from_pt(1.0) }
+fn default_slider_shadow_offset_y() -> DimensionValue { DimensionValue::from_pt(1.5) }
+fn default_slider_default_width() -> DimensionValue { DimensionValue::from_pt(120.0) }
+fn default_slider_key_step_fraction() -> DimensionValue { DimensionValue::from_pt(0.05) }
 
 impl Default for SliderMetrics {
     fn default() -> Self {
@@ -137,29 +123,12 @@ pub struct OutlineViewMetrics {
     pub header_font_size: DimensionValue,
 }
 
-fn default_outline_header_font_size() -> DimensionValue {
-    DimensionValue::from_pt(11.0)
-}
-
-fn default_outline_chevron_stroke_width() -> DimensionValue {
-    DimensionValue::from_pt(1.2)
-}
-
-fn default_outline_chevron_size() -> DimensionValue {
-    DimensionValue::from_pt(7.0)
-}
-
-fn default_outline_chevron_depth() -> DimensionValue {
-    DimensionValue::from_pt(1.75)
-}
-
-fn default_outline_item_spacing() -> DimensionValue {
-    DimensionValue::from_pt(6.0)
-}
-
-fn default_outline_edge_padding() -> DimensionValue {
-    DimensionValue::from_pt(4.0)
-}
+fn default_outline_header_font_size() -> DimensionValue { DimensionValue::from_pt(11.0) }
+fn default_outline_chevron_stroke_width() -> DimensionValue { DimensionValue::from_pt(1.2) }
+fn default_outline_chevron_size() -> DimensionValue { DimensionValue::from_pt(7.0) }
+fn default_outline_chevron_depth() -> DimensionValue { DimensionValue::from_pt(1.75) }
+fn default_outline_item_spacing() -> DimensionValue { DimensionValue::from_pt(6.0) }
+fn default_outline_edge_padding() -> DimensionValue { DimensionValue::from_pt(4.0) }
 
 impl Default for OutlineViewMetrics {
     fn default() -> Self {
@@ -197,6 +166,33 @@ pub struct PopUpButtonMetrics {
     /// Stroke width of the chevron arrows.
     #[serde(default = "default_popup_chevron_stroke_width")]
     pub chevron_stroke_width: DimensionValue,
+    /// Half-gap vertical separation from vertical center to each chevron base (`1.75pt`).
+    #[serde(default = "default_popup_chevron_gap_vertical")]
+    pub chevron_gap_vertical: DimensionValue,
+    /// Horizontal half-width of each chevron (`2.5pt`).
+    #[serde(default = "default_popup_chevron_half_width")]
+    pub chevron_half_width: DimensionValue,
+    /// Vertical height of each chevron from base to apex (`2.25pt`).
+    #[serde(default = "default_popup_chevron_height")]
+    pub chevron_height: DimensionValue,
+    /// AppKit `firstBaselineOffsetFromTop` for Regular popup buttons (`14pt`).
+    #[serde(default = "default_popup_regular_baseline")]
+    pub regular_first_baseline_offset: DimensionValue,
+    /// AppKit `firstBaselineOffsetFromTop` for Small popup buttons (`12pt`).
+    #[serde(default = "default_popup_small_baseline")]
+    pub small_first_baseline_offset: DimensionValue,
+    /// AppKit `firstBaselineOffsetFromTop` for Mini popup buttons (`10pt`).
+    #[serde(default = "default_popup_mini_baseline")]
+    pub mini_first_baseline_offset: DimensionValue,
+    /// AppKit visual bezel height for Regular popup buttons inside a 25pt NIB frame (`20pt`).
+    #[serde(default = "default_popup_regular_visual_h")]
+    pub regular_visual_height: DimensionValue,
+    /// AppKit visual bezel height for Small popup buttons inside a 22pt NIB frame (`16pt`).
+    #[serde(default = "default_popup_small_visual_h")]
+    pub small_visual_height: DimensionValue,
+    /// AppKit visual bezel height for Mini popup buttons inside a 16pt NIB frame (`13pt`).
+    #[serde(default = "default_popup_mini_visual_h")]
+    pub mini_visual_height: DimensionValue,
     /// Spacing between label text and chevron arrows.
     #[serde(default = "default_popup_chevron_spacing")]
     pub chevron_spacing: DimensionValue,
@@ -223,37 +219,23 @@ pub struct PopUpButtonMetrics {
     pub popup_gap: DimensionValue,
 }
 
-fn default_popup_chevron_stroke_width() -> DimensionValue {
-    DimensionValue::from_pt(1.2)
-}
-
-fn default_popup_chevron_spacing() -> DimensionValue {
-    DimensionValue::from_pt(6.0)
-}
-
-fn default_popup_font_size() -> DimensionValue {
-    DimensionValue::from_pt(13.0)
-}
-
-fn default_popup_chevron_offset_y() -> DimensionValue {
-    DimensionValue::from_pt(2.0)
-}
-
-fn default_popup_menu_item_height() -> DimensionValue {
-    DimensionValue::from_pt(20.0)
-}
-
-fn default_popup_menu_item_padding() -> DimensionValue {
-    DimensionValue::from_pt(6.0)
-}
-
-fn default_popup_menu_min_width() -> DimensionValue {
-    DimensionValue::from_pt(120.0)
-}
-
-fn default_popup_gap() -> DimensionValue {
-    DimensionValue::from_pt(2.0)
-}
+fn default_popup_chevron_stroke_width() -> DimensionValue { DimensionValue::from_pt(1.25) }
+fn default_popup_chevron_gap_vertical() -> DimensionValue { DimensionValue::from_pt(1.75) }
+fn default_popup_chevron_half_width() -> DimensionValue { DimensionValue::from_pt(2.5) }
+fn default_popup_chevron_height() -> DimensionValue { DimensionValue::from_pt(2.25) }
+fn default_popup_regular_baseline() -> DimensionValue { DimensionValue::from_pt(14.0) }
+fn default_popup_small_baseline() -> DimensionValue { DimensionValue::from_pt(12.0) }
+fn default_popup_mini_baseline() -> DimensionValue { DimensionValue::from_pt(10.0) }
+fn default_popup_regular_visual_h() -> DimensionValue { DimensionValue::from_pt(20.0) }
+fn default_popup_small_visual_h() -> DimensionValue { DimensionValue::from_pt(16.0) }
+fn default_popup_mini_visual_h() -> DimensionValue { DimensionValue::from_pt(13.0) }
+fn default_popup_chevron_spacing() -> DimensionValue { DimensionValue::from_pt(6.0) }
+fn default_popup_font_size() -> DimensionValue { DimensionValue::from_pt(13.0) }
+fn default_popup_chevron_offset_y() -> DimensionValue { DimensionValue::from_pt(2.0) }
+fn default_popup_menu_item_height() -> DimensionValue { DimensionValue::from_pt(20.0) }
+fn default_popup_menu_item_padding() -> DimensionValue { DimensionValue::from_pt(6.0) }
+fn default_popup_menu_min_width() -> DimensionValue { DimensionValue::from_pt(120.0) }
+fn default_popup_gap() -> DimensionValue { DimensionValue::from_pt(2.0) }
 
 impl Default for PopUpButtonMetrics {
     fn default() -> Self {
@@ -263,6 +245,15 @@ impl Default for PopUpButtonMetrics {
             padding_horizontal: DimensionValue::from_pt(8.0),
             chevron_size: DimensionValue::from_pt(8.0),
             chevron_stroke_width: default_popup_chevron_stroke_width(),
+            chevron_gap_vertical: default_popup_chevron_gap_vertical(),
+            chevron_half_width: default_popup_chevron_half_width(),
+            chevron_height: default_popup_chevron_height(),
+            regular_first_baseline_offset: default_popup_regular_baseline(),
+            small_first_baseline_offset: default_popup_small_baseline(),
+            mini_first_baseline_offset: default_popup_mini_baseline(),
+            regular_visual_height: default_popup_regular_visual_h(),
+            small_visual_height: default_popup_small_visual_h(),
+            mini_visual_height: default_popup_mini_visual_h(),
             chevron_spacing: default_popup_chevron_spacing(),
             font_size: default_popup_font_size(),
             border_width: default_border_width(),

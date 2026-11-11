@@ -4,9 +4,9 @@
 | :--- | :--- |
 | **Document ID** | SPEC-INDEX |
 | **Document Title** | Specification Suite Index & Version Matrix |
-| **Document Version** | `0.6.4` |
+| **Document Version** | `0.6.5` |
 | **Status** | Accepted / Normative |
-| **Target Milestone** | Milestone 0.6.4 |
+| **Target Milestone** | Milestone 0.6.5 |
 | **Target Host** | Standalone crate `egui-macview` (Rust, egui 0.37) |
 | **Author** | Jaco Oversluizen / `egui-macview` contributors |
 | **Normative Standards** | ISO/IEC/IEEE 42010:2011, ISO/IEC/IEEE 29119-3:2021, RFC 2119/8174, Apple macOS HIG, W3C DTCG, SemVer 2.0.0 |
@@ -29,12 +29,13 @@
 | `0.6.2` | 2026-11-10 | Architecture Team | Milestone 0.6.2 Release: Comprehensive Developer Documentation, HIG Control Decision Guide, Standalone `eframe` Quickstart, IDE Hover Doc-Tests & Architecture Diagrams |
 | `0.6.3` | 2026-11-10 | Architecture Team | Milestone 0.6.3 Release: `docs.rs` Intra-Doc Link Parity (62 Table Links), Navigation/Surface/Feedback/State/Symbol Hover Examples & Link Guard |
 | `0.6.4` | 2026-11-10 | Architecture Team | Milestone 0.6.4 Release: Repository-Wide 100% English Comment & Prose Guard, Removal of Legacy Dutch Audit File & Portable Launcher Script |
+| `0.6.5` | 2026-11-11 | Architecture Team | Milestone 0.6.5 Release: AppKit NIB Parity (`MacCheckbox`, `MacLabel`, `MacHelpButton`, `MacInlineActionButton`), Universal Optical Tracking, Cross-Platform Baseline Anchoring & Bundled Open-Source `Inter` Font |
 
 ---
 
 ## 1. Specification Suite Structure
 
-The `egui-macview` specification suite provides the formal normative requirements, mathematical foundations, MVC abstractions, and test oracles for the entire crate. Every specification in this directory runs strictly in lockstep with the crate release version (`0.6.4`).
+The `egui-macview` specification suite provides the formal normative requirements, mathematical foundations, MVC abstractions, and test oracles for the entire crate. Every specification in this directory runs strictly in lockstep with the crate release version (`0.6.5`).
 
 | Spec ID | Document Title | Version | Status | Primary Test Suite |
 | :--- | :--- | :--- | :--- | :--- |
@@ -51,7 +52,7 @@ The `egui-macview` specification suite provides the formal normative requirement
 | [**SPEC-009**](SPEC-009-CROSS-PLATFORM-DIFFERENTIAL-HARNESS.md) | Cross-Platform Parity and Remote Differential Testing Harness | `0.3.0` | Accepted / Normative | `tests/macbook_parity_differential_tests.rs` |
 | [**SPEC-010**](SPEC-010-INTERACTIVE-GALLERY-CONTROLS-AND-ICONOGRAPHY.md) | Interactive Gallery Controls, Bidirectional State Binding & Iconography Parity | `0.3.1` | Accepted / Normative | `tests/micro_animations_and_hud_tests.rs`, `tests/symbol_tests.rs` |
 | [**SPEC-011**](SPEC-011-STUDIO-AND-AVKIT-CONTROLS.md) | Studio & AVKit Media, Timeline and Publishing Controls | `0.5.0` | Accepted / Normative | `tests/studio_controls_v05_tests.rs`, `tests/zero_hardcoding_and_primitive_tests.rs` |
-| [**SPEC-012**](SPEC-012-ADVANCED-MEDIA-SCHEDULING-AND-GRID-CONTROLS.md) | Advanced Media, Scheduling, and Grid Controls | `0.6.4` | Accepted / Normative | `tests/spec012_advanced_controls_tests.rs`, `tests/spec012_appkit_and_battery_parity_tests.rs` |
+| [**SPEC-012**](SPEC-012-ADVANCED-MEDIA-SCHEDULING-AND-GRID-CONTROLS.md) | Advanced Media, Scheduling, and Grid Controls | `0.6.5` | Accepted / Normative | `tests/spec012_advanced_controls_tests.rs`, `tests/spec012_appkit_and_battery_parity_tests.rs`, `tests/appkit_v065_nib_parity_tests.rs` |
 
 ---
 

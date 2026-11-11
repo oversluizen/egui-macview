@@ -125,14 +125,20 @@ pub(crate) fn render_table_header(
                 col_rect.max.y,
             ),
         );
-        let title_pos = Pos2::new(col_rect.left() + pad_h, col_rect.center().y);
-        painter.with_clip_rect(title_clip_rect).text(
-            title_pos,
-            Align2::LEFT_CENTER,
+        let title_galley = theme.layout_tracked_galley(
+            ui,
             col.title,
             FontId::proportional(font_sz),
             theme.label(),
+            f32::INFINITY,
         );
+        let title_pos = Pos2::new(
+            col_rect.left() + pad_h,
+            col_rect.center().y - title_galley.size().y * 0.5,
+        );
+        painter
+            .with_clip_rect(title_clip_rect)
+            .galley(title_pos, title_galley, theme.label());
 
         if let Some(dir) = col.sort_direction {
             let symbol = match dir {

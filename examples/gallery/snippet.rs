@@ -180,24 +180,31 @@ MacRatingIndicator::new(&mut rating, 5).theme(&theme).show(ui);
             ctx.audio_level_l,
             ctx.audio_peak_l,
         ),
-        GalleryScreen::AdvancedControls => r#"// Milestone 0.6.0: Advanced Media, Scheduling & Grid Controls (SPEC-012)
+        GalleryScreen::AdvancedControls => r#"// Milestone 0.6.5: Advanced Media, Scheduling, Grid & AppKit NIB Primitives (SPEC-012)
 use egui_macview::{
-    MacBox, MacCollectionView, MacCollectionViewFlowLayout, MacComboBox,
-    MacDatePicker, MacDatePickerStyle, MacDisclosureButton, MacDisclosureGroup,
-    MacPlayerView, MacTabView, MacTheme,
+    MacBox, MacCheckbox, MacComboBox, MacControlSize, MacDisclosureGroup,
+    MacFontWeight, MacHelpButton, MacInlineActionButton, MacLabel, MacTheme,
 };
 
 let theme = MacTheme::default();
 let mut expanded = true;
+let mut checked = true;
 let mut combo_text = "Apple ProRes 422 HQ".to_string();
-let mut selected_tab = 0;
 
 MacBox::new("Inspector Group").theme(&theme).show(ui, |ui| {
-    MacDisclosureGroup::new("disc", "Media Settings", &mut expanded)
+    let resp = MacDisclosureGroup::new("disc", "Media Settings", &mut expanded)
         .theme(&theme)
+        .with_trailing_add_button(true)
         .show(ui, |ui| {
+            MacLabel::new("Codec:").weight(MacFontWeight::Semibold).theme(&theme).show(ui);
+            MacCheckbox::new(&mut checked, "Enable HDR").control_size(MacControlSize::Regular).theme(&theme).show(ui);
             MacComboBox::new("cb", &mut combo_text, &["ProRes 422", "H.265"]).theme(&theme).show(ui);
+            MacInlineActionButton::new("+").theme(&theme).show(ui);
+            MacHelpButton::new().theme(&theme).show(ui);
         });
+    if resp.trailing_clicked {
+        // Handle section header '+' action
+    }
 });
 "#.to_string(),
     }

@@ -3,12 +3,13 @@
 pub mod advanced;
 pub mod basic;
 pub mod extended;
+pub mod media_and_date;
+pub mod nib_primitives;
 pub mod selection_and_value;
 pub mod studio;
 
 pub use advanced::{
-    BoxViewMetrics, CollectionViewMetrics, ComboBoxMetrics, DatePickerMetrics,
-    DisclosureGroupMetrics, PlayerViewMetrics, RuleEditorMetrics, TabViewMetrics,
+    BoxViewMetrics, ComboBoxMetrics, DisclosureGroupMetrics, RuleEditorMetrics, TabViewMetrics,
 };
 pub use basic::{
     default_border_width, ButtonMetrics, ButtonSizeMetrics, FocusRingMetrics, SegmentedMetrics,
@@ -17,6 +18,11 @@ pub use basic::{
 pub use extended::{
     ColorWellMetrics, OutlineViewMetrics, PopUpButtonMetrics, SearchFieldMetrics, SliderMetrics,
     StepperMetrics, ThumbnailCellMetrics, ToggleMetrics,
+};
+pub use media_and_date::{CollectionViewMetrics, DatePickerMetrics, PlayerViewMetrics};
+pub use nib_primitives::{
+    CheckboxMetrics, CheckboxSizeMetrics, HelpButtonMetrics, InlineActionButtonMetrics,
+    LabelMetrics,
 };
 pub use studio::{
     LevelIndicatorMetrics, PathControlMetrics, ProgressIndicatorMetrics, ProgressSizeMetrics,
@@ -110,4 +116,16 @@ pub struct MacControlMetrics {
     /// Rule editor metrics.
     #[serde(default)]
     pub rule_editor: RuleEditorMetrics,
+    /// Square AppKit checkbox (`NSButtonTypeSwitch`) metrics.
+    #[serde(default)]
+    pub checkbox: CheckboxMetrics,
+    /// Non-editable AppKit label (`NSTextField.labelWithString:`) metrics.
+    #[serde(default)]
+    pub label: LabelMetrics,
+    /// Circular AppKit help button (`NSBezelStyleHelpButton`) metrics.
+    #[serde(default)]
+    pub help_button: HelpButtonMetrics,
+    /// Circular inline action badge button (`16x16pt`) metrics.
+    #[serde(default)]
+    pub inline_action_button: InlineActionButtonMetrics,
 }

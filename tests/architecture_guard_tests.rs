@@ -150,11 +150,14 @@ fn test_guard_zero_cross_component_token_borrowing_and_self_check() {
     let methods = [
         "box_view",
         "button",
+        "checkbox",
         "collection_view",
         "color_well",
         "combo_box",
         "date_picker",
         "disclosure_group",
+        "help_button",
+        "inline_action_button",
         "level_indicator",
         "outline_view",
         "path_control",
@@ -190,17 +193,20 @@ fn test_guard_zero_cross_component_token_borrowing_and_self_check() {
         let allowed: &[&str] = match (pname, fname) {
             (_, "box_view.rs") => &["box_view"],
             (_, "button_cell.rs") => &["button"],
+            (_, "checkbox.rs") => &["checkbox"],
             (_, "circular_slider.rs") => &["slider"],
             (_, "collection_view.rs") => &["collection_view"],
             (_, "color_well.rs") => &["color_well"],
-            (_, "combo_box.rs") => &["combo_box"],
+            (_, "combo_box.rs") | ("combo_box", _) => &["combo_box"],
             (_, "date_picker.rs") | ("date_picker", _) => &["date_picker"],
-            (_, "disclosure_group.rs") => &["disclosure_group"],
+            (_, "disclosure_group.rs") | ("disclosure_group", _) => &["disclosure_group"],
+            (_, "help_button.rs") => &["help_button", "inline_action_button"],
+            (_, "label.rs") => &[],
             (_, "level_indicator.rs") => &["level_indicator"],
-            (_, "outline_view.rs") => &["outline_view", "thumbnail"],
+            (_, "outline_view.rs") | ("outline_view", _) => &["outline_view", "thumbnail"],
             (_, "path_control.rs") => &["path_control"],
             (_, "player_view.rs") | ("player_view", _) => &["player_view"],
-            (_, "popup_button.rs") => &["popup_button"],
+            (_, "popup_button.rs") | ("popup_button", _) => &["popup_button"],
             (_, "progress_indicator.rs") => &["progress_indicator"],
             (_, "rating_indicator.rs") => &["level_indicator"],
             (_, "rule_editor.rs") => &["rule_editor"],
@@ -407,4 +413,53 @@ fn test_guard_zero_vault_leakage_and_de_ai_ification() {
         "Vault Leakage, Local Path, Jargon & Non-English (Dutch) Guard:\n{violations:#?}"
     );
 }
+
+#[test]
+fn test_guard_open_source_fonts_only_zero_proprietary_apple_fonts() {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let fonts_dir = manifest_dir.join("assets").join("fonts");
+    let allowed_font_files = [
+        "CupertinoIcons.ttf",
+        "Inter-Regular.ttf",
+        "Inter-SemiBold.ttf",
+        "Inter-OFL.txt",
+    ];
+    let mut found_files = Vec::new();
+    if let Ok(entries) = fs::read_dir(&fonts_dir) {
+        for entry in entries.flatten() {
+            if let Some(name) = entry.file_name().to_str() {
+                found_files.push(name.to_string());
+                assert!(
+                    allowed_font_files.contains(&name),
+                    "Forbidden or unapproved font asset in assets/fonts/: {name}"
+                );
+            }
+        }
+    }
+    for required in &allowed_font_files {
+        assert!(
+            found_files.iter().any(|f| f == required),
+            "Missing required open-source font or license file in assets/fonts/: {required}"
+        );
+    }
+    for file in collect_rs_files(&manifest_dir.join("src")) {
+        let content = fs::read_to_string(&file).expect("read src file");
+        for forbidden_font in [
+            "SFNS.ttf",
+            "SFNS.otf",
+            "SFPro.ttf",
+            "SFCompact.ttf",
+            "Menlo.ttc",
+            "LucidaGrande.ttc",
+            "Apple Symbols.ttf",
+        ] {
+            assert!(
+                !content.contains(forbidden_font),
+                "Proprietary Apple font reference '{forbidden_font}' found in {:?}",
+                file
+            );
+        }
+    }
+}
+
 

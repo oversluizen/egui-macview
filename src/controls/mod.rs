@@ -5,13 +5,16 @@
 
 pub mod box_view;
 pub mod button_cell;
+pub mod checkbox;
 pub mod circular_slider;
 pub mod collection_view;
 pub mod color_well;
 pub mod combo_box;
 pub mod date_picker;
 pub mod disclosure_group;
+pub mod help_button;
 pub mod input_cell;
+pub mod label;
 pub mod level_indicator;
 pub mod outline_view;
 pub mod path_control;
@@ -33,6 +36,7 @@ pub mod trim_scrubber;
 
 pub use box_view::MacBox;
 pub use button_cell::{MacButton, MacButtonCell};
+pub use checkbox::MacCheckbox;
 pub use circular_slider::MacCircularSlider;
 pub use collection_view::{MacCollectionView, MacCollectionViewFlowLayout};
 pub use color_well::MacColorWell;
@@ -40,8 +44,10 @@ pub use combo_box::MacComboBox;
 pub use date_picker::{
     MacDate, MacDatePicker, MacDatePickerElementFlags, MacDatePickerStyle,
 };
-pub use disclosure_group::{MacDisclosureButton, MacDisclosureGroup};
+pub use disclosure_group::{MacDisclosureButton, MacDisclosureGroup, MacDisclosureResponse};
+pub use help_button::{MacHelpButton, MacInlineActionButton};
 pub use input_cell::{MacControlSize, MacInputCell};
+pub use label::{MacFontWeight, MacLabel, MacLabelColor};
 pub use level_indicator::{
     calculate_pan_weights, MacLevelIndicator, MacLevelIndicatorStyle, MacLevelOrientation,
 };

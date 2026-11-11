@@ -67,44 +67,19 @@ pub fn format_tracked_small_caps(text: &str) -> String {
     out
 }
 
-/// Loads local SF Pro / Inter / SF Mono / Cascadia fonts if present, plus the embedded vector symbol font.
+/// Registers embedded open-source `Inter` + `CupertinoIcons` fonts (and optional Cascadia Mono).
 pub fn setup_system_or_custom_fonts(ctx: &egui::Context) {
     let mut fonts = egui::FontDefinitions::default();
-    let dir = std::path::Path::new(&std::env::var("LOCALAPPDATA").unwrap_or_default())
-        .join("Microsoft\\Windows\\Fonts");
-    for (n, p, fam) in [
-        (
-            "sf_pro",
-            dir.join("SF-Pro-Text-Regular.otf"),
-            egui::FontFamily::Proportional,
-        ),
-        (
-            "inter",
-            dir.join("Inter-Variable.ttf"),
-            egui::FontFamily::Proportional,
-        ),
-        (
-            "sf_mono",
-            dir.join("SF-Mono-Regular.otf"),
-            egui::FontFamily::Monospace,
-        ),
-        (
-            "cascadia_mono",
-            std::path::PathBuf::from("C:\\Windows\\Fonts\\CascadiaMono.ttf"),
-            egui::FontFamily::Monospace,
-        ),
-    ] {
-        if let Ok(bytes) = std::fs::read(&p) {
-            fonts.font_data.insert(
-                n.to_owned(),
-                std::sync::Arc::new(egui::FontData::from_owned(bytes)),
-            );
-            fonts
-                .families
-                .entry(fam)
-                .or_default()
-                .insert(0, n.to_owned());
-        }
+    if let Ok(bytes) = std::fs::read("C:\\Windows\\Fonts\\CascadiaMono.ttf") {
+        fonts.font_data.insert(
+            "cascadia_mono".to_owned(),
+            std::sync::Arc::new(egui::FontData::from_owned(bytes)),
+        );
+        fonts
+            .families
+            .entry(egui::FontFamily::Monospace)
+            .or_default()
+            .insert(0, "cascadia_mono".to_owned());
     }
     setup_symbols_font(&mut fonts);
     ctx.set_fonts(fonts);

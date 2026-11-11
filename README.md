@@ -28,7 +28,7 @@ Add `egui-macview` to your `Cargo.toml`:
 ```toml
 [dependencies]
 egui = "0.37.0"
-egui-macview = "0.6.4"
+egui-macview = "0.6.5"
 ```
 
 To run the interactive showcase gallery included in this repository:
@@ -549,8 +549,12 @@ ui.horizontal(|ui| {
 
 | Component | macOS AppKit Equivalent | What It Does |
 | :--- | :--- | :--- |
-| [`MacButton`] / [`MacButtonCell`] | `NSButton` | Push buttons, default action blue buttons, checkboxes, radio buttons, and icon buttons. |
+| [`MacButton`] / [`MacButtonCell`] | `NSButton` | Push buttons, default action blue buttons, radio buttons, and icon buttons. |
+| [`MacCheckbox`] | `NSButtonTypeSwitch` | Native AppKit square checkbox (`14x14pt` Regular, `12x12pt` Small, `10x10pt` Mini) with checked, unchecked, and mixed (`-`) state. |
 | [`MacToggle`] | `NSSwitch` | Animated pill switch with system green active fill. |
+| [`MacLabel`] | `NSTextField` (Label) | Non-editable AppKit form and section label with `Regular`/`Small`/`Mini` sizes, `Semibold`/`Bold` weights, and exact baseline alignment. |
+| [`MacHelpButton`] | `NSBezelStyleHelpButton` | Circular `20x20pt` AppKit context help button (`?`) with subtle bottom shadow. |
+| [`MacInlineActionButton`] | `NSButton` (Inline Badge) | Circular `16x16pt` inline action badge button (`+`, `-`, `×`, or [`MacSymbol`]). |
 | [`MacSegmentedControl`] | `NSSegmentedControl` | Multi-segment pill switcher with a sliding selection thumb. |
 | [`MacInputCell`] | `NSTextField` | Single-line text and numeric input with focus ring, `Tab` cycling, `Enter` commit, and `Escape` cancel. |
 | [`MacSearchField`] | `NSSearchField` | Search input with leading magnifying glass icon and trailing clear (`×`) button. |

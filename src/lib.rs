@@ -19,7 +19,9 @@ pub mod theme;
 pub mod tokens;
 
 pub use symbols::{
-    setup_symbols_font, MacSymbol, CUPERTINO_ICONS_FONT_BYTES, CUPERTINO_ICONS_FONT_NAME,
+    setup_macview_fonts, setup_symbols_font, MacSymbol, CUPERTINO_ICONS_FONT_BYTES,
+    CUPERTINO_ICONS_FONT_NAME, INTER_REGULAR_FONT_BYTES, INTER_REGULAR_FONT_NAME,
+    INTER_SEMIBOLD_FONT_BYTES, INTER_SEMIBOLD_FONT_NAME,
 };
 
 pub use theme::{
@@ -29,10 +31,11 @@ pub use theme::{
 
 pub use controls::{
     calculate_pan_weights, format_remaining_timecode, format_timecode, MacBox, MacButton,
-    MacButtonCell, MacCircularSlider, MacCollectionView, MacCollectionViewFlowLayout, MacColorWell,
-    MacComboBox, MacControlSize, MacDate, MacDatePicker, MacDatePickerElementFlags,
-    MacDatePickerStyle, MacDisclosureButton, MacDisclosureGroup, MacInputCell, MacInsets,
-    MacLevelIndicator, MacLevelIndicatorStyle, MacLevelOrientation, MacOutlineRow,
+    MacButtonCell, MacCheckbox, MacCircularSlider, MacCollectionView, MacCollectionViewFlowLayout,
+    MacColorWell, MacComboBox, MacControlSize, MacDate, MacDatePicker, MacDatePickerElementFlags,
+    MacDatePickerStyle, MacDisclosureButton, MacDisclosureGroup, MacDisclosureResponse,
+    MacFontWeight, MacHelpButton, MacInlineActionButton, MacInputCell, MacInsets, MacLabel,
+    MacLabelColor, MacLevelIndicator, MacLevelIndicatorStyle, MacLevelOrientation, MacOutlineRow,
     MacOutlineRowResponse, MacOutlineTree, MacOutlineView, MacPathComponent, MacPathControl,
     MacPathControlResponse, MacPlayerControlsStyle, MacPlayerView, MacPopUpButton,
     MacProgressControlSize, MacProgressIndicator, MacProgressStyle, MacRatingIndicator,
@@ -57,7 +60,8 @@ pub use navigation::{
 pub use state::{NSUndoManager, DEFAULT_UNDO_CAPACITY};
 pub use surfaces::{MacCard, MacFloatingInfoBox, MacPanel, MacPopover, MacPopoverArrowEdge};
 pub use tokens::{
-    sf_pro_tracking, ColorWellMetrics, LayoutMetrics, LevelIndicatorMetrics, MacColorTokens,
+    sf_pro_tracking, CheckboxMetrics, CheckboxSizeMetrics, ColorWellMetrics, HelpButtonMetrics,
+    InlineActionButtonMetrics, LabelMetrics, LayoutMetrics, LevelIndicatorMetrics, MacColorTokens,
     MacControlMetrics, MacDesignTokens, MacMotionTokens, MacTypographyTokens, OutlineViewMetrics,
     PathControlMetrics, PopUpButtonMetrics, ProgressIndicatorMetrics, ProgressSizeMetrics,
     ScrollViewMetrics, SearchFieldMetrics, SliderMetrics, SplitViewMetrics, StackViewMetrics,

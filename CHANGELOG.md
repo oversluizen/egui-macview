@@ -5,6 +5,20 @@ All notable changes to the `egui-macview` crate will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.5] - 2026-11-11
+
+### Added
+- **Universal Apple HIG Optical Tracking (`MacTheme::tracking_for_font_size`, `tracked_text_format`, `layout_tracked_galley`)**: Wired `tokens/design_tokens.json` optical tracking (`13pt -> -0.08pt`, `12pt -> 0.0pt`, `11pt -> +0.06pt`, `9pt -> +0.17pt`, `15pt -> -0.23pt`) across all controls (`MacButtonCell`, `MacPopUpButton`, `MacInputCell`, `MacComboBox`, `MacDisclosureGroup`, `MacBox`, `MacTableView`, `MacOutlineView`, `MacSegmentedControl`, `MacCheckbox`, `MacLabel`).
+- **Native AppKit Checkbox (`MacCheckbox`, `NSButtonTypeSwitch`)**: Square rounded checkbox (`14x14pt` Regular, `12x12pt` Small, `10x10pt` Mini) with unchecked, checked (3-point vector checkmark `(0.24, 0.52) -> (0.43, 0.72) -> (0.76, 0.28)`), and mixed (`-`) states, `.fixed_rect(Rect)`, and optical tracking.
+- **First-Class AppKit Form & Section Label (`MacLabel`, `MacFontWeight`, `MacLabelColor`)**: Non-editable `NSTextField` label supporting `Regular`/`Small`/`Mini` control sizes, `Regular`/`Medium`/`Semibold`/`Bold` font weights, `Primary`/`Secondary`/`Tertiary` semantic label colors, `.alignment(Align)`, `.fixed_rect(Rect)`, and deterministic `firstBaselineOffsetFromTop` anchoring.
+- **Circular AppKit Help Button & Inline Action Badge (`MacHelpButton`, `MacInlineActionButton`)**: `20x20pt` circular `NSBezelStyleHelpButton` (`?`) and `16x16pt` inline action badge button (`+`, `-`, `×`, or `MacSymbol`) with `.fixed_rect(Rect)` support.
+- **Bundled Open-Source `Inter` (SIL OFL 1.1) + `CupertinoIcons` (MIT) (`setup_symbols_font`, `setup_macview_fonts`)**: Embedded `Inter-Regular.ttf` and `Inter-SemiBold.ttf` alongside `CupertinoIcons.ttf` in `assets/fonts/` with an automated license guard forbidding proprietary Apple fonts.
+
+### Changed
+- **`MacInputCell` (`NSTextField` `NSControlSize`, `.fixed_rect(Rect)`, `.text_align(Align)`)**: Defaulted `MacInputCell` to `MacControlSize::Regular` (`22pt` height, `13pt` font, `7pt` horizontal padding), added automatic size detection from `fixed_rect.height()`, added `.text_align(Align)`, and anchored unfocused text rendering to AppKit `firstBaselineOffsetFromTop`.
+- **`MacPopUpButton` & `MacComboBox` NIB Visual Bezel Clamping & Accent Badge**: Separated `MacPopUpButton` upper (`⌃`) and lower (`⌄`) chevrons using `theme.label()` stroke color, added the `17pt` right accent button badge to `MacComboBox`, and clamped `25pt`/`23pt` NIB frames to `20pt` visual bezels.
+- **`MacBox` Recessed Surface Tokens & `MacDisclosureGroup` Trailing `+` Action**: Added `theme.box_background()` (`#E5E5E5` Aqua / `#232528` DarkAqua), `theme.box_border()` (`#D8D8D8` / `#3A3D42`), `MacBox::fixed_rect(Rect)`, and `MacDisclosureGroup::with_trailing_add_button(bool)` returning `MacDisclosureResponse<R>`.
+
 ## [0.6.4] - 2026-11-10
 
 ### Added
@@ -208,6 +222,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - W3C DTCG design token catalog parser (`tokens/design_tokens.json`, `tokens/typography.json`).
 - Baseline test suite validating token deserialization, layout budgets, and physical spring properties.
 
+[0.6.5]: https://github.com/oversluizen/egui-macview/compare/v0.6.4...v0.6.5
 [0.6.4]: https://github.com/oversluizen/egui-macview/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/oversluizen/egui-macview/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/oversluizen/egui-macview/compare/v0.6.1...v0.6.2

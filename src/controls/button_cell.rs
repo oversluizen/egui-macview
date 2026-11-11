@@ -9,7 +9,7 @@ use egui::{Color32, CornerRadius, Response, Stroke, StrokeKind, Ui, Vec2, Widget
 /// Authentic macOS AppKit Push Button / Tool Button (`NSButtonCell` equivalent).
 ///
 /// Features authentic theme-driven background, border, selection states,
-/// typography metrics, and hover feedback.
+/// typography metrics with Apple HIG optical tracking, and hover feedback.
 ///
 /// # Example
 ///
@@ -107,9 +107,13 @@ impl<'a> Widget for MacButtonCell<'a> {
             .unwrap_or_else(|| metrics.font_size.points());
 
         let font_id = egui::FontId::proportional(metrics.font_size.points());
-        let text_layout =
-            ui.painter()
-                .layout_no_wrap(self.text.to_owned(), font_id, Color32::PLACEHOLDER);
+        let text_layout = theme.layout_tracked_galley(
+            ui,
+            self.text,
+            font_id,
+            Color32::PLACEHOLDER,
+            f32::INFINITY,
+        );
         let desired_width = self
             .width
             .unwrap_or_else(|| text_layout.size().x + padding_h * 2.0);

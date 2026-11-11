@@ -123,112 +123,54 @@ pub struct MacAppearanceColors {
     /// Overlay scrollbar thumb hovered/dragged color.
     #[serde(default = "default_scrollbar_thumb_active")]
     pub scrollbar_thumb_active: ColorValue,
+    /// Tertiary label text color (`NSColor.tertiaryLabelColor`).
+    #[serde(default = "default_tertiary_label")]
+    pub tertiary_label: ColorValue,
+    /// Subtle recessed container surface color for `NSBoxPrimary` (`#E5E5E5` in Aqua, `#232528` in DarkAqua).
+    #[serde(default = "default_box_background")]
+    pub box_background: ColorValue,
+    /// Perimeter hairline border color for `NSBoxPrimary` (`#D8D8D8` in Aqua, `#3A3D42` in DarkAqua).
+    #[serde(default = "default_box_border")]
+    pub box_border: ColorValue,
 }
 
-fn color_val(val: &str) -> ColorValue {
-    ColorValue::new(val)
-}
-
-fn default_label_color() -> ColorValue {
-    color_val("rgba(0, 0, 0, 0.85)")
-}
-fn default_secondary_label_color() -> ColorValue {
-    color_val("rgba(0, 0, 0, 0.50)")
-}
-fn default_system_green() -> ColorValue {
-    color_val("#34C759")
-}
-fn default_system_yellow() -> ColorValue {
-    color_val("#FFCC00")
-}
-fn default_system_orange() -> ColorValue {
-    color_val("#FF9500")
-}
-fn default_system_red() -> ColorValue {
-    color_val("#FF3B30")
-}
-fn default_alternating_row_even() -> ColorValue {
-    color_val("#FFFFFF")
-}
-fn default_alternating_row_odd() -> ColorValue {
-    color_val("#F4F5F5")
-}
-fn default_scrubber_selection_border() -> ColorValue {
-    color_val("#FFCC00")
-}
-fn default_scrubber_outside_dim() -> ColorValue {
-    color_val("rgba(0, 0, 0, 0.58)")
-}
-fn default_scrubber_waveform() -> ColorValue {
-    color_val("#007AFF")
-}
-fn default_scrubber_playhead() -> ColorValue {
-    color_val("#FFFFFF")
-}
-fn default_traffic_light_close() -> ColorValue {
-    color_val("#FF5F56")
-}
-fn default_traffic_light_close_border() -> ColorValue {
-    color_val("#E0443E")
-}
-fn default_traffic_light_minimize() -> ColorValue {
-    color_val("#FFBD2E")
-}
-fn default_traffic_light_minimize_border() -> ColorValue {
-    color_val("#D69A1E")
-}
-fn default_traffic_light_zoom() -> ColorValue {
-    color_val("#27C93F")
-}
-fn default_traffic_light_zoom_border() -> ColorValue {
-    color_val("#1BA931")
-}
-
-fn default_on_accent_text() -> ColorValue {
-    color_val("#FFFFFF")
-}
-fn default_knob_fill() -> ColorValue {
-    color_val("#FFFFFF")
-}
-fn default_drop_shadow() -> ColorValue {
-    color_val("rgba(0, 0, 0, 0.12)")
-}
-fn default_backdrop_dim() -> ColorValue {
-    color_val("rgba(0, 0, 0, 0.40)")
-}
-fn default_hud_background() -> ColorValue {
-    color_val("rgba(30, 30, 32, 0.90)")
-}
-fn default_hud_border() -> ColorValue {
-    color_val("#3C3C3E")
-}
-fn default_hud_text() -> ColorValue {
-    color_val("#F2F2F7")
-}
-fn default_hud_secondary_text() -> ColorValue {
-    color_val("#B4B4B8")
-}
-fn default_caption_close_hover() -> ColorValue {
-    color_val("#E81123")
-}
-fn default_caption_close_pressed() -> ColorValue {
-    color_val("#C42B1C")
-}
-fn default_caption_hover() -> ColorValue {
-    color_val("rgba(0, 0, 0, 0.06)")
-}
-fn default_caption_pressed() -> ColorValue {
-    color_val("rgba(0, 0, 0, 0.11)")
-}
-fn default_traffic_light_glyph() -> ColorValue {
-    color_val("rgba(0, 0, 0, 0.63)")
-}
-fn default_scrollbar_thumb() -> ColorValue {
-    color_val("rgba(0, 0, 0, 0.45)")
-}
-fn default_scrollbar_thumb_active() -> ColorValue {
-    color_val("rgba(0, 0, 0, 0.70)")
-}
+fn color_val(val: &str) -> ColorValue { ColorValue::new(val) }
+fn default_label_color() -> ColorValue { color_val("rgba(0, 0, 0, 0.85)") }
+fn default_secondary_label_color() -> ColorValue { color_val("rgba(0, 0, 0, 0.50)") }
+fn default_tertiary_label() -> ColorValue { color_val("rgba(0, 0, 0, 0.30)") }
+fn default_box_background() -> ColorValue { color_val("#E5E5E5") }
+fn default_box_border() -> ColorValue { color_val("#D8D8D8") }
+fn default_system_green() -> ColorValue { color_val("#34C759") }
+fn default_system_yellow() -> ColorValue { color_val("#FFCC00") }
+fn default_system_orange() -> ColorValue { color_val("#FF9500") }
+fn default_system_red() -> ColorValue { color_val("#FF3B30") }
+fn default_alternating_row_even() -> ColorValue { color_val("#FFFFFF") }
+fn default_alternating_row_odd() -> ColorValue { color_val("#F4F5F5") }
+fn default_scrubber_selection_border() -> ColorValue { color_val("#FFCC00") }
+fn default_scrubber_outside_dim() -> ColorValue { color_val("rgba(0, 0, 0, 0.58)") }
+fn default_scrubber_waveform() -> ColorValue { color_val("#007AFF") }
+fn default_scrubber_playhead() -> ColorValue { color_val("#FFFFFF") }
+fn default_traffic_light_close() -> ColorValue { color_val("#FF5F56") }
+fn default_traffic_light_close_border() -> ColorValue { color_val("#E0443E") }
+fn default_traffic_light_minimize() -> ColorValue { color_val("#FFBD2E") }
+fn default_traffic_light_minimize_border() -> ColorValue { color_val("#D69A1E") }
+fn default_traffic_light_zoom() -> ColorValue { color_val("#27C93F") }
+fn default_traffic_light_zoom_border() -> ColorValue { color_val("#1BA931") }
+fn default_on_accent_text() -> ColorValue { color_val("#FFFFFF") }
+fn default_knob_fill() -> ColorValue { color_val("#FFFFFF") }
+fn default_drop_shadow() -> ColorValue { color_val("rgba(0, 0, 0, 0.12)") }
+fn default_backdrop_dim() -> ColorValue { color_val("rgba(0, 0, 0, 0.40)") }
+fn default_hud_background() -> ColorValue { color_val("rgba(30, 30, 32, 0.90)") }
+fn default_hud_border() -> ColorValue { color_val("#3C3C3E") }
+fn default_hud_text() -> ColorValue { color_val("#F2F2F7") }
+fn default_hud_secondary_text() -> ColorValue { color_val("#B4B4B8") }
+fn default_caption_close_hover() -> ColorValue { color_val("#E81123") }
+fn default_caption_close_pressed() -> ColorValue { color_val("#C42B1C") }
+fn default_caption_hover() -> ColorValue { color_val("rgba(0, 0, 0, 0.06)") }
+fn default_caption_pressed() -> ColorValue { color_val("rgba(0, 0, 0, 0.11)") }
+fn default_traffic_light_glyph() -> ColorValue { color_val("rgba(0, 0, 0, 0.63)") }
+fn default_scrollbar_thumb() -> ColorValue { color_val("rgba(0, 0, 0, 0.45)") }
+fn default_scrollbar_thumb_active() -> ColorValue { color_val("rgba(0, 0, 0, 0.70)") }
 
 /// Semantic system color tokens for Aqua, Anthracite, and DarkAqua.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -286,5 +228,8 @@ pub fn default_anthracite_colors() -> MacAppearanceColors {
         traffic_light_glyph: color_val("rgba(0, 0, 0, 0.63)"),
         scrollbar_thumb: color_val("rgba(255, 255, 255, 0.45)"),
         scrollbar_thumb_active: color_val("rgba(255, 255, 255, 0.70)"),
+        tertiary_label: color_val("rgba(255, 255, 255, 0.35)"),
+        box_background: color_val("#2B2E35"),
+        box_border: color_val("#424650"),
     }
 }
