@@ -101,7 +101,6 @@ impl<'a> Widget for MacHelpButton<'a> {
         let hm = theme.help_button();
 
         let diam = self.diameter();
-        let radius = diam * 0.5;
         let border_w = hm.border_width.points();
         let shadow_dy = hm.shadow_offset_y.points();
         let font_sz = self.font_size();
@@ -119,9 +118,11 @@ impl<'a> Widget for MacHelpButton<'a> {
         let alpha = if self.enabled { 1.0 } else { theme.disabled_opacity() };
         let painter = ui.painter_at(rect);
         let center = rect.center();
+        let visual_diam = diam.min(rect.width()).min(rect.height());
+        let radius = visual_diam * 0.5;
 
         if self.enabled && response.has_focus() {
-            theme.paint_focus_ring(&painter, Rect::from_center_size(center, Vec2::splat(diam)), radius);
+            theme.paint_focus_ring(&painter, Rect::from_center_size(center, Vec2::splat(visual_diam)), radius);
         }
 
         painter.circle_filled(

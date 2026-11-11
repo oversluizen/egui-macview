@@ -232,10 +232,16 @@ impl<'a> Widget for MacPopUpButton<'a> {
 
         let text_color = if !self.enabled { theme.secondary_label() } else { theme.label() };
         let text_top_y = subpixel_snap(visual_rect.top() + (baseline_from_top - ascender), ppp);
-        painter.galley(Pos2::new(visual_rect.left() + padding_h, text_top_y), current_galley.clone(), text_color);
-
         let badge_inset = metrics.popup_gap.points();
         let badge_w = chevron_size + chevron_spacing + badge_inset;
+        let text_right = if self.accent_badge {
+            (visual_rect.right() - badge_inset - badge_w - badge_inset).max(visual_rect.left())
+        } else {
+            (visual_rect.right() - padding_h - chevron_size - chevron_spacing).max(visual_rect.left())
+        };
+        let text_clip = Rect::from_min_max(visual_rect.min, Pos2::new(text_right, visual_rect.max.y));
+        painter.with_clip_rect(text_clip).galley(Pos2::new(visual_rect.left() + padding_h, text_top_y), current_galley.clone(), text_color);
+
         let cx = if self.accent_badge {
             let badge_rect = Rect::from_min_max(
                 Pos2::new((visual_rect.right() - badge_inset - badge_w).max(visual_rect.left()), visual_rect.top() + badge_inset),

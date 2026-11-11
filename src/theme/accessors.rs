@@ -67,14 +67,17 @@ impl MacTheme {
             egui::FontFamily::Name(crate::symbols::INTER_SEMIBOLD_FONT_NAME.into())
         });
         let cache_id = egui::Id::unique("macview_has_inter_semibold");
-        let has_semibold = ui
-            .ctx()
-            .data(|d| d.get_temp::<bool>(cache_id))
-            .unwrap_or_else(|| {
+        let pass_nr = ui.ctx().cumulative_pass_nr();
+        let cached = ui.ctx().data(|d| d.get_temp::<(u64, bool)>(cache_id));
+        let has_semibold = match cached {
+            Some((_, true)) => true,
+            Some((cached_pass, false)) if cached_pass == pass_nr => false,
+            _ => {
                 let found = ui.fonts(|f| f.families().contains(family));
-                ui.ctx().data_mut(|d| d.insert_temp(cache_id, found));
+                ui.ctx().data_mut(|d| d.insert_temp(cache_id, (pass_nr, found)));
                 found
-            });
+            }
+        };
         if has_semibold {
             (FontId::new(size_pt, family.clone()), true)
         } else {

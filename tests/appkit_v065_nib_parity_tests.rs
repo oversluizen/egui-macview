@@ -315,12 +315,33 @@ fn test_v065_inter_and_cupertino_fonts_and_cross_platform_baseline_alignment() {
 
 #[test]
 fn test_v066_help_button_sizes_popup_accent_badge_and_zero_idle_repaint() {
+    let ctx = Context::default();
+    let theme = MacTheme::new(MacAppearance::Aqua);
+
+    // 1. Verify semibold_font_id returns false before setup_macview_fonts, then updates to true after ctx.set_fonts
+    let mut pre_reg_has_semibold = true;
+    let mut out0 = ctx.run_ui(RawInput::default(), |ui| {
+        let (_, has) = theme.semibold_font_id(ui, 13.0);
+        pre_reg_has_semibold = has;
+    });
+    out0.textures_delta.clear();
+    assert!(!pre_reg_has_semibold);
+
     let mut fonts = egui::FontDefinitions::default();
     setup_macview_fonts(&mut fonts);
     setup_symbols_font(&mut fonts);
-    let ctx = Context::default();
     ctx.set_fonts(fonts);
-    let theme = MacTheme::new(MacAppearance::Aqua);
+
+    let mut post_reg_font = FontId::proportional(13.0);
+    let mut post_reg_has_semibold = false;
+    let mut out1 = ctx.run_ui(RawInput::default(), |ui| {
+        let (fid, has) = theme.semibold_font_id(ui, 13.0);
+        post_reg_font = fid;
+        post_reg_has_semibold = has;
+    });
+    out1.textures_delta.clear();
+    assert!(post_reg_has_semibold);
+    assert_eq!(post_reg_font.family, FontFamily::Name(INTER_SEMIBOLD_FONT_NAME.into()));
 
     assert_eq!(MacHelpButton::new().theme(&theme).control_size(MacControlSize::Regular).font_size(), 12.0);
     assert_eq!(MacHelpButton::new().theme(&theme).control_size(MacControlSize::Small).font_size(), 10.0);
@@ -346,13 +367,21 @@ fn test_v066_help_button_sizes_popup_accent_badge_and_zero_idle_repaint() {
         let mut out = ctx.run_ui(raw, |ui| {
             MacLabel::new("Resolution:").theme(&theme).weight(MacFontWeight::Medium).show(ui);
             MacInputCell::new("nib_in", &mut val).theme(&theme).show(ui);
-            MacPopUpButton::new(&mut pop_idx, &["1080p", "4K"]).theme(&theme).accent_badge(true).show(ui);
+            MacPopUpButton::new(&mut pop_idx, &["1080p Ultra Wide Cinema", "4K"])
+                .theme(&theme)
+                .width(90.0)
+                .accent_badge(true)
+                .show(ui);
             MacComboBox::new("nib_cb", &mut cb_val, &["4K UHD", "8K"]).theme(&theme).show(ui);
             MacCheckbox::new(&mut chk, "Preserve Aspect").theme(&theme).show(ui);
             MacBox::new("Group").theme(&theme).show(ui, |b_ui| {
                 MacLabel::new("Caption").theme(&theme).color(MacLabelColor::Secondary).show(b_ui);
             });
-            MacHelpButton::new().theme(&theme).control_size(MacControlSize::Small).show(ui);
+            MacHelpButton::new()
+                .theme(&theme)
+                .control_size(MacControlSize::Regular)
+                .fixed_rect(Rect::from_min_size(Pos2::new(350.0, 20.0), Vec2::new(14.0, 14.0)))
+                .show(ui);
             MacInlineActionButton::new("+")
                 .theme(&theme)
                 .fixed_rect(Rect::from_min_size(Pos2::new(300.0, 20.0), Vec2::new(24.0, 24.0)))
@@ -386,9 +415,21 @@ fn test_v066_help_button_sizes_popup_accent_badge_and_zero_idle_repaint() {
     }).collect();
     assert_eq!(inline_circles, vec![8.0]);
 
-    // Verify MacPopUpButton::accent_badge(true) paints the right accent badge
-    assert!(shapes.iter().any(|cs| matches!(
-        &cs.shape,
-        egui::Shape::Rect(r) if r.fill == theme.control_accent() && (r.rect.width() - 16.0).abs() < 1.5
-    )));
+    // Verify MacHelpButton clamps visual circle radius to 7.0pt (14pt diameter) inside 14x14pt fixed_rect
+    let help_circles: Vec<_> = shapes.iter().filter_map(|cs| match &cs.shape {
+        egui::Shape::Circle(c) if (c.center.x - 357.0).abs() < 1.0 => Some(c.radius),
+        _ => None,
+    }).collect();
+    assert!(help_circles.iter().all(|&r| (r - 7.0).abs() < 0.01));
+
+    // Verify MacPopUpButton::accent_badge(true) paints the right accent badge and clips text before the badge
+    let badge_rect = shapes.iter().find_map(|cs| match &cs.shape {
+        egui::Shape::Rect(r) if r.fill == theme.control_accent() && (r.rect.width() - 16.0).abs() < 1.5 => Some(r.rect),
+        _ => None,
+    }).expect("MacPopUpButton accent badge rect");
+    let popup_text_clip = shapes.iter().find_map(|cs| match &cs.shape {
+        egui::Shape::Text(t) if t.galley.job.text.contains("1080p") => Some(cs.clip_rect),
+        _ => None,
+    }).expect("MacPopUpButton text shape");
+    assert!(popup_text_clip.max.x <= badge_rect.min.x);
 }
