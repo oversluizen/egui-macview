@@ -102,11 +102,13 @@ impl<'a> MacBox<'a> {
         let border_w = self.border_width();
         let m = theme.box_view();
         let snapped = subpixel_snap_rect(rect, ui.ctx().pixels_per_point());
+        let box_bg = theme.box_background();
+        theme.register_surface_rect(ui.ctx(), rect.union(snapped), box_bg);
 
         ui.painter().add(egui::epaint::RectShape::new(
             snapped,
             CornerRadius::same(corner_r as u8),
-            theme.box_background(),
+            box_bg,
             Stroke::new(border_w, theme.box_border()),
             StrokeKind::Inside,
         ));
@@ -163,8 +165,9 @@ impl<'a> MacBox<'a> {
                 .max_rect(content_rect),
         );
         let box_bg = theme.box_background();
-        let entry_pf = child_ui.visuals().panel_fill;
-        let inner = theme.with_surface_scope(box_bg, Some(entry_pf), || add_contents(&mut child_ui));
+        child_ui.visuals_mut().panel_fill = box_bg;
+        let surface_slot = theme.register_surface_rect_slot(ui.ctx(), Rect::NOTHING, box_bg);
+        let inner = add_contents(&mut child_ui);
         let content_min_rect = child_ui.min_rect();
 
         let (rect, response) = if let Some(fixed) = fixed_box_rect {
@@ -177,6 +180,11 @@ impl<'a> MacBox<'a> {
             let box_rect = subpixel_snap_rect(box_rect, ui.ctx().pixels_per_point());
             ui.allocate_exact_size(box_rect.size(), Sense::hover())
         };
+        theme.update_surface_rect_slot(
+            ui.ctx(),
+            surface_slot,
+            fixed_box_rect.map_or(rect, |f| f.union(rect)),
+        );
 
         ui.painter().set(
             bg_shape_idx,

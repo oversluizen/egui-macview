@@ -180,31 +180,36 @@ MacRatingIndicator::new(&mut rating, 5).theme(&theme).show(ui);
             ctx.audio_level_l,
             ctx.audio_peak_l,
         ),
-        GalleryScreen::AdvancedControls => r#"// Milestone 0.6.5: Advanced Media, Scheduling, Grid & AppKit NIB Primitives (SPEC-012)
+        GalleryScreen::AdvancedControls => r#"// Milestone 0.6.8: AppKit NIB Inspector Matrix, Baseline & Surface Vibrancy (SPEC-012)
 use egui_macview::{
     MacBox, MacCheckbox, MacComboBox, MacControlSize, MacDisclosureGroup,
-    MacFontWeight, MacHelpButton, MacInlineActionButton, MacLabel, MacTheme,
+    MacFontWeight, MacHelpButton, MacInlineActionButton, MacInputCell,
+    MacLabel, MacLabelColor, MacPopUpButton, MacTheme,
 };
 
 let theme = MacTheme::default();
-let mut expanded = true;
-let mut checked = true;
+let (mut expanded, mut group_enabled, mut checked) = (true, true, true);
+let (mut width, mut unit_idx, mut preset_idx) = ("1920".to_string(), 0usize, 0usize);
 let mut combo_text = "Apple ProRes 422 HQ".to_string();
 
 MacBox::new("Inspector Group").theme(&theme).show(ui, |ui| {
-    let resp = MacDisclosureGroup::new("disc", "Media Settings", &mut expanded)
+    MacDisclosureGroup::new("disc", "Media Settings", &mut expanded)
         .theme(&theme)
         .with_trailing_add_button(true)
-        .show(ui, |ui| {
-            MacLabel::new("Codec:").weight(MacFontWeight::Semibold).theme(&theme).show(ui);
-            MacCheckbox::new(&mut checked, "Enable HDR").control_size(MacControlSize::Regular).theme(&theme).show(ui);
-            MacComboBox::new("cb", &mut combo_text, &["ProRes 422", "H.265"]).theme(&theme).show(ui);
-            MacInlineActionButton::new("+").theme(&theme).show(ui);
-            MacHelpButton::new().theme(&theme).show(ui);
+        .show(ui, |disc_ui| {
+            MacCheckbox::new(&mut group_enabled, "Enable Group").theme(&theme).show(disc_ui);
+            disc_ui.add_enabled_ui(group_enabled, |ui| {
+                MacLabel::new("Width:").weight(MacFontWeight::Semibold).theme(&theme).show(ui);
+                MacInputCell::new("w_in", &mut width).width(64.0).theme(&theme).show(ui);
+                MacPopUpButton::new(&mut unit_idx, &["pt", "px", "%"]).theme(&theme).show(ui);
+                MacPopUpButton::new(&mut preset_idx, &["Sonoma 14.8"]).accent_badge(true).theme(&theme).show(ui);
+                MacCheckbox::new(&mut checked, "Enable HDR").control_size(MacControlSize::Regular).theme(&theme).show(ui);
+                MacComboBox::new("cb", &mut combo_text, &["ProRes 422", "H.265"]).theme(&theme).show(ui);
+                MacLabel::new("WCAG Vibrancy").color(MacLabelColor::Secondary).theme(&theme).show(ui);
+                MacInlineActionButton::new("+").theme(&theme).show(ui);
+                MacHelpButton::new().theme(&theme).show(ui);
+            });
         });
-    if resp.trailing_clicked {
-        // Handle section header '+' action
-    }
 });
 "#.to_string(),
     }

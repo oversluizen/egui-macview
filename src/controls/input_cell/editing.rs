@@ -1,7 +1,7 @@
 //! Transactional editing, keyboard stepping, and baseline rendering for [`super::MacInputCell`].
 
 use super::{MacControlSize, MacInputCell};
-use crate::layout::{subpixel_snap, subpixel_snap_rect};
+use crate::layout::subpixel_snap_rect;
 use crate::theme::MacTheme;
 use egui::{Align, CornerRadius, FontId, Key, Modifiers, Pos2, Response, Stroke, StrokeKind, Ui, Vec2};
 
@@ -48,7 +48,8 @@ pub(super) fn show_input_cell(cell: MacInputCell<'_>, ui: &mut Ui) -> Response {
     let width = cell.fixed_rect.map(|r| r.width()).or(cell.width).unwrap_or_else(|| metrics.default_width.points());
     let font_size = cell.font_size.unwrap_or_else(|| metrics.font_size.points());
     let corner_radius = cell.corner_radius.unwrap_or_else(|| metrics.corner_radius.points());
-    let sense = if cell.enabled { egui::Sense::click_and_drag() } else { egui::Sense::hover() };
+    let enabled = cell.enabled && ui.is_enabled();
+    let sense = if enabled { egui::Sense::click_and_drag() } else { egui::Sense::hover() };
     let ppp = ui.ctx().pixels_per_point();
     let (rect, mut response) = if let Some(fixed) = cell.fixed_rect {
         let snapped = subpixel_snap_rect(fixed, ppp);
@@ -58,12 +59,12 @@ pub(super) fn show_input_cell(cell: MacInputCell<'_>, ui: &mut Ui) -> Response {
         (subpixel_snap_rect(r, ppp), resp)
     };
 
-    if cell.enabled && (response.clicked() || response.has_focus()) {
+    if enabled && (response.clicked() || response.has_focus()) {
         ui.memory_mut(|m| m.request_focus(cell.id));
     }
 
-    let is_focused = cell.enabled && ui.memory(|m| m.has_focus(cell.id));
-    let alpha_factor = if cell.enabled { 1.0 } else { theme.disabled_opacity() };
+    let is_focused = enabled && ui.memory(|m| m.has_focus(cell.id));
+    let alpha_factor = if enabled { 1.0 } else { theme.disabled_opacity() };
     let tx_key = cell.id.with("mac_input_tx_state");
     let (mut tx, injected_buf) = ui.data_mut(|d| {
         (d.get_temp::<InputCellTransactionState>(tx_key), d.remove_temp::<String>(cell.id.with("mac_input_buffer")))
@@ -199,7 +200,7 @@ pub(super) fn show_input_cell(cell: MacInputCell<'_>, ui: &mut Ui) -> Response {
                 MacControlSize::Small | MacControlSize::CompactInfobox => lm.small_ascender.points(),
                 MacControlSize::Mini => lm.mini_ascender.points(),
             };
-            let text_y = subpixel_snap(rect.top() + metrics.first_baseline_offset_from_top.points() - ascender, ppp);
+            let text_y = theme.baseline_text_y(rect, metrics.first_baseline_offset_from_top.points(), ascender, ppp);
             let text_x = match cell.text_align {
                 Align::Max => (inner_rect.right() - galley.size().x).max(inner_rect.left()),
                 Align::Center => inner_rect.center().x - galley.size().x * 0.5,
@@ -224,7 +225,7 @@ pub(super) fn show_input_cell(cell: MacInputCell<'_>, ui: &mut Ui) -> Response {
             .desired_width((width - shrink_pad * 2.0).max(0.0))
             .frame(egui::Frame::NONE)
             .lock_focus(true)
-            .interactive(cell.enabled)
+            .interactive(enabled)
             .layouter(&mut layouter);
         if let Some(hint) = cell.placeholder {
             text_edit = text_edit.hint_text(hint);

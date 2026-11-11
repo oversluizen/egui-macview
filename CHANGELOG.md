@@ -5,6 +5,14 @@ All notable changes to the `egui-macview` crate will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.8] - 2026-11-11
+
+### Added
+- **Idiomatic `egui::Ui` Surface Propagation & Zero-Allocation Geometric Surface Registry (`MacTheme::register_surface_rect`, `MacTheme::active_surface_at`)**: Propagates closure-scoped container surfaces (`MacBox::show`, `MacCard::show`) natively via `child_ui.visuals_mut().panel_fill` and registers finalized container rects `(rect, surface_bg)` in a per-pass `Copy` array (`PASS_SURFACE_RECTS`) for flat NIB `.fixed_rect(rect)` peer controls.
+- **Unified AppKit Baseline & NIB Visual Bezel Helpers (`MacTheme::baseline_text_y`, `MacTheme::clamp_nib_visual_rect`)**: Deduplicated `firstBaselineOffsetFromTop - ascender` baseline anchoring and NIB frame-to-visual bezel clamping into `MacTheme`, wired across `MacLabel`, `MacInputCell`, `MacPopUpButton`, `MacComboBox`, `MacCheckbox`, `MacHelpButton`, and `MacInlineActionButton`, with native `ui.is_enabled()` (`ui.add_enabled_ui(false, ...)`) inheritance.
+- **Automated Surface-Aware Vibrancy & Baseline Architecture Guard (`tests/architecture_guard_tests.rs`, `SPEC-001-APPKIT-PRIMITIVES-AND-LAYOUT.md`)**: Anchored container surface awareness and shared baseline/bezel helpers in `SPEC-001 §4` and `test_guard_surface_aware_vibrancy_anchoring`.
+- **Complete Legal, Third-Party Font & Trademark Compliance (`LICENSE`, `assets/fonts/CupertinoIcons-LICENSE.txt`, `README.md`, `tests/architecture_guard_tests.rs`)**: Added root `LICENSE` (MIT warranty/liability disclaimer + third-party font notices), `assets/fonts/CupertinoIcons-LICENSE.txt` (Flutter MIT notice), and nominative trademark/non-affiliation disclaimer in `README.md`, guarded by `test_guard_open_source_fonts_only_zero_proprietary_apple_fonts`.
+
 ## [0.6.7] - 2026-11-11
 
 ### Added
@@ -239,6 +247,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - W3C DTCG design token catalog parser (`tokens/design_tokens.json`, `tokens/typography.json`).
 - Baseline test suite validating token deserialization, layout budgets, and physical spring properties.
 
+[0.6.8]: https://github.com/oversluizen/egui-macview/compare/v0.6.7...v0.6.8
 [0.6.7]: https://github.com/oversluizen/egui-macview/compare/v0.6.6...v0.6.7
 [0.6.6]: https://github.com/oversluizen/egui-macview/compare/v0.6.5...v0.6.6
 [0.6.5]: https://github.com/oversluizen/egui-macview/compare/v0.6.4...v0.6.5

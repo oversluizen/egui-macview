@@ -8,7 +8,7 @@
 //! with a vector checkmark (or mixed `-` dash) and optical-tracked label aligned on the AppKit baseline.
 
 use crate::controls::MacControlSize;
-use crate::layout::{subpixel_snap, subpixel_snap_rect};
+use crate::layout::subpixel_snap_rect;
 use crate::theme::MacTheme;
 use egui::{
     CornerRadius, FontId, Key, Modifiers, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui,
@@ -137,13 +137,18 @@ impl<'a> Widget for MacCheckbox<'a> {
         let baseline_from_top = sz_metrics.first_baseline_offset_from_top.points();
         let border_w = cm.border_width.points();
 
-        let alpha = if self.enabled {
+        let enabled = self.enabled && ui.is_enabled();
+        let alpha = if enabled {
             1.0
         } else {
             theme.disabled_opacity()
         };
-        let surface_bg = theme.active_surface(ui);
-        let text_color = if self.enabled {
+        let probe_pos = self.fixed_rect.map_or_else(
+            || ui.next_widget_position(),
+            |r| Pos2::new(r.left() + (box_sz * 0.5).min(r.width() * 0.5), r.center().y),
+        );
+        let surface_bg = theme.active_surface_at(ui, probe_pos);
+        let text_color = if enabled {
             theme.label_on(surface_bg)
         } else {
             theme.tertiary_label_on(surface_bg)
@@ -171,7 +176,7 @@ impl<'a> Widget for MacCheckbox<'a> {
             .map(|r| r.height())
             .unwrap_or_else(|| box_sz.max(cell_h));
 
-        let sense = if self.enabled {
+        let sense = if enabled {
             Sense::click()
         } else {
             Sense::hover()
@@ -187,7 +192,7 @@ impl<'a> Widget for MacCheckbox<'a> {
             (subpixel_snap_rect(r, ppp), resp)
         };
 
-        if self.enabled {
+        if enabled {
             let key_toggle = response.has_focus()
                 && ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Space));
             if response.clicked() || key_toggle {
@@ -205,14 +210,14 @@ impl<'a> Widget for MacCheckbox<'a> {
             ppp,
         );
 
-        if self.enabled && response.has_focus() {
+        if enabled && response.has_focus() {
             theme.paint_focus_ring(&painter, box_rect, corner_r);
         }
 
         let is_active = *self.checked || self.mixed;
         let fill_color = if is_active {
             theme.control_accent().gamma_multiply(alpha)
-        } else if response.is_pointer_button_down_on() && self.enabled {
+        } else if response.is_pointer_button_down_on() && enabled {
             theme.control().gamma_multiply(alpha)
         } else {
             theme.control_background().gamma_multiply(alpha)
@@ -261,7 +266,7 @@ impl<'a> Widget for MacCheckbox<'a> {
         }
 
         if let Some(galley) = galley {
-            let text_y = subpixel_snap(rect.top() + (baseline_from_top - ascender).max(0.0), ppp);
+            let text_y = theme.baseline_text_y(rect, baseline_from_top, ascender, ppp);
             let text_pos = Pos2::new(box_rect.right() + gap, text_y);
             painter.galley(text_pos, galley, text_color);
         }

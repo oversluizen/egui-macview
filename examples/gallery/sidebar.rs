@@ -55,7 +55,7 @@ impl SidebarState {
                     &mut self.expanded_components,
                     false,
                     |row| {
-                        row.header(&format_tracked_small_caps("Studio States (v0.2-v0.5)"));
+                        row.header(&format_tracked_small_caps("Studio States (v0.2-v0.6)"));
                     },
                 );
                 if resp_comp.clicked {

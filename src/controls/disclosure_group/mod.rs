@@ -139,9 +139,11 @@ impl<'a> MacDisclosureGroup<'a> {
         );
         let spring_key = self.id_salt.with("chevron_rot");
 
-        let surface_bg = theme.active_surface(ui);
-        let primary_fg = theme.label_on(surface_bg);
-        let secondary_fg = theme.secondary_label_on(surface_bg);
+        let enabled = ui.is_enabled();
+        let sense = if enabled { Sense::click() } else { Sense::hover() };
+        let surface_bg = theme.active_surface_at(ui, ui.next_widget_position());
+        let primary_fg = theme.apply_enabled(theme.label_on(surface_bg), enabled);
+        let secondary_fg = theme.apply_enabled(theme.secondary_label_on(surface_bg), enabled);
 
         let (font_id, has_semibold_family) = theme.semibold_font_id(ui, header_font_sz);
         let galley = theme.layout_tracked_galley(
@@ -174,9 +176,9 @@ impl<'a> MacDisclosureGroup<'a> {
             let plus_resp = ui.interact(
                 plus_rect,
                 self.id_salt.with("trailing_add_btn"),
-                Sense::click(),
+                sense,
             );
-            if plus_resp.clicked() {
+            if enabled && plus_resp.clicked() {
                 trailing_clicked = true;
             }
             if ui.is_rect_visible(plus_rect) {
@@ -202,9 +204,9 @@ impl<'a> MacDisclosureGroup<'a> {
         let response = ui.interact(
             toggle_rect,
             self.id_salt.with("disclosure_hdr"),
-            Sense::click(),
+            sense,
         );
-        if response.clicked() && !trailing_clicked {
+        if enabled && response.clicked() && !trailing_clicked {
             *self.is_expanded = !*self.is_expanded;
         }
 

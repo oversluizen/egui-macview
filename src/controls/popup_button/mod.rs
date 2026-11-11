@@ -3,7 +3,7 @@
 mod dropdown;
 
 use crate::controls::MacControlSize;
-use crate::layout::{subpixel_snap, subpixel_snap_rect};
+use crate::layout::subpixel_snap_rect;
 use crate::theme::MacTheme;
 use egui::{
     Color32, CornerRadius, FontId, Key, Modifiers, Pos2, Rect, Response, Sense, Stroke, StrokeKind,
@@ -182,14 +182,14 @@ impl<'a> Widget for MacPopUpButton<'a> {
         let desired_width = self.fixed_rect.map(|r| r.width()).or(self.width)
             .unwrap_or_else(|| layout_items(ui, &current_galley, &mut cached_items).0);
 
-        let sense = if self.enabled { Sense::click() } else { Sense::hover() };
+        let enabled = self.enabled && ui.is_enabled();
+        let sense = if enabled { Sense::click() } else { Sense::hover() };
         let ppp = ui.ctx().pixels_per_point();
         let (frame_rect, visual_rect, mut response) = if let Some(fixed) = self.fixed_rect {
             let id = self.id.unwrap_or_else(|| ui.next_auto_id().with("mac_popup_fixed"));
             let resp = ui.interact(fixed, id, sense);
             let sf = subpixel_snap_rect(fixed, ppp);
-            let bh = fixed.height().min(visual_h);
-            (sf, subpixel_snap_rect(Rect::from_center_size(sf.center(), Vec2::new(sf.width(), bh)), ppp), resp)
+            (sf, theme.clamp_nib_visual_rect(sf, visual_h, ppp), resp)
         } else if let Some(explicit_id) = self.id {
             let (r, _) = ui.allocate_exact_size(Vec2::new(desired_width, height), Sense::hover());
             let resp = ui.interact(r, explicit_id, sense);
@@ -201,7 +201,7 @@ impl<'a> Widget for MacPopUpButton<'a> {
             (snapped, snapped, resp)
         };
 
-        if self.enabled && response.has_focus() {
+        if enabled && response.has_focus() {
             if ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::ArrowDown)) {
                 if *self.selected_index + 1 < self.items.len() {
                     *self.selected_index += 1;
@@ -214,8 +214,8 @@ impl<'a> Widget for MacPopUpButton<'a> {
         }
 
         let painter = ui.painter_at(frame_rect);
-        let bg_color = if !self.enabled {
-            theme.control_background()
+        let bg_color = if !enabled {
+            theme.apply_enabled(theme.control_background(), false)
         } else if response.is_pointer_button_down_on() {
             theme.selected_control_inactive()
         } else if response.hovered() {
@@ -224,14 +224,18 @@ impl<'a> Widget for MacPopUpButton<'a> {
             theme.control_background()
         };
         let border_w = metrics.border_width.points();
-        let border_col = if response.has_focus() { theme.control_accent() } else { theme.separator() };
-        if self.enabled && response.has_focus() {
+        let border_col = if enabled && response.has_focus() {
+            theme.control_accent()
+        } else {
+            theme.apply_enabled(theme.separator(), enabled)
+        };
+        if enabled && response.has_focus() {
             theme.paint_focus_ring(&painter, visual_rect, corner_radius);
         }
         painter.rect(visual_rect, CornerRadius::same(corner_radius as u8), bg_color, Stroke::new(border_w, border_col), StrokeKind::Inside);
 
-        let text_color = if !self.enabled { theme.secondary_label() } else { theme.label() };
-        let text_top_y = subpixel_snap(visual_rect.top() + (baseline_from_top - ascender), ppp);
+        let text_color = theme.apply_enabled(theme.label(), enabled);
+        let text_top_y = theme.baseline_text_y(visual_rect, baseline_from_top, ascender, ppp);
         let badge_inset = metrics.popup_gap.points();
         let badge_w = chevron_size + chevron_spacing + badge_inset;
         let text_right = if self.accent_badge {
@@ -247,7 +251,7 @@ impl<'a> Widget for MacPopUpButton<'a> {
                 Pos2::new((visual_rect.right() - badge_inset - badge_w).max(visual_rect.left()), visual_rect.top() + badge_inset),
                 Pos2::new(visual_rect.right() - badge_inset, visual_rect.bottom() - badge_inset),
             );
-            let badge_fill = if !self.enabled {
+            let badge_fill = if !enabled {
                 theme.control().gamma_multiply(theme.disabled_opacity())
             } else if response.is_pointer_button_down_on() {
                 theme.selected_control()
@@ -261,7 +265,7 @@ impl<'a> Widget for MacPopUpButton<'a> {
         };
 
         // Draw trailing double separated chevrons (up `⌃` and down `⌄`)
-        let chevron_color = if !self.enabled {
+        let chevron_color = if !enabled {
             theme.secondary_label()
         } else if self.accent_badge {
             theme.on_accent_text()
@@ -281,7 +285,7 @@ impl<'a> Widget for MacPopUpButton<'a> {
 
         dropdown::handle_popup_dropdown(
             ui, &theme, visual_rect, &mut response, self.selected_index, self.items,
-            self.enabled, desired_width, visual_rect.height(), corner_radius,
+            enabled, desired_width, visual_rect.height(), corner_radius,
             &current_galley, &mut cached_items, layout_items,
         );
         response

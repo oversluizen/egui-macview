@@ -238,4 +238,40 @@ impl MacTheme {
             egui::StrokeKind::Outside,
         );
     }
+
+    /// Computes the subpixel-snapped top-Y coordinate for a text galley so that its
+    /// typographic ascender lands on `rect.top() + first_baseline_from_top`
+    /// (`NSLayoutConstraint` `firstBaseline` parity).
+    pub fn baseline_text_y(
+        &self,
+        rect: egui::Rect,
+        first_baseline_from_top: f32,
+        ascender: f32,
+        ppp: f32,
+    ) -> f32 {
+        crate::layout::subpixel_snap(rect.top() + (first_baseline_from_top - ascender), ppp)
+    }
+
+    /// Clamps an AppKit NIB layout `frame_rect` (which may include outer shadow or focus-ring
+    /// insets) to the control's `visual_height`, centering the visual bezel vertically and
+    /// snapping to physical pixel boundaries.
+    pub fn clamp_nib_visual_rect(
+        &self,
+        frame_rect: egui::Rect,
+        visual_height: f32,
+        ppp: f32,
+    ) -> egui::Rect {
+        let sf = crate::layout::subpixel_snap_rect(frame_rect, ppp);
+        if sf.height() > visual_height {
+            crate::layout::subpixel_snap_rect(
+                egui::Rect::from_center_size(
+                    sf.center(),
+                    egui::Vec2::new(sf.width(), visual_height),
+                ),
+                ppp,
+            )
+        } else {
+            sf
+        }
+    }
 }

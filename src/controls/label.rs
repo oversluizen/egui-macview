@@ -8,7 +8,7 @@
 //! cross-platform baseline positioning (`firstBaselineOffsetFromTop`).
 
 use crate::controls::MacControlSize;
-use crate::layout::{subpixel_snap, subpixel_snap_rect};
+use crate::layout::subpixel_snap_rect;
 use crate::theme::MacTheme;
 use egui::{Align, Color32, FontId, Pos2, Rect, Response, Sense, Ui, Vec2, Widget, WidgetText};
 
@@ -181,8 +181,16 @@ impl<'a> Widget for MacLabel<'a> {
             ),
         };
 
-        let surface_bg = theme.active_surface(ui);
-        let text_color = self.resolved_color_on(theme, surface_bg);
+        let probe_pos = self.fixed_rect.map_or_else(
+            || ui.next_widget_position(),
+            |r| match self.alignment {
+                Align::Min => Pos2::new(r.left(), r.center().y),
+                Align::Center => r.center(),
+                Align::Max => Pos2::new(r.right(), r.center().y),
+            },
+        );
+        let surface_bg = theme.active_surface_at(ui, probe_pos);
+        let text_color = theme.apply_enabled(self.resolved_color_on(theme, surface_bg), ui.is_enabled());
         let is_heavy = matches!(
             self.weight,
             MacFontWeight::Medium | MacFontWeight::Semibold | MacFontWeight::Bold
@@ -210,7 +218,7 @@ impl<'a> Widget for MacLabel<'a> {
         };
 
         let painter = ui.painter_at(rect);
-        let text_y = subpixel_snap(rect.top() + (baseline_from_top - ascender), ppp);
+        let text_y = theme.baseline_text_y(rect, baseline_from_top, ascender, ppp);
         let text_x = match self.alignment {
             Align::Min => rect.left(),
             Align::Center => rect.center().x - galley.size().x * 0.5,

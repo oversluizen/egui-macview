@@ -93,9 +93,11 @@ impl<'a> Widget for MacDisclosureButton<'a> {
         let theme: &MacTheme = &theme_cow;
         let metrics = theme.disclosure_group();
 
+        let enabled = ui.is_enabled();
+        let sense = if enabled { Sense::click() } else { Sense::hover() };
         let desired_size = self.frame_size();
-        let (rect, mut response) = ui.allocate_exact_size(desired_size, Sense::click());
-        if response.clicked() {
+        let (rect, mut response) = ui.allocate_exact_size(desired_size, sense);
+        if enabled && response.clicked() {
             *self.is_expanded = !*self.is_expanded;
             response.mark_changed();
         }
@@ -104,19 +106,20 @@ impl<'a> Widget for MacDisclosureButton<'a> {
             let painter = ui.painter_at(rect);
             let corner_r = rect.height() * 0.5;
 
-            let fill = if response.is_pointer_button_down_on() {
+            let base_fill = if enabled && response.is_pointer_button_down_on() {
                 theme.selected_control()
-            } else if response.hovered() {
+            } else if enabled && response.hovered() {
                 theme.control()
             } else {
                 theme.control_background()
             };
+            let fill = theme.apply_enabled(base_fill, enabled);
 
             painter.rect(
                 rect,
                 CornerRadius::same(corner_r as u8),
                 fill,
-                Stroke::new(1.0, theme.separator()),
+                Stroke::new(1.0, theme.apply_enabled(theme.separator(), enabled)),
                 StrokeKind::Inside,
             );
 
@@ -147,11 +150,12 @@ impl<'a> Widget for MacDisclosureButton<'a> {
             let p2 = rotate(-chevron_sz * 0.5, chevron_sz);
             let p3 = rotate(chevron_sz, 0.0);
 
-            let glyph_color = if response.hovered() {
-                theme.label_on(fill)
+            let base_glyph = if enabled && response.hovered() {
+                theme.label_on(base_fill)
             } else {
-                theme.secondary_label_on(fill)
+                theme.secondary_label_on(base_fill)
             };
+            let glyph_color = theme.apply_enabled(base_glyph, enabled);
             painter.add(Shape::convex_polygon(
                 vec![p1, p2, p3],
                 glyph_color,

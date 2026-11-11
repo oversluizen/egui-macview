@@ -473,6 +473,14 @@ fn test_v067_appkit_vibrancy_plus_darker_plus_lighter_and_wcag_clamping() {
     );
     assert!(lighter_fg.r() > 160);
 
+    for appearance in [MacAppearance::Aqua, MacAppearance::Anthracite, MacAppearance::DarkAqua] {
+        let t = MacTheme::new(appearance);
+        for surface in [t.window_background(), t.box_background(), t.control_background()] {
+            assert!(crate_contrast_ratio(t.label_on(surface), surface) >= 4.5);
+            assert!(crate_contrast_ratio(t.secondary_label_on(surface), surface) >= 4.5);
+            assert!(crate_contrast_ratio(t.tertiary_label_on(surface), surface) >= 3.0);
+        }
+    }
     for gray in (0u8..=255).step_by(5) {
         let custom_bg = Color32::from_rgb(gray, gray, gray);
         let clamped = ensure_wcag_contrast(Color32::from_rgb(120, 120, 120), custom_bg, 4.5);

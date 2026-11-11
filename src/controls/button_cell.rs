@@ -118,7 +118,8 @@ impl<'a> Widget for MacButtonCell<'a> {
             .width
             .unwrap_or_else(|| text_layout.size().x + padding_h * 2.0);
 
-        let sense = if self.enabled {
+        let enabled = self.enabled && ui.is_enabled();
+        let sense = if enabled {
             egui::Sense::click()
         } else {
             egui::Sense::hover()
@@ -126,14 +127,14 @@ impl<'a> Widget for MacButtonCell<'a> {
         let (rect, response) = ui.allocate_exact_size(Vec2::new(desired_width, height), sense);
         let painter = ui.painter_at(rect);
 
-        let alpha_factor = if self.enabled {
+        let alpha_factor = if enabled {
             1.0
         } else {
             theme.disabled_opacity()
         };
 
         // Dynamic AppKit styling (pressed feedback works even when selected == true)
-        let base_bg = if !self.enabled {
+        let base_bg = if !enabled {
             if self.selected {
                 theme.selected_control_inactive()
             } else {

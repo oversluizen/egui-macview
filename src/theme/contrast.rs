@@ -11,25 +11,40 @@ use egui::{Color32, Ui};
 use std::cell::Cell;
 use std::sync::OnceLock;
 
+const MAX_PASS_SURFACE_RECTS: usize = 32;
+
 #[derive(Clone, Copy)]
-struct SurfaceScope {
-    surface_bg: Color32,
-    entry_panel_fill: Option<Color32>,
+struct PassSurfaceRects {
+    pass_nr: u64,
+    ctx_token: u64,
+    len: usize,
+    entries: [(egui::Rect, Color32); MAX_PASS_SURFACE_RECTS],
+}
+
+impl PassSurfaceRects {
+    const EMPTY: Self = Self {
+        pass_nr: u64::MAX,
+        ctx_token: 0,
+        len: 0,
+        entries: [(egui::Rect::NOTHING, Color32::TRANSPARENT); MAX_PASS_SURFACE_RECTS],
+    };
 }
 
 thread_local! {
-    static ACTIVE_SURFACE_OVERRIDE: Cell<Option<SurfaceScope>> = const { Cell::new(None) };
+    static PASS_SURFACE_RECTS: Cell<PassSurfaceRects> = const { Cell::new(PassSurfaceRects::EMPTY) };
+    static NEXT_PASS_TOKEN: Cell<u64> = const { Cell::new(1) };
+    static EXPLICIT_SURFACE_CELL: Cell<Option<Color32>> = const { Cell::new(None) };
 }
 
 static EGUI_DEFAULT_PANEL_FILLS: OnceLock<(Color32, Color32)> = OnceLock::new();
 
-struct SurfaceScopeGuard {
-    prev: Option<SurfaceScope>,
+struct ExplicitSurfaceGuard {
+    prev: Option<Color32>,
 }
 
-impl Drop for SurfaceScopeGuard {
+impl Drop for ExplicitSurfaceGuard {
     fn drop(&mut self) {
-        ACTIVE_SURFACE_OVERRIDE.with(|cell| cell.set(self.prev));
+        EXPLICIT_SURFACE_CELL.with(|cell| cell.set(self.prev));
     }
 }
 
@@ -157,26 +172,14 @@ pub fn ensure_wcag_contrast(fg: Color32, bg: Color32, min_ratio: f32) -> Color32
 
 impl MacTheme {
     /// Executes `f` inside a zero-allocation surface vibrancy scope where [`Self::active_surface`]
-    /// returns `surface_bg`, automatically restoring the enclosing surface on scope exit.
+    /// falls back to `surface_bg`, automatically restoring the previous override on scope exit.
     pub fn with_surface<R>(&self, surface_bg: Color32, f: impl FnOnce() -> R) -> R {
-        self.with_surface_scope(surface_bg, None, f)
-    }
-
-    pub(crate) fn with_surface_scope<R>(
-        &self,
-        surface_bg: Color32,
-        entry_panel_fill: Option<Color32>,
-        f: impl FnOnce() -> R,
-    ) -> R {
-        let prev = ACTIVE_SURFACE_OVERRIDE.with(|cell| {
+        let prev = EXPLICIT_SURFACE_CELL.with(|cell| {
             let old = cell.get();
-            cell.set(Some(SurfaceScope {
-                surface_bg,
-                entry_panel_fill,
-            }));
+            cell.set(Some(surface_bg));
             old
         });
-        let _guard = SurfaceScopeGuard { prev };
+        let _guard = ExplicitSurfaceGuard { prev };
         f()
     }
 
@@ -191,30 +194,121 @@ impl MacTheme {
             || panel_fill == colors.dark_aqua.window_background.to_color32()
     }
 
-    /// Resolves the active container surface background color for `ui`:
-    ///
-    /// 1. Returns `ui.visuals().panel_fill` if explicitly mutated inside the current container scope.
-    /// 2. Returns the active container surface pushed by [` crate::MacBox `], [` crate::MacCard `],
-    ///    or [`Self::with_surface`] if inside a container scope.
-    /// 3. Otherwise returns `ui.visuals().panel_fill` if customized away from default window/panel fills.
-    /// 4. Falls back to [`Self::window_background`].
-    pub fn active_surface(&self, ui: &Ui) -> Color32 {
-        let panel_fill = ui.visuals().panel_fill;
-        if let Some(scope) = ACTIVE_SURFACE_OVERRIDE.with(|cell| cell.get()) {
-            if let Some(entry_pf) = scope.entry_panel_fill {
-                if panel_fill != entry_pf {
-                    return panel_fill;
-                }
-            } else if !self.is_default_panel_fill(panel_fill) {
-                return panel_fill;
+    /// Registers a painted container surface `(rect, surface_bg)` for the current `egui::Context`
+    /// pass so flat NIB peer controls rendered after the container (such as via `.fixed_rect(rect)`)
+    /// automatically detect `surface_bg` when their geometry lies within `rect`.
+    pub fn register_surface_rect(
+        &self,
+        ctx: &egui::Context,
+        rect: egui::Rect,
+        surface_bg: Color32,
+    ) {
+        let _ = self.register_surface_rect_slot(ctx, rect, surface_bg);
+    }
+
+    pub(crate) fn register_surface_rect_slot(
+        &self,
+        ctx: &egui::Context,
+        rect: egui::Rect,
+        surface_bg: Color32,
+    ) -> usize {
+        let pass_nr = ctx.cumulative_pass_nr();
+        let pass_id = egui::Id::unique("macview_surface_pass_token");
+        PASS_SURFACE_RECTS.with(|cell| {
+            let mut state = cell.get();
+            let same_pass = state.pass_nr == pass_nr
+                && state.ctx_token != 0
+                && ctx.data(|d| d.get_temp::<(u64, u64)>(pass_id))
+                    == Some((pass_nr, state.ctx_token));
+            if !same_pass {
+                let token = NEXT_PASS_TOKEN.with(|t| {
+                    let next = t.get().wrapping_add(1).max(1);
+                    t.set(next);
+                    next
+                });
+                ctx.data_mut(|d| d.insert_temp(pass_id, (pass_nr, token)));
+                state.pass_nr = pass_nr;
+                state.ctx_token = token;
+                state.len = 0;
             }
-            return scope.surface_bg;
+            let slot = if state.len < MAX_PASS_SURFACE_RECTS {
+                let s = state.len;
+                state.entries[s] = (rect, surface_bg);
+                state.len += 1;
+                s
+            } else {
+                state.entries.copy_within(1..MAX_PASS_SURFACE_RECTS, 0);
+                state.entries[MAX_PASS_SURFACE_RECTS - 1] = (rect, surface_bg);
+                MAX_PASS_SURFACE_RECTS - 1
+            };
+            cell.set(state);
+            slot
+        })
+    }
+
+    pub(crate) fn update_surface_rect_slot(
+        &self,
+        ctx: &egui::Context,
+        slot: usize,
+        rect: egui::Rect,
+    ) {
+        let pass_nr = ctx.cumulative_pass_nr();
+        PASS_SURFACE_RECTS.with(|cell| {
+            let mut state = cell.get();
+            if state.pass_nr == pass_nr && slot < state.len {
+                state.entries[slot].0 = rect;
+                cell.set(state);
+            }
+        });
+    }
+
+    fn lookup_registered_surface(ctx: &egui::Context, pos: egui::Pos2) -> Option<Color32> {
+        let pass_nr = ctx.cumulative_pass_nr();
+        let (token, bg) = PASS_SURFACE_RECTS.with(|cell| {
+            let state = cell.get();
+            if state.pass_nr != pass_nr || state.len == 0 {
+                return None;
+            }
+            for idx in (0..state.len).rev() {
+                let (rect, bg) = state.entries[idx];
+                if rect == egui::Rect::NOTHING {
+                    return None;
+                }
+                if rect.contains(pos) {
+                    return Some((state.ctx_token, bg));
+                }
+            }
+            None
+        })?;
+        let pass_id = egui::Id::unique("macview_surface_pass_token");
+        (ctx.data(|d| d.get_temp::<(u64, u64)>(pass_id)) == Some((pass_nr, token))).then_some(bg)
+    }
+
+    /// Resolves the active container surface background color at `pos` inside `ui`:
+    ///
+    /// 1. Returns the last registered `(rect, surface_bg)` in the current pass where `rect.contains(pos)`
+    ///    (for flat NIB layouts where `MacBox::paint_at` or `MacBox::show` precedes `.fixed_rect` peers).
+    /// 2. Returns `ui.visuals().panel_fill` when set by an enclosing container `Ui` (such as `MacBox::show`
+    ///    or `MacCard::show`) or customized away from default window/panel fills.
+    /// 3. Returns any active [`Self::with_surface`] override.
+    /// 4. Falls back to [`Self::window_background`].
+    pub fn active_surface_at(&self, ui: &Ui, pos: egui::Pos2) -> Color32 {
+        if let Some(bg) = Self::lookup_registered_surface(ui.ctx(), pos) {
+            return bg;
         }
+        let panel_fill = ui.visuals().panel_fill;
         if !self.is_default_panel_fill(panel_fill) {
-            panel_fill
-        } else {
-            self.window_background()
+            return panel_fill;
         }
+        if let Some(override_bg) = EXPLICIT_SURFACE_CELL.with(|cell| cell.get()) {
+            return override_bg;
+        }
+        self.window_background()
+    }
+
+    /// Resolves the active container surface background color at `ui.next_widget_position()`.
+    pub fn active_surface(&self, ui: &Ui) -> Color32 {
+        self.active_surface_at(ui, ui.next_widget_position())
     }
 
     fn resolve_vibrant_on(&self, surface_bg: Color32, tier: u8, min_ratio: f32) -> Color32 {

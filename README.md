@@ -28,7 +28,7 @@ Add `egui-macview` to your `Cargo.toml`:
 ```toml
 [dependencies]
 egui = "0.37.0"
-egui-macview = "0.6.7"
+egui-macview = "0.6.8"
 ```
 
 To run the interactive showcase gallery included in this repository:
@@ -706,10 +706,24 @@ cargo clippy --all-targets -- -D warnings
 
 ---
 
-## License
+## License, Third-Party Notices & Trademark Disclaimer
 
-Dual-licensed under either of:
+### Software License & Warranty Disclaimer
+
+`egui-macview` is dual-licensed under either of:
+- MIT License (<https://opensource.org/licenses/MIT>, see `LICENSE`)
 - Apache License, Version 2.0 (<https://www.apache.org/licenses/LICENSE-2.0>)
-- MIT license (<https://opensource.org/licenses/MIT>)
 
-at your option.
+at your option. The software is provided `"AS IS"`, without warranty or liability of any kind, express or implied.
+
+### Open-Source Font & Asset Notices
+
+All bundled fonts and vector assets in `egui-macview` are 100% open-source:
+- **Inter** (`assets/fonts/Inter-Regular.ttf`, `assets/fonts/Inter-SemiBold.ttf`): Copyright (c) 2016 The Inter Project Authors, licensed under the **SIL Open Font License 1.1** (`assets/fonts/Inter-OFL.txt`).
+- **CupertinoIcons** (`assets/fonts/CupertinoIcons.ttf`): Copyright 2014 The Flutter Authors, licensed under the **MIT License** (`assets/fonts/CupertinoIcons-LICENSE.txt`).
+
+Zero proprietary Apple fonts, icons, bitmaps, or binaries are included or distributed with this crate.
+
+### Trademark & Clean-Room Non-Affiliation Disclaimer
+
+Apple®, macOS®, AppKit®, Aqua®, Finder®, QuickTime®, AVKit®, and SF Pro® are trademarks of Apple Inc., registered in the U.S. and other countries. `egui-macview` is an independent, clean-room open-source UI library for `egui` and is not affiliated with, endorsed by, or sponsored by Apple Inc. All references to macOS, AppKit, or AVKit class and style names are used solely for nominative, descriptive interoperability and developer familiarity.

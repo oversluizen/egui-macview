@@ -108,7 +108,8 @@ impl<'a> MacSegmentedControl<'a> {
         let count = self.options.len().max(1);
         let total_width = segment_width * count as f32;
 
-        let sense = if self.enabled {
+        let enabled = self.enabled && ui.is_enabled();
+        let sense = if enabled {
             Sense::click()
         } else {
             Sense::hover()
@@ -116,7 +117,7 @@ impl<'a> MacSegmentedControl<'a> {
         let (rect, mut response) = ui.allocate_exact_size(Vec2::new(total_width, height), sense);
         let mut active_idx = self.selected_idx.min(count.saturating_sub(1));
 
-        if self.enabled && response.has_focus() {
+        if enabled && response.has_focus() {
             if ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::ArrowRight))
                 && active_idx + 1 < count
             {
@@ -132,7 +133,7 @@ impl<'a> MacSegmentedControl<'a> {
             }
         }
 
-        let alpha_factor = if self.enabled {
+        let alpha_factor = if enabled {
             1.0
         } else {
             theme.disabled_opacity()
@@ -180,7 +181,7 @@ impl<'a> MacSegmentedControl<'a> {
                 Vec2::new(segment_width, height),
             );
 
-            if self.enabled && response.clicked() {
+            if enabled && response.clicked() {
                 if let Some(pos) = ui.input(|inp| inp.pointer.interact_pos()) {
                     if seg_rect.contains(pos) {
                         response.request_focus();
@@ -190,7 +191,7 @@ impl<'a> MacSegmentedControl<'a> {
                 }
             }
 
-            let is_hovered = self.enabled && ui.rect_contains_pointer(seg_rect);
+            let is_hovered = enabled && ui.rect_contains_pointer(seg_rect);
             let text_color = if i == active_idx || is_hovered {
                 theme.label().gamma_multiply(alpha_factor)
             } else {

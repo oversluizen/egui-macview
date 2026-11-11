@@ -5,7 +5,7 @@ mod popover;
 pub use popover::ComboBoxPopoverGeometry;
 
 use crate::controls::MacControlSize;
-use crate::layout::{subpixel_snap, subpixel_snap_rect};
+use crate::layout::subpixel_snap_rect;
 use crate::theme::MacTheme;
 use egui::{
     CornerRadius, FontId, Id, Key, Modifiers, Pos2, Rect, Response, Sense, Stroke, StrokeKind,
@@ -185,20 +185,21 @@ impl<'a, T: AsRef<str>> MacComboBox<'a, T> {
         let theme: &MacTheme = &theme_cow;
         let metrics = theme.combo_box();
         let layout = self.compute_header_layout(ui);
+        let enabled = ui.is_enabled();
+        let sense = if enabled { Sense::click() } else { Sense::hover() };
         let ppp = ui.ctx().pixels_per_point();
         let (frame_rect, visual_rect, mut response) = if let Some(fixed) = self.fixed_rect {
             let sf = subpixel_snap_rect(fixed, ppp);
-            let resp = ui.interact(sf, self.id_salt.with("fixed_combo"), Sense::click());
-            let bh = fixed.height().min(self.visual_height());
-            (sf, subpixel_snap_rect(Rect::from_center_size(sf.center(), Vec2::new(sf.width(), bh)), ppp), resp)
+            let resp = ui.interact(sf, self.id_salt.with("fixed_combo"), sense);
+            (sf, theme.clamp_nib_visual_rect(sf, self.visual_height(), ppp), resp)
         } else {
-            let (r, resp) = ui.allocate_exact_size(layout.total_rect.size(), Sense::click());
+            let (r, resp) = ui.allocate_exact_size(layout.total_rect.size(), sense);
             let snapped = subpixel_snap_rect(r, ppp);
             (snapped, snapped, resp)
         };
 
         let open_id = self.id_salt.with("popover_open");
-        let mut is_open = ui.data_mut(|d| d.get_temp::<bool>(open_id).unwrap_or(false));
+        let mut is_open = enabled && ui.data_mut(|d| d.get_temp::<bool>(open_id).unwrap_or(false));
         let selected_item_id = self.id_salt.with("popover_sel_idx");
         let stored_sel_idx = ui.data_mut(|d| d.get_temp::<usize>(selected_item_id));
 
@@ -209,19 +210,24 @@ impl<'a, T: AsRef<str>> MacComboBox<'a, T> {
             Pos2::new(visual_rect.max.x - btn_w, visual_rect.max.y),
         );
 
-        if ui.input_mut(|i| i.consume_key(Modifiers::ALT, Key::ArrowDown))
-            || ui.input(|i| i.modifiers.alt && i.key_pressed(Key::ArrowDown))
+        if enabled && (ui.input_mut(|i| i.consume_key(Modifiers::ALT, Key::ArrowDown))
+            || ui.input(|i| i.modifiers.alt && i.key_pressed(Key::ArrowDown)))
         {
             is_open = true;
         }
 
         let painter = ui.painter_at(frame_rect);
-        let border_col = if response.has_focus() { theme.control_accent() } else { theme.separator() };
-        painter.rect(visual_rect, CornerRadius::same(layout.corner_radius as u8), theme.control_background(), Stroke::new(1.0, border_col), StrokeKind::Inside);
-        painter.line_segment([Pos2::new(btn_rect.min.x, visual_rect.min.y), Pos2::new(btn_rect.min.x, visual_rect.max.y)], Stroke::new(1.0, theme.separator()));
+        let border_col = if enabled && response.has_focus() {
+            theme.control_accent()
+        } else {
+            theme.apply_enabled(theme.separator(), enabled)
+        };
+        let bg_fill = theme.apply_enabled(theme.control_background(), enabled);
+        painter.rect(visual_rect, CornerRadius::same(layout.corner_radius as u8), bg_fill, Stroke::new(1.0, border_col), StrokeKind::Inside);
+        painter.line_segment([Pos2::new(btn_rect.min.x, visual_rect.min.y), Pos2::new(btn_rect.min.x, visual_rect.max.y)], Stroke::new(1.0, theme.apply_enabled(theme.separator(), enabled)));
 
         let pointer_pos = ui.input(|i| i.pointer.hover_pos());
-        let btn_hovered = pointer_pos.is_some_and(|p| btn_rect.contains(p));
+        let btn_hovered = enabled && pointer_pos.is_some_and(|p| btn_rect.contains(p));
         let btn_down = btn_hovered && ui.input(|i| i.pointer.primary_down());
         let btn_radius = CornerRadius { nw: 0, sw: 0, ne: layout.corner_radius as u8, se: layout.corner_radius as u8 };
         if btn_down {
@@ -239,12 +245,12 @@ impl<'a, T: AsRef<str>> MacComboBox<'a, T> {
             Pos2::new((visual_rect.max.x - badge_inset - badge_w).max(btn_rect.min.x), visual_rect.min.y + badge_inset),
             Pos2::new(visual_rect.max.x - badge_inset, visual_rect.max.y - badge_inset),
         );
-        let badge_fill = if btn_down { theme.selected_control() } else { theme.control_accent() };
+        let badge_fill = if !enabled { theme.control().gamma_multiply(theme.disabled_opacity()) } else if btn_down { theme.selected_control() } else { theme.control_accent() };
         painter.rect_filled(badge_rect, CornerRadius::same(badge_r as u8), badge_fill);
 
         let (cx, cy) = (badge_rect.center().x, badge_rect.center().y);
         let (ch_hw, ch_hh) = (metrics.chevron_half_width.points(), metrics.chevron_half_height.points());
-        let ch_stroke = Stroke::new(metrics.chevron_stroke_width.points(), theme.on_accent_text());
+        let ch_stroke = Stroke::new(metrics.chevron_stroke_width.points(), theme.apply_enabled(theme.on_accent_text(), enabled));
         painter.line_segment([Pos2::new(cx - ch_hw, cy - ch_hh * 0.5), Pos2::new(cx, cy + ch_hh)], ch_stroke);
         painter.line_segment([Pos2::new(cx, cy + ch_hh), Pos2::new(cx + ch_hw, cy - ch_hh * 0.5)], ch_stroke);
 
@@ -255,7 +261,7 @@ impl<'a, T: AsRef<str>> MacComboBox<'a, T> {
             MacControlSize::Mini => theme.text_field().mini.font_size.points(),
         };
         let edit_id = self.id_salt.with("combo_input_id");
-        let is_edit_focused = ui.memory(|m| m.has_focus(edit_id));
+        let is_edit_focused = enabled && ui.memory(|m| m.has_focus(edit_id));
         if is_edit_focused {
             let edit_res = child_ui.add_sized(
                 text_rect.size(),
@@ -266,8 +272,8 @@ impl<'a, T: AsRef<str>> MacComboBox<'a, T> {
                 is_open = true;
             }
         } else {
-            let click_res = child_ui.interact(text_rect, edit_id, Sense::click());
-            if click_res.clicked() {
+            let click_res = child_ui.interact(text_rect, edit_id, sense);
+            if enabled && click_res.clicked() {
                 ui.memory_mut(|m| m.request_focus(edit_id));
             }
             if !self.text.is_empty() {
@@ -277,9 +283,10 @@ impl<'a, T: AsRef<str>> MacComboBox<'a, T> {
                     MacControlSize::Small | MacControlSize::CompactInfobox => (metrics.small_first_baseline_offset.points(), lm.small_ascender.points()),
                     MacControlSize::Mini => (metrics.mini_first_baseline_offset.points(), lm.mini_ascender.points()),
                 };
-                let galley = theme.layout_tracked_galley(ui, self.text.as_str(), FontId::proportional(font_sz), theme.label(), text_rect.width().max(0.0));
-                let text_y = subpixel_snap(visual_rect.top() + (baseline_from_top - ascender), ppp);
-                painter.with_clip_rect(text_rect).galley(Pos2::new(text_rect.left(), text_y), galley, theme.label());
+                let text_col = theme.apply_enabled(theme.label(), enabled);
+                let galley = theme.layout_tracked_galley(ui, self.text.as_str(), FontId::proportional(font_sz), text_col, text_rect.width().max(0.0));
+                let text_y = theme.baseline_text_y(visual_rect, baseline_from_top, ascender, ppp);
+                painter.with_clip_rect(text_rect).galley(Pos2::new(text_rect.left(), text_y), galley, text_col);
             }
         }
 

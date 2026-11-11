@@ -148,45 +148,16 @@ fn test_guard_documentation_and_file_size_ceilings() {
 fn test_guard_zero_cross_component_token_borrowing_and_self_check() {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     let methods = [
-        "box_view",
-        "button",
-        "checkbox",
-        "collection_view",
-        "color_well",
-        "combo_box",
-        "date_picker",
-        "disclosure_group",
-        "help_button",
-        "inline_action_button",
-        "level_indicator",
-        "outline_view",
-        "path_control",
-        "player_view",
-        "popover_metrics",
-        "popup_button",
-        "progress_indicator",
-        "rule_editor",
-        "scroll_view",
-        "search_field",
-        "segmented",
-        "slider",
-        "split_view",
-        "stack_view",
-        "stepper",
-        "tab_view",
-        "table_view",
-        "thumbnail",
-        "toggle",
-        "token_field",
-        "trim_scrubber",
+        "box_view", "button", "checkbox", "collection_view", "color_well", "combo_box",
+        "date_picker", "disclosure_group", "help_button", "inline_action_button",
+        "level_indicator", "outline_view", "path_control", "player_view", "popover_metrics",
+        "popup_button", "progress_indicator", "rule_editor", "scroll_view", "search_field",
+        "segmented", "slider", "split_view", "stack_view", "stepper", "tab_view", "table_view",
+        "thumbnail", "toggle", "token_field", "trim_scrubber",
     ];
     for file_path in collect_rs_files(&manifest_dir.join("src/controls")) {
         let fname = file_path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-        let pname = file_path
-            .parent()
-            .and_then(|p| p.file_name())
-            .and_then(|n| n.to_str())
-            .unwrap_or("");
+        let pname = file_path.parent().and_then(|p| p.file_name()).and_then(|n| n.to_str()).unwrap_or("");
         if fname == "mod.rs" && pname == "controls" {
             continue;
         }
@@ -194,25 +165,22 @@ fn test_guard_zero_cross_component_token_borrowing_and_self_check() {
             (_, "box_view.rs") => &["box_view"],
             (_, "button_cell.rs") => &["button"],
             (_, "checkbox.rs") => &["checkbox"],
-            (_, "circular_slider.rs") => &["slider"],
+            (_, "circular_slider.rs") | (_, "slider.rs") => &["slider"],
             (_, "collection_view.rs") => &["collection_view"],
             (_, "color_well.rs") => &["color_well"],
             (_, "combo_box.rs") | ("combo_box", _) => &["combo_box"],
             (_, "date_picker.rs") | ("date_picker", _) => &["date_picker"],
             (_, "disclosure_group.rs") | ("disclosure_group", _) => &["disclosure_group"],
             (_, "help_button.rs") => &["help_button", "inline_action_button"],
-            (_, "label.rs") => &[],
-            (_, "level_indicator.rs") => &["level_indicator"],
+            (_, "level_indicator.rs") | (_, "rating_indicator.rs") => &["level_indicator"],
             (_, "outline_view.rs") | ("outline_view", _) => &["outline_view", "thumbnail"],
             (_, "path_control.rs") => &["path_control"],
             (_, "player_view.rs") | ("player_view", _) => &["player_view"],
             (_, "popup_button.rs") | ("popup_button", _) => &["popup_button"],
             (_, "progress_indicator.rs") => &["progress_indicator"],
-            (_, "rating_indicator.rs") => &["level_indicator"],
             (_, "rule_editor.rs") => &["rule_editor"],
             (_, "search_field.rs") => &["search_field"],
             (_, "segmented.rs") => &["segmented"],
-            (_, "slider.rs") => &["slider"],
             (_, "stepper.rs") => &["stepper"],
             (_, "tab_view.rs") => &["tab_view"],
             ("table_view", _) => &["table_view"],
@@ -225,31 +193,17 @@ fn test_guard_zero_cross_component_token_borrowing_and_self_check() {
         let stripped = strip_comments_and_strings(&fs::read_to_string(&file_path).unwrap());
         for &m in &methods {
             if !allowed.contains(&m) {
-                assert!(
-                    !stripped.contains(&format!("theme.{m}(")),
-                    "{fname} calls theme.{m}("
-                );
+                assert!(!stripped.contains(&format!("theme.{m}(")), "{fname} calls theme.{m}(");
             }
         }
     }
     assert!(!check_magic_numbers_in_source("bad.rs", "let h = 18.0;").is_empty());
     assert!(check_magic_numbers_in_source("ok.rs", "let mid = w * 0.5;").is_empty());
     assert!(!check_hardcoded_colors_in_source("bad.rs", "let c = Color32::WHITE;").is_empty());
-    assert!(
-        !check_token_arithmetic_cheating("bad.rs", "let w = theme.width.points() + 4.0;")
-            .is_empty()
-    );
+    assert!(!check_token_arithmetic_cheating("bad.rs", "let w = theme.width.points() + 4.0;").is_empty());
     assert!(!check_domain_leakage_in_source("bad.rs", "struct PedigreeNode;").is_empty());
-    assert!(!check_uibuilder_id_salt_in_source(
-        "bad.rs",
-        "ui.new_child(UiBuilder::new().max_rect(r));"
-    )
-    .is_empty());
-    assert!(check_uibuilder_id_salt_in_source(
-        "ok.rs",
-        "ui.new_child(UiBuilder::new().id_salt(\"s\").max_rect(r));"
-    )
-    .is_empty());
+    assert!(!check_uibuilder_id_salt_in_source("bad.rs", "ui.new_child(UiBuilder::new().max_rect(r));").is_empty());
+    assert!(check_uibuilder_id_salt_in_source("ok.rs", "ui.new_child(UiBuilder::new().id_salt(\"s\").max_rect(r));").is_empty());
 }
 
 #[test]
@@ -420,6 +374,7 @@ fn test_guard_open_source_fonts_only_zero_proprietary_apple_fonts() {
     let fonts_dir = manifest_dir.join("assets").join("fonts");
     let allowed_font_files = [
         "CupertinoIcons.ttf",
+        "CupertinoIcons-LICENSE.txt",
         "Inter-Regular.ttf",
         "Inter-SemiBold.ttf",
         "Inter-OFL.txt",
@@ -429,37 +384,71 @@ fn test_guard_open_source_fonts_only_zero_proprietary_apple_fonts() {
         for entry in entries.flatten() {
             if let Some(name) = entry.file_name().to_str() {
                 found_files.push(name.to_string());
-                assert!(
-                    allowed_font_files.contains(&name),
-                    "Forbidden or unapproved font asset in assets/fonts/: {name}"
-                );
+                assert!(allowed_font_files.contains(&name), "Forbidden font asset in assets/fonts/: {name}");
             }
         }
     }
     for required in &allowed_font_files {
-        assert!(
-            found_files.iter().any(|f| f == required),
-            "Missing required open-source font or license file in assets/fonts/: {required}"
-        );
+        assert!(found_files.iter().any(|f| f == required), "Missing open-source font/license: {required}");
     }
+    assert!(!fs::read_to_string(fonts_dir.join("Inter-OFL.txt")).expect("read Inter-OFL.txt").trim().is_empty());
+    assert!(!fs::read_to_string(fonts_dir.join("CupertinoIcons-LICENSE.txt")).expect("read CupertinoIcons-LICENSE.txt").trim().is_empty());
+    let root_license = fs::read_to_string(manifest_dir.join("LICENSE")).expect("read root LICENSE");
+    for clause in [
+        "WITHOUT WARRANTY OF ANY KIND",
+        "IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE",
+        "SIL OPEN FONT LICENSE",
+        "The Flutter Authors",
+    ] {
+        assert!(root_license.contains(clause), "Root LICENSE missing required clause: {clause}");
+    }
+    let readme = fs::read_to_string(manifest_dir.join("README.md")).expect("read README.md");
+    assert!(
+        readme.contains("not affiliated with, endorsed by, or sponsored by Apple Inc."),
+        "README.md missing non-affiliation trademark disclaimer"
+    );
+    let forbidden = ["SFNS.ttf", "SFNS.otf", "SFPro.ttf", "SFCompact.ttf", "Menlo.ttc", "LucidaGrande.ttc", "Apple Symbols.ttf"];
     for file in collect_rs_files(&manifest_dir.join("src")) {
         let content = fs::read_to_string(&file).expect("read src file");
-        for forbidden_font in [
-            "SFNS.ttf",
-            "SFNS.otf",
-            "SFPro.ttf",
-            "SFCompact.ttf",
-            "Menlo.ttc",
-            "LucidaGrande.ttc",
-            "Apple Symbols.ttf",
-        ] {
-            assert!(
-                !content.contains(forbidden_font),
-                "Proprietary Apple font reference '{forbidden_font}' found in {:?}",
-                file
-            );
+        for bad in forbidden {
+            assert!(!content.contains(bad), "Proprietary Apple font '{bad}' in {file:?}");
         }
     }
 }
+
+#[test]
+fn test_guard_surface_aware_vibrancy_anchoring() {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let contrast_src = strip_comments_and_strings(&fs::read_to_string(manifest_dir.join("src/theme/contrast.rs")).unwrap());
+    for req in [
+        "pub fn plus_darker(", "pub fn plus_lighter(", "pub fn ensure_wcag_contrast(",
+        "pub fn register_surface_rect(", "pub fn active_surface_at(", "pub fn active_surface(",
+        "pub fn label_on(", "pub fn secondary_label_on(", "pub fn tertiary_label_on(",
+    ] {
+        assert!(contrast_src.contains(req), "src/theme/contrast.rs must expose '{req}'");
+    }
+    for bad in ["ACTIVE_SURFACE_OVERRIDE", "SurfaceScope", "with_surface_scope", "entry_panel_fill", "entry_seq", "next_seq"] {
+        assert!(!contrast_src.contains(bad), "src/theme/contrast.rs must not contain '{bad}'");
+    }
+    for container_rel in ["src/controls/box_view.rs", "src/surfaces/card.rs"] {
+        let src = strip_comments_and_strings(&fs::read_to_string(manifest_dir.join(container_rel)).unwrap());
+        assert!(src.contains("visuals_mut().panel_fill") && src.contains("register_surface_rect_slot(") && !src.contains("with_surface_scope("), "{container_rel}");
+    }
+    for control_rel in ["src/controls/label.rs", "src/controls/checkbox.rs", "src/controls/disclosure_group/mod.rs", "src/controls/help_button.rs", "src/layout/stack_view.rs"] {
+        let src = strip_comments_and_strings(&fs::read_to_string(manifest_dir.join(control_rel)).unwrap());
+        assert!((src.contains("active_surface_at(") || src.contains("active_surface(")) && (src.contains("label_on(") || src.contains("secondary_label_on(") || src.contains("tertiary_label_on(") || src.contains("resolved_color_on(")), "{control_rel}");
+    }
+    let accessors_src = strip_comments_and_strings(&fs::read_to_string(manifest_dir.join("src/theme/accessors.rs")).unwrap());
+    assert!(accessors_src.contains("pub fn baseline_text_y(") && accessors_src.contains("pub fn clamp_nib_visual_rect("));
+    for bc in ["src/controls/label.rs", "src/controls/input_cell/editing.rs", "src/controls/popup_button/mod.rs", "src/controls/combo_box/mod.rs", "src/controls/checkbox.rs"] {
+        let src = strip_comments_and_strings(&fs::read_to_string(manifest_dir.join(bc)).unwrap());
+        assert!(src.contains("baseline_text_y(") && !src.contains("baseline_from_top - ascender") && !src.contains("first_baseline_offset_from_top.points() - ascender"), "{bc}");
+    }
+    for cc in ["src/controls/popup_button/mod.rs", "src/controls/combo_box/mod.rs", "src/controls/help_button.rs"] {
+        let src = strip_comments_and_strings(&fs::read_to_string(manifest_dir.join(cc)).unwrap());
+        assert!(src.contains("clamp_nib_visual_rect("), "{cc}");
+    }
+}
+
 
 

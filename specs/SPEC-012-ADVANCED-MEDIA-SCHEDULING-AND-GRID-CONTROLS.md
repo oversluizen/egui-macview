@@ -4,9 +4,9 @@
 | :--- | :--- |
 | **Document ID** | SPEC-012 |
 | **Document Title** | Advanced Media, Scheduling, and Grid Controls |
-| **Document Version** | `0.6.7` |
+| **Document Version** | `0.6.8` |
 | **Status** | Accepted / Normative |
-| **Target Milestone** | Milestone 0.6.7 |
+| **Target Milestone** | Milestone 0.6.8 |
 | **Target Host** | Standalone crate `egui-macview` (Rust, egui 0.37) |
 | **Author** | Jaco Oversluizen / `egui-macview` contributors |
 | **Hardware Ground Truth** | Apple Silicon MacBook Air (macOS Sonoma `14.8.9`, SDK `14`, 291 AppKit headers, 11 AVKit headers) |
@@ -28,6 +28,7 @@
 | `0.6.5` | 2026-11-11 | Architecture Team | Milestone 0.6.5 Release: AppKit NIB parity (`MacCheckbox`, `MacLabel`, `MacHelpButton`, `MacInlineActionButton`), universal optical tracking (`layout_tracked_galley`), cross-platform baseline anchoring (`firstBaselineOffsetFromTop`), NIB `frame_rect` vs `visual_rect` bezel clamping, recessed `MacBox` surface tokens (`box_background`, `box_border`), `MacComboBox` right accent badge, `MacDisclosureGroup` trailing `+` action, and bundled open-source `Inter` font. |
 | `0.6.6` | 2026-11-11 | Architecture Team | Milestone 0.6.6 Release: MacBook Air (`macOS Sonoma 14.8.9`) `NSTextFieldSquareBezel` corner-radius calibration (`2.0pt` Regular/Small/CompactInfobox, `1.5pt` Mini), WCAG 2.1 AA Aqua `secondary_label` contrast hardening (`#5A5A5F`, `5.48:1` on `box_background`), `MacHelpButton` control-size typography (`12/10/9pt` Semibold), `MacPopUpButton::accent_badge(bool)`, and zero-allocation `tracking_for_font_size` & `semibold_font_id` caching. |
 | `0.6.7` | 2026-11-11 | Architecture Team | Milestone 0.6.7 Release: Dynamic AppKit Vibrancy (`plus_darker` / `plus_lighter`) & Surface-Aware WCAG 2.1 AA Contrast Engine (`ensure_wcag_contrast`, `MacTheme::label_on`, `secondary_label_on`, `tertiary_label_on`, `active_surface`, `with_surface`) automatically resolving `MacLabel`, `MacDisclosureGroup`, `MacCheckbox`, and `MacInlineActionButton` foreground colors on `MacBox` (`box_background`), `MacCard`, and custom container surfaces with zero per-frame heap allocations. |
+| `0.6.8` | 2026-11-11 | Architecture Team | Milestone 0.6.8 Release: Zero-allocation per-pass geometric surface registry (`MacTheme::register_surface_rect`, `MacTheme::active_surface_at`) anchoring container surface awareness across both closure-scoped (`MacBox::show`, `MacCard::show`) and flat NIB `.fixed_rect` peer layouts (`MacBox::paint_at`, `MacBox::show`), guarded by `test_guard_surface_aware_vibrancy_anchoring` in `tests/architecture_guard_tests.rs`. |
 
 ---
 

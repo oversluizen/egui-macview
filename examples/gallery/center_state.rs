@@ -1,4 +1,4 @@
-//! Central interactive state and layout orchestrator across the 5 Gallery Studio screens.
+//! Central interactive state and layout orchestrator across the 6 Gallery Studio screens.
 
 use super::{
     audio_media,
@@ -9,11 +9,9 @@ use super::{
 use egui::{pos2, vec2, Align, Color32, CornerRadius, Layout, Pos2, Rect, Ui};
 use egui_macview::{
     theme::MacTheme, CASpring, MacCanvasFooter, MacCanvasFooterAction, MacScrollView,
-    MacSearchField, MacSortDirection, MacSymbol, MacToastManager, NSUndoManager,
-    CANVAS_FOOTER_HEIGHT,
+    MacSearchField, MacSortDirection, MacSymbol, MacToastManager, NSUndoManager, CANVAS_FOOTER_HEIGHT,
 };
-use std::cell::RefCell;
-use std::collections::BTreeSet;
+use std::{cell::RefCell, collections::BTreeSet};
 
 /// Composite cache key to avoid per-frame disk scans and sorting in State 4 Finder.
 #[derive(Clone, PartialEq, Debug)]
@@ -27,7 +25,7 @@ pub struct FinderCacheKey {
     pub sort_dir: MacSortDirection,
 }
 
-/// Shared state across the 5 interactive Center Studio States (`v0.1` – `v0.5`).
+/// Shared state across the 6 interactive Center Studio States (`v0.1` – `v0.6.8`).
 pub struct CenterState {
     pub search_query: String,
     pub spring: CASpring,
@@ -59,7 +57,6 @@ pub struct CenterState {
     pub showcase_step_val: f64,
     pub showcase_popup_idx: usize,
     pub showcase_color: Color32,
-    // State 4 (v0.5 Finder & Publishing Data Browser)
     pub active_path_idx: usize,
     pub table_sort_col: usize,
     pub table_sort_dir: MacSortDirection,
@@ -75,7 +72,6 @@ pub struct CenterState {
     pub finder_url_input: String,
     pub finder_cached_rows: Vec<FinderDisplayRow>,
     pub finder_cache_key: Option<FinderCacheKey>,
-    // State 5 (v0.5 AVKit Media & Audio Timeline Studio)
     pub media_playing: bool,
     pub media_loop: bool,
     pub media_in_point: f64,
@@ -116,6 +112,11 @@ pub struct CenterState {
     pub v065_check_small: bool,
     pub v065_check_mini_mixed: bool,
     pub v065_axis_count: usize,
+    pub v068_inspector_enabled: bool,
+    pub v068_nib_width: String,
+    pub v068_nib_unit_idx: usize,
+    pub v068_nib_preset_idx: usize,
+    pub v068_nib_small_text: String,
 }
 
 impl Default for CenterState {
@@ -124,10 +125,7 @@ impl Default for CenterState {
         let waveform = track.waveform_peaks.clone();
         Self {
             search_query: String::new(),
-            spring: MacTheme::default()
-                .motion()
-                .hud_panel_transition
-                .to_spring(),
+            spring: MacTheme::default().motion().hud_panel_transition.to_spring(),
             spring_start_time: None,
             popover_open: false,
             bounce_spring: CASpring::from_perceptual(0.35, 0.65),
@@ -161,12 +159,9 @@ impl Default for CenterState {
             table_sort_dir: MacSortDirection::Ascending,
             selected_table_rows: BTreeSet::from([0]),
             asset_tokens: [
-                vec!["ProRes".into(), "HDR".into(), "Master".into()],
-                vec!["ProRes".into(), "4444".into(), "VFX".into()],
-                vec!["Stem".into(), "24bit".into(), "48k".into()],
-                vec!["Proxy".into(), "HEVC".into(), "Dailies".into()],
-                vec!["LUT".into(), "Rec709".into(), "Color".into()],
-                vec!["QuickTime".into(), "Master".into(), "Deliverable".into()],
+                vec!["ProRes".into(), "HDR".into(), "Master".into()], vec!["ProRes".into(), "4444".into(), "VFX".into()],
+                vec!["Stem".into(), "24bit".into(), "48k".into()], vec!["Proxy".into(), "HEVC".into(), "Dailies".into()],
+                vec!["LUT".into(), "Rec709".into(), "Color".into()], vec!["QuickTime".into(), "Master".into(), "Deliverable".into()],
             ],
             asset_ratings: [5, 4, 5, 3, 4, 5],
             token_draft: String::new(),
@@ -213,14 +208,16 @@ impl Default for CenterState {
             advanced_grid_selection: BTreeSet::new(),
             advanced_player_playing: false,
             advanced_player_progress: 0.35,
-            advanced_rules: vec![
-                egui_macview::controls::MacRuleRow::new(vec![0, 0]),
-                egui_macview::controls::MacRuleRow::new(vec![1, 1]),
-            ],
+            advanced_rules: vec![egui_macview::controls::MacRuleRow::new(vec![0, 0]), egui_macview::controls::MacRuleRow::new(vec![1, 1])],
             v065_check_regular: true,
             v065_check_small: false,
             v065_check_mini_mixed: false,
             v065_axis_count: 2,
+            v068_inspector_enabled: true,
+            v068_nib_width: "1920".to_string(),
+            v068_nib_unit_idx: 0,
+            v068_nib_preset_idx: 0,
+            v068_nib_small_text: "Small 19pt".to_string(),
         }
     }
 }
@@ -228,66 +225,25 @@ impl Default for CenterState {
 impl CenterState {
     #[allow(clippy::too_many_arguments)]
     pub fn render(
-        &mut self,
-        ui: &mut Ui,
-        theme: &MacTheme,
-        card_cell: &RefCell<CardModel>,
-        undo_manager: &RefCell<NSUndoManager<CardModel>>,
-        last_stable_card: &RefCell<CardModel>,
-        inspector_mode: InspectorMode,
-        active_screen: &mut GalleryScreen,
-        snapping_enabled: bool,
-        unit_segmented_idx: usize,
-        vis_canvas: bool,
-        lock_canvas: bool,
-        toasts: &RefCell<MacToastManager>,
+        &mut self, ui: &mut Ui, theme: &MacTheme, card_cell: &RefCell<CardModel>,
+        undo_manager: &RefCell<NSUndoManager<CardModel>>, last_stable_card: &RefCell<CardModel>,
+        inspector_mode: InspectorMode, active_screen: &mut GalleryScreen, snapping_enabled: bool,
+        unit_segmented_idx: usize, vis_canvas: bool, lock_canvas: bool, toasts: &RefCell<MacToastManager>,
     ) {
         let mut card = card_cell.borrow_mut();
         let avail_rect = ui.available_rect_before_wrap();
-        ui.painter_at(avail_rect).rect_filled(
-            avail_rect,
-            CornerRadius::ZERO,
-            theme.control_background(),
-        );
+        ui.painter_at(avail_rect).rect_filled(avail_rect, CornerRadius::ZERO, theme.control_background());
 
-        let padding = 16.0;
-        let search_h = 24.0;
-        let search_rect = Rect::from_min_size(
-            pos2(avail_rect.min.x + padding, avail_rect.min.y + padding),
-            vec2(avail_rect.width() - padding * 2.0, search_h),
-        );
-        let mut search_ui = ui.new_child(
-            egui::UiBuilder::new()
-                .id_salt("gallery_center_search_ui")
-                .max_rect(search_rect)
-                .layout(Layout::left_to_right(Align::Center)),
-        );
-        MacSearchField::new(&mut self.search_query)
-            .theme(theme)
-            .placeholder(active_screen.search_placeholder())
-            .width(search_rect.width())
-            .corner_radius(6.0)
-            .show(&mut search_ui);
+        let (padding, search_h, footer_h) = (16.0, 24.0, CANVAS_FOOTER_HEIGHT);
+        let search_rect = Rect::from_min_size(pos2(avail_rect.min.x + padding, avail_rect.min.y + padding), vec2(avail_rect.width() - padding * 2.0, search_h));
+        let mut search_ui = ui.new_child(egui::UiBuilder::new().id_salt("gallery_center_search_ui").max_rect(search_rect).layout(Layout::left_to_right(Align::Center)));
+        MacSearchField::new(&mut self.search_query).theme(theme).placeholder(active_screen.search_placeholder()).width(search_rect.width()).corner_radius(6.0).show(&mut search_ui);
 
-        let footer_h = CANVAS_FOOTER_HEIGHT;
-        let footer_rect = Rect::from_min_max(
-            pos2(avail_rect.min.x, avail_rect.max.y - footer_h),
-            avail_rect.max,
-        );
-        let mut footer_ui = ui.new_child(
-            egui::UiBuilder::new()
-                .id_salt("gallery_center_footer_ui")
-                .max_rect(footer_rect)
-                .layout(Layout::left_to_right(Align::Center)),
-        );
+        let footer_rect = Rect::from_min_max(pos2(avail_rect.min.x, avail_rect.max.y - footer_h), avail_rect.max);
+        let mut footer_ui = ui.new_child(egui::UiBuilder::new().id_salt("gallery_center_footer_ui").max_rect(footer_rect).layout(Layout::left_to_right(Align::Center)));
         let breadcrumbs = active_screen.breadcrumb_path();
-        let cursor_pos = ui
-            .input(|i| i.pointer.hover_pos())
-            .map(|p| pos2(p.x - avail_rect.min.x, p.y - avail_rect.min.y));
-        let footer_action = MacCanvasFooter::new(&breadcrumbs, cursor_pos, card.scale_pct / 100.0)
-            .theme(theme)
-            .height(footer_h)
-            .show(&mut footer_ui, footer_rect.width());
+        let cursor_pos = ui.input(|i| i.pointer.hover_pos()).map(|p| pos2(p.x - avail_rect.min.x, p.y - avail_rect.min.y));
+        let footer_action = MacCanvasFooter::new(&breadcrumbs, cursor_pos, card.scale_pct / 100.0).theme(theme).height(footer_h).show(&mut footer_ui, footer_rect.width());
 
         match footer_action {
             Some(MacCanvasFooterAction::SelectZoom(z)) => {
@@ -295,12 +251,11 @@ impl CenterState {
                 toasts.borrow_mut().info("Preset applied");
             }
             Some(MacCanvasFooterAction::BreadcrumbClicked(crumb_idx)) => {
-                if crumb_idx == 0 {
-                    *active_screen = GalleryScreen::CanvasPhysics;
+                *active_screen = if crumb_idx == 0 {
+                    GalleryScreen::CanvasPhysics
                 } else {
-                    let cur_idx = *active_screen as usize;
-                    *active_screen = GalleryScreen::ALL[(cur_idx + 1) % GalleryScreen::ALL.len()];
-                }
+                    GalleryScreen::ALL[(*active_screen as usize + 1) % GalleryScreen::ALL.len()]
+                };
                 toasts.borrow_mut().info(active_screen.title());
             }
             None => {}
@@ -311,10 +266,7 @@ impl CenterState {
             pos2(avail_rect.max.x, avail_rect.max.y - footer_h),
         );
         let mut scroll_container_ui = ui.new_child(
-            egui::UiBuilder::new()
-                .id_salt("gallery_center_scroll_container_ui")
-                .max_rect(scroll_rect)
-                .layout(Layout::top_down(Align::Min)),
+            egui::UiBuilder::new().id_salt("gallery_center_scroll_container_ui").max_rect(scroll_rect).layout(Layout::top_down(Align::Min)),
         );
 
         MacScrollView::new("center_canvas_scroll")
@@ -323,47 +275,18 @@ impl CenterState {
             .horizontal(false)
             .max_height(scroll_rect.height())
             .max_width(scroll_rect.width())
-            .show(
-                &mut scroll_container_ui,
-                |content_ui| match *active_screen {
-                    GalleryScreen::CanvasPhysics => {
-                        self.render_state1_canvas(
-                            content_ui,
-                            theme,
-                            &mut card,
-                            undo_manager,
-                            last_stable_card,
-                            inspector_mode,
-                            snapping_enabled,
-                            unit_segmented_idx,
-                            vis_canvas,
-                            lock_canvas,
-                            toasts,
-                        );
-                    }
-                    GalleryScreen::VectorAssets => {
-                        self.render_state2_symbols_layout(content_ui, theme, &mut card, toasts);
-                    }
-                    GalleryScreen::DesignTokensWcag => {
-                        self.render_state3_command_state(
-                            content_ui,
-                            theme,
-                            &mut card,
-                            undo_manager,
-                            last_stable_card,
-                            toasts,
-                        );
-                    }
-                    GalleryScreen::FinderDataBrowser => {
-                        self.render_state4_finder_browser(content_ui, theme, toasts);
-                    }
-                    GalleryScreen::AvKitMediaStudio => {
-                        self.render_state5_avkit_media(content_ui, theme, toasts);
-                    }
-                    GalleryScreen::AdvancedControls => {
-                        self.render_state6_advanced_controls(content_ui, theme, toasts);
-                    }
-                },
-            );
+            .show(&mut scroll_container_ui, |content_ui| match *active_screen {
+                GalleryScreen::CanvasPhysics => self.render_state1_canvas(
+                    content_ui, theme, &mut card, undo_manager, last_stable_card,
+                    inspector_mode, snapping_enabled, unit_segmented_idx, vis_canvas, lock_canvas, toasts,
+                ),
+                GalleryScreen::VectorAssets => self.render_state2_symbols_layout(content_ui, theme, &mut card, toasts),
+                GalleryScreen::DesignTokensWcag => self.render_state3_command_state(
+                    content_ui, theme, &mut card, undo_manager, last_stable_card, toasts,
+                ),
+                GalleryScreen::FinderDataBrowser => self.render_state4_finder_browser(content_ui, theme, toasts),
+                GalleryScreen::AvKitMediaStudio => self.render_state5_avkit_media(content_ui, theme, toasts),
+                GalleryScreen::AdvancedControls => self.render_state6_advanced_controls(content_ui, theme, toasts),
+            });
     }
 }

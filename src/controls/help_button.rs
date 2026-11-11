@@ -100,11 +100,12 @@ impl<'a> Widget for MacHelpButton<'a> {
         let theme: &MacTheme = &theme_cow;
         let hm = theme.help_button();
 
+        let enabled = self.enabled && ui.is_enabled();
         let diam = self.diameter();
         let border_w = hm.border_width.points();
         let shadow_dy = hm.shadow_offset_y.points();
         let font_sz = self.font_size();
-        let sense = if self.enabled { Sense::click() } else { Sense::hover() };
+        let sense = if enabled { Sense::click() } else { Sense::hover() };
         let ppp = ui.ctx().pixels_per_point();
         let (rect, response) = if let Some(fixed) = self.fixed_rect {
             let snapped = subpixel_snap_rect(fixed, ppp);
@@ -115,13 +116,14 @@ impl<'a> Widget for MacHelpButton<'a> {
             (subpixel_snap_rect(r, ppp), resp)
         };
 
-        let alpha = if self.enabled { 1.0 } else { theme.disabled_opacity() };
+        let alpha = if enabled { 1.0 } else { theme.disabled_opacity() };
         let painter = ui.painter_at(rect);
-        let center = rect.center();
-        let visual_diam = diam.min(rect.width()).min(rect.height());
+        let visual_rect = theme.clamp_nib_visual_rect(rect, diam, ppp);
+        let center = visual_rect.center();
+        let visual_diam = diam.min(visual_rect.width()).min(visual_rect.height());
         let radius = visual_diam * 0.5;
 
-        if self.enabled && response.has_focus() {
+        if enabled && response.has_focus() {
             theme.paint_focus_ring(&painter, Rect::from_center_size(center, Vec2::splat(visual_diam)), radius);
         }
 
@@ -131,7 +133,7 @@ impl<'a> Widget for MacHelpButton<'a> {
             theme.drop_shadow().gamma_multiply(alpha),
         );
 
-        let fill = if !self.enabled {
+        let fill = if !enabled {
             theme.control_background().gamma_multiply(alpha)
         } else if response.is_pointer_button_down_on() {
             theme.selected_control_inactive()
@@ -225,10 +227,11 @@ impl<'a> Widget for MacInlineActionButton<'a> {
         let theme: &MacTheme = &theme_cow;
         let im = theme.inline_action_button();
 
+        let enabled = self.enabled && ui.is_enabled();
         let diam = im.diameter.points();
         let border_w = im.border_width.points();
         let icon_sz = im.icon_size.points();
-        let sense = if self.enabled { Sense::click() } else { Sense::hover() };
+        let sense = if enabled { Sense::click() } else { Sense::hover() };
         let ppp = ui.ctx().pixels_per_point();
         let (rect, response) = if let Some(fixed) = self.fixed_rect {
             let snapped = subpixel_snap_rect(fixed, ppp);
@@ -239,17 +242,18 @@ impl<'a> Widget for MacInlineActionButton<'a> {
             (subpixel_snap_rect(r, ppp), resp)
         };
 
-        let alpha = if self.enabled { 1.0 } else { theme.disabled_opacity() };
+        let alpha = if enabled { 1.0 } else { theme.disabled_opacity() };
         let painter = ui.painter_at(rect);
-        let center = rect.center();
-        let visual_diam = diam.min(rect.width()).min(rect.height());
+        let visual_rect = theme.clamp_nib_visual_rect(rect, diam, ppp);
+        let center = visual_rect.center();
+        let visual_diam = diam.min(visual_rect.width()).min(visual_rect.height());
         let visual_radius = visual_diam * 0.5;
 
-        if self.enabled && response.has_focus() {
+        if enabled && response.has_focus() {
             theme.paint_focus_ring(&painter, Rect::from_center_size(center, Vec2::splat(visual_diam)), visual_radius);
         }
 
-        let fill = if !self.enabled {
+        let fill = if !enabled {
             theme.control().gamma_multiply(alpha)
         } else if response.is_pointer_button_down_on() {
             theme.selected_control_inactive()
@@ -260,8 +264,8 @@ impl<'a> Widget for MacInlineActionButton<'a> {
         };
 
         painter.circle(center, visual_radius, fill, Stroke::new(border_w, theme.separator().gamma_multiply(alpha)));
-        let surface_bg = theme.active_surface(ui);
-        let fg = if !self.enabled {
+        let surface_bg = theme.active_surface_at(ui, center);
+        let fg = if !enabled {
             theme.tertiary_label_on(surface_bg)
         } else if response.hovered() {
             theme.label_on(surface_bg)

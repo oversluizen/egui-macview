@@ -119,8 +119,18 @@ impl GalleryApp {
                 "State 5 (v0.5): AVKit Media & Timeline Studio",
             )
             .category("States"),
+            CommandPaletteItem::new(
+                "screen.advanced",
+                "State 6 (v0.6.8): Advanced & AppKit NIB Controls",
+            )
+            .category("States"),
             CommandPaletteItem::new("theme.aqua", "Appearance: Switch to Aqua (Light)")
                 .category("Theme"),
+            CommandPaletteItem::new(
+                "theme.anthracite",
+                "Appearance: Switch to Anthracite (Pro Graphite)",
+            )
+            .category("Theme"),
             CommandPaletteItem::new("theme.dark", "Appearance: Switch to DarkAqua (Dark)")
                 .category("Theme"),
             CommandPaletteItem::new("canvas.pulse", "Physics: Trigger CASpring Pulse")
