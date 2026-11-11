@@ -9,11 +9,8 @@
 
 use crate::controls::MacControlSize;
 use crate::layout::{subpixel_snap, subpixel_snap_rect};
-use crate::symbols::INTER_SEMIBOLD_FONT_NAME;
 use crate::theme::MacTheme;
-use egui::{
-    Align, Color32, FontFamily, FontId, Pos2, Rect, Response, Sense, Ui, Vec2, Widget, WidgetText,
-};
+use egui::{Align, Color32, FontId, Pos2, Rect, Response, Sense, Ui, Vec2, Widget, WidgetText};
 
 /// Font weight tiers for [`MacLabel`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -180,15 +177,10 @@ impl<'a> Widget for MacLabel<'a> {
             self.weight,
             MacFontWeight::Medium | MacFontWeight::Semibold | MacFontWeight::Bold
         );
-        let has_semibold_family = is_heavy
-            && ui.fonts(|f| {
-                f.families()
-                    .contains(&FontFamily::Name(INTER_SEMIBOLD_FONT_NAME.into()))
-            });
-        let font_id = if has_semibold_family {
-            FontId::new(font_sz, FontFamily::Name(INTER_SEMIBOLD_FONT_NAME.into()))
+        let (font_id, has_semibold_family) = if is_heavy {
+            theme.semibold_font_id(ui, font_sz)
         } else {
-            FontId::proportional(font_sz)
+            (FontId::proportional(font_sz), false)
         };
 
         let wrap_w = self.fixed_rect.map_or(f32::INFINITY, |r| r.width());

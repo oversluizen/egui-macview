@@ -5,6 +5,17 @@ All notable changes to the `egui-macview` crate will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.6] - 2026-11-11
+
+### Added
+- **Zero-Allocation `Inter-SemiBold` Font Lookup (`MacTheme::semibold_font_id`)**: Added `OnceLock<FontFamily>` + per-context `egui::Memory` registration caching on `MacTheme` so `MacLabel`, `MacDisclosureGroup`, and `MacHelpButton` resolve semibold typography without per-frame `Arc<str>` or `Vec<FontFamily>` heap allocations.
+- **Size-Calibrated `MacHelpButton` Typography & `MacPopUpButton::accent_badge(bool)`**: Added `small_font_size` (`10.0pt`) and `mini_font_size` (`9.0pt`) tokens to `HelpButtonMetrics` with Semibold `?` rendering, clamped `MacInlineActionButton` visual circle radius inside larger NIB alignment frames, and added `.accent_badge(bool)` to `MacPopUpButton`.
+
+### Fixed
+- **MacBook Air Ground-Truth `NSTextFieldSquareBezel` Corner Radius (`tokens/design_tokens.json`)**: Calibrated `text_field` corner radius to physical `macOS Sonoma 14.8.9` `@2x` Retina ground truth (`2.0pt` for `Regular`, `Small`, and `CompactInfobox`; `1.5pt` for `Mini`), distinguishing square text inputs from `5.0pt` rounded `MacPopUpButton` bezels.
+- **WCAG 2.1 AA Contrast for Aqua `secondary_label` on `MacBox` (`#5A5A5F`)**: Darkened `aqua.secondary_label` from `#6E6E73` (`4.01:1` on `#E5E5E5`) to `#5A5A5F`, achieving `5.48:1` contrast on `aqua.box_background` (`#E5E5E5`) and `5.84:1` on `aqua.window_background` (`#ECECEC`).
+- **Zero-Allocation `MacTheme::tracking_for_font_size`**: Replaced per-call `format!("pt_{}", ...)` heap allocation with a static `const fn tracking_table_key(pt: i32) -> Option<&'static str>` lookup table (`6..=24`).
+
 ## [0.6.5] - 2026-11-11
 
 ### Added
@@ -222,6 +233,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - W3C DTCG design token catalog parser (`tokens/design_tokens.json`, `tokens/typography.json`).
 - Baseline test suite validating token deserialization, layout budgets, and physical spring properties.
 
+[0.6.6]: https://github.com/oversluizen/egui-macview/compare/v0.6.5...v0.6.6
 [0.6.5]: https://github.com/oversluizen/egui-macview/compare/v0.6.4...v0.6.5
 [0.6.4]: https://github.com/oversluizen/egui-macview/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/oversluizen/egui-macview/compare/v0.6.2...v0.6.3

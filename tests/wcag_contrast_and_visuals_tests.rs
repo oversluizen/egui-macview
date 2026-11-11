@@ -371,3 +371,38 @@ fn test_v05_semantic_studio_colors_and_wcag_contrast() {
         assert!(contrast_ratio(dark_aqua.label(), eff_dark_bg) >= 4.5);
     }
 }
+
+#[test]
+fn test_wcag_contrast_on_mac_box_surfaces_all_appearances() {
+    for appearance in [
+        MacAppearance::Aqua,
+        MacAppearance::Anthracite,
+        MacAppearance::DarkAqua,
+    ] {
+        let theme = MacTheme::new(appearance);
+        let box_bg = theme.box_background();
+        let win_bg = theme.window_background();
+
+        let label_on_box = contrast_ratio(theme.label(), box_bg);
+        let sec_on_box = contrast_ratio(theme.secondary_label(), box_bg);
+        let label_on_win = contrast_ratio(theme.label(), win_bg);
+        let sec_on_win = contrast_ratio(theme.secondary_label(), win_bg);
+
+        assert!(
+            label_on_box >= 4.5,
+            "WCAG 2.1 AA violation in {appearance:?}: label on box_background = {label_on_box:.2}:1 (< 4.5:1)"
+        );
+        assert!(
+            sec_on_box >= 4.5,
+            "WCAG 2.1 AA violation in {appearance:?}: secondary_label on box_background = {sec_on_box:.2}:1 (< 4.5:1)"
+        );
+        assert!(
+            label_on_win >= 4.5,
+            "WCAG 2.1 AA violation in {appearance:?}: label on window_background = {label_on_win:.2}:1 (< 4.5:1)"
+        );
+        assert!(
+            sec_on_win >= 4.5,
+            "WCAG 2.1 AA violation in {appearance:?}: secondary_label on window_background = {sec_on_win:.2}:1 (< 4.5:1)"
+        );
+    }
+}

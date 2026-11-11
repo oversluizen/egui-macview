@@ -24,8 +24,8 @@ fn test_token_catalog_deserialization() {
 
     // Verify metadata
     assert_eq!(tokens.name, "egui-macview Design Tokens");
-    assert_eq!(tokens.version, "0.6.5");
-    assert_eq!(egui_macview::VERSION, "0.6.5");
+    assert_eq!(tokens.version, "0.6.6");
+    assert_eq!(egui_macview::VERSION, "0.6.6");
     assert!(!tokens.description.is_empty());
 
     // Verify Control Metrics
@@ -36,11 +36,14 @@ fn test_token_catalog_deserialization() {
 
     assert_eq!(ctrl.text_field.regular.height.points(), 22.0);
     assert_eq!(ctrl.text_field.regular.font_size.points(), 13.0);
-    assert_eq!(ctrl.text_field.regular.corner_radius.points(), 6.0);
+    assert_eq!(ctrl.text_field.regular.corner_radius.points(), 2.0);
     assert_eq!(ctrl.text_field.small.height.points(), 19.0);
+    assert_eq!(ctrl.text_field.small.corner_radius.points(), 2.0);
     assert_eq!(ctrl.text_field.compact_infobox.height.points(), 18.0);
+    assert_eq!(ctrl.text_field.compact_infobox.corner_radius.points(), 2.0);
     assert_eq!(ctrl.text_field.compact().height.points(), 18.0);
     assert_eq!(ctrl.text_field.mini.height.points(), 15.0);
+    assert_eq!(ctrl.text_field.mini.corner_radius.points(), 1.5);
     assert_eq!(ctrl.text_field.large.height.points(), 28.0);
 
     assert_eq!(ctrl.button.regular.height.points(), 22.0);
@@ -335,21 +338,22 @@ fn test_version_synchronization_invariants() {
     // 1. Cargo.toml version
     let cargo_toml = fs::read_to_string(manifest_dir.join("Cargo.toml")).expect("read Cargo.toml");
     assert!(
-        cargo_toml.contains("version = \"0.6.5\""),
-        "Cargo.toml must have version = \"0.6.5\""
+        cargo_toml.contains("version = \"0.6.6\""),
+        "Cargo.toml must have version = \"0.6.6\""
     );
 
     // 2. Exported crate version constant
-    assert_eq!(egui_macview::VERSION, "0.6.5");
+    assert_eq!(egui_macview::VERSION, "0.6.6");
 
     // 3. Design tokens version
     let tokens = MacDesignTokens::load_default();
-    assert_eq!(tokens.version, "0.6.5");
+    assert_eq!(tokens.version, "0.6.6");
 
     // 4. CHANGELOG.md strictly documents all released milestones
     let changelog =
         fs::read_to_string(manifest_dir.join("CHANGELOG.md")).expect("read CHANGELOG.md");
     for header in [
+        "## [0.6.6] - 2026-11-11",
         "## [0.6.5] - 2026-11-11",
         "## [0.6.4] - 2026-11-10",
         "## [0.6.3] - 2026-11-10",
@@ -392,7 +396,7 @@ fn test_version_synchronization_invariants() {
                 } else if file_name.starts_with("SPEC-011") {
                     ("0.5.0", Some("Milestone 0.5.0"))
                 } else if file_name.starts_with("SPEC-012") || file_name.starts_with("SPEC-INDEX") {
-                    ("0.6.5", Some("Milestone 0.6.5"))
+                    ("0.6.6", Some("Milestone 0.6.6"))
                 } else {
                     ("0.2.0", None)
                 };

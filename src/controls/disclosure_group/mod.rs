@@ -8,11 +8,9 @@ mod button;
 pub use button::MacDisclosureButton;
 
 use crate::motion::CASpring;
-use crate::symbols::INTER_SEMIBOLD_FONT_NAME;
 use crate::theme::MacTheme;
 use egui::{
-    FontFamily, FontId, Id, InnerResponse, Pos2, Rect, Response, Sense, Shape, Stroke, Ui,
-    UiBuilder, Vec2, WidgetText,
+    Id, InnerResponse, Pos2, Rect, Response, Sense, Shape, Stroke, Ui, UiBuilder, Vec2, WidgetText,
 };
 use std::hash::Hash;
 
@@ -141,15 +139,7 @@ impl<'a> MacDisclosureGroup<'a> {
         );
         let spring_key = self.id_salt.with("chevron_rot");
 
-        let has_semibold_family = ui.fonts(|f| {
-            f.families()
-                .contains(&FontFamily::Name(INTER_SEMIBOLD_FONT_NAME.into()))
-        });
-        let font_id = if has_semibold_family {
-            FontId::new(header_font_sz, FontFamily::Name(INTER_SEMIBOLD_FONT_NAME.into()))
-        } else {
-            FontId::proportional(header_font_sz)
-        };
+        let (font_id, has_semibold_family) = theme.semibold_font_id(ui, header_font_sz);
         let galley = theme.layout_tracked_galley(
             ui,
             self.title.text(),

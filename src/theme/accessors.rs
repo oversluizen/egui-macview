@@ -16,6 +16,31 @@ use crate::tokens::{
 use egui::{Color32, FontId, Galley, TextFormat, Ui};
 use std::sync::Arc;
 
+const fn tracking_table_key(pt: i32) -> Option<&'static str> {
+    match pt {
+        6 => Some("pt_6"),
+        7 => Some("pt_7"),
+        8 => Some("pt_8"),
+        9 => Some("pt_9"),
+        10 => Some("pt_10"),
+        11 => Some("pt_11"),
+        12 => Some("pt_12"),
+        13 => Some("pt_13"),
+        14 => Some("pt_14"),
+        15 => Some("pt_15"),
+        16 => Some("pt_16"),
+        17 => Some("pt_17"),
+        18 => Some("pt_18"),
+        19 => Some("pt_19"),
+        20 => Some("pt_20"),
+        21 => Some("pt_21"),
+        22 => Some("pt_22"),
+        23 => Some("pt_23"),
+        24 => Some("pt_24"),
+        _ => None,
+    }
+}
+
 impl MacTheme {
     /// Resolves Apple HIG / SF Pro optical tracking (`extra_letter_spacing` in points)
     /// for `size_pt` from `self.typography().tracking_table`, falling back to
@@ -23,12 +48,38 @@ impl MacTheme {
     pub fn tracking_for_font_size(&self, size_pt: f32) -> f32 {
         let rounded = size_pt.round();
         if (size_pt - rounded).abs() == 0.0 {
-            let key = format!("pt_{}", rounded as i32);
-            if let Some(entry) = self.typography().tracking_table.get(&key) {
-                return entry.tracking_pt;
+            if let Some(key) = tracking_table_key(rounded as i32) {
+                if let Some(entry) = self.typography().tracking_table.get(key) {
+                    return entry.tracking_pt;
+                }
             }
         }
         crate::tokens::sf_pro_tracking(size_pt)
+    }
+
+    /// Resolves the `Inter-SemiBold` [`FontId`] when registered in `ui.ctx()`, or falls back
+    /// to [`FontId::proportional`], returning `(font_id, has_semibold_family)` with zero
+    /// per-widget `Arc<str>` or `Vec<FontFamily>` heap allocations.
+    pub fn semibold_font_id(&self, ui: &Ui, size_pt: f32) -> (FontId, bool) {
+        static INTER_SEMIBOLD_FAMILY: std::sync::OnceLock<egui::FontFamily> =
+            std::sync::OnceLock::new();
+        let family = INTER_SEMIBOLD_FAMILY.get_or_init(|| {
+            egui::FontFamily::Name(crate::symbols::INTER_SEMIBOLD_FONT_NAME.into())
+        });
+        let cache_id = egui::Id::unique("macview_has_inter_semibold");
+        let has_semibold = ui
+            .ctx()
+            .data(|d| d.get_temp::<bool>(cache_id))
+            .unwrap_or_else(|| {
+                let found = ui.fonts(|f| f.families().contains(family));
+                ui.ctx().data_mut(|d| d.insert_temp(cache_id, found));
+                found
+            });
+        if has_semibold {
+            (FontId::new(size_pt, family.clone()), true)
+        } else {
+            (FontId::proportional(size_pt), false)
+        }
     }
 
     /// Constructs an [`egui::TextFormat`] populated with optical letter spacing (`extra_letter_spacing`)

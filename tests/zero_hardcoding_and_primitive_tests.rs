@@ -52,7 +52,7 @@ fn test_theme_dynamic_geometry_metrics() {
     let tf_compact = &theme.text_field().compact_infobox;
     assert_eq!(tf_compact.height.points(), 18.0);
     assert_eq!(tf_compact.font_size.points(), 11.0);
-    assert_eq!(tf_compact.corner_radius.points(), 3.0);
+    assert_eq!(tf_compact.corner_radius.points(), 2.0);
 
     // Push button metrics
     assert_eq!(theme.button().regular.height.points(), 22.0);

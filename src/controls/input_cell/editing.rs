@@ -15,20 +15,16 @@ struct InputCellTransactionState {
 fn decimal_places_if_valid(s: &str) -> usize {
     let t = s.trim();
     if t.parse::<f64>().is_ok() {
-        t.split_once('.')
-            .map_or(0, |(_, f)| f.split(['e', 'E']).next().unwrap_or("").len())
+        t.split_once('.').map_or(0, |(_, f)| f.split(['e', 'E']).next().unwrap_or("").len())
     } else {
         0
     }
 }
 
 fn format_stepped_number(reference: &str, fallback_ref: &str, step: f64, val: f64) -> String {
-    let ref_decimals =
-        decimal_places_if_valid(reference).max(decimal_places_if_valid(fallback_ref));
+    let ref_decimals = decimal_places_if_valid(reference).max(decimal_places_if_valid(fallback_ref));
     let step_decimals = if (step - step.round()).abs() > f64::EPSILON {
-        format!("{step}")
-            .split_once('.')
-            .map_or(1, |(_, f)| f.len())
+        format!("{step}").split_once('.').map_or(1, |(_, f)| f.len())
     } else {
         0
     };
@@ -70,10 +66,7 @@ pub(super) fn show_input_cell(cell: MacInputCell<'_>, ui: &mut Ui) -> Response {
     let alpha_factor = if cell.enabled { 1.0 } else { theme.disabled_opacity() };
     let tx_key = cell.id.with("mac_input_tx_state");
     let (mut tx, injected_buf) = ui.data_mut(|d| {
-        (
-            d.get_temp::<InputCellTransactionState>(tx_key),
-            d.remove_temp::<String>(cell.id.with("mac_input_buffer")),
-        )
+        (d.get_temp::<InputCellTransactionState>(tx_key), d.remove_temp::<String>(cell.id.with("mac_input_buffer")))
     });
     let mut tx_dirty = false;
     let was_active = tx.as_ref().is_some_and(|s| s.active);
@@ -94,11 +87,7 @@ pub(super) fn show_input_cell(cell: MacInputCell<'_>, ui: &mut Ui) -> Response {
         }
     }
     if let Some(override_buf) = injected_buf {
-        let st = tx.get_or_insert_with(|| InputCellTransactionState {
-            active: is_focused,
-            snapshot: cell.value.clone(),
-            buffer: String::new(),
-        });
+        let st = tx.get_or_insert_with(|| InputCellTransactionState { active: is_focused, snapshot: cell.value.clone(), buffer: String::new() });
         st.buffer = override_buf;
         tx_dirty = true;
     }

@@ -178,8 +178,12 @@ pub struct HelpButtonMetrics {
     pub small_diameter: DimensionValue,
     /// Mini circular diameter (`13.0pt`).
     pub mini_diameter: DimensionValue,
-    /// Question mark glyph font size (`12.0pt`).
+    /// Regular question mark glyph font size (`12.0pt`).
     pub font_size: DimensionValue,
+    /// Small question mark glyph font size (`10.0pt`).
+    pub small_font_size: DimensionValue,
+    /// Mini question mark glyph font size (`9.0pt`).
+    pub mini_font_size: DimensionValue,
     /// Circular bezel border stroke width (`1.0pt`).
     pub border_width: DimensionValue,
     /// Subtle bottom drop-shadow offset (`1.0pt`).
@@ -193,6 +197,8 @@ impl Default for HelpButtonMetrics {
             small_diameter: DimensionValue::from_pt(16.0),
             mini_diameter: DimensionValue::from_pt(13.0),
             font_size: DimensionValue::from_pt(12.0),
+            small_font_size: DimensionValue::from_pt(10.0),
+            mini_font_size: DimensionValue::from_pt(9.0),
             border_width: DimensionValue::from_pt(1.0),
             shadow_offset_y: DimensionValue::from_pt(1.0),
         }

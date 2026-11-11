@@ -1,6 +1,6 @@
 {
   "$name": "egui-macview Design Tokens",
-  "$version": "0.6.5",
+  "$version": "0.6.6",
   "$description": "W3C DTCG-compliant design token catalog for egui-macview. Fully grounded in Apple AppKit, macOS Human Interface Guidelines, Apple Typography specifications, and CoreAnimation spring physics.",
   "macview": {
     "metrics": {
@@ -51,8 +51,8 @@
             },
             "corner_radius": {
               "$type": "dimension",
-              "$value": "6.0pt",
-              "$description": "Continuous curvature squircle corner radius for regular rounded text fields.",
+              "$value": "2.0pt",
+              "$description": "Crisp square bezel corner radius for regular NSTextField (NSTextFieldSquareBezel, macOS Sonoma 14.8.9).",
               "$extensions": {
                 "apple_citation": "macOS Human Interface Guidelines - Text Fields (Big Sur+)"
               }
@@ -113,8 +113,8 @@
             },
             "corner_radius": {
               "$type": "dimension",
-              "$value": "4.0pt",
-              "$description": "Continuous curvature squircle corner radius for small rounded text fields.",
+              "$value": "2.0pt",
+              "$description": "Crisp square bezel corner radius for small NSTextField (NSTextFieldSquareBezel, macOS Sonoma 14.8.9).",
               "$extensions": {
                 "apple_citation": "macOS Human Interface Guidelines - Text Fields (Compact/Small)"
               }
@@ -175,8 +175,8 @@
             },
             "corner_radius": {
               "$type": "dimension",
-              "$value": "3.0pt",
-              "$description": "Tight corner radius for 18pt floating infobox cells.",
+              "$value": "2.0pt",
+              "$description": "Crisp square bezel corner radius for 18pt floating infobox cells.",
               "$extensions": {
                 "apple_citation": "SPEC-001 Section 4.1"
               }
@@ -243,8 +243,8 @@
             },
             "corner_radius": {
               "$type": "dimension",
-              "$value": "3.0pt",
-              "$description": "Mini control corner radius.",
+              "$value": "1.5pt",
+              "$description": "Crisp square bezel corner radius for Mini NSTextField (NSTextFieldSquareBezel, macOS Sonoma 14.8.9).",
               "$extensions": {
                 "apple_citation": "AppKit NSControlSizeMini Bezel Style"
               }
@@ -2289,6 +2289,8 @@
           "small_diameter": { "$type": "dimension", "$value": "16.0pt" },
           "mini_diameter": { "$type": "dimension", "$value": "13.0pt" },
           "font_size": { "$type": "dimension", "$value": "12.0pt" },
+          "small_font_size": { "$type": "dimension", "$value": "10.0pt" },
+          "mini_font_size": { "$type": "dimension", "$value": "9.0pt" },
           "border_width": { "$type": "dimension", "$value": "1.0pt" },
           "shadow_offset_y": { "$type": "dimension", "$value": "1.0pt" }
         },
@@ -3101,8 +3103,8 @@
         },
         "secondary_label": {
           "$type": "color",
-          "$value": "#6E6E73",
-          "$description": "Secondary label text color in Aqua Light mode.",
+          "$value": "#5A5A5F",
+          "$description": "Secondary label text color in Aqua Light mode (WCAG 2.1 AA >= 4.5:1 on #ECECEC and #E5E5E5).",
           "$extensions": {
             "apple_citation": "NSColor.secondaryLabelColor in NSAppearanceNameAqua"
           }

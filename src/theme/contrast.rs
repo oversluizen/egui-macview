@@ -94,7 +94,7 @@ impl MacBackgroundStyle {
     /// Secondary text color (subtitles, captions, metadata).
     ///
     /// - `Dark` => 85% white (`rgba(255, 255, 255, 0.85)`)
-    /// - `Light` => dark secondary label color from Aqua tokens (`#6E6E73`)
+    /// - `Light` => dark secondary label color from Aqua tokens (`#5A5A5F`)
     pub fn secondary_text_color(&self, theme: &MacTheme) -> Color32 {
         match self {
             Self::Dark => Color32::from_white_alpha(217),

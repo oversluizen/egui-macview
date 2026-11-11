@@ -2,7 +2,7 @@
 
 - **Document ID:** SPEC-001
 - **Status:** Approved / Normative
-- **Version:** 0.6.5
+- **Version:** 0.6.6
 - **Scope:** Standalone crate `egui-macview` and its integration into consumer applications on Windows 11, macOS, and Linux.
 - **Normative Standards:** ISO/IEC/IEEE 42010:2011, ISO/IEC/IEEE 29119-3:2021, RFC 2119/8174, Apple macOS HIG, W3C DTCG Specification, ITU-T/IEEE SSIM, SemVer 2.0.0.
 

@@ -35,6 +35,7 @@ pub struct MacPopUpButton<'a> {
     corner_radius: Option<f32>,
     control_size: MacControlSize,
     fixed_rect: Option<Rect>,
+    accent_badge: bool,
     enabled: bool,
 }
 
@@ -51,6 +52,7 @@ impl<'a> MacPopUpButton<'a> {
             corner_radius: None,
             control_size: MacControlSize::Regular,
             fixed_rect: None,
+            accent_badge: false,
             enabled: true,
         }
     }
@@ -94,6 +96,12 @@ impl<'a> MacPopUpButton<'a> {
     /// Overrides default corner radius.
     pub fn corner_radius(mut self, r: f32) -> Self {
         self.corner_radius = Some(r);
+        self
+    }
+
+    /// Enables or disables the right-hand accent button badge (`NSPopUpButtonCell` classic/accent style).
+    pub fn accent_badge(mut self, enabled: bool) -> Self {
+        self.accent_badge = enabled;
         self
     }
 
@@ -215,20 +223,46 @@ impl<'a> Widget for MacPopUpButton<'a> {
         } else {
             theme.control_background()
         };
+        let border_w = metrics.border_width.points();
         let border_col = if response.has_focus() { theme.control_accent() } else { theme.separator() };
         if self.enabled && response.has_focus() {
             theme.paint_focus_ring(&painter, visual_rect, corner_radius);
         }
-        painter.rect(visual_rect, CornerRadius::same(corner_radius as u8), bg_color, Stroke::new(metrics.border_width.points(), border_col), StrokeKind::Inside);
+        painter.rect(visual_rect, CornerRadius::same(corner_radius as u8), bg_color, Stroke::new(border_w, border_col), StrokeKind::Inside);
 
         let text_color = if !self.enabled { theme.secondary_label() } else { theme.label() };
         let text_top_y = subpixel_snap(visual_rect.top() + (baseline_from_top - ascender), ppp);
         painter.galley(Pos2::new(visual_rect.left() + padding_h, text_top_y), current_galley.clone(), text_color);
 
+        let badge_inset = metrics.popup_gap.points();
+        let badge_w = chevron_size + chevron_spacing + badge_inset;
+        let cx = if self.accent_badge {
+            let badge_rect = Rect::from_min_max(
+                Pos2::new((visual_rect.right() - badge_inset - badge_w).max(visual_rect.left()), visual_rect.top() + badge_inset),
+                Pos2::new(visual_rect.right() - badge_inset, visual_rect.bottom() - badge_inset),
+            );
+            let badge_fill = if !self.enabled {
+                theme.control().gamma_multiply(theme.disabled_opacity())
+            } else if response.is_pointer_button_down_on() {
+                theme.selected_control()
+            } else {
+                theme.control_accent()
+            };
+            painter.rect_filled(badge_rect, CornerRadius::same((corner_radius - border_w).max(0.0) as u8), badge_fill);
+            badge_rect.center().x
+        } else {
+            visual_rect.right() - padding_h - chevron_size * 0.5
+        };
+
         // Draw trailing double separated chevrons (up `⌃` and down `⌄`)
-        let chevron_color = if !self.enabled { theme.secondary_label() } else { theme.label() };
+        let chevron_color = if !self.enabled {
+            theme.secondary_label()
+        } else if self.accent_badge {
+            theme.on_accent_text()
+        } else {
+            theme.label()
+        };
         let stroke = Stroke::new(chevron_stroke, chevron_color);
-        let cx = visual_rect.right() - padding_h - chevron_size * 0.5;
         let cy = visual_rect.center().y;
         let half_w = metrics.chevron_half_width.points();
         let gap = metrics.chevron_gap_vertical.points();

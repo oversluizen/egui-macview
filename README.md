@@ -28,7 +28,7 @@ Add `egui-macview` to your `Cargo.toml`:
 ```toml
 [dependencies]
 egui = "0.37.0"
-egui-macview = "0.6.5"
+egui-macview = "0.6.6"
 ```
 
 To run the interactive showcase gallery included in this repository:

@@ -115,16 +115,21 @@ fn test_v065_input_cell_control_sizes_fixed_rect_and_alignment() {
 
     assert_eq!(tf.regular.height.points(), 22.0);
     assert_eq!(tf.regular.font_size.points(), 13.0);
+    assert_eq!(tf.regular.corner_radius.points(), 2.0);
     assert_eq!(tf.regular.padding_horizontal.points(), 7.0);
     assert_eq!(tf.regular.padding_vertical.as_ref().unwrap().points(), 2.0);
     assert_eq!(tf.regular.first_baseline_offset_from_top.points(), 15.0);
     assert_eq!(tf.regular.baseline_offset_from_bottom.points(), 6.0);
     assert_eq!(tf.small.height.points(), 19.0);
     assert_eq!(tf.small.font_size.points(), 11.0);
+    assert_eq!(tf.small.corner_radius.points(), 2.0);
     assert_eq!(tf.small.padding_horizontal.points(), 5.0);
     assert_eq!(tf.mini.font_size.points(), 9.0);
+    assert_eq!(tf.mini.corner_radius.points(), 1.5);
     assert_eq!(tf.mini.padding_horizontal.points(), 4.0);
     assert_eq!(tf.compact_infobox.height.points(), 18.0);
+    assert_eq!(tf.compact_infobox.corner_radius.points(), 2.0);
+    assert_eq!(theme.popup_button().corner_radius.points(), 5.0);
 
     let mut v_default = "Default22".to_string();
     let mut v_reg = "AutoReg".to_string();
@@ -146,6 +151,11 @@ fn test_v065_input_cell_control_sizes_fixed_rect_and_alignment() {
     });
 
     assert_eq!(default_h, 22.0);
+    let input_rect_radii: Vec<u8> = shapes.iter().filter_map(|cs| match &cs.shape {
+        egui::Shape::Rect(r) if r.fill == theme.control_background() && (r.rect.left() - 10.0).abs() < 1.0 && r.rect.height() >= 18.0 => Some(r.corner_radius.nw),
+        _ => None,
+    }).collect();
+    assert_eq!(input_rect_radii, vec![2, 2, 2]);
     let mut texts = Vec::new();
     for cs in &shapes {
         collect_text_shapes(&cs.shape, &mut texts);
@@ -180,7 +190,10 @@ fn test_v065_popup_button_double_chevron_and_nib_frame_visual_clamping() {
     });
 
     let bezel_rect = shapes.iter().find_map(|cs| match &cs.shape {
-        egui::Shape::Rect(r) if r.fill == theme.control_background() => Some(r.rect),
+        egui::Shape::Rect(r) if r.fill == theme.control_background() => {
+            assert_eq!(r.corner_radius.nw, 5);
+            Some(r.rect)
+        }
         _ => None,
     }).unwrap();
     assert!((bezel_rect.height() - 20.0).abs() < 0.5);
@@ -298,4 +311,84 @@ fn test_v065_inter_and_cupertino_fonts_and_cross_platform_baseline_alignment() {
     }).collect();
     assert!(circles.iter().any(|&r| (r - 10.0).abs() < 0.5));
     assert!(circles.iter().any(|&r| (r - 8.0).abs() < 0.5));
+}
+
+#[test]
+fn test_v066_help_button_sizes_popup_accent_badge_and_zero_idle_repaint() {
+    let mut fonts = egui::FontDefinitions::default();
+    setup_macview_fonts(&mut fonts);
+    setup_symbols_font(&mut fonts);
+    let ctx = Context::default();
+    ctx.set_fonts(fonts);
+    let theme = MacTheme::new(MacAppearance::Aqua);
+
+    assert_eq!(MacHelpButton::new().theme(&theme).control_size(MacControlSize::Regular).font_size(), 12.0);
+    assert_eq!(MacHelpButton::new().theme(&theme).control_size(MacControlSize::Small).font_size(), 10.0);
+    assert_eq!(MacHelpButton::new().theme(&theme).control_size(MacControlSize::Mini).font_size(), 9.0);
+
+    let (mut val, mut pop_idx, mut cb_val, mut chk, mut disc) = (
+        "1080".to_string(),
+        0usize,
+        "4K UHD".to_string(),
+        true,
+        true,
+    );
+
+    // Settle egui font/sizing caches and verify zero immediate repaints (Duration::MAX) at rest across all NIB controls
+    let mut last_repaint_after = std::time::Duration::ZERO;
+    let mut shapes = Vec::new();
+    for step in 0..3 {
+        let raw = RawInput {
+            time: Some(1.0 + step as f64 * 0.05),
+            screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(800.0, 600.0))),
+            ..Default::default()
+        };
+        let mut out = ctx.run_ui(raw, |ui| {
+            MacLabel::new("Resolution:").theme(&theme).weight(MacFontWeight::Medium).show(ui);
+            MacInputCell::new("nib_in", &mut val).theme(&theme).show(ui);
+            MacPopUpButton::new(&mut pop_idx, &["1080p", "4K"]).theme(&theme).accent_badge(true).show(ui);
+            MacComboBox::new("nib_cb", &mut cb_val, &["4K UHD", "8K"]).theme(&theme).show(ui);
+            MacCheckbox::new(&mut chk, "Preserve Aspect").theme(&theme).show(ui);
+            MacBox::new("Group").theme(&theme).show(ui, |b_ui| {
+                MacLabel::new("Caption").theme(&theme).color(MacLabelColor::Secondary).show(b_ui);
+            });
+            MacHelpButton::new().theme(&theme).control_size(MacControlSize::Small).show(ui);
+            MacInlineActionButton::new("+")
+                .theme(&theme)
+                .fixed_rect(Rect::from_min_size(Pos2::new(300.0, 20.0), Vec2::new(24.0, 24.0)))
+                .show(ui);
+            MacDisclosureGroup::new("nib_disc", "Advanced", &mut disc)
+                .theme(&theme)
+                .with_trailing_add_button(true)
+                .show(ui, |d_ui| {
+                    MacLabel::new("Nested").theme(&theme).show(d_ui);
+                });
+        });
+        out.textures_delta.clear();
+        last_repaint_after = out
+            .viewport_output
+            .get(&egui::ViewportId::ROOT)
+            .map(|v| v.repaint_delay)
+            .unwrap_or(std::time::Duration::MAX);
+        shapes = out.shapes;
+    }
+
+    assert_eq!(
+        last_repaint_after,
+        std::time::Duration::MAX,
+        "All NIB controls at rest must request zero immediate repaints (Duration::MAX)"
+    );
+
+    // Verify MacInlineActionButton clamps visual circle radius to 8.0pt (16pt diameter) inside 24x24pt fixed_rect
+    let inline_circles: Vec<_> = shapes.iter().filter_map(|cs| match &cs.shape {
+        egui::Shape::Circle(c) if (c.center.x - 312.0).abs() < 1.0 => Some(c.radius),
+        _ => None,
+    }).collect();
+    assert_eq!(inline_circles, vec![8.0]);
+
+    // Verify MacPopUpButton::accent_badge(true) paints the right accent badge
+    assert!(shapes.iter().any(|cs| matches!(
+        &cs.shape,
+        egui::Shape::Rect(r) if r.fill == theme.control_accent() && (r.rect.width() - 16.0).abs() < 1.5
+    )));
 }
