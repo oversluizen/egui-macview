@@ -4,9 +4,9 @@
 | :--- | :--- |
 | **Document ID** | SPEC-INDEX |
 | **Document Title** | Specification Suite Index & Version Matrix |
-| **Document Version** | `0.6.10` |
+| **Document Version** | `0.6.11` |
 | **Status** | Accepted / Normative |
-| **Target Milestone** | Milestone 0.6.10 |
+| **Target Milestone** | Milestone 0.6.11 |
 | **Target Host** | Standalone crate `egui-macview` (Rust, egui 0.37) |
 | **Author** | Jaco Oversluizen / `egui-macview` contributors |
 | **Normative Standards** | ISO/IEC/IEEE 42010:2011, ISO/IEC/IEEE 29119-3:2021, RFC 2119/8174, Apple macOS HIG, W3C DTCG, SemVer 2.0.0 |
@@ -35,12 +35,13 @@
 | `0.6.8` | 2026-11-11 | Architecture Team | Milestone 0.6.8 Release: Zero-Allocation Per-Pass Geometric Surface Registry (`register_surface_rect`, `active_surface_at`) for Flat NIB `.fixed_rect` Layouts & Automated Surface-Aware Vibrancy Architecture Guard |
 | `0.6.9` | 2026-11-11 | Architecture Team | Milestone 0.6.9 Release: AppKit Pro-Inspector Controls (`MacOriginMatrix`, `MacTagColorPicker`, `MacTableActionBar`) & Semantic Tag Label Colors (`MacTagLabelColors`) |
 | `0.6.10` | 2026-11-12 | Architecture Team | Milestone 0.6.10 Release: AppKit NIB Control Properties (`MacSlider::tick_marks`, `MacControlSize` across `MacInputCell`/`MacCheckbox`/`MacRadioButton`/`MacPopUpButton`/`MacButtonCell`, `MacSegmentedControl::small_square` & `show_multi`, `MacTagColorPicker::rows`/`dot_size`/`spacing`, `MacPopoverSurface`) & Full `src/` Hardcoding Guard |
+| `0.6.11` | 2026-11-12 | Architecture Team | Milestone 0.6.11 Release: Clean-Room AppKit `NSSegmentedControl` Vector Icons (`SegmentItem::from_icon`), Per-Segment Widths & Enablement, Orthogonal `with_menu` / `with_shows_menu_indicator`, Press-and-Hold / Pull-Down / Secondary-Click Menu Triggers (`SegmentMenuTrigger`), and Sonoma Active-Pill Divider Suppression |
 
 ---
 
 ## 1. Specification Suite Structure
 
-The `egui-macview` specification suite provides the formal normative requirements, mathematical foundations, MVC abstractions, and test oracles for the entire crate. Every specification in this directory runs strictly in lockstep with the crate release version (`0.6.10`).
+The `egui-macview` specification suite provides the formal normative requirements, mathematical foundations, MVC abstractions, and test oracles for the entire crate. Every specification in this directory runs strictly in lockstep with the crate release version (`0.6.11`).
 
 | Spec ID | Document Title | Version | Status | Primary Test Suite |
 | :--- | :--- | :--- | :--- | :--- |
@@ -132,6 +133,7 @@ All core specifications in this repository maintain exact version parity with th
 | **v0.6.8** | `0.6.8` | 2026-11-11 | Milestone 0.6.8 release: Zero-allocation per-pass geometric surface registry (`MacTheme::register_surface_rect`, `MacTheme::active_surface_at`) so both closure-nested (`MacBox::show`, `MacCard::show`) and flat NIB `.fixed_rect` peer controls (`MacLabel`, `MacCheckbox`, `MacDisclosureGroup`, `MacInlineActionButton` placed over `MacBox::paint_at` or `MacBox::show`) automatically detect their container surface, permanently guarded by `test_guard_surface_aware_vibrancy_anchoring` in `tests/architecture_guard_tests.rs`. |
 | **v0.6.9** | `0.6.9` | 2026-11-11 | Milestone 0.6.9 release: AppKit Pro-Inspector controls (`MacOriginMatrix`, `MacTagColorPicker`, `MacTableActionBar`) and semantic tag label colors (`MacTagLabelColors`), verified by `tests/appkit_v069_pro_controls_tests.rs`. |
 | **v0.6.10** | `0.6.10` | 2026-11-12 | Milestone 0.6.10 release: Five AppKit NIB properties (`MacSlider::tick_marks` with `4.0pt` neutral track, `1.0x4.0pt` tick marks at `3.0pt` offset, and `7.0x15.0pt` vertical pill thumb; `MacControlSize` across `MacInputCell`, `MacCheckbox`, `MacRadioButton`, `MacPopUpButton`, and `MacButtonCell`; `MacSegmentedControl::small_square` & `.show_multi`; `MacTagColorPicker::rows`, `.dot_size`, and `.spacing`; `MacPopoverSurface`) plus full `src/` hardcoding and `MacNibPrimitives` guard, verified by `tests/appkit_v0610_nib_controls_tests.rs`. |
+| **v0.6.11** | `0.6.11` | 2026-11-12 | Milestone 0.6.11 release: Clean-room AppKit `NSSegmentedControl` parity (`SegmentItem::from_icon`, per-segment `.with_width` and `.enabled`, orthogonal `.with_menu` vs `.with_shows_menu_indicator`, `PressAndHold` / `PullDown` / `SecondaryClick` menu triggers, analytical vector chevrons, and Sonoma active-pill divider suppression), verified by `tests/segmented_vector_icon_parity_tests.rs`. |
 
 ---
 

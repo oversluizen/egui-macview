@@ -28,7 +28,7 @@ Add `egui-macview` to your `Cargo.toml`:
 ```toml
 [dependencies]
 egui = "0.37.0"
-egui-macview = "0.6.8"
+egui-macview = "0.6.11"
 ```
 
 To run the interactive showcase gallery included in this repository:
@@ -160,7 +160,8 @@ Every control in `egui-macview` works with standard `egui::Ui` and optionally ac
 
 ```rust
 use egui_macview::{
-    MacAppearance, MacButton, MacSegmentedControl, MacTheme, MacToggle, setup_symbols_font,
+    MacAppearance, MacButton, MacSegmentedControl, MacSymbol, MacTheme, MacToggle, SegmentItem,
+    setup_symbols_font,
 };
 
 # let ctx = egui::Context::default();
@@ -175,18 +176,36 @@ theme.apply_to_egui(&ctx);
 
 # let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
 let mut auto_save = true;
-let mut view_mode = 0usize;
+let mut active_tool = 0usize;
 
 ui.horizontal(|ui| {
     // macOS pill toggle switch (NSSwitch)
     ui.label("Auto-Save:");
     ui.add(MacToggle::new(&mut auto_save).theme(&theme));
 
-    // Segmented pill switcher (NSSegmentedControl)
-    let modes = ["Grid", "List", "Columns"];
-    MacSegmentedControl::new(&modes, view_mode)
+    // Segmented strip with vector icons, per-segment widths & submenus (NSSegmentedControl)
+    let tools = [
+        SegmentItem::from_symbol(MacSymbol::Search).with_width(30.0).with_tooltip("Inspect"),
+        SegmentItem::from_symbol(MacSymbol::Sliders).with_width(34.0).with_submenu(true),
+        SegmentItem::new("Preview"),
+    ];
+    MacSegmentedControl::with_custom_segments(tools, active_tool)
+        .id_salt("inspector_tools")
+        .accessibility_label("Inspector Tools")
         .theme(&theme)
-        .show(ui, |new_idx| view_mode = new_idx);
+        .show_with_events(ui, |ev| {
+            if ev.opens_menu() {
+                // Open segment submenu anchored at ev.rect
+            } else {
+                active_tool = ev.index;
+            }
+        });
+
+    // Momentary < | > navigation strip (NSSegmentedSwitchTrackingMomentary)
+    MacSegmentedControl::momentary([SegmentItem::new("<"), SegmentItem::new(">")])
+        .id_salt("history_nav")
+        .theme(&theme)
+        .show_momentary(ui, |_dir| {});
 
     // Push button (NSButton)
     if ui.add(MacButton::new("Apply").selected(true).theme(&theme)).clicked() {
@@ -701,7 +720,7 @@ cargo test --doc
 cargo clippy --all-targets -- -D warnings
 ```
 
-- **23 integration test suites** and **60+ documentation tests** verify widget layout, keyboard navigation, undo/redo roundtrips, WCAG contrast ratios, and zero idle CPU usage.
+- **28 integration test suites** and **65+ documentation tests** verify widget layout, keyboard navigation, undo/redo roundtrips, WCAG contrast ratios, and zero idle CPU usage.
 - **Design token architecture**: All dimensions, spacing, corner radii, and semantic colors live in `tokens/design_tokens.json` ([`MacDesignTokens`]) and are resolved through [`MacTheme`].
 
 ---

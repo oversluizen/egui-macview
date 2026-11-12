@@ -306,8 +306,10 @@ fn test_v0610_tag_color_picker_multi_row_layout() {
             .size();
     });
     out2.textures_delta.clear();
-    assert!((default_rows_size.x - 6.0 * (12.0 + 6.0)).abs() < 1e-3);
-    assert!((default_rows_size.y - 2.0 * (12.0 + 4.0)).abs() < 1e-3);
+    let default_pitch =
+        theme.tag_color_picker().dot_diameter.points() + theme.tag_color_picker().dot_spacing.points();
+    assert!((default_rows_size.x - 6.0 * default_pitch).abs() < 1e-3);
+    assert!((default_rows_size.y - 2.0 * default_pitch).abs() < 1e-3);
     assert!(zero_bounds_size.x > 0.0 && zero_bounds_size.y > 0.0);
 }
 

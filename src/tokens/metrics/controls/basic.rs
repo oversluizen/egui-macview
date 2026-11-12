@@ -133,4 +133,24 @@ pub struct SegmentedMetrics {
     pub padding_horizontal: DimensionValue,
     /// Duration of the sliding pill transition animation in seconds.
     pub animation_duration: DimensionValue,
+    /// Interior padding inset around custom template icons inside a segment cell.
+    pub icon_padding: DimensionValue,
+    /// Top and bottom vertical inset for rounded-style interior segment dividers.
+    pub divider_vertical_inset: DimensionValue,
+    /// Horizontal half-width of the trailing downward menu chevron indicator.
+    pub menu_chevron_half_width: DimensionValue,
+    /// Vertical span of the trailing downward menu chevron indicator.
+    pub menu_chevron_height: DimensionValue,
+    /// Stroke thickness of the trailing downward menu chevron indicator.
+    pub menu_chevron_stroke_width: DimensionValue,
+    /// Trailing horizontal inset from segment right edge to the menu chevron apex.
+    pub menu_chevron_inset_trailing: DimensionValue,
+    /// Bottom vertical inset from segment bottom edge to the menu chevron apex.
+    pub menu_chevron_inset_bottom: DimensionValue,
+    /// Press-and-hold duration threshold in seconds before opening a segment menu.
+    pub menu_press_hold_delay: DimensionValue,
+    /// Downward pointer drag distance in points that immediately opens a segment menu.
+    pub menu_drag_threshold: DimensionValue,
+    /// Opacity multiplier for the depressed `isHighlighted` backdrop on an inactive segment.
+    pub pressed_highlight_opacity: DimensionValue,
 }

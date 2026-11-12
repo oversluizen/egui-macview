@@ -13,6 +13,7 @@ use std::path::Path;
 
 const UI_COMPONENT_DIRS: &[&str] = &["src/controls", "src/layout", "src/surfaces", "src/navigation", "src/feedback"];
 const EXTRA_GUARDED_FILES: &[&str] = &["src/theme/mod.rs", "src/theme/accessors.rs", "src/theme/pro_accessors.rs"];
+const TOKEN_SCHEMA_TEST_STACK_BYTES: usize = 8 * 1024 * 1024;
 
 #[test]
 fn test_guard_zero_magic_numbers_and_colors_in_ui_components() {
@@ -65,18 +66,26 @@ fn test_guard_token_catalog_100_percent_schema_synchronization() {
     let raw_json = include_str!("../tokens/design_tokens.json");
     let raw_val: serde_json::Value = serde_json::from_str(raw_json).expect("Valid JSON");
     let typed_tokens = egui_macview::tokens::MacDesignTokens::load_default();
-    let reserialized_val = std::thread::Builder::new().stack_size(8 * 1024 * 1024)
+    let reserialized_val = std::thread::Builder::new()
+        .stack_size(TOKEN_SCHEMA_TEST_STACK_BYTES)
         .spawn(move || serde_json::to_value(&typed_tokens).expect("Serialize MacDesignTokens"))
-        .expect("spawn").join().expect("join");
+        .expect("spawn")
+        .join()
+        .expect("join");
     let (mut raw_leaves, mut typed_leaves) = (BTreeSet::new(), BTreeSet::new());
     collect_json_leaf_paths(&raw_val, String::new(), false, &mut raw_leaves);
     collect_json_leaf_paths(&reserialized_val, String::new(), false, &mut typed_leaves);
-    assert!(raw_leaves.difference(&typed_leaves).count() == 0 && typed_leaves.difference(&raw_leaves).count() == 0);
+    let missing: Vec<_> = raw_leaves.difference(&typed_leaves).collect();
+    assert!(missing.is_empty(), "Orphaned JSON tokens:\n{missing:#?}");
+    let missing_in_json: Vec<_> = typed_leaves.difference(&raw_leaves).collect();
+    assert!(missing_in_json.is_empty(), "Struct fields missing in design_tokens.json:\n{missing_in_json:#?}");
+
     for file in collect_rs_files(&manifest_dir.join("src/tokens")) {
         let rel = file.strip_prefix(manifest_dir).unwrap_or(&file).to_string_lossy().replace('\\', "/");
         if rel != "src/tokens/dtcg.rs" {
             let stripped = strip_comments_and_strings(&fs::read_to_string(&file).expect("read token file"));
-            assert!(!stripped.contains("DimensionValue::from_pt(") && !stripped.contains("ColorValue::new("), "{rel}");
+            assert!(!stripped.contains("DimensionValue::from_pt("), "{rel} contains hardcoded DimensionValue::from_pt(");
+            assert!(!stripped.contains("ColorValue::new("), "{rel} contains hardcoded ColorValue::new(");
         }
     }
 }
@@ -138,7 +147,7 @@ fn test_guard_zero_cross_component_token_borrowing_and_self_check() {
             (_, "outline_view.rs") | ("outline_view", _) => &["outline_view", "thumbnail"], (_, "path_control.rs") => &["path_control"],
             (_, "player_view.rs") | ("player_view", _) => &["player_view"], (_, "popup_button.rs") | ("popup_button", _) => &["popup_button"],
             (_, "progress_indicator.rs") => &["progress_indicator"], (_, "rule_editor.rs") => &["rule_editor"],
-            (_, "search_field.rs") => &["search_field"], (_, "segmented.rs") => &["segmented"],
+            (_, "search_field.rs") => &["search_field"], (_, "segmented.rs") | ("segmented", _) => &["segmented"],
             (_, "stepper.rs") => &["stepper"], (_, "tab_view.rs") => &["tab_view"],
             (_, "table_action_bar.rs") => &["table_action_bar"], ("table_view", _) => &["table_view"],
             (_, "tag_color_picker.rs") => &["tag_color_picker"], (_, "thumbnail_cell.rs") => &["thumbnail"],
@@ -156,7 +165,10 @@ fn test_guard_zero_cross_component_token_borrowing_and_self_check() {
     assert!(check_magic_numbers_in_source("ok.rs", "let mid = w * 0.5;").is_empty());
     assert!(!check_hardcoded_colors_in_source("bad.rs", "let c = Color32::WHITE;").is_empty());
     assert!(!check_token_arithmetic_cheating("bad.rs", "let w = theme.width.points() + 4.0;").is_empty());
+    assert!(!check_token_arithmetic_cheating("src/controls/segmented/render.rs", "let ind = indicator_inset * 2.0;").is_empty());
+    assert!(!check_token_arithmetic_cheating("src/controls/segmented/render.rs", "painter.add(Shape::convex_polygon(pts, col, Stroke::NONE));").is_empty());
     assert!(!check_domain_leakage_in_source("bad.rs", "struct PedigreeNode;").is_empty());
+    assert!(!check_domain_leakage_in_source("bad.rs", "const ICON: &str = \"GSHOITemplate\";").is_empty());
     assert!(!check_uibuilder_id_salt_in_source("bad.rs", "ui.new_child(UiBuilder::new().max_rect(r));").is_empty());
     assert!(check_uibuilder_id_salt_in_source("ok.rs", "ui.new_child(UiBuilder::new().id_salt(\"s\").max_rect(r));").is_empty());
 }

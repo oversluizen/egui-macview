@@ -4,10 +4,10 @@ use egui::{Align, CornerRadius, Layout, Pos2, Rect, Sense, Stroke, StrokeKind, U
 use egui_macview::{
     controls::{
         MacControlSize, MacFontWeight, MacLabel, MacLabelColor, MacOriginAnchor, MacOriginMatrix,
-        MacTableActionBar, MacTagColorPicker,
+        MacSegmentedControl, MacTableActionBar, MacTagColorPicker, SegmentItem,
     },
     theme::MacTheme,
-    MacToastManager,
+    MacSymbol, MacToastManager,
 };
 use std::cell::RefCell;
 
@@ -135,5 +135,60 @@ pub fn render_state6_pro_controls(
         if bar_resp.action_clicked {
             toasts.borrow_mut().info("Table action menu clicked");
         }
+
+        pro_ui.add_space(8.0);
+        pro_ui.horizontal(|seg_ui| {
+            MacLabel::new("Tool Strip (NSSegmentedControl):")
+                .color(MacLabelColor::Secondary)
+                .theme(theme)
+                .show(seg_ui);
+            let ctx = seg_ui.ctx().clone();
+            let seg_state_id = egui::Id::unique("gallery_v0611_tool_strip_idx");
+            let mut active_tool = ctx.data(|d| d.get_temp::<usize>(seg_state_id)).unwrap_or(0);
+            let items = [
+                SegmentItem::from_symbol(MacSymbol::Search)
+                    .with_width(34.0)
+                    .with_submenu(true)
+                    .with_tooltip("Inspect (hold, pull down, secondary-click, or ArrowDown for menu)"),
+                SegmentItem::from_icon_fn(|painter, icon_rect, tint| {
+                    let c = icon_rect.center();
+                    let r = icon_rect.height().min(icon_rect.width()) * 0.35;
+                    let stroke = Stroke::new(1.25, tint);
+                    let pts = [
+                        Pos2::new(c.x, c.y - r),
+                        Pos2::new(c.x + r, c.y),
+                        Pos2::new(c.x, c.y + r),
+                        Pos2::new(c.x - r, c.y),
+                    ];
+                    for pair in [[pts[0], pts[1]], [pts[1], pts[2]], [pts[2], pts[3]], [pts[3], pts[0]]] {
+                        painter.line_segment(pair, stroke);
+                    }
+                })
+                .with_width(33.0)
+                .with_menu(true)
+                .with_shows_menu_indicator(true)
+                .with_tooltip("Vector Diamond (zero-alloc function pointer + menu)"),
+                SegmentItem::from_symbol(MacSymbol::Gear)
+                    .with_width(33.0)
+                    .with_tooltip("Settings (click only)"),
+                SegmentItem::from_symbol(MacSymbol::Sliders)
+                    .with_width(35.0)
+                    .enabled(false)
+                    .with_tooltip("Sliders Segment (disabled)"),
+            ];
+            MacSegmentedControl::with_custom_segments(items, active_tool)
+                .accessibility_label("Tool Strip")
+                .theme(theme)
+                .height(24.0)
+                .show_with_events(seg_ui, |ev| {
+                    if let Some(trigger) = ev.menu_trigger {
+                        toasts.borrow_mut().info(format!("Segment {} menu ({trigger:?})", ev.index));
+                    } else {
+                        active_tool = ev.index;
+                        ctx.data_mut(|d| d.insert_temp(seg_state_id, active_tool));
+                        toasts.borrow_mut().info(format!("Selected segment {}", ev.index));
+                    }
+                });
+        });
     });
 }

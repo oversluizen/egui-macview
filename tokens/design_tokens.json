@@ -1,6 +1,6 @@
 {
   "$name": "egui-macview Design Tokens",
-  "$version": "0.6.10",
+  "$version": "0.6.11",
   "$description": "W3C DTCG-compliant design token catalog for egui-macview. Fully grounded in Apple AppKit, macOS Human Interface Guidelines, Apple Typography specifications, and CoreAnimation spring physics.",
   "macview": {
     "metrics": {
@@ -597,6 +597,86 @@
             "$type": "dimension",
             "$value": "0.18pt",
             "$description": "Duration in seconds of the sliding active selection pill transition animation."
+          },
+          "icon_padding": {
+            "$type": "dimension",
+            "$value": "4.0pt",
+            "$description": "Interior padding inset around custom template icons inside a segment cell.",
+            "$extensions": {
+              "apple_citation": "Apple AppKit NSSegmentedCell image interior inset"
+            }
+          },
+          "divider_vertical_inset": {
+            "$type": "dimension",
+            "$value": "4.0pt",
+            "$description": "Top and bottom vertical inset for rounded-style interior segment dividers.",
+            "$extensions": {
+              "apple_citation": "macOS Sonoma NSSegmentedControl interior separator inset"
+            }
+          },
+          "menu_chevron_half_width": {
+            "$type": "dimension",
+            "$value": "2.0pt",
+            "$description": "Horizontal half-width of the trailing downward menu chevron indicator.",
+            "$extensions": {
+              "apple_citation": "Apple AppKit NSSegmentedControl setShowsMenuIndicator(_:forSegment:)"
+            }
+          },
+          "menu_chevron_height": {
+            "$type": "dimension",
+            "$value": "2.0pt",
+            "$description": "Vertical span of the trailing downward menu chevron indicator.",
+            "$extensions": {
+              "apple_citation": "Apple AppKit NSSegmentedControl setShowsMenuIndicator(_:forSegment:)"
+            }
+          },
+          "menu_chevron_stroke_width": {
+            "$type": "dimension",
+            "$value": "1.0pt",
+            "$description": "Analytical vector stroke thickness for the trailing downward menu chevron indicator.",
+            "$extensions": {
+              "apple_citation": "Apple AppKit NSSegmentedControl menu indicator stroke"
+            }
+          },
+          "menu_chevron_inset_trailing": {
+            "$type": "dimension",
+            "$value": "4.0pt",
+            "$description": "Trailing horizontal inset from segment right edge to the menu chevron apex.",
+            "$extensions": {
+              "apple_citation": "Apple AppKit NSSegmentedControl menu indicator placement"
+            }
+          },
+          "menu_chevron_inset_bottom": {
+            "$type": "dimension",
+            "$value": "2.5pt",
+            "$description": "Bottom vertical inset from segment bottom edge to the menu chevron apex.",
+            "$extensions": {
+              "apple_citation": "Apple AppKit NSSegmentedControl menu indicator placement"
+            }
+          },
+          "menu_press_hold_delay": {
+            "$type": "dimension",
+            "$value": "0.25pt",
+            "$description": "Press-and-hold duration threshold in seconds before opening a segment menu.",
+            "$extensions": {
+              "apple_citation": "Apple AppKit NSSegmentedCell menu hold delay"
+            }
+          },
+          "menu_drag_threshold": {
+            "$type": "dimension",
+            "$value": "4.0pt",
+            "$description": "Downward pointer drag distance in points that immediately opens a segment menu.",
+            "$extensions": {
+              "apple_citation": "Apple AppKit NSSegmentedCell pull-down menu drag threshold"
+            }
+          },
+          "pressed_highlight_opacity": {
+            "$type": "dimension",
+            "$value": "0.55pt",
+            "$description": "Opacity multiplier applied to separator fill for the depressed isHighlighted backdrop on an inactive segment.",
+            "$extensions": {
+              "apple_citation": "Apple AppKit NSSegmentedCell isHighlighted state"
+            }
           }
         },
         "slider": {

@@ -4,9 +4,9 @@
 | :--- | :--- |
 | **Document ID** | SPEC-012 |
 | **Document Title** | Advanced Media, Scheduling, and Grid Controls |
-| **Document Version** | `0.6.10` |
+| **Document Version** | `0.6.11` |
 | **Status** | Accepted / Normative |
-| **Target Milestone** | Milestone 0.6.10 |
+| **Target Milestone** | Milestone 0.6.11 |
 | **Target Host** | Standalone crate `egui-macview` (Rust, egui 0.37) |
 | **Author** | Jaco Oversluizen / `egui-macview` contributors |
 | **Hardware Ground Truth** | Apple Silicon MacBook Air (macOS Sonoma `14.8.9`, SDK `14`, 291 AppKit headers, 11 AVKit headers) |
@@ -31,6 +31,7 @@
 | `0.6.8` | 2026-11-11 | Architecture Team | Milestone 0.6.8 Release: Zero-allocation per-pass geometric surface registry (`MacTheme::register_surface_rect`, `MacTheme::active_surface_at`) anchoring container surface awareness across both closure-scoped (`MacBox::show`, `MacCard::show`) and flat NIB `.fixed_rect` peer layouts (`MacBox::paint_at`, `MacBox::show`), guarded by `test_guard_surface_aware_vibrancy_anchoring` in `tests/architecture_guard_tests.rs`. |
 | `0.6.9` | 2026-11-11 | Architecture Team | Milestone 0.6.9 Release: AppKit Pro-Inspector controls (`MacOriginMatrix`, `MacTagColorPicker`, `MacTableActionBar`) fully driven by W3C DTCG tokens (`metrics.control.origin_matrix`, `metrics.control.tag_color_picker`, `metrics.control.table_action_bar`, `color.tag_labels`), verified by `tests/appkit_v069_pro_controls_tests.rs`. |
 | `0.6.10` | 2026-11-12 | Architecture Team | Milestone 0.6.10 Release: AppKit NIB properties (`MacSlider::tick_marks`, `MacControlSize` across `MacInputCell`/`MacCheckbox`/`MacRadioButton`/`MacPopUpButton`/`MacButtonCell`, `MacSegmentedControl::small_square` & `show_multi`, `MacTagColorPicker::rows`/`dot_size`/`spacing`, and `MacPopoverSurface`) verified by `tests/appkit_v0610_nib_controls_tests.rs`. |
+| `0.6.11` | 2026-11-12 | Architecture Team | Milestone 0.6.11 Release: Clean-room AppKit `NSSegmentedControl` vector icon closures, per-segment widths & enablement, orthogonal menu vs. indicator builders, press-and-hold / pull-down / secondary-click triggers, and Sonoma divider suppression (`SPEC-002` §2.3), verified by `tests/segmented_vector_icon_parity_tests.rs`. |
 
 ---
 

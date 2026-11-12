@@ -40,10 +40,12 @@ pub use controls::{
     MacPathComponent, MacPathControl, MacPathControlResponse, MacPlayerControlsStyle,
     MacPlayerView, MacPopUpButton, MacProgressControlSize, MacProgressIndicator, MacProgressStyle,
     MacRadioButton, MacRatingIndicator, MacRuleEditor, MacRuleRow, MacSearchField,
-    MacSegmentedControl, MacSlider, MacSortDirection, MacStepper, MacTabItem, MacTabStyle,
-    MacTabView, MacTableActionBar, MacTableActionResponse, MacTableColumn, MacTableView,
-    MacTableViewOutput, MacTableViewResponse, MacTagColorPicker, MacThumbnailCell, MacTimelineZone,
-    MacToggle, MacTokenField, MacTrimScrubber, MacTrimScrubberResponse, UNIT_STAR,
+    MacSegmentEvent, MacSegmentItem, MacSegmentedControl, MacSlider, MacSortDirection, MacStepper,
+    MacTabItem, MacTabStyle, MacTabView, MacTableActionBar, MacTableActionResponse, MacTableColumn,
+    MacTableView, MacTableViewOutput, MacTableViewResponse, MacTagColorPicker, MacThumbnailCell,
+    MacTimelineZone, MacToggle, MacTokenField, MacTrimScrubber, MacTrimScrubberResponse,
+    SegmentContent, SegmentEvent, SegmentIconFn, SegmentIconPainter, SegmentItem,
+    SegmentMenuTrigger, UNIT_STAR,
 };
 pub use feedback::{clamp_menu_rect, MacContextMenu, MacToast, MacToastManager, ToastLevel};
 pub use layout::{

@@ -66,7 +66,10 @@ pub use progress_indicator::{MacProgressControlSize, MacProgressIndicator, MacPr
 pub use rating_indicator::{MacRatingIndicator, UNIT_STAR};
 pub use rule_editor::{MacRuleEditor, MacRuleRow};
 pub use search_field::MacSearchField;
-pub use segmented::MacSegmentedControl;
+pub use segmented::{
+    MacSegmentEvent, MacSegmentItem, MacSegmentedControl, SegmentContent, SegmentEvent,
+    SegmentIconFn, SegmentIconPainter, SegmentItem, SegmentMenuTrigger,
+};
 pub use slider::MacSlider;
 pub use stepper::MacStepper;
 pub use tab_view::{MacInsets, MacTabItem, MacTabStyle, MacTabView};

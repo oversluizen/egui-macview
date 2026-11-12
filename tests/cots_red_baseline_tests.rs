@@ -17,8 +17,8 @@ fn test_token_catalog_deserialization() {
     let tokens = MacDesignTokens::load_default();
 
     assert_eq!(tokens.name, "egui-macview Design Tokens");
-    assert_eq!(tokens.version, "0.6.10");
-    assert_eq!(egui_macview::VERSION, "0.6.10");
+    assert_eq!(tokens.version, "0.6.11");
+    assert_eq!(egui_macview::VERSION, "0.6.11");
     assert!(!tokens.description.is_empty());
 
     let ctrl = tokens.control_metrics();
@@ -184,14 +184,15 @@ fn test_sf_pro_dynamic_tracking_optical_bounds() {
 fn test_version_synchronization_invariants() {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     let cargo_toml = fs::read_to_string(manifest_dir.join("Cargo.toml")).expect("read Cargo.toml");
-    assert!(cargo_toml.contains("version = \"0.6.10\""), "Cargo.toml must have version = \"0.6.10\"");
-    assert_eq!(egui_macview::VERSION, "0.6.10");
+    assert!(cargo_toml.contains("version = \"0.6.11\""), "Cargo.toml must have version = \"0.6.11\"");
+    assert_eq!(egui_macview::VERSION, "0.6.11");
 
     let tokens = MacDesignTokens::load_default();
-    assert_eq!(tokens.version, "0.6.10");
+    assert_eq!(tokens.version, "0.6.11");
 
     let changelog = fs::read_to_string(manifest_dir.join("CHANGELOG.md")).expect("read CHANGELOG.md");
     for header in [
+        "## [0.6.11] - 2026-11-12",
         "## [0.6.10] - 2026-11-12",
         "## [0.6.9] - 2026-11-11",
         "## [0.6.8] - 2026-11-11",
@@ -235,7 +236,7 @@ fn test_version_synchronization_invariants() {
                 } else if file_name.starts_with("SPEC-011") {
                     ("0.5.0", Some("Milestone 0.5.0"))
                 } else if file_name.starts_with("SPEC-012") || file_name.starts_with("SPEC-INDEX") {
-                    ("0.6.10", Some("Milestone 0.6.10"))
+                    ("0.6.11", Some("Milestone 0.6.11"))
                 } else {
                     ("0.2.0", None)
                 };

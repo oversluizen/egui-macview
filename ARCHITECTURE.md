@@ -109,7 +109,7 @@ egui-macview/
 │   │   ├── rating_indicator.rs             (MacRatingIndicator 5-star rating control)
 │   │   ├── rule_editor.rs                  (MacRuleEditor predicate filter rows)
 │   │   ├── search_field.rs                 (MacSearchField with clear button)
-│   │   ├── segmented.rs                    (MacSegmentedControl animated pill switcher)
+│   │   ├── segmented/                      (MacSegmentedControl animated pill, vector icons & menus)
 │   │   ├── slider.rs                       (MacSlider linear slider with ticks)
 │   │   ├── stepper.rs                      (MacStepper up/down increment buttons)
 │   │   ├── tab_view.rs                     (MacTabView segmented & borderless tabs)

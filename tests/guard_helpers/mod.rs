@@ -10,7 +10,8 @@ use std::path::{Path, PathBuf};
 pub const ALLOWED_RATIOS: &[f64] = &[0.0, 0.5, 1.0, 2.0];
 pub const FORBIDDEN_DOMAIN_TERMS: &[&str] = &[
     "pedigree", "gedcom", "kinship", "ancestor", "proband", "marriage", "genealogy", "lineage",
-    "divorce", "adoptive", "foster", "sibling",
+    "divorce", "adoptive", "foster", "sibling", "glyphsapp", "schriftgestaltung", "patrix",
+    "ascendonia", "gshoi", "gsdraw", "gsselect", "gsknife", "gspen",
 ];
 pub const MAX_PHYSICAL_LINES: usize = 599;
 pub const MAX_ESLOC: usize = 400;
@@ -234,7 +235,33 @@ pub fn check_hardcoded_colors_in_source(file_label: &str, source: &str) -> Vec<S
 pub fn check_token_arithmetic_cheating(file_label: &str, source: &str) -> Vec<String> {
     let stripped = strip_comments_and_strings(source);
     let mut violations = Vec::new();
+    let normalized_label = file_label.replace('\\', "/");
+    let is_segmented = normalized_label.contains("src/controls/segmented");
     for (idx, line) in stripped.lines().enumerate() {
+        let compact: String = line.chars().filter(|c| !c.is_whitespace()).collect();
+        for bad_var_math in [
+            "indicator_inset*",
+            "*indicator_inset",
+            "border_width*2.0+border_width",
+            "+border_width;",
+        ] {
+            if compact.contains(bad_var_math) {
+                violations.push(format!(
+                    "{file_label}:{} -> forbidden token variable arithmetic `{bad_var_math}`",
+                    idx + 1
+                ));
+            }
+        }
+        if is_segmented
+            && (compact.contains("border_width*")
+                || compact.contains("*border_width")
+                || compact.contains("convex_polygon("))
+        {
+            violations.push(format!(
+                "{file_label}:{} -> forbidden ad-hoc polygon or border_width arithmetic in segmented control",
+                idx + 1
+            ));
+        }
         if let Some(pos) = line.find(".points()") {
             let after = line[pos + ".points()".len()..].trim_start();
             if after.starts_with('+') || after.starts_with('-') {

@@ -5,6 +5,13 @@ All notable changes to the `egui-macview` crate will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.11] - 2026-11-12
+
+### Added
+- **Clean-Room Apple AppKit `NSSegmentedControl` Vector Icon, Per-Segment Metrics & Menu Gesture Parity (`SegmentItem`, `SegmentEvent`, `SegmentMenuTrigger`)**: Added `SegmentItem::from_symbol`, stateless zero-allocation `SegmentItem::from_icon_fn`, stateful `SegmentItem::from_icon(|painter, icon_rect, tint| ...)`, `Cow<'a, str>` borrowed/owned text & tooltips, per-segment `.with_width(f32)` (`setWidth(_:forSegment:)`), per-segment `.enabled(bool)` (`setEnabled(_:forSegment:)` with keyboard arrow-key skip), orthogonal `.with_menu(bool)` (`setMenu(_:forSegment:)`) vs. `.with_shows_menu_indicator(bool)` (`setShowsMenuIndicator(_:forSegment:)`), analytical subpixel-snapped 2-segment downward menu chevrons, Sonoma active-pill divider suppression, and `PressAndHold` (`250ms`) / `PullDown` (`4.0pt`) / `SecondaryClick` / `Keyboard` menu triggers with `Duration::MAX` idle CPU hygiene.
+- **Tier-1 Accessibility, Keyboard Parity, Momentary Tracking, Pressed Highlight & Stack-Inline Storage (`MacSegmentedControl`, `InlineBuf`)**: Added `.accessibility_label(...)` with lazy zero-cost `AccessKit` (`egui::Role::RadioGroup` / `egui::Role::Toolbar`) metadata, deterministic `.id_salt(impl Hash)`, `MacSegmentedControl::momentary(...)` / `.show_momentary(...)` / `.show_momentary_with_events(...)` (`NSSegmentedSwitchTrackingMomentary`), `ArrowDown` / `Shift+F10` keyboard menu invocation (`SegmentMenuTrigger::Keyboard`), full `show_multi` focus ring + `ArrowLeft`/`ArrowRight` + `Space`/`Enter` keyboard toggling, AppKit `NSSegmentedCell.isHighlighted` depressed segment backdrop (`pressed_highlight_opacity`) with drag-out cancellation, and safe zero-`unsafe` stack-inline storage (`INLINE_SEGMENT_CAPACITY = 8`, `with_custom_segments(impl IntoIterator<Item = SegmentItem<'a>>, usize)`) eliminating per-frame `Vec` heap allocations.
+- **Segmented Control W3C DTCG Tokens & Anti-Token-Arithmetic Guard (`tokens/design_tokens.json`, `SegmentedMetrics`, `tests/architecture_guard_tests.rs`)**: Added `icon_padding`, `divider_vertical_inset`, `menu_chevron_half_width`, `menu_chevron_height`, `menu_chevron_stroke_width`, `menu_chevron_inset_trailing`, `menu_chevron_inset_bottom`, `menu_press_hold_delay`, `menu_drag_threshold`, and `pressed_highlight_opacity` tokens, enforced by AST/source guards banning token variable multiplication and polygon triangle hacks.
+
 ## [0.6.10] - 2026-11-12
 
 ### Added
