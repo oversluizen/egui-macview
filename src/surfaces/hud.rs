@@ -157,10 +157,7 @@ impl<'a> MacFloatingInfoBox<'a> {
                 // Header bar separator & centered title
                 let sep_y = hud_rect.min.y + header_h;
                 painter.line_segment(
-                    [
-                        Pos2::new(hud_rect.min.x, sep_y),
-                        Pos2::new(hud_rect.max.x, sep_y),
-                    ],
+                    [Pos2::new(hud_rect.min.x, sep_y), Pos2::new(hud_rect.max.x, sep_y)],
                     border_stroke,
                 );
                 painter.text(
@@ -178,28 +175,22 @@ impl<'a> MacFloatingInfoBox<'a> {
                     Pos2::new(hud_rect.min.x + side_inset, row1_top),
                     Vec2::new(hud_w - side_inset * 2.0, row_h),
                 );
-                let row2_top = row1_top + row_h + row_gap;
                 let row2_rect = Rect::from_min_size(
-                    Pos2::new(hud_rect.min.x + side_inset, row2_top),
+                    Pos2::new(hud_rect.min.x + side_inset, row1_top + row_h + row_gap),
                     Vec2::new(hud_w - side_inset * 2.0, row_h),
                 );
-
-                let mut row1_ui = ui.new_child(
+                row1(&mut ui.new_child(
                     UiBuilder::new()
                         .id_salt((self.id, "hud_row1"))
                         .max_rect(row1_rect)
                         .layout(Layout::left_to_right(Align::Center)),
-                );
-                row1(&mut row1_ui);
-
-                let mut row2_ui = ui.new_child(
+                ));
+                row2(&mut ui.new_child(
                     UiBuilder::new()
                         .id_salt((self.id, "hud_row2"))
                         .max_rect(row2_rect)
                         .layout(Layout::left_to_right(Align::Center)),
-                );
-                row2(&mut row2_ui);
-
+                ));
                 hud_resp
             })
             .inner
@@ -217,25 +208,17 @@ impl<'a> MacFloatingInfoBox<'a> {
         let theme_cow = MacTheme::resolve(self.theme, ctx);
         let theme_ref: &MacTheme = &theme_cow;
         let hud_id = self.id;
-        let cell_w = theme_ref
-            .text_field()
-            .compact_infobox
-            .default_width
-            .points();
+        let cell_w = theme_ref.text_field().compact_infobox.default_width.points();
         let font_pt = theme_ref.text_field().compact_infobox.font_size.points();
         let label_col = theme_ref.hud_secondary_text();
-
-        let id_x = hud_id.with("hud_x");
-        let id_y = hud_id.with("hud_y");
-        let id_w = hud_id.with("hud_w");
-        let id_h = hud_id.with("hud_h");
-
+        let (id_x, id_y, id_w, id_h) = (
+            hud_id.with("hud_x"),
+            hud_id.with("hud_y"),
+            hud_id.with("hud_w"),
+            hud_id.with("hud_h"),
+        );
         let draw_cell = |ui: &mut Ui, lbl: &str, id: Id, val: &mut String, prev: Id, next: Id| {
-            ui.label(
-                RichText::new(lbl)
-                    .font(FontId::proportional(font_pt))
-                    .color(label_col),
-            );
+            ui.label(RichText::new(lbl).font(FontId::proportional(font_pt)).color(label_col));
             MacInputCell::new(id, val)
                 .theme(theme_ref)
                 .control_size(MacControlSize::CompactInfobox)
@@ -244,7 +227,6 @@ impl<'a> MacFloatingInfoBox<'a> {
                 .next_focus(next)
                 .show(ui);
         };
-
         self.show(
             ctx,
             |r1| {
@@ -256,5 +238,24 @@ impl<'a> MacFloatingInfoBox<'a> {
                 draw_cell(r2, "H", id_h, h_val, id_w, id_x);
             },
         )
+    }
+
+    /// Paints an inline NIB Inspector HUD pill surface (`GSInfoBox*` rounded translucent container).
+    pub fn paint_pill(ui: &mut Ui, rect: Rect, with_header_divider: bool, theme: &MacTheme) {
+        let pm = theme.popover_metrics();
+        let corner_r = pm.hud_corner_radius.points() as u8;
+        let border_w = pm.border_width.points();
+        let header_y = rect.min.y + pm.hud_row_height.points() + pm.hud_row_gap.points() * 0.5;
+        let painter = ui.painter();
+        painter.rect_filled(rect, CornerRadius::same(corner_r), theme.box_background());
+        if with_header_divider && rect.height() > header_y - rect.min.y {
+            painter.line_segment(
+                [
+                    Pos2::new(rect.min.x + border_w, header_y),
+                    Pos2::new(rect.max.x - border_w, header_y),
+                ],
+                Stroke::new(border_w, theme.control_background()),
+            );
+        }
     }
 }

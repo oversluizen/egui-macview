@@ -1,7 +1,7 @@
 //! Advanced AppKit Container & Control geometry metrics tokens (`SPEC-012` & `v0.6.5`).
 
-use super::basic::default_border_width;
 use crate::tokens::dtcg::DimensionValue;
+use crate::tokens::MacDesignTokens;
 use serde::{Deserialize, Serialize};
 
 /// `MacDisclosureGroup` & `MacDisclosureButton` geometry and spring physics metrics.
@@ -47,26 +47,9 @@ pub struct DisclosureGroupMetrics {
 
 impl Default for DisclosureGroupMetrics {
     fn default() -> Self {
-        Self {
-            chevron_size: DimensionValue::from_pt(13.0),
-            label_gap: DimensionValue::from_pt(6.0),
-            button_regular_width: DimensionValue::from_pt(28.0),
-            button_regular_height: DimensionValue::from_pt(26.0),
-            button_regular_intrinsic: DimensionValue::from_pt(20.0),
-            button_small_width: DimensionValue::from_pt(24.0),
-            button_small_height: DimensionValue::from_pt(21.0),
-            button_small_intrinsic: DimensionValue::from_pt(16.0),
-            button_mini_width: DimensionValue::from_pt(19.0),
-            button_mini_height: DimensionValue::from_pt(16.0),
-            button_mini_intrinsic: DimensionValue::from_pt(13.0),
-            spring_mass: DimensionValue::from_pt(1.0),
-            spring_stiffness: DimensionValue::from_pt(300.0),
-            spring_damping: DimensionValue::from_pt(25.0),
-            header_font_size: DimensionValue::from_pt(12.0),
-            trailing_button_size: DimensionValue::from_pt(16.0),
-            trailing_plus_half_span: DimensionValue::from_pt(4.0),
-            trailing_plus_stroke_width: DimensionValue::from_pt(1.4),
-        }
+        MacDesignTokens::default_shared()
+            .disclosure_group_metrics()
+            .clone()
     }
 }
 
@@ -133,36 +116,7 @@ pub struct ComboBoxMetrics {
 
 impl Default for ComboBoxMetrics {
     fn default() -> Self {
-        Self {
-            regular_height: DimensionValue::from_pt(23.0),
-            regular_button_width: DimensionValue::from_pt(27.0),
-            regular_inset: DimensionValue::from_pt(9.0),
-            regular_corner_radius: DimensionValue::from_pt(5.0),
-            small_height: DimensionValue::from_pt(19.0),
-            small_button_width: DimensionValue::from_pt(20.0),
-            small_inset: DimensionValue::from_pt(7.0),
-            small_corner_radius: DimensionValue::from_pt(4.0),
-            mini_height: DimensionValue::from_pt(15.0),
-            mini_button_width: DimensionValue::from_pt(18.0),
-            mini_inset: DimensionValue::from_pt(6.0),
-            mini_corner_radius: DimensionValue::from_pt(3.0),
-            item_height: DimensionValue::from_pt(18.0),
-            visible_items: DimensionValue::from_pt(5.0),
-            intercell_spacing_x: DimensionValue::from_pt(3.0),
-            intercell_spacing_y: DimensionValue::from_pt(2.0),
-            badge_button_width: DimensionValue::from_pt(17.0),
-            button_inset: DimensionValue::from_pt(2.0),
-            button_corner_radius: DimensionValue::from_pt(4.0),
-            chevron_half_width: DimensionValue::from_pt(2.5),
-            chevron_half_height: DimensionValue::from_pt(1.5),
-            chevron_stroke_width: DimensionValue::from_pt(1.3),
-            regular_first_baseline_offset: DimensionValue::from_pt(15.0),
-            small_first_baseline_offset: DimensionValue::from_pt(12.0),
-            mini_first_baseline_offset: DimensionValue::from_pt(11.0),
-            regular_visual_height: DimensionValue::from_pt(20.0),
-            small_visual_height: DimensionValue::from_pt(16.0),
-            mini_visual_height: DimensionValue::from_pt(13.0),
-        }
+        MacDesignTokens::default_shared().combo_box_metrics().clone()
     }
 }
 
@@ -213,28 +167,7 @@ pub struct TabViewMetrics {
 
 impl Default for TabViewMetrics {
     fn default() -> Self {
-        Self {
-            regular_bar_height: DimensionValue::from_pt(24.0),
-            regular_inset_top: DimensionValue::from_pt(33.0),
-            regular_inset_bottom: DimensionValue::from_pt(13.0),
-            regular_inset_horizontal: DimensionValue::from_pt(10.0),
-            small_bar_height: DimensionValue::from_pt(20.0),
-            small_inset_top: DimensionValue::from_pt(25.0),
-            small_inset_bottom: DimensionValue::from_pt(13.0),
-            small_inset_horizontal: DimensionValue::from_pt(10.0),
-            mini_bar_height: DimensionValue::from_pt(15.0),
-            mini_inset_top: DimensionValue::from_pt(19.0),
-            mini_inset_bottom: DimensionValue::from_pt(13.0),
-            mini_inset_horizontal: DimensionValue::from_pt(10.0),
-            corner_radius: DimensionValue::from_pt(5.0),
-            regular_min_width: DimensionValue::from_pt(150.0),
-            regular_min_height: DimensionValue::from_pt(36.0),
-            small_min_width: DimensionValue::from_pt(122.0),
-            small_min_height: DimensionValue::from_pt(28.0),
-            mini_min_width: DimensionValue::from_pt(107.0),
-            mini_min_height: DimensionValue::from_pt(22.0),
-            tab_padding_horizontal: DimensionValue::from_pt(24.0),
-        }
+        MacDesignTokens::default_shared().tab_view_metrics().clone()
     }
 }
 
@@ -251,13 +184,12 @@ pub struct RuleEditorMetrics {
 
 impl Default for RuleEditorMetrics {
     fn default() -> Self {
-        Self {
-            row_height: DimensionValue::from_pt(32.0),
-            add_remove_button_size: DimensionValue::from_pt(20.0),
-            row_horizontal_spacing: DimensionValue::from_pt(8.0),
-        }
+        MacDesignTokens::default_shared()
+            .rule_editor_metrics()
+            .clone()
     }
 }
+
 /// `MacBox` container and separator metrics.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BoxViewMetrics {
@@ -272,7 +204,6 @@ pub struct BoxViewMetrics {
     /// Box corner radius (`5.0 pt`).
     pub corner_radius: DimensionValue,
     /// Box border stroke width (`1.0 pt`).
-    #[serde(default = "default_border_width")]
     pub border_width: DimensionValue,
     /// Separator frame height (`5.0 pt`).
     pub separator_frame_height: DimensionValue,
@@ -281,18 +212,9 @@ pub struct BoxViewMetrics {
     /// Title typography font size (`11.0 pt`).
     pub title_font_size: DimensionValue,
 }
+
 impl Default for BoxViewMetrics {
     fn default() -> Self {
-        Self {
-            inset_top: DimensionValue::from_pt(20.0),
-            inset_bottom: DimensionValue::from_pt(10.0),
-            inset_left: DimensionValue::from_pt(9.0),
-            inset_right: DimensionValue::from_pt(9.0),
-            corner_radius: DimensionValue::from_pt(5.0),
-            border_width: default_border_width(),
-            separator_frame_height: DimensionValue::from_pt(5.0),
-            title_height: DimensionValue::from_pt(14.0),
-            title_font_size: DimensionValue::from_pt(11.0),
-        }
+        MacDesignTokens::default_shared().box_view_metrics().clone()
     }
 }

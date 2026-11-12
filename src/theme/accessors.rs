@@ -54,7 +54,7 @@ impl MacTheme {
                 }
             }
         }
-        crate::tokens::sf_pro_tracking(size_pt)
+        self.typography().tracking_for_size(size_pt as f64) as f32
     }
 
     /// Resolves the `Inter-SemiBold` [`FontId`] when registered in `ui.ctx()`, or falls back

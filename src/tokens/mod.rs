@@ -7,6 +7,7 @@ pub mod color;
 pub mod dtcg;
 pub mod metrics;
 pub mod motion;
+pub mod tag_colors;
 pub mod typography;
 
 pub use color::{MacAppearanceColors, MacColorTokens};
@@ -16,16 +17,18 @@ pub use metrics::{
     CollectionViewMetrics, ColorWellMetrics, ComboBoxMetrics, ContextMenuMetrics,
     DatePickerMetrics, DisclosureGroupMetrics, FocusRingMetrics, FooterMetrics, HelpButtonMetrics,
     InlineActionButtonMetrics, LabelMetrics, LayoutMetrics, LevelIndicatorMetrics,
-    MacControlMetrics, MacMetricsTokens, MenuBarMetrics, NavigationMetrics, OutlineViewMetrics,
-    PaletteMetrics, PathControlMetrics, PlayerViewMetrics, PopUpButtonMetrics, PopoverMetrics,
-    ProgressIndicatorMetrics, ProgressSizeMetrics, RuleEditorMetrics, ScrollViewMetrics,
-    SearchFieldMetrics, SegmentedMetrics, SegmentedSizeMetrics, SliderMetrics, SplitViewMetrics,
-    StackViewMetrics, StepperMetrics, TabViewMetrics, TableViewMetrics, TextFieldMetrics,
-    TextFieldSizeMetrics, ThumbnailCellMetrics, ToastMetrics, ToggleMetrics, TokenFieldMetrics,
-    ToolbarMetrics, TrimScrubberMetrics, CANVAS_FOOTER_HEIGHT, COMMAND_PALETTE_HEIGHT,
-    COMMAND_PALETTE_WIDTH, DEFAULT_TOAST_DURATION,
+    MacControlMetrics, MacMetricsTokens, MenuBarMetrics, NavigationMetrics, OriginMatrixMetrics,
+    OutlineViewMetrics, PaletteMetrics, PathControlMetrics, PlayerViewMetrics, PopUpButtonMetrics,
+    PopoverMetrics, ProgressIndicatorMetrics, ProgressSizeMetrics, RuleEditorMetrics,
+    ScrollViewMetrics, SearchFieldMetrics, SegmentedMetrics, SegmentedSizeMetrics, SliderMetrics,
+    SplitViewMetrics, StackViewMetrics, StepperMetrics, TabViewMetrics, TableActionBarMetrics,
+    TableViewMetrics, TagColorPickerMetrics, TextFieldMetrics, TextFieldSizeMetrics,
+    ThumbnailCellMetrics, ToastMetrics, ToggleMetrics, TokenFieldMetrics, ToolbarMetrics,
+    TrimScrubberMetrics, CANVAS_FOOTER_HEIGHT, COMMAND_PALETTE_HEIGHT, COMMAND_PALETTE_WIDTH,
+    DEFAULT_TOAST_DURATION,
 };
 pub use motion::{MacMotionTokens, MotionPresetToken};
+pub use tag_colors::MacTagLabelColors;
 pub use typography::{
     sf_pro_tracking, CubicCoefficients, CubicFit, MacTypographyTokens, PolynomialSpec001,
     QuadraticCoefficients, QuadraticFit, TrackingPoint, TrackingTableEntry,
@@ -63,18 +66,26 @@ pub struct MacDesignTokens {
 }
 
 impl MacDesignTokens {
+    /// Returns a shared reference to the parsed embedded `tokens/design_tokens.json` catalog.
+    pub fn default_shared() -> &'static Self {
+        static DEFAULT_TOKENS: std::sync::OnceLock<MacDesignTokens> = std::sync::OnceLock::new();
+        DEFAULT_TOKENS.get_or_init(|| {
+            std::thread::Builder::new()
+                .name("mac_token_loader".into())
+                .stack_size(8 * 1024 * 1024)
+                .spawn(|| {
+                    Self::from_json(include_str!("../../tokens/design_tokens.json"))
+                        .expect("Failed to parse embedded tokens/design_tokens.json")
+                })
+                .expect("Failed to spawn token loader thread")
+                .join()
+                .expect("Token loader panicked")
+        })
+    }
+
     /// Loads default design tokens from embedded `tokens/design_tokens.json`.
     pub fn load_default() -> Self {
-        std::thread::Builder::new()
-            .name("mac_token_loader".into())
-            .stack_size(8 * 1024 * 1024)
-            .spawn(|| {
-                Self::from_json(include_str!("../../tokens/design_tokens.json"))
-                    .expect("Failed to parse embedded tokens/design_tokens.json")
-            })
-            .expect("Failed to spawn token loader thread")
-            .join()
-            .expect("Token loader panicked")
+        Self::default_shared().clone()
     }
 
     /// Deserializes `MacDesignTokens` from a JSON string.
@@ -199,6 +210,15 @@ impl MacDesignTokens {
     /// Accesses inline action button metrics tokens.
     #[inline]
     pub fn inline_action_button_metrics(&self) -> &InlineActionButtonMetrics { &self.macview.metrics.control.inline_action_button }
+    /// Accesses `3x3` origin matrix metrics tokens.
+    #[inline]
+    pub fn origin_matrix_metrics(&self) -> &OriginMatrixMetrics { &self.macview.metrics.control.origin_matrix }
+    /// Accesses tag color picker metrics tokens.
+    #[inline]
+    pub fn tag_color_picker_metrics(&self) -> &TagColorPickerMetrics { &self.macview.metrics.control.tag_color_picker }
+    /// Accesses table action bar metrics tokens.
+    #[inline]
+    pub fn table_action_bar_metrics(&self) -> &TableActionBarMetrics { &self.macview.metrics.control.table_action_bar }
     /// Accesses semantic color tokens.
     #[inline]
     pub fn colors(&self) -> &MacColorTokens { &self.macview.color }

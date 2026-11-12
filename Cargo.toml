@@ -1,6 +1,6 @@
 [package]
 name = "egui-macview"
-version = "0.6.8"
+version = "0.6.10"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 authors = ["Jaco Oversluizen", "egui-macview contributors"]
@@ -122,5 +122,15 @@ path = "tests/spec012_appkit_and_battery_parity_tests.rs"
 name = "appkit_v065_nib_parity_tests"
 path = "tests/appkit_v065_nib_parity_tests.rs"
 
+[[test]]
+name = "appkit_v069_pro_controls_tests"
+path = "tests/appkit_v069_pro_controls_tests.rs"
 
+[[test]]
+name = "appkit_v0610_nib_controls_tests"
+path = "tests/appkit_v0610_nib_controls_tests.rs"
+
+[[test]]
+name = "table_and_scrubber_focus_tests"
+path = "tests/table_and_scrubber_focus_tests.rs"
 

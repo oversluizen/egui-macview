@@ -1,7 +1,7 @@
 //! Studio, Timeline, and Publishing AppKit/AVKit control geometry metrics tokens (SPEC-011).
 
 use crate::tokens::dtcg::DimensionValue;
-use crate::tokens::metrics::controls::basic::default_border_width;
+use crate::tokens::MacDesignTokens;
 use serde::{Deserialize, Serialize};
 
 /// Per-size geometry metrics for `NSProgressIndicator` (`Regular`, `Small`, `Mini`).
@@ -17,18 +17,6 @@ pub struct ProgressSizeMetrics {
     pub spoke_width: DimensionValue,
     /// Typography font size for optional status/percentage label.
     pub font_size: DimensionValue,
-}
-
-impl ProgressSizeMetrics {
-    fn new(bar_h: f32, bar_r: f32, spin_sz: f32, spoke_w: f32, font_sz: f32) -> Self {
-        Self {
-            bar_height: DimensionValue::from_pt(bar_h),
-            bar_corner_radius: DimensionValue::from_pt(bar_r),
-            spinner_size: DimensionValue::from_pt(spin_sz),
-            spoke_width: DimensionValue::from_pt(spoke_w),
-            font_size: DimensionValue::from_pt(font_sz),
-        }
-    }
 }
 
 /// `NSProgressIndicator` metrics across `Regular`, `Small`, and `Mini` control sizes.
@@ -55,7 +43,6 @@ pub struct ProgressIndicatorMetrics {
     /// Spacing between indicator and optional label.
     pub label_spacing: DimensionValue,
     /// Hairline track border stroke width.
-    #[serde(default = "default_border_width")]
     pub border_width: DimensionValue,
     /// Full circle angle $2\pi$ in radians.
     pub tau_radians: DimensionValue,
@@ -67,22 +54,9 @@ pub struct ProgressIndicatorMetrics {
 
 impl Default for ProgressIndicatorMetrics {
     fn default() -> Self {
-        Self {
-            regular: ProgressSizeMetrics::new(6.0, 3.0, 32.0, 2.5, 12.0),
-            small: ProgressSizeMetrics::new(4.0, 2.0, 16.0, 1.6, 11.0),
-            mini: ProgressSizeMetrics::new(4.0, 2.0, 12.0, 1.2, 9.0),
-            default_bar_width: DimensionValue::from_pt(160.0),
-            spoke_count: DimensionValue::from_pt(12.0),
-            spoke_inner_ratio: DimensionValue::from_pt(0.52),
-            indeterminate_pill_ratio: DimensionValue::from_pt(0.35),
-            spin_speed_hz: DimensionValue::from_pt(1.0),
-            bar_indeterminate_speed: DimensionValue::from_pt(1.2),
-            label_spacing: DimensionValue::from_pt(6.0),
-            border_width: default_border_width(),
-            tau_radians: DimensionValue::from_pt(6.283_185_5),
-            min_spoke_alpha: DimensionValue::from_pt(0.18),
-            percentage_scale: DimensionValue::from_pt(100.0),
-        }
+        MacDesignTokens::default_shared()
+            .progress_indicator_metrics()
+            .clone()
     }
 }
 
@@ -117,20 +91,7 @@ pub struct TableViewMetrics {
 
 impl Default for TableViewMetrics {
     fn default() -> Self {
-        Self {
-            header_height: DimensionValue::from_pt(28.0),
-            row_height: DimensionValue::from_pt(24.0),
-            cell_padding_horizontal: DimensionValue::from_pt(8.0),
-            cell_padding_vertical: DimensionValue::from_pt(2.0),
-            header_font_size: DimensionValue::from_pt(11.0),
-            cell_font_size: DimensionValue::from_pt(12.0),
-            sort_chevron_size: DimensionValue::from_pt(8.0),
-            sort_chevron_spacing: DimensionValue::from_pt(6.0),
-            separator_width: DimensionValue::from_pt(1.0),
-            header_divider_inset: DimensionValue::from_pt(4.0),
-            corner_radius: DimensionValue::from_pt(6.0),
-            row_corner_radius: DimensionValue::from_pt(4.0),
-        }
+        MacDesignTokens::default_shared().table_view_metrics().clone()
     }
 }
 
@@ -177,26 +138,7 @@ pub struct TokenFieldMetrics {
 
 impl Default for TokenFieldMetrics {
     fn default() -> Self {
-        Self {
-            min_height: DimensionValue::from_pt(22.0),
-            corner_radius: DimensionValue::from_pt(6.0),
-            border_width: DimensionValue::from_pt(1.0),
-            padding_horizontal: DimensionValue::from_pt(6.0),
-            padding_vertical: DimensionValue::from_pt(3.0),
-            pill_height: DimensionValue::from_pt(16.0),
-            pill_corner_radius: DimensionValue::from_pt(8.0),
-            pill_padding_horizontal: DimensionValue::from_pt(6.0),
-            pill_spacing: DimensionValue::from_pt(4.0),
-            row_spacing: DimensionValue::from_pt(4.0),
-            font_size: DimensionValue::from_pt(12.0),
-            counter_font_size: DimensionValue::from_pt(10.0),
-            remove_icon_size: DimensionValue::from_pt(12.0),
-            remove_icon_stroke: DimensionValue::from_pt(1.2),
-            remove_cross_span: DimensionValue::from_pt(2.5),
-            min_input_width: DimensionValue::from_pt(64.0),
-            default_width: DimensionValue::from_pt(240.0),
-            counter_row_height: DimensionValue::from_pt(14.0),
-        }
+        MacDesignTokens::default_shared().token_field_metrics().clone()
     }
 }
 
@@ -225,17 +167,9 @@ pub struct LevelIndicatorMetrics {
 
 impl Default for LevelIndicatorMetrics {
     fn default() -> Self {
-        Self {
-            default_length: DimensionValue::from_pt(160.0),
-            thickness: DimensionValue::from_pt(16.0),
-            corner_radius: DimensionValue::from_pt(3.0),
-            segment_corner_radius: DimensionValue::from_pt(1.5),
-            segment_spacing: DimensionValue::from_pt(2.0),
-            default_segment_count: DimensionValue::from_pt(12.0),
-            border_width: DimensionValue::from_pt(1.0),
-            peak_line_width: DimensionValue::from_pt(2.0),
-            track_inset: DimensionValue::from_pt(1.5),
-        }
+        MacDesignTokens::default_shared()
+            .level_indicator_metrics()
+            .clone()
     }
 }
 
@@ -286,28 +220,9 @@ pub struct TrimScrubberMetrics {
 
 impl Default for TrimScrubberMetrics {
     fn default() -> Self {
-        Self {
-            height: DimensionValue::from_pt(44.0),
-            default_width: DimensionValue::from_pt(320.0),
-            track_inset_vertical: DimensionValue::from_pt(8.0),
-            corner_radius: DimensionValue::from_pt(6.0),
-            handle_width: DimensionValue::from_pt(12.0),
-            handle_slot_width: DimensionValue::from_pt(1.0),
-            handle_slot_height: DimensionValue::from_pt(10.0),
-            selection_border_width: DimensionValue::from_pt(2.0),
-            playhead_width: DimensionValue::from_pt(2.0),
-            playhead_hit_width: DimensionValue::from_pt(12.0),
-            badge_height: DimensionValue::from_pt(14.0),
-            badge_padding_horizontal: DimensionValue::from_pt(6.0),
-            badge_corner_radius: DimensionValue::from_pt(7.0),
-            badge_font_size: DimensionValue::from_pt(11.0),
-            zone_font_size: DimensionValue::from_pt(9.0),
-            zone_label_padding: DimensionValue::from_pt(4.0),
-            waveform_bar_width: DimensionValue::from_pt(2.0),
-            waveform_min_amplitude: DimensionValue::from_pt(0.08),
-            seconds_per_minute: DimensionValue::from_pt(60.0),
-            tenths_per_second: DimensionValue::from_pt(10.0),
-        }
+        MacDesignTokens::default_shared()
+            .trim_scrubber_metrics()
+            .clone()
     }
 }
 
@@ -348,22 +263,8 @@ pub struct PathControlMetrics {
 
 impl Default for PathControlMetrics {
     fn default() -> Self {
-        Self {
-            height: DimensionValue::from_pt(22.0),
-            corner_radius: DimensionValue::from_pt(5.0),
-            segment_corner_radius: DimensionValue::from_pt(4.0),
-            padding_horizontal: DimensionValue::from_pt(6.0),
-            segment_padding_horizontal: DimensionValue::from_pt(5.0),
-            segment_spacing: DimensionValue::from_pt(2.0),
-            icon_size: DimensionValue::from_pt(16.0),
-            icon_spacing: DimensionValue::from_pt(4.0),
-            chevron_size: DimensionValue::from_pt(8.0),
-            font_size: DimensionValue::from_pt(11.0),
-            border_width: DimensionValue::from_pt(1.0),
-            choose_button_padding: DimensionValue::from_pt(8.0),
-            choose_button_height: DimensionValue::from_pt(18.0),
-            folder_tab_width: DimensionValue::from_pt(5.0),
-            folder_tab_height: DimensionValue::from_pt(2.0),
-        }
+        MacDesignTokens::default_shared()
+            .path_control_metrics()
+            .clone()
     }
 }

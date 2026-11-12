@@ -6,6 +6,7 @@ use std::sync::{Arc, OnceLock};
 
 pub mod accessors;
 pub mod contrast;
+pub mod pro_accessors;
 pub use contrast::{
     alpha_composite, contrast_ratio, ensure_wcag_contrast, plus_darker, plus_lighter,
     relative_luminance, srgb_channel_to_linear, MacBackgroundStyle,

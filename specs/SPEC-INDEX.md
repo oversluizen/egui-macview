@@ -4,9 +4,9 @@
 | :--- | :--- |
 | **Document ID** | SPEC-INDEX |
 | **Document Title** | Specification Suite Index & Version Matrix |
-| **Document Version** | `0.6.8` |
+| **Document Version** | `0.6.10` |
 | **Status** | Accepted / Normative |
-| **Target Milestone** | Milestone 0.6.8 |
+| **Target Milestone** | Milestone 0.6.10 |
 | **Target Host** | Standalone crate `egui-macview` (Rust, egui 0.37) |
 | **Author** | Jaco Oversluizen / `egui-macview` contributors |
 | **Normative Standards** | ISO/IEC/IEEE 42010:2011, ISO/IEC/IEEE 29119-3:2021, RFC 2119/8174, Apple macOS HIG, W3C DTCG, SemVer 2.0.0 |
@@ -33,12 +33,14 @@
 | `0.6.6` | 2026-11-11 | Architecture Team | Milestone 0.6.6 Release: MacBook Air `NSTextFieldSquareBezel` Corner-Radius Parity (`2.0pt`/`1.5pt`), WCAG 2.1 AA Aqua `secondary_label` Contrast Hardening (`#5A5A5F`), `MacPopUpButton::accent_badge(bool)` & Zero-Allocation Typography Lookup |
 | `0.6.7` | 2026-11-11 | Architecture Team | Milestone 0.6.7 Release: Dynamic AppKit Vibrancy (`plus_darker` / `plus_lighter`) & Surface-Aware WCAG 2.1 AA Contrast Engine (`ensure_wcag_contrast`, `label_on`, `secondary_label_on`, `tertiary_label_on`, `active_surface`, `with_surface`) |
 | `0.6.8` | 2026-11-11 | Architecture Team | Milestone 0.6.8 Release: Zero-Allocation Per-Pass Geometric Surface Registry (`register_surface_rect`, `active_surface_at`) for Flat NIB `.fixed_rect` Layouts & Automated Surface-Aware Vibrancy Architecture Guard |
+| `0.6.9` | 2026-11-11 | Architecture Team | Milestone 0.6.9 Release: AppKit Pro-Inspector Controls (`MacOriginMatrix`, `MacTagColorPicker`, `MacTableActionBar`) & Semantic Tag Label Colors (`MacTagLabelColors`) |
+| `0.6.10` | 2026-11-12 | Architecture Team | Milestone 0.6.10 Release: AppKit NIB Control Properties (`MacSlider::tick_marks`, `MacControlSize` across `MacInputCell`/`MacCheckbox`/`MacRadioButton`/`MacPopUpButton`/`MacButtonCell`, `MacSegmentedControl::small_square` & `show_multi`, `MacTagColorPicker::rows`/`dot_size`/`spacing`, `MacPopoverSurface`) & Full `src/` Hardcoding Guard |
 
 ---
 
 ## 1. Specification Suite Structure
 
-The `egui-macview` specification suite provides the formal normative requirements, mathematical foundations, MVC abstractions, and test oracles for the entire crate. Every specification in this directory runs strictly in lockstep with the crate release version (`0.6.8`).
+The `egui-macview` specification suite provides the formal normative requirements, mathematical foundations, MVC abstractions, and test oracles for the entire crate. Every specification in this directory runs strictly in lockstep with the crate release version (`0.6.10`).
 
 | Spec ID | Document Title | Version | Status | Primary Test Suite |
 | :--- | :--- | :--- | :--- | :--- |
@@ -55,7 +57,7 @@ The `egui-macview` specification suite provides the formal normative requirement
 | [**SPEC-009**](SPEC-009-CROSS-PLATFORM-DIFFERENTIAL-HARNESS.md) | Cross-Platform Parity and Remote Differential Testing Harness | `0.3.0` | Accepted / Normative | `tests/macbook_parity_differential_tests.rs` |
 | [**SPEC-010**](SPEC-010-INTERACTIVE-GALLERY-CONTROLS-AND-ICONOGRAPHY.md) | Interactive Gallery Controls, Bidirectional State Binding & Iconography Parity | `0.3.1` | Accepted / Normative | `tests/micro_animations_and_hud_tests.rs`, `tests/symbol_tests.rs` |
 | [**SPEC-011**](SPEC-011-STUDIO-AND-AVKIT-CONTROLS.md) | Studio & AVKit Media, Timeline and Publishing Controls | `0.5.0` | Accepted / Normative | `tests/studio_controls_v05_tests.rs`, `tests/zero_hardcoding_and_primitive_tests.rs` |
-| [**SPEC-012**](SPEC-012-ADVANCED-MEDIA-SCHEDULING-AND-GRID-CONTROLS.md) | Advanced Media, Scheduling, and Grid Controls | `0.6.8` | Accepted / Normative | `tests/spec012_advanced_controls_tests.rs`, `tests/spec012_appkit_and_battery_parity_tests.rs`, `tests/appkit_v065_nib_parity_tests.rs` |
+| [**SPEC-012**](SPEC-012-ADVANCED-MEDIA-SCHEDULING-AND-GRID-CONTROLS.md) | Advanced Media, Scheduling, and Grid Controls | `0.6.10` | Accepted / Normative | `tests/spec012_advanced_controls_tests.rs`, `tests/spec012_appkit_and_battery_parity_tests.rs`, `tests/appkit_v065_nib_parity_tests.rs`, `tests/appkit_v069_pro_controls_tests.rs`, `tests/appkit_v0610_nib_controls_tests.rs` |
 
 ---
 
@@ -128,6 +130,8 @@ All core specifications in this repository maintain exact version parity with th
 | **v0.6.6** | `0.6.6` | 2026-11-11 | Milestone 0.6.6 release: Physical MacBook Air (`macOS Sonoma 14.8.9`) `NSTextFieldSquareBezel` corner-radius parity (`2.0pt` for `Regular`/`Small`/`CompactInfobox`, `1.5pt` for `Mini`), WCAG 2.1 AA Aqua `secondary_label` contrast hardening (`#5A5A5F`, `5.48:1` on `MacBox`), `MacHelpButton` (`12pt`/`10pt`/`9pt` `Inter-SemiBold`), `MacPopUpButton::accent_badge(bool)`, and zero-allocation `tracking_for_font_size` & `semibold_font_id` lookups. |
 | **v0.6.7** | `0.6.7` | 2026-11-11 | Milestone 0.6.7 release: Dynamic AppKit Vibrancy (`plus_darker` in Light mode / `plus_lighter` in Dark mode) & Surface-Aware WCAG 2.1 AA Contrast Engine (`ensure_wcag_contrast`, `MacTheme::label_on`, `secondary_label_on`, `tertiary_label_on`, `active_surface`, `with_surface`) automatically resolving `MacLabel`, `MacDisclosureGroup`, `MacCheckbox`, and `MacInlineActionButton` foreground colors on `MacBox` (`box_background`), `MacCard`, and custom container surfaces with zero per-frame heap allocations. |
 | **v0.6.8** | `0.6.8` | 2026-11-11 | Milestone 0.6.8 release: Zero-allocation per-pass geometric surface registry (`MacTheme::register_surface_rect`, `MacTheme::active_surface_at`) so both closure-nested (`MacBox::show`, `MacCard::show`) and flat NIB `.fixed_rect` peer controls (`MacLabel`, `MacCheckbox`, `MacDisclosureGroup`, `MacInlineActionButton` placed over `MacBox::paint_at` or `MacBox::show`) automatically detect their container surface, permanently guarded by `test_guard_surface_aware_vibrancy_anchoring` in `tests/architecture_guard_tests.rs`. |
+| **v0.6.9** | `0.6.9` | 2026-11-11 | Milestone 0.6.9 release: AppKit Pro-Inspector controls (`MacOriginMatrix`, `MacTagColorPicker`, `MacTableActionBar`) and semantic tag label colors (`MacTagLabelColors`), verified by `tests/appkit_v069_pro_controls_tests.rs`. |
+| **v0.6.10** | `0.6.10` | 2026-11-12 | Milestone 0.6.10 release: Five AppKit NIB properties (`MacSlider::tick_marks` with `4.0pt` neutral track, `1.0x4.0pt` tick marks at `3.0pt` offset, and `7.0x15.0pt` vertical pill thumb; `MacControlSize` across `MacInputCell`, `MacCheckbox`, `MacRadioButton`, `MacPopUpButton`, and `MacButtonCell`; `MacSegmentedControl::small_square` & `.show_multi`; `MacTagColorPicker::rows`, `.dot_size`, and `.spacing`; `MacPopoverSurface`) plus full `src/` hardcoding and `MacNibPrimitives` guard, verified by `tests/appkit_v0610_nib_controls_tests.rs`. |
 
 ---
 

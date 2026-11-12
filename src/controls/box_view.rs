@@ -234,4 +234,18 @@ impl<'a> MacBox<'a> {
 
         response
     }
+
+    /// Paints a horizontal or vertical hairline separator at an exact NIB `rect`.
+    pub fn separator_at(ui: &mut Ui, rect: Rect, theme: &MacTheme) {
+        let border_w = theme.box_view().border_width.points();
+        let stroke = Stroke::new(border_w, theme.separator());
+        let painter = ui.painter();
+        if rect.width() >= rect.height() {
+            let cy = rect.center().y;
+            painter.line_segment([Pos2::new(rect.min.x, cy), Pos2::new(rect.max.x, cy)], stroke);
+        } else {
+            let cx = rect.center().x;
+            painter.line_segment([Pos2::new(cx, rect.min.y), Pos2::new(cx, rect.max.y)], stroke);
+        }
+    }
 }

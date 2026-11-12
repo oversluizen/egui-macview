@@ -16,6 +16,7 @@ pub mod state4_publish;
 pub mod state5_avkit_media;
 pub mod state5_meters;
 pub mod state6_advanced_controls;
+pub mod state6_pro_controls;
 pub mod types;
 pub mod video_scene;
 

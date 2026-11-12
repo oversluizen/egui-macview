@@ -1,7 +1,7 @@
 //! AppKit NIB primitive control tokens (`MacCheckbox`, `MacLabel`, `MacHelpButton`, `MacInlineActionButton`).
 
-use super::basic::default_border_width;
 use crate::tokens::dtcg::DimensionValue;
+use crate::tokens::MacDesignTokens;
 use serde::{Deserialize, Serialize};
 
 /// Size-specific geometry tokens for `MacCheckbox` (`NSButtonTypeSwitch`).
@@ -31,7 +31,6 @@ pub struct CheckboxMetrics {
     /// Mini size tier (`10x10pt` box, `9pt` font).
     pub mini: CheckboxSizeMetrics,
     /// Unchecked box border stroke width (`1.0pt`).
-    #[serde(default = "default_border_width")]
     pub border_width: DimensionValue,
     /// Checkmark start vertex normalized X (`0.24`).
     pub check_p1_x: DimensionValue,
@@ -51,40 +50,7 @@ pub struct CheckboxMetrics {
 
 impl Default for CheckboxMetrics {
     fn default() -> Self {
-        Self {
-            regular: CheckboxSizeMetrics {
-                box_size: DimensionValue::from_pt(14.0),
-                corner_radius: DimensionValue::from_pt(3.5),
-                label_gap: DimensionValue::from_pt(6.0),
-                font_size: DimensionValue::from_pt(13.0),
-                checkmark_stroke: DimensionValue::from_pt(1.6),
-                first_baseline_offset_from_top: DimensionValue::from_pt(13.0),
-            },
-            small: CheckboxSizeMetrics {
-                box_size: DimensionValue::from_pt(12.0),
-                corner_radius: DimensionValue::from_pt(3.0),
-                label_gap: DimensionValue::from_pt(5.0),
-                font_size: DimensionValue::from_pt(11.0),
-                checkmark_stroke: DimensionValue::from_pt(1.4),
-                first_baseline_offset_from_top: DimensionValue::from_pt(11.0),
-            },
-            mini: CheckboxSizeMetrics {
-                box_size: DimensionValue::from_pt(10.0),
-                corner_radius: DimensionValue::from_pt(2.5),
-                label_gap: DimensionValue::from_pt(4.0),
-                font_size: DimensionValue::from_pt(9.0),
-                checkmark_stroke: DimensionValue::from_pt(1.2),
-                first_baseline_offset_from_top: DimensionValue::from_pt(9.0),
-            },
-            border_width: default_border_width(),
-            check_p1_x: DimensionValue::from_pt(0.24),
-            check_p1_y: DimensionValue::from_pt(0.52),
-            check_p2_x: DimensionValue::from_pt(0.43),
-            check_p2_y: DimensionValue::from_pt(0.72),
-            check_p3_x: DimensionValue::from_pt(0.76),
-            check_p3_y: DimensionValue::from_pt(0.28),
-            mixed_bar_inset_ratio: DimensionValue::from_pt(0.24),
-        }
+        MacDesignTokens::default_shared().checkbox_metrics().clone()
     }
 }
 
@@ -138,58 +104,16 @@ pub struct LabelMetrics {
     /// Subpixel faux-bold offset for Bold weight (`0.55pt`).
     pub bold_stroke_boost: DimensionValue,
     /// WCAG 2.1 Level AA minimum contrast ratio for primary and secondary labels (`4.5`).
-    #[serde(default = "default_wcag_aa_normal_ratio")]
     pub wcag_aa_normal_ratio: DimensionValue,
     /// WCAG 2.1 Level AA minimum contrast ratio for tertiary and disabled labels (`3.0`).
-    #[serde(default = "default_wcag_aa_large_ratio")]
     pub wcag_aa_large_ratio: DimensionValue,
     /// AppKit `PlusDarker` / `PlusLighter` surface delta gain factor (`1.0`).
-    #[serde(default = "default_vibrancy_gain")]
     pub vibrancy_gain: DimensionValue,
-}
-
-fn default_wcag_aa_normal_ratio() -> DimensionValue {
-    DimensionValue::from_pt(4.5)
-}
-
-fn default_wcag_aa_large_ratio() -> DimensionValue {
-    DimensionValue::from_pt(3.0)
-}
-
-fn default_vibrancy_gain() -> DimensionValue {
-    DimensionValue::from_pt(1.0)
 }
 
 impl Default for LabelMetrics {
     fn default() -> Self {
-        Self {
-            regular_font_size: DimensionValue::from_pt(13.0),
-            regular_height: DimensionValue::from_pt(16.0),
-            regular_baseline_from_top: DimensionValue::from_pt(13.0),
-            regular_baseline_from_bottom: DimensionValue::from_pt(3.0),
-            regular_ascender: DimensionValue::from_pt(12.57),
-            regular_descender: DimensionValue::from_pt(-2.74),
-            regular_cap_height: DimensionValue::from_pt(9.16),
-            small_font_size: DimensionValue::from_pt(11.0),
-            small_height: DimensionValue::from_pt(14.0),
-            small_baseline_from_top: DimensionValue::from_pt(11.0),
-            small_baseline_from_bottom: DimensionValue::from_pt(3.0),
-            small_ascender: DimensionValue::from_pt(10.63),
-            small_descender: DimensionValue::from_pt(-2.32),
-            small_cap_height: DimensionValue::from_pt(7.75),
-            mini_font_size: DimensionValue::from_pt(9.0),
-            mini_height: DimensionValue::from_pt(11.0),
-            mini_baseline_from_top: DimensionValue::from_pt(10.0),
-            mini_baseline_from_bottom: DimensionValue::from_pt(2.0),
-            mini_ascender: DimensionValue::from_pt(8.70),
-            mini_descender: DimensionValue::from_pt(-1.90),
-            mini_cap_height: DimensionValue::from_pt(6.34),
-            semibold_stroke_boost: DimensionValue::from_pt(0.35),
-            bold_stroke_boost: DimensionValue::from_pt(0.55),
-            wcag_aa_normal_ratio: default_wcag_aa_normal_ratio(),
-            wcag_aa_large_ratio: default_wcag_aa_large_ratio(),
-            vibrancy_gain: default_vibrancy_gain(),
-        }
+        MacDesignTokens::default_shared().label_metrics().clone()
     }
 }
 
@@ -216,16 +140,9 @@ pub struct HelpButtonMetrics {
 
 impl Default for HelpButtonMetrics {
     fn default() -> Self {
-        Self {
-            diameter: DimensionValue::from_pt(20.0),
-            small_diameter: DimensionValue::from_pt(16.0),
-            mini_diameter: DimensionValue::from_pt(13.0),
-            font_size: DimensionValue::from_pt(12.0),
-            small_font_size: DimensionValue::from_pt(10.0),
-            mini_font_size: DimensionValue::from_pt(9.0),
-            border_width: DimensionValue::from_pt(1.0),
-            shadow_offset_y: DimensionValue::from_pt(1.0),
-        }
+        MacDesignTokens::default_shared()
+            .help_button_metrics()
+            .clone()
     }
 }
 
@@ -244,11 +161,8 @@ pub struct InlineActionButtonMetrics {
 
 impl Default for InlineActionButtonMetrics {
     fn default() -> Self {
-        Self {
-            diameter: DimensionValue::from_pt(16.0),
-            icon_size: DimensionValue::from_pt(10.0),
-            border_width: DimensionValue::from_pt(1.0),
-            icon_stroke_width: DimensionValue::from_pt(1.3),
-        }
+        MacDesignTokens::default_shared()
+            .inline_action_button_metrics()
+            .clone()
     }
 }

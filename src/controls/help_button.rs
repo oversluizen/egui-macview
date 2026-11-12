@@ -110,6 +110,7 @@ impl<'a> Widget for MacHelpButton<'a> {
         let (rect, response) = if let Some(fixed) = self.fixed_rect {
             let snapped = subpixel_snap_rect(fixed, ppp);
             let id = ui.next_auto_id().with("mac_help_btn_fixed");
+            ui.skip_ahead_auto_ids(1);
             (snapped, ui.interact(snapped, id, sense))
         } else {
             let (r, resp) = ui.allocate_exact_size(Vec2::splat(diam), sense);
@@ -236,6 +237,7 @@ impl<'a> Widget for MacInlineActionButton<'a> {
         let (rect, response) = if let Some(fixed) = self.fixed_rect {
             let snapped = subpixel_snap_rect(fixed, ppp);
             let id = ui.next_auto_id().with("mac_inline_action_fixed");
+            ui.skip_ahead_auto_ids(1);
             (snapped, ui.interact(snapped, id, sense))
         } else {
             let (r, resp) = ui.allocate_exact_size(Vec2::splat(diam), sense);

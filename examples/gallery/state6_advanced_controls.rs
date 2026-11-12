@@ -269,6 +269,16 @@ impl CenterState {
                                 .theme(theme)
                                 .show(r_ui);
                         });
+
+                        MacBox::separator(ui);
+                        super::state6_pro_controls::render_state6_pro_controls(
+                            ui,
+                            theme,
+                            &mut self.v069_origin_anchor,
+                            &mut self.v069_tag_color,
+                            &mut self.v069_action_items,
+                            toasts,
+                        );
                     });
                 });
         });

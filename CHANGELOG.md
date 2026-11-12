@@ -5,6 +5,23 @@ All notable changes to the `egui-macview` crate will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.10] - 2026-11-12
+
+### Added
+- **AppKit `NSSlider.numberOfTickMarks` Ticked Slider Mode (`MacSlider::tick_marks`, `MacSlider::fixed_rect`, `MacSlider::control_size`)**: When `tick_marks > 0`, `MacSlider` renders a `4.0pt` neutral track (`slider_track_bg` / `slider_track_border`) without blue accent fill, `count` evenly spaced vertical tick marks (`1.0x4.0pt` at `3.0pt` offset below the track in `slider_tick_mark`), and an AppKit vertical pill/pointer thumb (`7.0x15.0pt`, `3.5pt` corner radius in `slider_thumb_bg` / `slider_thumb_border`).
+- **Complete `MacControlSize` (`Regular`, `Small`, `Mini`) Coverage Across NIB Controls (`MacInputCell`, `MacCheckbox`, `MacRadioButton`, `MacPopUpButton`, `MacButtonCell`)**: Promoted `MacRadioButton` to a first-class AppKit radio button struct (`NSButtonTypeRadio`, circular `14/12/10pt` button with inner dot) and wired `.control_size(MacControlSize)` across `MacButtonCell` (`22/18/15pt` height, `13/11/9pt` font) and `MacPopUpButton` (`22/18/15pt` height, `13/11/9pt` font).
+- **AppKit `NSSegmentedControl` `.small_square()` Style & `.show_multi(...)` (`NSSegmentedSwitchTrackingSelectAny`)**: Added `.small_square()`, `.show_multi(ui, active_states)`, `.fixed_rect(Rect)`, and `.control_size(MacControlSize)` to `MacSegmentedControl` for contiguous `2.0pt`-cornered multi-toggle inspector strips with `1.0pt` borders and dividers.
+- **Multi-Row `MacTagColorPicker` Inspector Sidebar Layout (`.rows(usize)`, `.dot_size(f32)`, `.spacing(f32, f32)`)**: Added multi-row grid layout (e.g. `.rows(2)` producing 2 rows of 6 columns across the 12 semantic tag swatches) with configurable dot diameter and column/row spacing.
+- **AppKit `NSPopover` Container Surface (`MacPopoverSurface`)**: Added `MacPopoverSurface` in `src/surfaces/` rendering a `popover_background` panel with `8.0pt` corner radius and `1.0pt` `popover_border`, supporting `.fixed_rect(Rect)`, `.paint_at(ui, rect)`, `.show(ui, ...)`, and surface-aware vibrancy registration.
+- **Repository-Wide `src/` Hardcoding & `MacNibPrimitives` Guard (`tests/zero_hardcoding_and_primitive_tests.rs`, `tests/architecture_guard_tests.rs`)**: Expanded automated COTS guards to scan every subdirectory of `src/` for forbidden `Color32::from_rgb`, `Color32::from_rgba`, `from_hex`, raw `[u8; 3]` color arrays, and `MacNibPrimitives`.
+
+## [0.6.9] - 2026-11-11
+
+### Added
+- **AppKit Pro-Inspector Transform Origin Matrix (`MacOriginAnchor`, `MacOriginMatrix`, `OriginMatrixMetrics`)**: Added `3x3` 9-point transform origin / anchor pin grid supporting both `MacOriginAnchor` and `usize` (`from_index`) bindings, `Regular` (`34pt`) / `Small` (`28pt`) / `Mini` (`22pt`) control sizes, `.fixed_rect(Rect)`, pointer click selection, and keyboard arrow-key navigation.
+- **macOS Finder / AppKit Tag Color Swatch Picker (`MacTagColorPicker`, `TagColorPickerMetrics`, `MacTagLabelColors`)**: Added 12-slot semantic label swatch picker (`Red`, `Orange`, `Brown`, `Yellow`, `LightGreen`, `DarkGreen`, `Cyan`, `Blue`, `Purple`, `Magenta`, `Gray`, plus `Clear`/`None` cross swatch) supporting `1x12`, `2x6`, and custom column/palette configurations.
+- **AppKit `NSBezelStyleSmallSquare` Table Action Bar (`MacTableActionBar`, `MacTableActionResponse`, `TableActionBarMetrics`)**: Added bottom table/list `[ + | - | action ]` strip supporting `.can_add(bool)`, `.can_remove(bool)`, `.with_action_menu(bool)`, and `.fill_remaining_strip(bool)`.
+
 ## [0.6.8] - 2026-11-11
 
 ### Added

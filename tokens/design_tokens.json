@@ -1,6 +1,6 @@
 {
   "$name": "egui-macview Design Tokens",
-  "$version": "0.6.8",
+  "$version": "0.6.10",
   "$description": "W3C DTCG-compliant design token catalog for egui-macview. Fully grounded in Apple AppKit, macOS Human Interface Guidelines, Apple Typography specifications, and CoreAnimation spring physics.",
   "macview": {
     "metrics": {
@@ -436,6 +436,36 @@
                 "apple_citation": "AppKit NSButton bezel border"
               }
             }
+          },
+          "mini": {
+            "height": {
+              "$type": "dimension",
+              "$value": "15.0pt",
+              "$description": "Miniature macOS push button height for NSControlSize.mini.",
+              "$extensions": {
+                "apple_citation": "Apple AppKit NSButton NSControlSizeMini"
+              }
+            },
+            "corner_radius": {
+              "$type": "dimension",
+              "$value": "3.5pt",
+              "$description": "Corner radius for mini push buttons."
+            },
+            "padding_horizontal": {
+              "$type": "dimension",
+              "$value": "6.0pt",
+              "$description": "Horizontal label margin for mini push buttons."
+            },
+            "font_size": {
+              "$type": "dimension",
+              "$value": "9.0pt",
+              "$description": "Standard system font size for NSButton mini size."
+            },
+            "border_width": {
+              "$type": "dimension",
+              "$value": "1.0pt",
+              "$description": "Bezel stroke border width for mini push button."
+            }
           }
         },
         "segmented": {
@@ -478,6 +508,21 @@
             "$extensions": {
               "apple_citation": "AppKit NSSegmentedControl label font size"
             }
+          },
+          "small_font_size": {
+            "$type": "dimension",
+            "$value": "11.0pt",
+            "$description": "Small label typography font size for segmented control."
+          },
+          "mini_font_size": {
+            "$type": "dimension",
+            "$value": "9.0pt",
+            "$description": "Mini label typography font size for segmented control."
+          },
+          "small_square_corner_radius": {
+            "$type": "dimension",
+            "$value": "2.0pt",
+            "$description": "Outer corner radius for NSSegmentedControl with segmentStyle = .smallSquare."
           },
           "regular": {
             "height": {
@@ -530,6 +575,28 @@
                 "apple_citation": "macOS HIG Segmented Controls (Small)"
               }
             }
+          },
+          "mini": {
+            "height": {
+              "$type": "dimension",
+              "$value": "15.0pt",
+              "$description": "Miniature NSSegmentedControl height for NSControlSizeMini."
+            },
+            "corner_radius": {
+              "$type": "dimension",
+              "$value": "3.0pt",
+              "$description": "Container outer corner radius for mini segmented controls."
+            },
+            "indicator_radius": {
+              "$type": "dimension",
+              "$value": "2.5pt",
+              "$description": "Active selection pill corner radius for mini segmented controls."
+            }
+          },
+          "animation_duration": {
+            "$type": "dimension",
+            "$value": "0.18pt",
+            "$description": "Duration in seconds of the sliding active selection pill transition animation."
           }
         },
         "slider": {
@@ -540,6 +607,16 @@
             "$extensions": {
               "apple_citation": "AppKit NSSlider track thickness"
             }
+          },
+          "ticked_track_height": {
+            "$type": "dimension",
+            "$value": "4.0pt",
+            "$description": "Neutral track thickness when NSSlider.numberOfTickMarks > 0 (4.0pt)."
+          },
+          "ticked_track_border_width": {
+            "$type": "dimension",
+            "$value": "1.0pt",
+            "$description": "Neutral track hairline border stroke width when NSSlider.numberOfTickMarks > 0 (1.0pt)."
           },
           "thumb_size": {
             "$type": "dimension",
@@ -597,6 +674,11 @@
               "apple_citation": "AppKit NSSlider keyboard step fraction"
             }
           },
+          "shadow_offset_y": {
+            "$type": "dimension",
+            "$value": "1.5pt",
+            "$description": "Vertical offset of the circular NSSlider thumb ambient drop shadow."
+          },
           "thumb_press_scale": {
             "$type": "dimension",
             "$value": "1.15pt",
@@ -604,6 +686,27 @@
             "$extensions": {
               "apple_citation": "SPEC-002 §2.5 / AppKit NSSlider active knob scale"
             }
+          },
+          "ticked_thumb_width": {
+            "$type": "dimension",
+            "$value": "7.0pt",
+            "$description": "Horizontal width of the vertical pill thumb knob when NSSliderCell has tick marks (7.0pt).",
+            "$extensions": {
+              "apple_citation": "AppKit NSSliderCell ticked pill knob width"
+            }
+          },
+          "ticked_thumb_height": {
+            "$type": "dimension",
+            "$value": "15.0pt",
+            "$description": "Vertical height of the pill thumb knob when NSSliderCell has tick marks (15.0pt).",
+            "$extensions": {
+              "apple_citation": "AppKit NSSliderCell ticked pill knob height"
+            }
+          },
+          "ticked_thumb_corner_radius": {
+            "$type": "dimension",
+            "$value": "3.5pt",
+            "$description": "Corner radius of the vertical pill thumb knob when NSSliderCell has tick marks (3.5pt)."
           }
         },
         "thumbnail": {
@@ -859,6 +962,26 @@
               "apple_citation": "NSFont.systemFontSize(for: .regular)"
             }
           },
+          "small_height": {
+            "$type": "dimension",
+            "$value": "18.0pt",
+            "$description": "Compact intrinsic height for Small NSPopUpButton (18.0pt)."
+          },
+          "mini_height": {
+            "$type": "dimension",
+            "$value": "15.0pt",
+            "$description": "Miniature intrinsic height for Mini NSPopUpButton (15.0pt)."
+          },
+          "small_font_size": {
+            "$type": "dimension",
+            "$value": "11.0pt",
+            "$description": "Typography font size for Small NSPopUpButton label (11.0pt)."
+          },
+          "mini_font_size": {
+            "$type": "dimension",
+            "$value": "9.0pt",
+            "$description": "Typography font size for Mini NSPopUpButton label (9.0pt)."
+          },
           "border_width": {
             "$type": "dimension",
             "$value": "1.0pt",
@@ -956,6 +1079,11 @@
             "$extensions": {
               "apple_citation": "AppKit NSSearchFieldCell cancel button"
             }
+          },
+          "default_width": {
+            "$type": "dimension",
+            "$value": "160.0pt",
+            "$description": "Default fallback width for NSSearchField when not explicitly sized."
           },
           "clear_button_icon_padding": {
             "$type": "dimension",
@@ -1161,6 +1289,11 @@
               "apple_citation": "macOS HIG Color Well alpha checkerboard"
             }
           },
+          "picker_size": {
+            "$type": "dimension",
+            "$value": "220.0pt",
+            "$description": "Square dimension of the floating popup color picker panel."
+          },
           "popup_gap": {
             "$type": "dimension",
             "$value": "4.0pt",
@@ -1234,7 +1367,17 @@
             "$extensions": {
               "apple_citation": "macOS HIG Switches border"
             }
+          },
+          "animation_duration": {
+            "$type": "dimension",
+            "$value": "0.20pt",
+            "$description": "Animation duration in seconds for sliding NSSwitch knob transition."
           }
+        },
+        "disabled_opacity": {
+          "$type": "dimension",
+          "$value": "0.45pt",
+          "$description": "Alpha opacity multiplier applied to disabled AppKit controls (0.45)."
         },
         "progress_indicator": {
           "regular": {
@@ -2302,6 +2445,64 @@
           "icon_size": { "$type": "dimension", "$value": "10.0pt" },
           "border_width": { "$type": "dimension", "$value": "1.0pt" },
           "icon_stroke_width": { "$type": "dimension", "$value": "1.3pt" }
+        },
+        "origin_matrix": {
+          "grid_size": { "$type": "dimension", "$value": "34.0pt" },
+          "small_grid_size": { "$type": "dimension", "$value": "28.0pt" },
+          "mini_grid_size": { "$type": "dimension", "$value": "22.0pt" },
+          "cell_step": { "$type": "dimension", "$value": "12.0pt" },
+          "small_cell_step": { "$type": "dimension", "$value": "10.0pt" },
+          "mini_cell_step": { "$type": "dimension", "$value": "8.0pt" },
+          "line_stroke_width": { "$type": "dimension", "$value": "1.0pt" },
+          "node_radius": { "$type": "dimension", "$value": "2.5pt" },
+          "active_node_radius": { "$type": "dimension", "$value": "3.5pt" },
+          "hover_node_radius": { "$type": "dimension", "$value": "3.0pt" },
+          "active_ring_stroke_width": { "$type": "dimension", "$value": "1.0pt" }
+        },
+        "tag_color_picker": {
+          "dot_diameter": { "$type": "dimension", "$value": "12.0pt" },
+          "small_dot_diameter": { "$type": "dimension", "$value": "10.0pt" },
+          "mini_dot_diameter": { "$type": "dimension", "$value": "8.0pt" },
+          "dot_spacing": { "$type": "dimension", "$value": "5.0pt" },
+          "small_dot_spacing": { "$type": "dimension", "$value": "4.0pt" },
+          "mini_dot_spacing": { "$type": "dimension", "$value": "3.0pt" },
+          "selected_ring_offset": { "$type": "dimension", "$value": "1.5pt" },
+          "selected_ring_stroke": { "$type": "dimension", "$value": "1.5pt" },
+          "border_stroke_width": { "$type": "dimension", "$value": "1.0pt" },
+          "clear_cross_stroke_width": { "$type": "dimension", "$value": "1.2pt" },
+          "clear_cross_inset_ratio": { "$type": "dimension", "$value": "0.28pt" },
+          "hover_radius_delta": { "$type": "dimension", "$value": "1.0pt" },
+          "checkmark_stroke_width": { "$type": "dimension", "$value": "1.4pt" },
+          "check_p1_x": { "$type": "dimension", "$value": "0.26pt" },
+          "check_p1_y": { "$type": "dimension", "$value": "0.52pt" },
+          "check_p2_x": { "$type": "dimension", "$value": "0.44pt" },
+          "check_p2_y": { "$type": "dimension", "$value": "0.70pt" },
+          "check_p3_x": { "$type": "dimension", "$value": "0.74pt" },
+          "check_p3_y": { "$type": "dimension", "$value": "0.32pt" },
+          "default_rows": { "$type": "dimension", "$value": "1.0pt" },
+          "default_col_gap": { "$type": "dimension", "$value": "6.0pt" },
+          "default_row_gap": { "$type": "dimension", "$value": "4.0pt" }
+        },
+        "table_action_bar": {
+          "bar_height": { "$type": "dimension", "$value": "22.0pt" },
+          "small_bar_height": { "$type": "dimension", "$value": "18.0pt" },
+          "mini_bar_height": { "$type": "dimension", "$value": "15.0pt" },
+          "button_width": { "$type": "dimension", "$value": "24.0pt" },
+          "small_button_width": { "$type": "dimension", "$value": "20.0pt" },
+          "mini_button_width": { "$type": "dimension", "$value": "17.0pt" },
+          "action_button_width": { "$type": "dimension", "$value": "32.0pt" },
+          "small_action_button_width": { "$type": "dimension", "$value": "27.0pt" },
+          "mini_action_button_width": { "$type": "dimension", "$value": "23.0pt" },
+          "border_width": { "$type": "dimension", "$value": "1.0pt" },
+          "corner_radius": { "$type": "dimension", "$value": "1.0pt" },
+          "glyph_size": { "$type": "dimension", "$value": "13.0pt" },
+          "small_glyph_size": { "$type": "dimension", "$value": "11.0pt" },
+          "glyph_stroke_width": { "$type": "dimension", "$value": "1.35pt" },
+          "glyph_arm_half": { "$type": "dimension", "$value": "4.0pt" },
+          "small_glyph_arm_half": { "$type": "dimension", "$value": "3.25pt" },
+          "action_chevron_gap": { "$type": "dimension", "$value": "3.0pt" },
+          "action_chevron_half_width": { "$type": "dimension", "$value": "2.25pt" },
+          "action_chevron_height": { "$type": "dimension", "$value": "2.0pt" }
         }
       },
       "toolbar": {
@@ -2424,6 +2625,31 @@
           "$extensions": {
             "apple_citation": "macOS Human Interface Guidelines - Window Anatomy"
           }
+        },
+        "window_corner_radius": {
+          "$type": "dimension",
+          "$value": "10.0pt",
+          "$description": "Window top corner radius in points."
+        },
+        "traffic_light_hit_size": {
+          "$type": "dimension",
+          "$value": "14.0pt",
+          "$description": "Interactive hit box size for each traffic light circle."
+        },
+        "traffic_light_leading_inset": {
+          "$type": "dimension",
+          "$value": "18.0pt",
+          "$description": "Leading inset from left toolbar edge to first traffic light center."
+        },
+        "traffic_light_glyph_half": {
+          "$type": "dimension",
+          "$value": "2.5pt",
+          "$description": "Half-span of interior close/zoom glyph inside traffic light circle."
+        },
+        "min_title_width": {
+          "$type": "dimension",
+          "$value": "40.0pt",
+          "$description": "Minimum available width to render window title in toolbar center zone."
         }
       },
       "popover": {
@@ -2562,6 +2788,56 @@
           "$extensions": {
             "apple_citation": "macOS HIG Popover content margins"
           }
+        },
+        "surface_corner_radius": {
+          "$type": "dimension",
+          "$value": "8.0pt",
+          "$description": "Standard corner radius for AppKit NSPopover content surfaces (8.0pt)."
+        },
+        "surface_border_width": {
+          "$type": "dimension",
+          "$value": "1.0pt",
+          "$description": "Subtle perimeter hairline border width for AppKit NSPopover content surfaces (1.0pt)."
+        },
+        "hud_corner_radius": {
+          "$type": "dimension",
+          "$value": "6.0pt",
+          "$description": "Corner radius for compact floating HUD palette (6.0pt)."
+        },
+        "hud_row_height": {
+          "$type": "dimension",
+          "$value": "18.0pt",
+          "$description": "Row height inside compact floating HUD palette (18.0pt)."
+        },
+        "hud_row_gap": {
+          "$type": "dimension",
+          "$value": "1.0pt",
+          "$description": "Vertical gap between rows inside compact floating HUD palette (1.0pt)."
+        },
+        "hud_padding_x": {
+          "$type": "dimension",
+          "$value": "6.0pt",
+          "$description": "Horizontal padding inside compact floating HUD palette (6.0pt)."
+        },
+        "hud_padding_top": {
+          "$type": "dimension",
+          "$value": "2.0pt",
+          "$description": "Top padding below header inside compact floating HUD palette (2.0pt)."
+        },
+        "hud_dot_radius": {
+          "$type": "dimension",
+          "$value": "3.0pt",
+          "$description": "Status indicator dot radius in HUD header (3.0pt)."
+        },
+        "hud_dot_offset_x": {
+          "$type": "dimension",
+          "$value": "10.0pt",
+          "$description": "Leading X offset of HUD header dot (10.0pt)."
+        },
+        "hud_title_offset_x": {
+          "$type": "dimension",
+          "$value": "20.0pt",
+          "$description": "Leading X offset of HUD header title (20.0pt)."
         }
       },
       "split_view": {
@@ -3329,6 +3605,51 @@
           "$type": "color",
           "$value": "#D8D8D8",
           "$description": "Perimeter hairline border color for NSBoxPrimary in Aqua Light mode."
+        },
+        "slider_track_bg": {
+          "$type": "color",
+          "$value": "#DCDCDC",
+          "$description": "Neutral NSSlider track background fill in Aqua Light mode."
+        },
+        "slider_track_border": {
+          "$type": "color",
+          "$value": "#C4C4C4",
+          "$description": "Neutral NSSlider track border stroke in Aqua Light mode."
+        },
+        "slider_tick_mark": {
+          "$type": "color",
+          "$value": "#B8B8B8",
+          "$description": "AppKit NSSlider tick mark stroke color in Aqua Light mode."
+        },
+        "slider_thumb_bg": {
+          "$type": "color",
+          "$value": "#FFFFFF",
+          "$description": "AppKit NSSlider thumb fill color in Aqua Light mode."
+        },
+        "slider_thumb_border": {
+          "$type": "color",
+          "$value": "#ADADAD",
+          "$description": "AppKit NSSlider thumb border stroke color in Aqua Light mode."
+        },
+        "segmented_small_square_active_bg": {
+          "$type": "color",
+          "$value": "#D4D4D4",
+          "$description": "Active segment surface fill for NSSegmentedControl .smallSquare in Aqua Light mode."
+        },
+        "segmented_small_square_inactive_bg": {
+          "$type": "color",
+          "$value": "#F4F4F4",
+          "$description": "Inactive segment surface fill for NSSegmentedControl .smallSquare in Aqua Light mode."
+        },
+        "popover_background": {
+          "$type": "color",
+          "$value": "#F4F4F6",
+          "$description": "AppKit NSPopover container surface background color in Aqua Light mode."
+        },
+        "popover_border": {
+          "$type": "color",
+          "$value": "#D2D2D7",
+          "$description": "AppKit NSPopover container subtle perimeter border color in Aqua Light mode."
         }
       },
       "dark_aqua": {
@@ -3637,6 +3958,51 @@
           "$type": "color",
           "$value": "#3A3D42",
           "$description": "Perimeter hairline border color for NSBoxPrimary in DarkAqua mode."
+        },
+        "slider_track_bg": {
+          "$type": "color",
+          "$value": "#3E3E42",
+          "$description": "Neutral NSSlider track background fill in DarkAqua mode."
+        },
+        "slider_track_border": {
+          "$type": "color",
+          "$value": "#545458",
+          "$description": "Neutral NSSlider track border stroke in DarkAqua mode."
+        },
+        "slider_tick_mark": {
+          "$type": "color",
+          "$value": "#666666",
+          "$description": "AppKit NSSlider tick mark stroke color in DarkAqua mode."
+        },
+        "slider_thumb_bg": {
+          "$type": "color",
+          "$value": "#D8D8DC",
+          "$description": "AppKit NSSlider thumb fill color in DarkAqua mode."
+        },
+        "slider_thumb_border": {
+          "$type": "color",
+          "$value": "#202022",
+          "$description": "AppKit NSSlider thumb border stroke color in DarkAqua mode."
+        },
+        "segmented_small_square_active_bg": {
+          "$type": "color",
+          "$value": "#525257",
+          "$description": "Active segment surface fill for NSSegmentedControl .smallSquare in DarkAqua mode."
+        },
+        "segmented_small_square_inactive_bg": {
+          "$type": "color",
+          "$value": "#36363A",
+          "$description": "Inactive segment surface fill for NSSegmentedControl .smallSquare in DarkAqua mode."
+        },
+        "popover_background": {
+          "$type": "color",
+          "$value": "#2B2B2E",
+          "$description": "AppKit NSPopover container surface background color in DarkAqua mode."
+        },
+        "popover_border": {
+          "$type": "color",
+          "$value": "#48484C",
+          "$description": "AppKit NSPopover container subtle perimeter border color in DarkAqua mode."
         }
       },
       "anthracite": {
@@ -3945,7 +4311,67 @@
           "$type": "color",
           "$value": "#424650",
           "$description": "Perimeter hairline border color for NSBoxPrimary in Anthracite mode."
+        },
+        "slider_track_bg": {
+          "$type": "color",
+          "$value": "#3E424B",
+          "$description": "Neutral NSSlider track background fill in Anthracite Studio mode."
+        },
+        "slider_track_border": {
+          "$type": "color",
+          "$value": "#505561",
+          "$description": "Neutral NSSlider track border stroke in Anthracite Studio mode."
+        },
+        "slider_tick_mark": {
+          "$type": "color",
+          "$value": "#666666",
+          "$description": "AppKit NSSlider tick mark stroke color in Anthracite Studio mode."
+        },
+        "slider_thumb_bg": {
+          "$type": "color",
+          "$value": "#D8DCE3",
+          "$description": "AppKit NSSlider thumb fill color in Anthracite Studio mode."
+        },
+        "slider_thumb_border": {
+          "$type": "color",
+          "$value": "#22252A",
+          "$description": "AppKit NSSlider thumb border stroke color in Anthracite Studio mode."
+        },
+        "segmented_small_square_active_bg": {
+          "$type": "color",
+          "$value": "#4E5460",
+          "$description": "Active segment surface fill for NSSegmentedControl .smallSquare in Anthracite Studio mode."
+        },
+        "segmented_small_square_inactive_bg": {
+          "$type": "color",
+          "$value": "#383C45",
+          "$description": "Inactive segment surface fill for NSSegmentedControl .smallSquare in Anthracite Studio mode."
+        },
+        "popover_background": {
+          "$type": "color",
+          "$value": "#2F333B",
+          "$description": "AppKit NSPopover container surface background color in Anthracite Studio mode."
+        },
+        "popover_border": {
+          "$type": "color",
+          "$value": "#484D57",
+          "$description": "AppKit NSPopover container subtle perimeter border color in Anthracite Studio mode."
         }
+      },
+      "tag_labels": {
+        "red": { "$type": "color", "$value": "#FF3B30" },
+        "orange": { "$type": "color", "$value": "#FF9500" },
+        "brown": { "$type": "color", "$value": "#A2845E" },
+        "yellow": { "$type": "color", "$value": "#FFCC00" },
+        "light_green": { "$type": "color", "$value": "#34C759" },
+        "dark_green": { "$type": "color", "$value": "#248A3D" },
+        "cyan": { "$type": "color", "$value": "#32ADE6" },
+        "blue": { "$type": "color", "$value": "#007AFF" },
+        "purple": { "$type": "color", "$value": "#AF52DE" },
+        "magenta": { "$type": "color", "$value": "#FF2D55" },
+        "gray": { "$type": "color", "$value": "#8E8E93" },
+        "clear": { "$type": "color", "$value": "rgba(0, 0, 0, 0.0)" },
+        "swatch_border": { "$type": "color", "$value": "rgba(0, 0, 0, 0.18)" }
       }
     },
     "typography": {

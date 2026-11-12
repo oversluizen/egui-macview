@@ -3,6 +3,7 @@
 //! Grounded in `SPEC-007` and `SPEC-008` via W3C DTCG tokens (`tokens/design_tokens.json`).
 
 use crate::tokens::dtcg::DimensionValue;
+use crate::tokens::MacDesignTokens;
 use serde::{Deserialize, Serialize};
 
 /// Deterministic canvas footer height (`24.0pt` per `SPEC-007 §3`).
@@ -16,7 +17,6 @@ pub const DEFAULT_TOAST_DURATION: f32 = 2.5;
 
 /// SPEC-007 Menu Bar and Dropdown metrics.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(default)]
 pub struct MenuBarMetrics {
     /// Height of the top-level menu bar in points.
     pub bar_height: DimensionValue,
@@ -52,29 +52,12 @@ pub struct MenuBarMetrics {
 
 impl Default for MenuBarMetrics {
     fn default() -> Self {
-        Self {
-            bar_height: DimensionValue::from_pt(24.0),
-            item_padding_x: DimensionValue::from_pt(8.0),
-            item_spacing: DimensionValue::from_pt(2.0),
-            dropdown_min_width: DimensionValue::from_pt(180.0),
-            dropdown_max_width: DimensionValue::from_pt(360.0),
-            dropdown_item_height: DimensionValue::from_pt(22.0),
-            dropdown_separator_height: DimensionValue::from_pt(9.0),
-            dropdown_corner_radius: DimensionValue::from_pt(6.0),
-            dropdown_padding_y: DimensionValue::from_pt(4.0),
-            dropdown_padding_x: DimensionValue::from_pt(10.0),
-            shortcut_clearance: DimensionValue::from_pt(24.0),
-            submenu_gap: DimensionValue::from_pt(2.0),
-            bar_corner_radius: DimensionValue::from_pt(4.0),
-            font_size: DimensionValue::from_pt(13.0),
-            shortcut_font_size: DimensionValue::from_pt(12.0),
-        }
+        MacDesignTokens::default_shared().menu_bar_metrics().clone()
     }
 }
 
 /// SPEC-007 Canvas Footer metrics.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(default)]
 pub struct FooterMetrics {
     /// Deterministic SPEC-007 canvas footer height (`24.0pt`).
     pub height: DimensionValue,
@@ -106,27 +89,12 @@ pub struct FooterMetrics {
 
 impl Default for FooterMetrics {
     fn default() -> Self {
-        Self {
-            height: DimensionValue::from_pt(CANVAS_FOOTER_HEIGHT),
-            edge_padding_x: DimensionValue::from_pt(10.0),
-            preset_width: DimensionValue::from_pt(36.0),
-            preset_height: DimensionValue::from_pt(18.0),
-            preset_spacing: DimensionValue::from_pt(2.0),
-            preset_corner_radius: DimensionValue::from_pt(3.0),
-            font_size: DimensionValue::from_pt(10.5),
-            preset_font_size: DimensionValue::from_pt(10.0),
-            separator_gap: DimensionValue::from_pt(10.0),
-            coords_width: DimensionValue::from_pt(75.0),
-            presets_zone_offset: DimensionValue::from_pt(150.0),
-            divider_trailing_offset: DimensionValue::from_pt(155.0),
-            divider_vertical_inset: DimensionValue::from_pt(5.0),
-        }
+        MacDesignTokens::default_shared().footer_metrics().clone()
     }
 }
 
 /// SPEC-007 Spotlight Command Palette metrics.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(default)]
 pub struct PaletteMetrics {
     /// Spotlight command palette modal width (`480.0pt`).
     pub width: DimensionValue,
@@ -160,28 +128,12 @@ pub struct PaletteMetrics {
 
 impl Default for PaletteMetrics {
     fn default() -> Self {
-        Self {
-            width: DimensionValue::from_pt(COMMAND_PALETTE_WIDTH),
-            max_height: DimensionValue::from_pt(COMMAND_PALETTE_HEIGHT),
-            corner_radius: DimensionValue::from_pt(10.0),
-            search_bar_height: DimensionValue::from_pt(36.0),
-            search_padding_x: DimensionValue::from_pt(12.0),
-            search_icon_size: DimensionValue::from_pt(14.0),
-            row_height: DimensionValue::from_pt(28.0),
-            row_padding_x: DimensionValue::from_pt(12.0),
-            row_corner_radius: DimensionValue::from_pt(5.0),
-            row_inset: DimensionValue::from_pt(4.0),
-            query_font_size: DimensionValue::from_pt(14.0),
-            item_font_size: DimensionValue::from_pt(12.5),
-            category_font_size: DimensionValue::from_pt(10.5),
-            shortcut_font_size: DimensionValue::from_pt(10.5),
-        }
+        MacDesignTokens::default_shared().palette_metrics().clone()
     }
 }
 
 /// SPEC-008 Context Menu metrics.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(default)]
 pub struct ContextMenuMetrics {
     /// Context menu item row height.
     pub item_height: DimensionValue,
@@ -203,22 +155,12 @@ pub struct ContextMenuMetrics {
 
 impl Default for ContextMenuMetrics {
     fn default() -> Self {
-        Self {
-            item_height: DimensionValue::from_pt(22.0),
-            min_width: DimensionValue::from_pt(140.0),
-            padding: DimensionValue::from_pt(4.0),
-            item_padding_x: DimensionValue::from_pt(8.0),
-            corner_radius: DimensionValue::from_pt(6.0),
-            row_corner_radius: DimensionValue::from_pt(4.0),
-            shortcut_clearance: DimensionValue::from_pt(24.0),
-            font_size: DimensionValue::from_pt(12.0),
-        }
+        MacDesignTokens::default_shared().context_menu_metrics().clone()
     }
 }
 
 /// SPEC-008 Toast Notification metrics.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(default)]
 pub struct ToastMetrics {
     /// Floating toast pill height.
     pub height: DimensionValue,
@@ -238,21 +180,12 @@ pub struct ToastMetrics {
 
 impl Default for ToastMetrics {
     fn default() -> Self {
-        Self {
-            height: DimensionValue::from_pt(32.0),
-            min_width: DimensionValue::from_pt(120.0),
-            top_margin: DimensionValue::from_pt(20.0),
-            spacing: DimensionValue::from_pt(8.0),
-            padding_x: DimensionValue::from_pt(32.0),
-            duration_secs: DimensionValue::from_pt(DEFAULT_TOAST_DURATION),
-            font_size: DimensionValue::from_pt(12.0),
-        }
+        MacDesignTokens::default_shared().toast_metrics().clone()
     }
 }
 
 /// Combined navigation and feedback metrics container.
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
-#[serde(default)]
 pub struct NavigationMetrics {
     /// Menu bar and dropdown metrics.
     pub menu_bar: MenuBarMetrics,

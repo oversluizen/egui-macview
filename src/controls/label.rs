@@ -209,6 +209,7 @@ impl<'a> Widget for MacLabel<'a> {
         let (rect, response) = if let Some(fixed) = self.fixed_rect {
             let snapped = subpixel_snap_rect(fixed, ppp);
             let id = ui.next_auto_id().with("mac_label_fixed");
+            ui.skip_ahead_auto_ids(1);
             let resp = ui.interact(snapped, id, Sense::hover());
             (snapped, resp)
         } else {

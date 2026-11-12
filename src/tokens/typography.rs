@@ -111,10 +111,7 @@ impl MacTypographyTokens {
 /// $\text{Tracking}(p) = a \cdot p^3 + b \cdot p^2 + c \cdot p + d$
 #[inline]
 pub fn sf_pro_tracking(size_pt: f32) -> f32 {
-    let p = size_pt as f64;
-    let a = 0.000864840354;
-    let b = -0.0339060217;
-    let c = 0.355814827;
-    let d = -0.891241741;
-    (a * p.powi(3) + b * p.powi(2) + c * p + d) as f32
+    crate::tokens::MacDesignTokens::default_shared()
+        .typography()
+        .tracking_for_size(size_pt as f64) as f32
 }

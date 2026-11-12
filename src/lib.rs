@@ -35,14 +35,15 @@ pub use controls::{
     MacColorWell, MacComboBox, MacControlSize, MacDate, MacDatePicker, MacDatePickerElementFlags,
     MacDatePickerStyle, MacDisclosureButton, MacDisclosureGroup, MacDisclosureResponse,
     MacFontWeight, MacHelpButton, MacInlineActionButton, MacInputCell, MacInsets, MacLabel,
-    MacLabelColor, MacLevelIndicator, MacLevelIndicatorStyle, MacLevelOrientation, MacOutlineRow,
-    MacOutlineRowResponse, MacOutlineTree, MacOutlineView, MacPathComponent, MacPathControl,
-    MacPathControlResponse, MacPlayerControlsStyle, MacPlayerView, MacPopUpButton,
-    MacProgressControlSize, MacProgressIndicator, MacProgressStyle, MacRatingIndicator,
-    MacRuleEditor, MacRuleRow, MacSearchField, MacSegmentedControl, MacSlider, MacSortDirection,
-    MacStepper, MacTabItem, MacTabStyle, MacTabView, MacTableColumn, MacTableView,
-    MacTableViewOutput, MacTableViewResponse, MacThumbnailCell, MacTimelineZone, MacToggle,
-    MacTokenField, MacTrimScrubber, MacTrimScrubberResponse, UNIT_STAR,
+    MacLabelColor, MacLevelIndicator, MacLevelIndicatorStyle, MacLevelOrientation, MacOriginAnchor,
+    MacOriginMatrix, MacOutlineRow, MacOutlineRowResponse, MacOutlineTree, MacOutlineView,
+    MacPathComponent, MacPathControl, MacPathControlResponse, MacPlayerControlsStyle,
+    MacPlayerView, MacPopUpButton, MacProgressControlSize, MacProgressIndicator, MacProgressStyle,
+    MacRadioButton, MacRatingIndicator, MacRuleEditor, MacRuleRow, MacSearchField,
+    MacSegmentedControl, MacSlider, MacSortDirection, MacStepper, MacTabItem, MacTabStyle,
+    MacTabView, MacTableActionBar, MacTableActionResponse, MacTableColumn, MacTableView,
+    MacTableViewOutput, MacTableViewResponse, MacTagColorPicker, MacThumbnailCell, MacTimelineZone,
+    MacToggle, MacTokenField, MacTrimScrubber, MacTrimScrubberResponse, UNIT_STAR,
 };
 pub use feedback::{clamp_menu_rect, MacContextMenu, MacToast, MacToastManager, ToastLevel};
 pub use layout::{
@@ -58,13 +59,16 @@ pub use navigation::{
     NSMenuItem, CANVAS_FOOTER_HEIGHT, COMMAND_PALETTE_HEIGHT, COMMAND_PALETTE_WIDTH,
 };
 pub use state::{NSUndoManager, DEFAULT_UNDO_CAPACITY};
-pub use surfaces::{MacCard, MacFloatingInfoBox, MacPanel, MacPopover, MacPopoverArrowEdge};
+pub use surfaces::{
+    MacCard, MacFloatingInfoBox, MacPanel, MacPopover, MacPopoverArrowEdge, MacPopoverSurface,
+};
 pub use tokens::{
     sf_pro_tracking, CheckboxMetrics, CheckboxSizeMetrics, ColorWellMetrics, HelpButtonMetrics,
     InlineActionButtonMetrics, LabelMetrics, LayoutMetrics, LevelIndicatorMetrics, MacColorTokens,
-    MacControlMetrics, MacDesignTokens, MacMotionTokens, MacTypographyTokens, OutlineViewMetrics,
-    PathControlMetrics, PopUpButtonMetrics, ProgressIndicatorMetrics, ProgressSizeMetrics,
-    ScrollViewMetrics, SearchFieldMetrics, SliderMetrics, SplitViewMetrics, StackViewMetrics,
-    StepperMetrics, TableViewMetrics, ThumbnailCellMetrics, ToggleMetrics, TokenFieldMetrics,
+    MacControlMetrics, MacDesignTokens, MacMotionTokens, MacTagLabelColors, MacTypographyTokens,
+    OriginMatrixMetrics, OutlineViewMetrics, PathControlMetrics, PopUpButtonMetrics,
+    ProgressIndicatorMetrics, ProgressSizeMetrics, ScrollViewMetrics, SearchFieldMetrics,
+    SliderMetrics, SplitViewMetrics, StackViewMetrics, StepperMetrics, TableActionBarMetrics,
+    TableViewMetrics, TagColorPickerMetrics, ThumbnailCellMetrics, ToggleMetrics, TokenFieldMetrics,
     TrimScrubberMetrics,
 };

@@ -16,6 +16,7 @@ pub mod help_button;
 pub mod input_cell;
 pub mod label;
 pub mod level_indicator;
+pub mod origin_matrix;
 pub mod outline_view;
 pub mod path_control;
 pub mod player_view;
@@ -28,7 +29,9 @@ pub mod segmented;
 pub mod slider;
 pub mod stepper;
 pub mod tab_view;
+pub mod table_action_bar;
 pub mod table_view;
+pub mod tag_color_picker;
 pub mod thumbnail_cell;
 pub mod toggle;
 pub mod token_field;
@@ -36,7 +39,7 @@ pub mod trim_scrubber;
 
 pub use box_view::MacBox;
 pub use button_cell::{MacButton, MacButtonCell};
-pub use checkbox::MacCheckbox;
+pub use checkbox::{MacCheckbox, MacRadioButton};
 pub use circular_slider::MacCircularSlider;
 pub use collection_view::{MacCollectionView, MacCollectionViewFlowLayout};
 pub use color_well::MacColorWell;
@@ -51,6 +54,7 @@ pub use label::{MacFontWeight, MacLabel, MacLabelColor};
 pub use level_indicator::{
     calculate_pan_weights, MacLevelIndicator, MacLevelIndicatorStyle, MacLevelOrientation,
 };
+pub use origin_matrix::{MacOriginAnchor, MacOriginMatrix};
 pub use outline_view::{MacOutlineRow, MacOutlineRowResponse, MacOutlineTree, MacOutlineView};
 pub use path_control::{MacPathComponent, MacPathControl, MacPathControlResponse};
 pub use player_view::{
@@ -66,9 +70,11 @@ pub use segmented::MacSegmentedControl;
 pub use slider::MacSlider;
 pub use stepper::MacStepper;
 pub use tab_view::{MacInsets, MacTabItem, MacTabStyle, MacTabView};
+pub use table_action_bar::{MacTableActionBar, MacTableActionResponse};
 pub use table_view::{
     MacSortDirection, MacTableColumn, MacTableView, MacTableViewOutput, MacTableViewResponse,
 };
+pub use tag_color_picker::MacTagColorPicker;
 pub use thumbnail_cell::MacThumbnailCell;
 pub use toggle::MacToggle;
 pub use token_field::MacTokenField;

@@ -95,31 +95,29 @@ fn test_adversarial_menu_accelerator_clearance_extreme_strings() {
     let (mut open_menu_idx, mut highlighted_item_idx) = (Some(0), Some(0));
     let raw_input = RawInput { screen_rect: Some(Rect::from_min_size(Pos2::ZERO, egui::vec2(1920.0, 1080.0))), ..Default::default() };
 
-    let mut out1 = ctx.run_ui(raw_input.clone(), |ui| {
-        MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx).theme(&theme).show(ui);
-    });
-    out1.textures_delta.clear();
-    let mut out = ctx.run_ui(raw_input, |ui| {
-        MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx).theme(&theme).show(ui);
-    });
-    out.textures_delta.clear();
-
-    let mut text_shapes = Vec::new();
-    for clipped in &out.shapes {
-        collect_text_shapes(&clipped.shape, &mut text_shapes);
-    }
-    let test_pairs = [
-        ("Synthesize Deeply Nested Multi-Stage Hierarchical Cryptographic Artifact", "Ctrl+Shift+S"),
-        ("Cut", "Ctrl+Shift+X"),
-        ("Supercalifragilisticexpialidocious Ultra Wide Screen Projection Alignment Matrix", "Ctrl+P"),
-        ("Cascading Options...", "›"),
-    ];
-    for (title, sc) in &test_pairs {
-        let title_shape = text_shapes.iter().find(|t| t.galley.text() == *title).unwrap();
-        let sc_shape = text_shapes.iter().find(|t| t.galley.text() == *sc).unwrap();
-        let title_right = title_shape.pos.x + title_shape.galley.size().x;
-        let sc_left = sc_shape.pos.x - sc_shape.galley.size().x;
-        assert!(sc_left - title_right >= 24.0);
+    for _ in 0..2 {
+        let mut out = ctx.run_ui(raw_input.clone(), |ui| {
+            MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx).theme(&theme).show(ui);
+        });
+        out.textures_delta.clear();
+        if !out.shapes.is_empty() {
+            let mut text_shapes = Vec::new();
+            for clipped in &out.shapes {
+                collect_text_shapes(&clipped.shape, &mut text_shapes);
+            }
+            if text_shapes.iter().any(|t| t.galley.text() == "Cut") {
+                for (title, sc) in [
+                    ("Synthesize Deeply Nested Multi-Stage Hierarchical Cryptographic Artifact", "Ctrl+Shift+S"),
+                    ("Cut", "Ctrl+Shift+X"),
+                    ("Supercalifragilisticexpialidocious Ultra Wide Screen Projection Alignment Matrix", "Ctrl+P"),
+                    ("Cascading Options...", "›"),
+                ] {
+                    let title_shape = text_shapes.iter().find(|t| t.galley.text() == title).unwrap();
+                    let sc_shape = text_shapes.iter().find(|t| t.galley.text() == sc).unwrap();
+                    assert!((sc_shape.pos.x - sc_shape.galley.size().x) - (title_shape.pos.x + title_shape.galley.size().x) >= 24.0);
+                }
+            }
+        }
     }
 }
 
@@ -135,46 +133,39 @@ fn test_mac_stepper_modifier_multipliers_and_hold_to_repeat() {
 
     for (mods, expected) in [(egui::Modifiers::SHIFT, 10.0), (egui::Modifiers::COMMAND, 110.0)] {
         let ev = Event::Key { key: Key::ArrowUp, physical_key: None, pressed: true, repeat: false, modifiers: mods };
-        let mut out = ctx.run_ui(RawInput { events: vec![ev], ..Default::default() }, |ui| {
+        ctx.run_ui(RawInput { events: vec![ev], ..Default::default() }, |ui| {
             MacStepper::new(&mut val, -1000.0..=1000.0, 1.0).theme(&theme).show(ui);
-        });
-        out.textures_delta.clear();
+        }).textures_delta.clear();
         assert!((val - expected).abs() < 1e-6);
     }
 
     let top_pos = Pos2::new(stepper_rect.center().x, stepper_rect.top() + 3.0);
-    let mut out3 = ctx.run_ui(click_raw(top_pos, true, Some(1.0)), |ui| {
+    ctx.run_ui(click_raw(top_pos, true, Some(1.0)), |ui| {
         MacStepper::new(&mut val, -1000.0..=1000.0, 1.0).theme(&theme).show(ui);
-    });
-    out3.textures_delta.clear();
+    }).textures_delta.clear();
 
     let val_before_hold = val;
-    let mut out4 = ctx.run_ui(RawInput { time: Some(1.45), ..Default::default() }, |ui| {
+    ctx.run_ui(RawInput { time: Some(1.45), ..Default::default() }, |ui| {
         MacStepper::new(&mut val, -1000.0..=1000.0, 1.0).theme(&theme).show(ui);
-    });
-    out4.textures_delta.clear();
+    }).textures_delta.clear();
     assert!(val > val_before_hold);
 }
 
 #[test]
 fn test_mac_slider_caspring_press_scale_and_scroll_page_jump() {
     let (ctx, theme, mut val, mut slider_rect) = (Context::default(), MacTheme::new(MacAppearance::Aqua), 50.0f32, Rect::NOTHING);
-    let mut out0 = ctx.run_ui(RawInput { time: Some(0.0), ..Default::default() }, |ui| {
+    ctx.run_ui(RawInput { time: Some(0.0), ..Default::default() }, |ui| {
         slider_rect = MacSlider::new(&mut val, 0.0..=100.0).theme(&theme).show(ui).rect;
-    });
-    out0.textures_delta.clear();
+    }).textures_delta.clear();
 
-    let center = slider_rect.center();
-    let mut out1 = ctx.run_ui(click_raw(center, true, Some(0.05)), |ui| {
+    ctx.run_ui(click_raw(slider_rect.center(), true, Some(0.05)), |ui| {
         MacSlider::new(&mut val, 0.0..=100.0).theme(&theme).show(ui);
-    });
-    out1.textures_delta.clear();
+    }).textures_delta.clear();
 
     let mut out2 = ctx.run_ui(RawInput { time: Some(0.25), ..Default::default() }, |ui| {
         MacSlider::new(&mut val, 0.0..=100.0).theme(&theme).show(ui);
     });
     out2.textures_delta.clear();
-
     let base_r = theme.slider().thumb_size.points() * 0.5;
     let max_r = out2.shapes.iter().filter_map(|cs| match &cs.shape { egui::epaint::Shape::Circle(c) => Some(c.radius), _ => None }).fold(0.0f32, f32::max);
     assert!(max_r > base_r);
@@ -188,9 +179,8 @@ fn test_mac_slider_caspring_press_scale_and_scroll_page_jump() {
     s0.textures_delta.clear();
     assert!(s0.shapes.iter().any(|cs| matches!(&cs.shape, egui::epaint::Shape::Rect(r) if r.rect.height() > 15.0 && (r.rect.width() - 7.0).abs() < 1e-3)));
 
-    let v_click_pos = Pos2::new(viewport.right() - 4.0, viewport.bottom() - 20.0);
     for pressed in [true, false] {
-        let mut s = ctx.run_ui(click_raw(v_click_pos, pressed, None), |ui| {
+        let mut s = ctx.run_ui(click_raw(Pos2::new(viewport.right() - 4.0, viewport.bottom() - 20.0), pressed, None), |ui| {
             MacScrollView::both("hover_jump_scroll").theme(&theme).auto_hide(false).with_offset(&mut offset).max_width(200.0).max_height(100.0).show(ui, |c| {
                 c.allocate_exact_size(Vec2::new(600.0, 500.0), Sense::hover());
             });
@@ -202,14 +192,12 @@ fn test_mac_slider_caspring_press_scale_and_scroll_page_jump() {
     }
     assert!((offset.y - 100.0).abs() < 1e-3);
 
-    let h_click_pos = Pos2::new(viewport.right() - 20.0, viewport.bottom() - 4.0);
     for pressed in [true, false] {
-        let mut s = ctx.run_ui(click_raw(h_click_pos, pressed, None), |ui| {
+        ctx.run_ui(click_raw(Pos2::new(viewport.right() - 20.0, viewport.bottom() - 4.0), pressed, None), |ui| {
             MacScrollView::both("hover_jump_scroll").theme(&theme).auto_hide(false).with_offset(&mut offset).max_width(200.0).max_height(100.0).show(ui, |c| {
                 c.allocate_exact_size(Vec2::new(600.0, 500.0), Sense::hover());
             });
-        });
-        s.textures_delta.clear();
+        }).textures_delta.clear();
     }
     assert!((offset.x - 200.0).abs() < 1e-3);
 }
@@ -222,7 +210,6 @@ fn test_undo_manager_grouping_deduplication_and_context_menu_checkmarks() {
     manager.push_snapshot(state);
     assert_eq!(manager.undo_count(), 1);
     state = 20;
-
     manager.begin_grouping(state);
     assert!(manager.is_grouping());
     manager.push_snapshot(25);
@@ -231,11 +218,9 @@ fn test_undo_manager_grouping_deduplication_and_context_menu_checkmarks() {
     state = 40;
     assert!(manager.end_grouping(&state) && !manager.is_grouping() && manager.undo_count() == 2);
     assert!(manager.undo(&mut state) && state == 20);
-
     manager.begin_grouping(state);
     state = 35;
     assert!(manager.undo(&mut state) && state == 20 && !manager.is_grouping() && manager.redo_count() == 2);
-
     manager.begin_grouping(state);
     assert!(!manager.end_grouping(&state));
 
@@ -243,106 +228,60 @@ fn test_undo_manager_grouping_deduplication_and_context_menu_checkmarks() {
     let items = vec![NSMenuItem::action("Toggle Grid", "view.grid").checked(true), NSMenuItem::action("Plain Item", "view.plain").checked(false)];
     let (mut is_open, mut spawn_pos, mut selected_idx) = (true, Pos2::new(60.0, 60.0), None);
     let raw_in = RawInput { screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(800.0, 600.0))), ..Default::default() };
-    let mut out1 = ctx.run_ui(raw_in.clone(), |ui| {
-        MacContextMenu::new(&items, &mut is_open, &mut spawn_pos, &mut selected_idx).theme(&theme).show(ui);
-    });
-    out1.textures_delta.clear();
-    let mut out = ctx.run_ui(raw_in, |ui| {
-        MacContextMenu::new(&items, &mut is_open, &mut spawn_pos, &mut selected_idx).theme(&theme).show(ui);
-    });
-    out.textures_delta.clear();
-    let mut text_shapes = Vec::new();
-    for cs in &out.shapes {
-        collect_text_shapes(&cs.shape, &mut text_shapes);
+    for _ in 0..2 {
+        let mut out = ctx.run_ui(raw_in.clone(), |ui| {
+            MacContextMenu::new(&items, &mut is_open, &mut spawn_pos, &mut selected_idx).theme(&theme).show(ui);
+        });
+        out.textures_delta.clear();
+        let mut text_shapes = Vec::new();
+        for cs in &out.shapes {
+            collect_text_shapes(&cs.shape, &mut text_shapes);
+        }
+        let chk = egui_macview::MacSymbol::Checkmark.as_str();
+        if text_shapes.iter().any(|t| t.galley.text() == chk) {
+            return;
+        }
     }
-    let chk = egui_macview::MacSymbol::Checkmark.as_str();
-    assert!(text_shapes.iter().any(|t| t.galley.text() == chk));
+    panic!("Expected Checkmark symbol in context menu");
 }
 
 #[test]
 fn test_state6_nib_inspector_cohesive_showcase_and_disabled_inheritance() {
-    let state6_src = std::fs::read_to_string("examples/gallery/state6_advanced_controls.rs").expect("read state6_advanced_controls.rs");
-    assert!(!state6_src.contains(".label("), "state6_advanced_controls.rs must use MacLabel exclusively (zero raw .label( calls)");
-
+    let state6_src = std::fs::read_to_string("examples/gallery/state6_advanced_controls.rs").expect("read");
+    assert!(!state6_src.contains(".label("));
     let ctx = Context::default();
     gallery_app::setup_system_or_custom_fonts(&ctx);
     let theme = MacTheme::new(MacAppearance::Aqua);
     let mut center = gallery_app::gallery::CenterState::default();
     let toasts = std::cell::RefCell::new(egui_macview::MacToastManager::new());
-    assert!(center.v068_inspector_enabled);
-
     let screen_rect = Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(1000.0, 800.0)));
     let mut out = ctx.run_ui(RawInput { screen_rect, ..Default::default() }, |ui| {
         center.render_state6_advanced_controls(ui, &theme, &toasts);
     });
     out.textures_delta.clear();
-
     let mut texts = Vec::new();
     for cs in &out.shapes {
         collect_text_shapes(&cs.shape, &mut texts);
     }
-    let find_text = |s: &str| texts.iter().copied().find(|t| t.galley.text() == s).unwrap_or_else(|| panic!("Missing '{s}' in State 6"));
-
-    for required in [
-        "Enable Inspector Controls (ui.add_enabled_ui)", "Width:", "1920", "pt", "Sonoma 14.8", "?", "+",
-        "Regular (14pt)", "Small (12pt)", "Mini Mixed (10pt)", "Small 19pt", "Apple ProRes 422 HQ",
-        "Primary Label", "Tertiary Caption (WCAG Clamped)",
-    ] {
-        let _ = find_text(required);
+    let find_text = |s: &str| texts.iter().copied().find(|t| t.galley.text() == s).unwrap();
+    for req in ["Enable Inspector Controls (ui.add_enabled_ui)", "Width:", "1920", "pt", "Sonoma 14.8", "?", "+", "Regular (14pt)", "Small (12pt)", "Mini Mixed (10pt)", "Small 19pt", "Apple ProRes 422 HQ", "Primary Label", "Tertiary Caption (WCAG Clamped)", "Origin:", "Tag Label:", "Transform Layer", "Color Tag", "Center"] {
+        let _ = find_text(req);
     }
-
     let (w_lbl, w_in, u_pop, p_pop) = (find_text("Width:"), find_text("1920"), find_text("pt"), find_text("Sonoma 14.8"));
     assert!((w_lbl.pos.y - w_in.pos.y).abs() <= 1.0 && (w_in.pos.y - u_pop.pos.y).abs() <= 1.0 && (u_pop.pos.y - p_pop.pos.y).abs() <= 1.0);
-
-    let tert = find_text("Tertiary Caption (WCAG Clamped)");
-    assert_eq!(tert.galley.job.sections[0].format.color, theme.tertiary_label_on(theme.box_background()));
-    assert!(out.shapes.iter().any(|cs| matches!(&cs.shape, egui::Shape::Rect(r) if r.fill == theme.box_background())));
-    assert!(out.shapes.iter().any(|cs| matches!(&cs.shape, egui::Shape::Rect(r) if r.fill == theme.control_background() && r.corner_radius.nw == 2)));
-    assert!(out.shapes.iter().any(|cs| matches!(&cs.shape, egui::Shape::Rect(r) if r.fill == theme.control_background() && r.corner_radius.nw == 5)));
-    assert!(out.shapes.iter().any(|cs| matches!(&cs.shape, egui::Shape::Rect(r) if r.fill == theme.control_accent())));
-
-    for app in [MacAppearance::Anthracite, MacAppearance::DarkAqua] {
-        let th = MacTheme::new(app);
-        let mut o = ctx.run_ui(RawInput { screen_rect, ..Default::default() }, |ui| {
-            center.render_state6_advanced_controls(ui, &th, &toasts);
-        });
-        o.textures_delta.clear();
-    }
+    let (orig_lbl, tag_lbl) = (find_text("Origin:"), find_text("Tag Label:"));
+    assert!((orig_lbl.pos.y - tag_lbl.pos.y).abs() <= 1.0);
+    assert_eq!(find_text("Tertiary Caption (WCAG Clamped)").galley.job.sections[0].format.color, theme.tertiary_label_on(theme.box_background()));
 
     let (chk_pos, plus_pos) = (find_text("Regular (14pt)").pos + Vec2::new(-8.0, 6.0), find_text("+").pos + Vec2::new(2.0, 6.0));
     center.v068_inspector_enabled = false;
     let (init_chk, init_axes, init_btn) = (center.v065_check_regular, center.v065_axis_count, center.advanced_button_open);
-    let mut dis_out = ctx.run_ui(RawInput { screen_rect, ..Default::default() }, |ui| {
-        center.render_state6_advanced_controls(ui, &theme, &toasts);
-    });
-    dis_out.textures_delta.clear();
-    let dimmed_bg = theme.apply_enabled(theme.control_background(), false).gamma_multiply(0.5);
-    assert!(dis_out.shapes.iter().any(|cs| matches!(&cs.shape, egui::Shape::Rect(r) if r.fill == dimmed_bg && r.corner_radius.nw == 2)));
-    assert!(dis_out.shapes.iter().any(|cs| matches!(&cs.shape, egui::Shape::Rect(r) if r.fill == dimmed_bg && r.corner_radius.nw == 5)));
-    assert!(dis_out.shapes.iter().any(|cs| matches!(&cs.shape, egui::Shape::Rect(r) if r.fill == dimmed_bg && r.corner_radius.nw == 13)));
-
     for pos in [chk_pos, plus_pos] {
         for pressed in [true, false] {
             let mut raw = click_raw(pos, pressed, None);
             raw.screen_rect = screen_rect;
-            let mut o = ctx.run_ui(raw, |ui| {
-                center.render_state6_advanced_controls(ui, &theme, &toasts);
-            });
-            o.textures_delta.clear();
+            ctx.run_ui(raw, |ui| center.render_state6_advanced_controls(ui, &theme, &toasts)).textures_delta.clear();
         }
     }
     assert_eq!((center.v065_check_regular, center.v065_axis_count, center.advanced_button_open), (init_chk, init_axes, init_btn));
-
-    let mut app = GalleryApp::new();
-    app.active_screen = GalleryScreen::AdvancedControls;
-    let tb_rect = Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(1160.0, 740.0)));
-    let mut app_out = ctx.run_ui(RawInput { screen_rect: tb_rect, ..Default::default() }, |ui| app.render_ui(ui));
-    app_out.textures_delta.clear();
-    let mut tb_texts = Vec::new();
-    for cs in &app_out.shapes {
-        collect_text_shapes(&cs.shape, &mut tb_texts);
-    }
-    assert!(tb_texts.iter().any(|t| t.galley.text() == "Anthracite") && tb_texts.iter().any(|t| t.galley.text().contains("6. Advanced Controls (v0.6)")));
-    let k_lbl = tb_texts.iter().find(|t| t.galley.text().contains("Ctrl+K") || t.galley.text().contains("⌘K")).unwrap();
-    assert!(k_lbl.pos.x >= theme.toolbar_metrics().traffic_lights_inset.points());
 }

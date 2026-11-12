@@ -3,8 +3,10 @@
 //! Grounded in macOS HIG and W3C DTCG tokens via [`MacTheme`].
 //! Fully data-driven: zero hardcoded colors or dimensions.
 
+use crate::controls::MacControlSize;
+use crate::layout::subpixel_snap_rect;
 use crate::theme::MacTheme;
-use egui::{Color32, CornerRadius, Response, Stroke, StrokeKind, Ui, Vec2, Widget};
+use egui::{Color32, CornerRadius, Rect, Response, Stroke, StrokeKind, Ui, Vec2, Widget};
 
 /// Authentic macOS AppKit Push Button / Tool Button (`NSButtonCell` equivalent).
 ///
@@ -31,9 +33,11 @@ pub struct MacButtonCell<'a> {
     selected: bool,
     enabled: bool,
     theme: Option<&'a MacTheme>,
+    control_size: MacControlSize,
     width: Option<f32>,
     height: Option<f32>,
     corner_radius: Option<f32>,
+    fixed_rect: Option<Rect>,
 }
 
 /// Convenience alias for [`MacButtonCell`].
@@ -47,10 +51,29 @@ impl<'a> MacButtonCell<'a> {
             selected: false,
             enabled: true,
             theme: None,
+            control_size: MacControlSize::Regular,
             width: None,
             height: None,
             corner_radius: None,
+            fixed_rect: None,
         }
+    }
+
+    /// Sets the AppKit control size (`Regular` `22pt`, `Small` `18pt`, or `Mini` `15pt`).
+    pub fn control_size(mut self, size: MacControlSize) -> Self {
+        self.control_size = size;
+        self
+    }
+
+    /// Pins the button cell to an exact NIB rectangle.
+    pub fn fixed_rect(mut self, rect: Rect) -> Self {
+        self.fixed_rect = Some(rect);
+        self
+    }
+
+    /// Renders the button cell into `ui`.
+    pub fn show(self, ui: &mut Ui) -> Response {
+        ui.add(self)
     }
 
     /// Enables or disables the button cell.
@@ -95,8 +118,23 @@ impl<'a> Widget for MacButtonCell<'a> {
         let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
         let theme: &MacTheme = &theme_cow;
 
-        let metrics = &theme.button().regular;
-        let height = self.height.unwrap_or_else(|| metrics.height.points());
+        let metrics = match self.control_size {
+            MacControlSize::Regular | MacControlSize::Large => &theme.button().regular,
+            MacControlSize::Small | MacControlSize::CompactInfobox => &theme.button().small,
+            MacControlSize::Mini => &theme.button().mini,
+        };
+        let height = self
+            .fixed_rect
+            .map(|r| r.height())
+            .or(self.height)
+            .unwrap_or_else(|| metrics.height.points());
+        let font_sz = if height <= theme.button().mini.height.points() {
+            theme.button().mini.font_size.points()
+        } else if height <= theme.button().small.height.points() {
+            theme.button().small.font_size.points()
+        } else {
+            metrics.font_size.points()
+        };
         let corner_radius = self
             .corner_radius
             .unwrap_or_else(|| metrics.corner_radius.points());
@@ -104,9 +142,9 @@ impl<'a> Widget for MacButtonCell<'a> {
             .padding_horizontal
             .as_ref()
             .map(|d| d.points())
-            .unwrap_or_else(|| metrics.font_size.points());
+            .unwrap_or(font_sz);
 
-        let font_id = egui::FontId::proportional(metrics.font_size.points());
+        let font_id = egui::FontId::proportional(font_sz);
         let text_layout = theme.layout_tracked_galley(
             ui,
             self.text,
@@ -124,7 +162,17 @@ impl<'a> Widget for MacButtonCell<'a> {
         } else {
             egui::Sense::hover()
         };
-        let (rect, response) = ui.allocate_exact_size(Vec2::new(desired_width, height), sense);
+        let ppp = ui.ctx().pixels_per_point();
+        let (rect, response) = if let Some(fixed) = self.fixed_rect {
+            let snapped = subpixel_snap_rect(fixed, ppp);
+            let id = ui.next_auto_id().with("mac_button_cell_fixed");
+            ui.skip_ahead_auto_ids(1);
+            let resp = ui.interact(snapped, id, sense);
+            (snapped, resp)
+        } else {
+            let (r, resp) = ui.allocate_exact_size(Vec2::new(desired_width, height), sense);
+            (subpixel_snap_rect(r, ppp), resp)
+        };
         let painter = ui.painter_at(rect);
 
         let alpha_factor = if enabled {

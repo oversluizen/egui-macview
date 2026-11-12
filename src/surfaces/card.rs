@@ -116,11 +116,9 @@ impl<'a> MacCard<'a> {
             .stroke
             .unwrap_or_else(|| Stroke::new(metrics.border_width.points(), theme.separator()));
 
-        let resp = ui.interact(
-            rect,
-            ui.scope_id().with("mac_card"),
-            Sense::click_and_drag(),
-        );
+        let card_id = ui.next_auto_id().with("mac_card");
+        ui.skip_ahead_auto_ids(1);
+        let resp = ui.interact(rect, card_id, Sense::click_and_drag());
 
         let painter = ui.painter_at(rect);
 
@@ -146,7 +144,9 @@ impl<'a> MacCard<'a> {
 
         let bg_style = MacBackgroundStyle::from_color(bg_fill);
         let inner_padding = metrics.inner_padding.points();
-        let content_rect = rect.shrink(inner_padding);
+        let pad_x = inner_padding.min(rect.width() * 0.5);
+        let pad_y = inner_padding.min(rect.height() * 0.5);
+        let content_rect = rect.shrink2(Vec2::new(pad_x, pad_y));
 
         let mut child_ui = ui.new_child(
             egui::UiBuilder::new()

@@ -1,6 +1,7 @@
 //! Media playback, collection grid, and date/time picker control geometry tokens (`SPEC-012`).
 
 use crate::tokens::dtcg::DimensionValue;
+use crate::tokens::MacDesignTokens;
 use serde::{Deserialize, Serialize};
 
 /// `MacDatePicker` geometry and element metrics.
@@ -76,41 +77,9 @@ pub struct DatePickerMetrics {
 
 impl Default for DatePickerMetrics {
     fn default() -> Self {
-        Self {
-            stepper_width: DimensionValue::from_pt(19.0),
-            stepper_chevron_pitch: DimensionValue::from_pt(9.0),
-            selection_corner_radius: DimensionValue::from_pt(2.5),
-            corner_radius_regular: DimensionValue::from_pt(5.0),
-            corner_radius_small: DimensionValue::from_pt(4.0),
-            corner_radius_mini: DimensionValue::from_pt(3.0),
-            datetime_regular_width: DimensionValue::from_pt(161.0),
-            datetime_regular_height: DimensionValue::from_pt(28.0),
-            datetime_small_width: DimensionValue::from_pt(157.0),
-            datetime_small_height: DimensionValue::from_pt(22.0),
-            datetime_mini_width: DimensionValue::from_pt(155.0),
-            datetime_mini_height: DimensionValue::from_pt(21.0),
-            date_only_regular_width: DimensionValue::from_pt(97.0),
-            date_only_regular_height: DimensionValue::from_pt(28.0),
-            date_only_small_width: DimensionValue::from_pt(93.0),
-            date_only_small_height: DimensionValue::from_pt(22.0),
-            date_only_mini_width: DimensionValue::from_pt(91.0),
-            date_only_mini_height: DimensionValue::from_pt(21.0),
-            time_only_regular_width: DimensionValue::from_pt(81.0),
-            time_only_regular_height: DimensionValue::from_pt(28.0),
-            time_only_small_width: DimensionValue::from_pt(77.0),
-            time_only_small_height: DimensionValue::from_pt(22.0),
-            time_only_mini_width: DimensionValue::from_pt(75.0),
-            time_only_mini_height: DimensionValue::from_pt(21.0),
-            calendar_width: DimensionValue::from_pt(139.0),
-            calendar_height: DimensionValue::from_pt(148.0),
-            calendar_header_height: DimensionValue::from_pt(24.0),
-            calendar_weekday_height: DimensionValue::from_pt(16.0),
-            calendar_matrix_height: DimensionValue::from_pt(108.0),
-            calendar_cell_height: DimensionValue::from_pt(18.0),
-            clock_face_width: DimensionValue::from_pt(122.0),
-            clock_face_height: DimensionValue::from_pt(123.0),
-            clock_size: DimensionValue::from_pt(119.0),
-        }
+        MacDesignTokens::default_shared()
+            .date_picker_metrics()
+            .clone()
     }
 }
 
@@ -137,16 +106,9 @@ pub struct CollectionViewMetrics {
 
 impl Default for CollectionViewMetrics {
     fn default() -> Self {
-        Self {
-            item_size: DimensionValue::from_pt(50.0),
-            minimum_line_spacing: DimensionValue::from_pt(10.0),
-            minimum_interitem_spacing: DimensionValue::from_pt(10.0),
-            section_inset: DimensionValue::from_pt(0.0),
-            selection_corner_radius: DimensionValue::from_pt(6.0),
-            selection_stroke_width: DimensionValue::from_pt(2.0),
-            marquee_alpha_fill: DimensionValue::from_pt(0.20),
-            marquee_alpha_stroke: DimensionValue::from_pt(0.80),
-        }
+        MacDesignTokens::default_shared()
+            .collection_view_metrics()
+            .clone()
     }
 }
 
@@ -229,43 +191,8 @@ pub struct PlayerViewMetrics {
 
 impl Default for PlayerViewMetrics {
     fn default() -> Self {
-        Self {
-            hud_width: DimensionValue::from_pt(481.0),
-            hud_height: DimensionValue::from_pt(64.0),
-            hud_corner_radius: DimensionValue::from_pt(16.0),
-            hud_bottom_margin: DimensionValue::from_pt(16.0),
-            auto_hide_seconds: DimensionValue::from_pt(3.0),
-            top_row_height: DimensionValue::from_pt(34.0),
-            scrubber_height: DimensionValue::from_pt(22.5),
-            scrubber_track_height: DimensionValue::from_pt(3.5),
-            scrubber_track_corner_radius: DimensionValue::from_pt(1.8),
-            scrubber_knob_size: DimensionValue::from_pt(8.0),
-            inline_height: DimensionValue::from_pt(24.0),
-            inline_corner_radius: DimensionValue::from_pt(0.0),
-            minimal_width: DimensionValue::from_pt(29.0),
-            minimal_height: DimensionValue::from_pt(18.0),
-            skip_button_width: DimensionValue::from_pt(25.0),
-            skip_button_height: DimensionValue::from_pt(15.0),
-            step_button_width: DimensionValue::from_pt(19.0),
-            step_button_height: DimensionValue::from_pt(21.0),
-            mute_button_width: DimensionValue::from_pt(24.0),
-            mute_button_height: DimensionValue::from_pt(17.0),
-            volume_slider_width: DimensionValue::from_pt(125.0),
-            volume_slider_height: DimensionValue::from_pt(18.0),
-            play_button_width: DimensionValue::from_pt(29.0),
-            play_button_height: DimensionValue::from_pt(34.0),
-            aux_button_size: DimensionValue::from_pt(20.0),
-            button_spacing: DimensionValue::from_pt(6.0),
-            speed_button_width: DimensionValue::from_pt(36.0),
-            speed_button_height: DimensionValue::from_pt(18.0),
-            icon_size: DimensionValue::from_pt(8.0),
-            skip_duration_seconds: DimensionValue::from_pt(15.0),
-            frame_step_fps: DimensionValue::from_pt(30.0),
-            default_duration_seconds: DimensionValue::from_pt(100.0),
-            min_repaint_delay_seconds: DimensionValue::from_pt(0.05),
-            buffered_fill_alpha: DimensionValue::from_pt(0.28),
-            inline_play_button_width: DimensionValue::from_pt(20.0),
-            inline_play_button_inset: DimensionValue::from_pt(8.0),
-        }
+        MacDesignTokens::default_shared()
+            .player_view_metrics()
+            .clone()
     }
 }

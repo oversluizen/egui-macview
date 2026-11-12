@@ -132,16 +132,16 @@ impl<'a> Widget for MacPopUpButton<'a> {
                 lm.regular_ascender.points(),
             ),
             MacControlSize::Small | MacControlSize::CompactInfobox => (
-                theme.text_field().small.height.points(),
+                metrics.small_height.points(),
                 metrics.small_visual_height.points(),
-                theme.text_field().small.font_size.points(),
+                metrics.small_font_size.points(),
                 metrics.small_first_baseline_offset.points(),
                 lm.small_ascender.points(),
             ),
             MacControlSize::Mini => (
-                theme.text_field().mini.height.points(),
+                metrics.mini_height.points(),
                 metrics.mini_visual_height.points(),
-                theme.text_field().mini.font_size.points(),
+                metrics.mini_font_size.points(),
                 metrics.mini_first_baseline_offset.points(),
                 lm.mini_ascender.points(),
             ),
@@ -186,7 +186,11 @@ impl<'a> Widget for MacPopUpButton<'a> {
         let sense = if enabled { Sense::click() } else { Sense::hover() };
         let ppp = ui.ctx().pixels_per_point();
         let (frame_rect, visual_rect, mut response) = if let Some(fixed) = self.fixed_rect {
-            let id = self.id.unwrap_or_else(|| ui.next_auto_id().with("mac_popup_fixed"));
+            let id = self.id.unwrap_or_else(|| {
+                let auto_id = ui.next_auto_id().with("mac_popup_fixed");
+                ui.skip_ahead_auto_ids(1);
+                auto_id
+            });
             let resp = ui.interact(fixed, id, sense);
             let sf = subpixel_snap_rect(fixed, ppp);
             (sf, theme.clamp_nib_visual_rect(sf, visual_h, ppp), resp)

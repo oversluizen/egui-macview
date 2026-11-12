@@ -1,12 +1,6 @@
 //! ISO/IEC/IEEE 29119-3:2021 Red COTS Test Baseline for Sprint 1.
 //!
 //! Normative reference: SPEC-001 Section 1, 2.1, 4.1 & Architecture Fitness Standards.
-//! Verifies:
-//! 1. W3C DTCG Token Catalog Deserialization into strongly typed models.
-//! 2. CASpring CoreAnimation Physics analytical precision and decay bounds.
-//! 3. Compact HUD panel budget and zero-clipping guarantee.
-//! 4. Subpixel snap criterion under fractional Windows DPI scaling (s = 1.50).
-//! 5. SF Pro dynamic typography cubic tracking optical bounds against Apple HIG.
 
 use std::fs;
 use std::path::Path;
@@ -22,13 +16,11 @@ use egui_macview::tokens::{sf_pro_tracking, MacDesignTokens};
 fn test_token_catalog_deserialization() {
     let tokens = MacDesignTokens::load_default();
 
-    // Verify metadata
     assert_eq!(tokens.name, "egui-macview Design Tokens");
-    assert_eq!(tokens.version, "0.6.8");
-    assert_eq!(egui_macview::VERSION, "0.6.8");
+    assert_eq!(tokens.version, "0.6.10");
+    assert_eq!(egui_macview::VERSION, "0.6.10");
     assert!(!tokens.description.is_empty());
 
-    // Verify Control Metrics
     let ctrl = tokens.control_metrics();
     assert_eq!(ctrl.focus_ring.stroke_width.points(), 3.0);
     assert_eq!(ctrl.focus_ring.offset.points(), 1.0);
@@ -51,7 +43,6 @@ fn test_token_catalog_deserialization() {
     assert_eq!(ctrl.segmented.regular.height.points(), 22.0);
     assert_eq!(ctrl.segmented.small.height.points(), 18.0);
 
-    // Verify Toolbar Metrics
     let tb = tokens.toolbar_metrics();
     assert_eq!(tb.traffic_lights_inset.points(), 70.0);
     assert_eq!(tb.height_unified.points(), 52.0);
@@ -65,7 +56,6 @@ fn test_token_catalog_deserialization() {
     assert_eq!(tb.traffic_light_radius.points(), 6.0);
     assert_eq!(tb.traffic_light_spacing.points(), 8.0);
 
-    // Verify Popover Metrics
     let pop = tokens.popover_metrics();
     assert_eq!(pop.arrow_base_width.points(), 24.0);
     assert_eq!(pop.arrow_height.points(), 12.0);
@@ -74,21 +64,18 @@ fn test_token_catalog_deserialization() {
     assert_eq!(pop.wing_width.points(), 84.0);
     assert_eq!(pop.wing_height.points(), 44.0);
 
-    // Verify Colors
     let colors = tokens.colors();
     assert_eq!(colors.aqua.window_background.hex_or_rgba(), "#ECECEC");
     assert_eq!(colors.aqua.control_accent.hex_or_rgba(), "#007AFF");
     assert_eq!(colors.dark_aqua.window_background.hex_or_rgba(), "#323232");
     assert_eq!(colors.dark_aqua.control_accent.hex_or_rgba(), "#0A84FF");
 
-    // Verify Typography Tracking Table
     let typo = tokens.typography();
     assert_eq!(typo.tracking_table.len(), 19);
     assert_eq!(typo.tracking_table.get("pt_6").unwrap().tracking_pt, 0.24);
     assert_eq!(typo.tracking_table.get("pt_12").unwrap().tracking_pt, 0.00);
     assert_eq!(typo.tracking_table.get("pt_20").unwrap().tracking_pt, -0.45);
 
-    // Verify Motion Presets
     let motion = tokens.motion();
     assert_eq!(motion.caspring_default.mass, 1.0);
     assert_eq!(motion.caspring_default.stiffness, 100.0);
@@ -101,151 +88,65 @@ fn test_token_catalog_deserialization() {
 #[test]
 fn test_caspring_analytical_precision() {
     let tolerance = 1e-4;
-
-    // 1. caspring_default: mass=1.0, stiffness=100.0, damping=10.0 -> omega_0=10.0, zeta=0.5, omega_d=8.660254
     let spring_default = CASpring::from_frequency(10.0, 0.5);
-    assert!(
-        (spring_default.omega_0() - 10.0).abs() < tolerance,
-        "omega_0 expected 10.0, got {}",
-        spring_default.omega_0()
-    );
-    assert!(
-        (spring_default.omega_d() - 8.660254).abs() < tolerance,
-        "omega_d expected 8.660254, got {}",
-        spring_default.omega_d()
-    );
+    assert!((spring_default.omega_0() - 10.0).abs() < tolerance);
+    assert!((spring_default.omega_d() - 8.660254).abs() < tolerance);
     assert_eq!(spring_default.damping_ratio, 0.5);
-
-    // Initial boundary conditions
     assert_eq!(spring_default.evaluate(0.0), 0.0);
     assert_eq!(spring_default.velocity(0.0), 0.0);
 
-    // Settling duration: -ln(0.001) / (zeta * omega_0) = 6.907755 / 5.0 = 1.381551s
     let t_settle_def = spring_default.settling_duration();
-    assert!(
-        (t_settle_def - 1.381551).abs() < 1e-3,
-        "t_settle expected ~1.38s, got {}",
-        t_settle_def
-    );
-    assert!(
-        (spring_default.evaluate(t_settle_def) - 1.0).abs() <= 0.001,
-        "Rest tolerance violation at t_settle: |x(t) - 1.0| = {}",
-        (spring_default.evaluate(t_settle_def) - 1.0).abs()
-    );
+    assert!((t_settle_def - 1.381551).abs() < 1e-3);
+    assert!((spring_default.evaluate(t_settle_def) - 1.0).abs() <= 0.001);
 
-    // Verify physical parameterization equivalence (mass=1.0, stiffness=100.0, damping=10.0)
     let spring_phys = CASpring::from_physical(1.0, 100.0, 10.0);
     assert!((spring_phys.omega_0() - 10.0).abs() < tolerance);
     assert!((spring_phys.omega_d() - 8.660254).abs() < tolerance);
     assert_eq!(spring_phys.damping_ratio, 0.5);
 
-    // 2. hud_panel_transition: response=0.35, damping_ratio=0.85 -> omega_0=17.951958, omega_d=9.456781, t_settle~0.453s
     let hud_spring = CASpring::new(0.35, 0.85);
-    assert!(
-        (hud_spring.omega_0() - 17.951958).abs() < tolerance,
-        "HUD omega_0 expected 17.951958, got {}",
-        hud_spring.omega_0()
-    );
-    assert!(
-        (hud_spring.omega_d() - 9.456781).abs() < tolerance,
-        "HUD omega_d expected 9.456781, got {}",
-        hud_spring.omega_d()
-    );
+    assert!((hud_spring.omega_0() - 17.951958).abs() < tolerance);
+    assert!((hud_spring.omega_d() - 9.456781).abs() < tolerance);
     assert_eq!(hud_spring.damping_ratio, 0.85);
-
-    // Initial boundary conditions
     assert_eq!(hud_spring.evaluate(0.0), 0.0);
     assert_eq!(hud_spring.velocity(0.0), 0.0);
 
-    // HUD settling duration
     let t_settle_hud = hud_spring.settling_duration();
-    assert!(
-        (t_settle_hud - 0.453).abs() < 0.002,
-        "HUD t_settle expected ~0.453s, got {}",
-        t_settle_hud
-    );
-    // At envelope decay boundary
-    assert!(
-        (hud_spring.evaluate(t_settle_hud) - 1.0).abs() <= 0.002,
-        "HUD rest boundary deviation: {}",
-        (hud_spring.evaluate(t_settle_hud) - 1.0).abs()
-    );
-    // Fully settled within 0.1% threshold at 0.5s
-    assert!(
-        (hud_spring.evaluate(0.50) - 1.0).abs() <= 0.001,
-        "HUD rest tolerance at 0.5s: {}",
-        (hud_spring.evaluate(0.50) - 1.0).abs()
-    );
+    assert!((t_settle_hud - 0.453).abs() < 0.002);
+    assert!((hud_spring.evaluate(t_settle_hud) - 1.0).abs() <= 0.002);
+    assert!((hud_spring.evaluate(0.50) - 1.0).abs() <= 0.001);
 }
 
 /// Test 3: Asserts compact HUD panel budget and zero-clipping guarantee (SPEC-001 Section 4.1).
 #[test]
 fn test_compact_hud_panel_budget_zero_clipping() {
     let tokens = MacDesignTokens::load_default();
-
-    // Standard HUD panel dimensions
     let total_panel_height = tokens.popover_metrics().compact_panel_height.points();
     let header_height = tokens.control_metrics().text_field.regular.height.points();
-    assert_eq!(total_panel_height, 63.0);
-    assert_eq!(header_height, 22.0);
+    assert_eq!((total_panel_height, header_height), (63.0, 22.0));
 
-    // Available body budget
     let available_body_budget = total_panel_height - header_height;
     assert_eq!(available_body_budget, 41.0);
 
-    // 2-row layout with two 18.0pt compact cells and 1.0pt vertical gap
-    let cell_height = tokens
-        .control_metrics()
-        .text_field
-        .compact_infobox
-        .height
-        .points();
+    let cell_height = tokens.control_metrics().text_field.compact_infobox.height.points();
     assert_eq!(cell_height, 18.0);
-
-    let vertical_gap = 1.0;
-    let claimed_body_height = cell_height + vertical_gap + cell_height;
+    let claimed_body_height = cell_height + 1.0 + cell_height;
     assert_eq!(claimed_body_height, 37.0);
-
-    // Zero-clipping verification: claimed height must not exceed available budget
-    assert!(
-        claimed_body_height <= available_body_budget,
-        "Body height {} exceeds available budget {}",
-        claimed_body_height,
-        available_body_budget
-    );
-
-    let safety_margin = available_body_budget - claimed_body_height;
-    assert_eq!(safety_margin, 4.0);
-    assert!(
-        safety_margin > 0.0,
-        "Zero-clipping guarantee requires strictly positive safety margin"
-    );
+    assert!(claimed_body_height <= available_body_budget);
+    assert_eq!(available_body_budget - claimed_body_height, 4.0);
 }
 
 /// Test 4: Tests subpixel snap criterion on Windows 150% fractional scaling (SPEC-001 Section 2.1 A).
 #[test]
 fn test_subpixel_snap_windows_150_percent() {
-    let scale = 1.5; // Windows 150% scaling
-
-    // Test specific boundary values
+    let scale = 1.5;
     let test_coords = [0.0, 0.25, 0.333, 0.5, 0.667, 1.0, 10.1, 10.4, 25.75, 41.333];
-
     for &x_logical in &test_coords {
         let x_snapped = subpixel_snap(x_logical, scale);
         let hardware_pixels = x_snapped * scale;
-        let rounded_pixels = hardware_pixels.round();
-
-        // Hardware pixel must land exactly on an integer pixel boundary
-        assert!(
-            (hardware_pixels - rounded_pixels).abs() < 1e-4,
-            "Logical coord {} snapped to {} does not align with hardware integer pixel boundary at scale 1.5x (got {} px)",
-            x_logical,
-            x_snapped,
-            hardware_pixels
-        );
+        assert!((hardware_pixels - hardware_pixels.round()).abs() < 1e-4);
     }
 
-    // Verify 2D point and Rect snapping
     let p = egui::Pos2::new(10.1, 20.4);
     let snapped_p = subpixel_snap_pos(p, scale);
     assert!(((snapped_p.x * scale) - (snapped_p.x * scale).round()).abs() < 1e-4);
@@ -263,68 +164,16 @@ fn test_sf_pro_dynamic_tracking_optical_bounds() {
     let tokens = MacDesignTokens::load_default();
     let typo = tokens.typography();
 
-    // 1. Verify exact Apple HIG ground truth tracking table points
-    let pt6_table = typo
-        .tracking_table
-        .get("pt_6")
-        .expect("pt_6 entry missing")
-        .tracking_pt;
-    let pt12_table = typo
-        .tracking_table
-        .get("pt_12")
-        .expect("pt_12 entry missing")
-        .tracking_pt;
-    let pt20_table = typo
-        .tracking_table
-        .get("pt_20")
-        .expect("pt_20 entry missing")
-        .tracking_pt;
+    assert_eq!(typo.tracking_table.get("pt_6").unwrap().tracking_pt, 0.24);
+    assert_eq!(typo.tracking_table.get("pt_12").unwrap().tracking_pt, 0.00);
+    assert_eq!(typo.tracking_table.get("pt_20").unwrap().tracking_pt, -0.45);
 
-    assert_eq!(pt6_table, 0.24, "HIG table pt_6 must be +0.24pt");
-    assert_eq!(pt12_table, 0.00, "HIG table pt_12 must be neutral 0.00pt");
-    assert_eq!(pt20_table, -0.45, "HIG table pt_20 must be -0.45pt");
+    let (track_6, track_12, track_20) = (typo.tracking_for_size(6.0), typo.tracking_for_size(12.0), typo.tracking_for_size(20.0));
+    assert!(track_6 > 0.15 && (track_6 - 0.24).abs() < 0.05);
+    assert!(track_12.abs() < 0.02);
+    assert!(track_20 < -0.35 && (track_20 - (-0.45)).abs() < 0.05);
+    assert!(track_6 > track_12 && track_12 > track_20);
 
-    // 2. Validate continuous cubic polynomial against HIG optical behavior
-    let track_6 = typo.tracking_for_size(6.0);
-    let track_12 = typo.tracking_for_size(12.0);
-    let track_20 = typo.tracking_for_size(20.0);
-
-    // 6pt: Positive loose tracking for small text optical legibility
-    assert!(
-        track_6 > 0.15,
-        "6pt tracking must be positive loose: got {}",
-        track_6
-    );
-    assert!(
-        (track_6 - 0.24).abs() < 0.05,
-        "6pt tracking polynomial deviation too large: {}",
-        track_6
-    );
-
-    // 12pt: Neutral zero-crossing baseline
-    assert!(
-        track_12.abs() < 0.02,
-        "12pt tracking must be close to neutral 0.0pt: got {}",
-        track_12
-    );
-
-    // 20pt: Display threshold negative tight tracking
-    assert!(
-        track_20 < -0.35,
-        "20pt tracking must be negative display tight: got {}",
-        track_20
-    );
-    assert!(
-        (track_20 - (-0.45)).abs() < 0.05,
-        "20pt tracking polynomial deviation too large: {}",
-        track_20
-    );
-
-    // Monotonic decrease from micro to display sizing
-    assert!(track_6 > track_12);
-    assert!(track_12 > track_20);
-
-    // Verify standalone sf_pro_tracking helper matches
     assert!((sf_pro_tracking(6.0) as f64 - track_6).abs() < 1e-4);
     assert!((sf_pro_tracking(12.0) as f64 - track_12).abs() < 1e-4);
     assert!((sf_pro_tracking(20.0) as f64 - track_20).abs() < 1e-4);
@@ -334,25 +183,17 @@ fn test_sf_pro_dynamic_tracking_optical_bounds() {
 #[test]
 fn test_version_synchronization_invariants() {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-
-    // 1. Cargo.toml version
     let cargo_toml = fs::read_to_string(manifest_dir.join("Cargo.toml")).expect("read Cargo.toml");
-    assert!(
-        cargo_toml.contains("version = \"0.6.8\""),
-        "Cargo.toml must have version = \"0.6.8\""
-    );
+    assert!(cargo_toml.contains("version = \"0.6.10\""), "Cargo.toml must have version = \"0.6.10\"");
+    assert_eq!(egui_macview::VERSION, "0.6.10");
 
-    // 2. Exported crate version constant
-    assert_eq!(egui_macview::VERSION, "0.6.8");
-
-    // 3. Design tokens version
     let tokens = MacDesignTokens::load_default();
-    assert_eq!(tokens.version, "0.6.8");
+    assert_eq!(tokens.version, "0.6.10");
 
-    // 4. CHANGELOG.md strictly documents all released milestones
-    let changelog =
-        fs::read_to_string(manifest_dir.join("CHANGELOG.md")).expect("read CHANGELOG.md");
+    let changelog = fs::read_to_string(manifest_dir.join("CHANGELOG.md")).expect("read CHANGELOG.md");
     for header in [
+        "## [0.6.10] - 2026-11-12",
+        "## [0.6.9] - 2026-11-11",
         "## [0.6.8] - 2026-11-11",
         "## [0.6.7] - 2026-11-11",
         "## [0.6.6] - 2026-11-11",
@@ -371,13 +212,9 @@ fn test_version_synchronization_invariants() {
         "## [0.2.0] - 2026-11-06",
         "## [0.1.0] - 2026-11-05",
     ] {
-        assert!(
-            changelog.contains(header),
-            "CHANGELOG.md must contain header '{header}'"
-        );
+        assert!(changelog.contains(header), "CHANGELOG.md must contain header '{header}'");
     }
 
-    // 5. Specs in specs/ have synchronized versions according to release roadmap
     let specs_dir = manifest_dir.join("specs");
     let entries = fs::read_dir(&specs_dir).expect("read specs dir");
     let mut spec_count = 0;
@@ -398,91 +235,49 @@ fn test_version_synchronization_invariants() {
                 } else if file_name.starts_with("SPEC-011") {
                     ("0.5.0", Some("Milestone 0.5.0"))
                 } else if file_name.starts_with("SPEC-012") || file_name.starts_with("SPEC-INDEX") {
-                    ("0.6.8", Some("Milestone 0.6.8"))
+                    ("0.6.10", Some("Milestone 0.6.10"))
                 } else {
                     ("0.2.0", None)
                 };
 
-            assert!(
-                content.contains(&format!("**Document Version** | `{expected_ver}`")),
-                "{file_name} missing Document Version `{expected_ver}`"
-            );
+            assert!(content.contains(&format!("**Document Version** | `{expected_ver}`")), "{file_name} missing `{expected_ver}`");
             if let Some(ms) = expected_milestone {
-                assert!(
-                    content.contains(ms),
-                    "{file_name} missing Target Milestone `{ms}`"
-                );
+                assert!(content.contains(ms), "{file_name} missing `{ms}`");
             }
-            assert!(
-                content.contains("`0.1.0`") && content.contains("2026-11-05"),
-                "{file_name} missing baseline 0.1.0 in Revision History"
-            );
+            assert!(content.contains("`0.1.0`") && content.contains("2026-11-05"));
         }
     }
-    assert!(
-        spec_count >= 8,
-        "Expected at least 8 specs, found {spec_count}"
-    );
+    assert!(spec_count >= 8);
 }
 
 /// Test 7: COTS validation of MacForm layout across multiple DPI zoom levels (100%, 125%, 150%).
-/// Verifies trailing-aligned column 0 labels, leading-aligned column 1 controls, and zero overlap.
 #[test]
 fn test_mac_form_cots_zoom_alignment_and_no_overlap() {
-    let zoom_factors = [1.0f32, 1.25f32, 1.50f32];
     let theme = MacTheme::new(MacAppearance::Aqua);
-
-    for &zoom in &zoom_factors {
+    for &zoom in &[1.0f32, 1.25f32, 1.50f32] {
         let ctx = Context::default();
         ctx.set_zoom_factor(zoom);
+        let (mut field1, mut field2, mut field3, mut row_rects) = ("Standard text".to_string(), "42".to_string(), true, Vec::new());
 
-        let mut field1 = "Standard text".to_string();
-        let mut field2 = "42".to_string();
-        let mut field3 = true;
-
-        let mut row_rects = Vec::new();
-
-        // Run 2 frames so egui::Grid computes and caches column widths in frame 1 and aligns in frame 2
         for frame in 0..2 {
             let mut out = ctx.run_ui(RawInput::default(), |ui| {
-                MacForm::new("test_cots_form")
-                    .theme(&theme)
-                    .show(ui, |form| {
-                        let (l1, c1) =
-                            form.row_label("Short:", |ui| ui.text_edit_singleline(&mut field1));
-                        let (l2, c2) = form.row_label("A Much Longer Form Label:", |ui| {
-                            ui.text_edit_singleline(&mut field2)
-                        });
-                        let (l3, c3) = form.row_label("Toggle Setting:", |ui| {
-                            ui.checkbox(&mut field3, "Enable feature")
-                        });
-
-                        if frame == 1 {
-                            row_rects =
-                                vec![(l1.rect, c1.rect), (l2.rect, c2.rect), (l3.rect, c3.rect)];
-                        }
-                    });
+                MacForm::new("test_cots_form").theme(&theme).show(ui, |form| {
+                    let (l1, c1) = form.row_label("Short:", |ui| ui.text_edit_singleline(&mut field1));
+                    let (l2, c2) = form.row_label("A Much Longer Form Label:", |ui| ui.text_edit_singleline(&mut field2));
+                    let (l3, c3) = form.row_label("Toggle Setting:", |ui| ui.checkbox(&mut field3, "Enable feature"));
+                    if frame == 1 {
+                        row_rects = vec![(l1.rect, c1.rect), (l2.rect, c2.rect), (l3.rect, c3.rect)];
+                    }
+                });
             });
             out.textures_delta.clear();
         }
-
-        assert_eq!(
-            row_rects.len(),
-            3,
-            "All 3 rows must be recorded at zoom {zoom}"
-        );
-
-        // 1. Column 0 (trailing labels): All labels should align on their right (trailing) edge
-        let right_edge_0 = row_rects[0].0.max.x;
-        let left_edge_1 = row_rects[0].1.min.x;
+        assert_eq!(row_rects.len(), 3);
+        let (right_edge_0, left_edge_1) = (row_rects[0].0.max.x, row_rects[0].1.min.x);
         for (idx, (label_rect, control_rect)) in row_rects.iter().enumerate() {
-            assert!((label_rect.max.x - right_edge_0).abs() <= 1.0);
-            assert!((control_rect.min.x - left_edge_1).abs() <= 1.0);
-            assert!(label_rect.max.x < control_rect.min.x);
+            assert!((label_rect.max.x - right_edge_0).abs() <= 1.0 && (control_rect.min.x - left_edge_1).abs() <= 1.0 && label_rect.max.x < control_rect.min.x);
             if idx + 1 < row_rects.len() {
-                let current_bottom = label_rect.max.y.max(control_rect.max.y);
-                let next_top = row_rects[idx + 1].0.min.y.min(row_rects[idx + 1].1.min.y);
-                assert!(current_bottom <= next_top + 0.1);
+                assert!(label_rect.max.y.max(control_rect.max.y) <= row_rects[idx + 1].0.min.y.min(row_rects[idx + 1].1.min.y) + 0.1);
             }
         }
     }
