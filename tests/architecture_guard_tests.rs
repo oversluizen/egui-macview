@@ -349,6 +349,14 @@ fn test_guard_zero_dead_code_and_zero_unused_dependencies() {
         scene_norm.contains("pub fn validate_invariants(&self) -> Result<(), String>"),
         "MacSceneIR must implement validate_invariants()"
     );
+    let pre_commit_path = manifest_dir.join(".git").join("hooks").join("pre-commit");
+    if pre_commit_path.exists() {
+        let hook_src = fs::read_to_string(&pre_commit_path).expect("read .git/hooks/pre-commit");
+        assert!(
+            hook_src.contains("mypka-cli.exe\" ssot-check --auto-sync") && !hook_src.contains(".py"),
+            ".git/hooks/pre-commit must use pure-Rust mypka-cli.exe ssot-check --auto-sync with zero .py scripts"
+        );
+    }
     let nib_builders = strip_comments_and_strings(
         &fs::read_to_string(manifest_dir.join("examples/gallery/nib_showcase_builders.rs")).expect("read nib_showcase_builders.rs"),
     );
