@@ -23,75 +23,27 @@
 <body>
 <canvas id="glcanvas"></canvas>
 <input id="kbinput" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-<video id="streamVid" src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" preload="auto" loop playsinline style="display:none; position:fixed; border-radius:6px; border:1px solid rgba(255,255,255,0.22); z-index:9; object-fit:cover; background:#14161a;" controls></video>
-<audio id="classicalAud" loop preload="auto" style="display:none;"></audio>
+<video id="streamVid" src="https://media.w3.org/2010/05/bunny/trailer.mp4" preload="auto" loop playsinline style="display:none; position:fixed; border-radius:6px; border:1px solid rgba(255,255,255,0.22); z-index:9; object-fit:cover; background:#14161a;" controls></video>
 <script>
 const canvas = document.getElementById('glcanvas');
 const kbInput = document.getElementById('kbinput');
 const streamVid = document.getElementById('streamVid');
-const classicalAud = document.getElementById('classicalAud');
 const gl = canvas.getContext('webgl2', { alpha: false, antialias: true, premultipliedAlpha: true });
 
 streamVid.addEventListener('loadedmetadata', () => {
-  if (streamVid.currentTime < 0.5) {
-    try { streamVid.currentTime = 4.0; } catch (_) {}
+  if (activePresetIdx < 4 && streamVid.currentTime < 0.5) {
+    try { streamVid.currentTime = 2.0; } catch (_) {}
   }
 });
 
-const wavCache = {};
-function buildClassicalWavUrl(presetIdx) {
-  if (wavCache[presetIdx]) return wavCache[presetIdx];
-  const sr = 22050, dur = 16, len = sr * dur;
-  const buf = new ArrayBuffer(44 + len * 4);
-  const dv = new DataView(buf);
-  const writeStr = (o, s) => { for (let i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
-  writeStr(0, 'RIFF'); dv.setUint32(4, 36 + len * 4, true);
-  writeStr(8, 'WAVEfmt '); dv.setUint32(16, 16, true);
-  dv.setUint16(20, 1, true); dv.setUint16(22, 2, true);
-  dv.setUint32(24, sr, true); dv.setUint32(28, sr * 4, true);
-  dv.setUint16(32, 4, true); dv.setUint16(34, 16, true);
-  writeStr(36, 'data'); dv.setUint32(40, len * 4, true);
-  const bachM = [392.00, 369.99, 392.00, 293.66, 493.88, 440.00, 493.88, 392.00, 587.33, 523.25, 493.88, 440.00, 392.00, 369.99, 329.63, 293.66];
-  const bachB = [196.00, 196.00, 146.83, 146.83, 246.94, 220.00, 196.00, 146.83, 293.66, 261.63, 246.94, 220.00, 196.00, 146.83, 164.81, 146.83];
-  const debM = [698.46, 622.25, 554.37, 466.16, 554.37, 466.16, 415.30, 369.99, 466.16, 415.30, 369.99, 311.13, 369.99, 415.30, 554.37, 622.25];
-  const debB = [138.59, 207.65, 277.18, 207.65, 184.99, 277.18, 207.65, 138.59, 155.56, 233.08, 311.13, 233.08, 138.59, 207.65, 277.18, 349.23];
-  const tau = Math.PI * 2;
-  let off = 44;
-  for (let i = 0; i < len; i++) {
-    const t = i / sr;
-    let l = 0, r = 0;
-    if (presetIdx === 4) {
-      const st = Math.floor(t * 4.5) % 16, ph = (t * 4.5) % 1;
-      const env = Math.exp(-ph * 3.2) * (1 - Math.exp(-ph * 45));
-      const f1 = bachM[st], fb = bachB[st];
-      const v1 = (Math.sin(t * f1 * tau) * 0.34 + Math.sin(t * f1 * 2 * tau) * 0.14 + Math.sin(t * f1 * 3 * tau) * 0.06) * env;
-      const vb = (Math.sin(t * fb * tau) * 0.25 + Math.sin(t * fb * 2 * tau) * 0.10) * Math.exp(-ph * 2.0);
-      l = v1 * 1.05 + vb * 0.85; r = v1 * 0.85 + vb * 1.05;
-    } else {
-      const st = Math.floor(t * 1.25) % 16, ph = (t * 1.25) % 1;
-      const env = Math.exp(-ph * 1.8) * (1 - Math.exp(-ph * 30));
-      const ast = Math.floor(t * 3.75) % 16, aph = (t * 3.75) % 1;
-      const f1 = debM[st], fb = debB[ast];
-      const v1 = (Math.sin(t * f1 * tau) * 0.36 + Math.sin(t * f1 * 2 * tau) * 0.08) * env;
-      const vb = (Math.sin(t * fb * tau) * 0.22 + Math.sin(t * fb * 1.5 * tau) * 0.07) * Math.exp(-aph * 2.4);
-      l = v1 * 0.95 + vb * 1.05; r = v1 * 1.05 + vb * 0.90;
-    }
-    dv.setInt16(off, Math.max(-1, Math.min(1, l)) * 32767, true);
-    dv.setInt16(off + 2, Math.max(-1, Math.min(1, r)) * 32767, true);
-    off += 4;
-  }
-  wavCache[presetIdx] = URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
-  return wavCache[presetIdx];
-}
-
 let scrollMode = false;
 const MEDIA_STREAMS = [
-  'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-  'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
-  'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
-  'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-  'https://upload.wikimedia.org/wikipedia/commons/4/47/BWV_1048_-_Brandenburg_Concerto_No._3_in_G_major_-_I._Allegro.ogg',
-  'https://upload.wikimedia.org/wikipedia/commons/b/be/Clair_de_lune_%28Claude_Debussy%29_Suite_bergamasque.ogg'
+  'https://media.w3.org/2010/05/bunny/trailer.mp4',
+  'https://media.w3.org/2010/05/sintel/trailer.mp4',
+  'https://archive.org/download/Tears-of-Steel/tears_of_steel_720p.mp4',
+  'https://media.w3.org/2010/05/video/movie_300.mp4',
+  'https://upload.wikimedia.org/wikipedia/commons/transcoded/b/b0/Bach_-_Brandenburg_Concerto_No._3_-_1._Allegro.ogg/Bach_-_Brandenburg_Concerto_No._3_-_1._Allegro.ogg.mp3',
+  'https://upload.wikimedia.org/wikipedia/commons/transcoded/b/be/Clair_de_lune_%28Claude_Debussy%29_Suite_bergamasque.ogg/Clair_de_lune_%28Claude_Debussy%29_Suite_bergamasque.ogg.mp3'
 ];
 let activePresetIdx = -1;
 let lastPlayingState = false;
@@ -107,7 +59,6 @@ function syncAvKitMediaOverlay(wPts, hPts) {
       streamVid.pause();
       streamVid.style.display = 'none';
     }
-    classicalAud.pause();
     lastPlayingState = false;
     return;
   }
@@ -123,29 +74,15 @@ function syncAvKitMediaOverlay(wPts, hPts) {
     streamVid.style.display = 'none';
     return;
   }
-  const isClassicalAudio = presetIdx >= 4;
+  const isAudioStream = presetIdx >= 4;
   if (presetIdx !== activePresetIdx) {
     activePresetIdx = presetIdx;
-    lastPlayingState = !playing;
-    if (isClassicalAudio) {
-      streamVid.pause();
-      streamVid.style.display = 'none';
-      classicalAud.src = buildClassicalWavUrl(presetIdx);
-    } else {
-      classicalAud.pause();
-      streamVid.src = MEDIA_STREAMS[presetIdx] || MEDIA_STREAMS[0];
+    streamVid.src = MEDIA_STREAMS[presetIdx] || MEDIA_STREAMS[0];
+    streamVid.load();
+    if (playing) {
+      lastPlayingState = true;
+      streamVid.play().catch(() => {});
     }
-  }
-  if (isClassicalAudio) {
-    streamVid.style.display = 'none';
-    classicalAud.volume = vol;
-    classicalAud.playbackRate = rate;
-    if (playing !== lastPlayingState) {
-      lastPlayingState = playing;
-      if (playing) classicalAud.play().catch(() => {});
-      else classicalAud.pause();
-    }
-    return;
   }
   const r = canvas.getBoundingClientRect();
   const sx = r.width / Math.max(1, wPts);
@@ -154,6 +91,7 @@ function syncAvKitMediaOverlay(wPts, hPts) {
   streamVid.style.top = `${Math.round(r.top + vy * sy)}px`;
   streamVid.style.width = `${Math.round(vw * sx)}px`;
   streamVid.style.height = `${Math.round(vh * sy)}px`;
+  streamVid.style.background = isAudioStream ? 'rgba(20, 22, 26, 0.30)' : '#14161a';
   streamVid.volume = vol;
   streamVid.playbackRate = rate;
   streamVid.style.display = 'block';
@@ -228,7 +166,7 @@ let inFlight = false;
 let dirty = true;
 let wasmExports = null;
 
-fetch('macview_gallery.wasm')
+fetch('macview_gallery.wasm?v=0706')
   .then(r => r.ok ? r.arrayBuffer() : Promise.reject())
   .then(bytes => WebAssembly.instantiate(bytes, {}))
   .then(res => {
