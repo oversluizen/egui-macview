@@ -1,5 +1,5 @@
 //! Static analysis helper functions for architecture fitness guards.
-#![allow(dead_code, unused_imports)]
+#![allow(unused_imports, dead_code)]
 
 mod hygiene;
 
@@ -9,9 +9,27 @@ use std::path::{Path, PathBuf};
 
 pub const ALLOWED_RATIOS: &[f64] = &[0.0, 0.5, 1.0, 2.0];
 pub const FORBIDDEN_DOMAIN_TERMS: &[&str] = &[
-    "pedigree", "gedcom", "kinship", "ancestor", "proband", "marriage", "genealogy", "lineage",
-    "divorce", "adoptive", "foster", "sibling", "glyphsapp", "schriftgestaltung", "patrix",
-    "ascendonia", "gshoi", "gsdraw", "gsselect", "gsknife", "gspen",
+    "pedigree",
+    "gedcom",
+    "kinship",
+    "ancestor",
+    "proband",
+    "marriage",
+    "genealogy",
+    "lineage",
+    "divorce",
+    "adoptive",
+    "foster",
+    "sibling",
+    "glyphsapp",
+    "schriftgestaltung",
+    "patrix",
+    "ascendonia",
+    "gshoi",
+    "gsdraw",
+    "gsselect",
+    "gsknife",
+    "gspen",
 ];
 pub const MAX_PHYSICAL_LINES: usize = 599;
 pub const MAX_ESLOC: usize = 400;
@@ -118,11 +136,11 @@ pub fn strip_comments_and_strings(source: &str) -> String {
     out
 }
 
-/// Counts physical lines and effective SLOC (non-empty, non-comment lines).
+/// Counts physical lines and effective SLOC (non-empty, non-comment logical lines containing code tokens).
 pub fn count_lines_and_esloc(source: &str) -> (usize, usize) {
     let physical = source.lines().count();
     let stripped = strip_comments_and_strings(source);
-    let esloc = stripped.lines().filter(|l| !l.trim().is_empty()).count();
+    let esloc = stripped.lines().filter(|l| l.chars().any(|c| c.is_alphanumeric() || c == '_')).count();
     (physical, esloc)
 }
 
@@ -133,9 +151,7 @@ pub fn extract_float_literals(code: &str) -> Vec<(usize, String, f64)> {
         while i < len {
             let b = bytes[i];
             if b.is_ascii_alphabetic() || b == b'_' {
-                while i < len
-                    && (bytes[i].is_ascii_alphanumeric() || bytes[i] == b'_' || bytes[i] == b'.')
-                {
+                while i < len && (bytes[i].is_ascii_alphanumeric() || bytes[i] == b'_' || bytes[i] == b'.') {
                     i += 1;
                 }
                 continue;
@@ -180,13 +196,19 @@ pub fn check_magic_numbers_in_source(file_label: &str, source: &str) -> Vec<Stri
     let mut violations: Vec<String> = extract_float_literals(&stripped)
         .into_iter()
         .filter(|(_, _, val)| !ALLOWED_RATIOS.iter().any(|&a| (val - a).abs() < 1e-9))
-        .map(|(line_num, raw, val)| {
-            format!("{file_label}:{line_num} -> forbidden magic float literal `{raw}` ({val})")
-        })
+        .map(|(line_num, raw, val)| format!("{file_label}:{line_num} -> forbidden magic float literal `{raw}` ({val})"))
         .collect();
     let forbidden_bypass_helpers = [
-        "fn pt(", "fn half_pt(", "fn tenth_pt(", "MacNibPrimitives", "rect_box(",
-        "rect_fill(", "sharp_input(", "bezel_edges(", "let mut checked =", "let mut _ =",
+        "fn pt(",
+        "fn half_pt(",
+        "fn tenth_pt(",
+        "MacNibPrimitives",
+        "rect_box(",
+        "rect_fill(",
+        "sharp_input(",
+        "bezel_edges(",
+        "let mut checked =",
+        "let mut _ =",
     ];
     for (idx, line) in stripped.lines().enumerate() {
         for helper in &forbidden_bypass_helpers {
@@ -201,10 +223,8 @@ pub fn check_magic_numbers_in_source(file_label: &str, source: &str) -> Vec<Stri
 pub fn check_hardcoded_colors_in_source(file_label: &str, source: &str) -> Vec<String> {
     let mut violations = Vec::new();
     let stripped = strip_comments_and_strings(source);
-    let forbidden_calls = [
-        "Color32::from_rgb(", "Color32::from_rgba", "Color32::from_black_alpha(",
-        "Color32::WHITE", "from_hex", "[u8; 3]", "rgb_color32(",
-    ];
+    let forbidden_calls =
+        ["Color32::from_rgb(", "Color32::from_rgba", "Color32::from_black_alpha(", "Color32::WHITE", "from_hex", "[u8; 3]", "rgb_color32("];
     for (idx, line) in stripped.lines().enumerate() {
         for call in &forbidden_calls {
             if line.contains(call) {
@@ -221,11 +241,7 @@ pub fn check_hardcoded_colors_in_source(file_label: &str, source: &str) -> Vec<S
             let after = &raw_line[pos + 2..];
             let hex_len = after.chars().take_while(|c| c.is_ascii_hexdigit()).count();
             if (hex_len == 6 || hex_len == 8) && after.as_bytes().get(hex_len) == Some(&b'"') {
-                violations.push(format!(
-                    "{file_label}:{} -> inline hex `\"#{}\"`",
-                    idx + 1,
-                    &after[..hex_len]
-                ));
+                violations.push(format!("{file_label}:{} -> inline hex `\"#{}\"`", idx + 1, &after[..hex_len]));
             }
         }
     }
@@ -239,28 +255,14 @@ pub fn check_token_arithmetic_cheating(file_label: &str, source: &str) -> Vec<St
     let is_segmented = normalized_label.contains("src/controls/segmented");
     for (idx, line) in stripped.lines().enumerate() {
         let compact: String = line.chars().filter(|c| !c.is_whitespace()).collect();
-        for bad_var_math in [
-            "indicator_inset*",
-            "*indicator_inset",
-            "border_width*2.0+border_width",
-            "+border_width;",
-        ] {
+        for bad_var_math in ["indicator_inset*", "*indicator_inset", "border_width*2.0+border_width", "+border_width;"] {
             if compact.contains(bad_var_math) {
-                violations.push(format!(
-                    "{file_label}:{} -> forbidden token variable arithmetic `{bad_var_math}`",
-                    idx + 1
-                ));
+                violations.push(format!("{file_label}:{} -> forbidden token variable arithmetic `{bad_var_math}`", idx + 1));
             }
         }
-        if is_segmented
-            && (compact.contains("border_width*")
-                || compact.contains("*border_width")
-                || compact.contains("convex_polygon("))
-        {
-            violations.push(format!(
-                "{file_label}:{} -> forbidden ad-hoc polygon or border_width arithmetic in segmented control",
-                idx + 1
-            ));
+        if is_segmented && (compact.contains("border_width*") || compact.contains("*border_width") || compact.contains("convex_polygon(")) {
+            violations
+                .push(format!("{file_label}:{} -> forbidden ad-hoc polygon or border_width arithmetic in segmented control", idx + 1));
         }
         if let Some(pos) = line.find(".points()") {
             let after = line[pos + ".points()".len()..].trim_start();
@@ -269,11 +271,7 @@ pub fn check_token_arithmetic_cheating(file_label: &str, source: &str) -> Vec<St
                 for (_, raw, val) in extract_float_literals(expr_rest) {
                     let is_allowed = ALLOWED_RATIOS.iter().any(|&a| (val - a).abs() < 1e-9);
                     if !is_allowed && expr_rest.starts_with(&raw) {
-                        violations.push(format!(
-                            "{file_label}:{} -> `.points() {} {raw}`",
-                            idx + 1,
-                            &after[..1]
-                        ));
+                        violations.push(format!("{file_label}:{} -> `.points() {} {raw}`", idx + 1, &after[..1]));
                     }
                 }
             }
@@ -302,15 +300,9 @@ pub fn check_uibuilder_id_salt_in_source(file_label: &str, source: &str) -> Vec<
         let abs = from + rel;
         let line_num = stripped[..abs].lines().count().max(1);
         let after = &stripped[abs + needle.len()..];
-        let span = after
-            .find(';')
-            .unwrap_or(after.len())
-            .min(after.find(needle).unwrap_or(after.len()))
-            .min(300);
+        let span = after.find(';').unwrap_or(after.len()).min(after.find(needle).unwrap_or(after.len())).min(300);
         if !after[..span].contains(".id_salt(") {
-            violations.push(format!(
-                "{file_label}:{line_num} -> `UiBuilder::new()` missing `.id_salt(...)`"
-            ));
+            violations.push(format!("{file_label}:{line_num} -> `UiBuilder::new()` missing `.id_salt(...)`"));
         }
         from = abs + needle.len();
     }

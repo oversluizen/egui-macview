@@ -117,26 +117,18 @@ impl<'a> MacStackUi<'a> {
     }
 
     /// Adds a grouped section with an optional section header label.
-    pub fn add_section<R>(
-        &mut self,
-        header: Option<&str>,
-        content: impl FnOnce(&mut Ui) -> R,
-    ) -> R {
+    pub fn add_section<R>(&mut self, header: Option<&str>, content: impl FnOnce(&mut Ui) -> R) -> R {
         if self.item_count > 0 || self.section_count > 0 {
             self.draw_separator();
         }
         self.section_count += 1;
 
         if let Some(title) = header {
-            let label_color = self
-                .theme
-                .secondary_label_on(self.theme.active_surface(self.ui));
+            let label_color = self.theme.secondary_label_on(self.theme.active_surface(self.ui));
             let font_size = self.theme.stack_view().section_header_font_size.points();
             let font_id = FontId::proportional(font_size);
-            self.ui.add(
-                egui::Label::new(egui::RichText::new(title).font(font_id).color(label_color))
-                    .wrap_mode(egui::TextWrapMode::Extend),
-            );
+            self.ui
+                .add(egui::Label::new(egui::RichText::new(title).font(font_id).color(label_color)).wrap_mode(egui::TextWrapMode::Extend));
             self.advance_spacing();
         }
 
@@ -167,14 +159,9 @@ impl<'a> MacStackUi<'a> {
         match self.orientation {
             MacStackOrientation::Vertical => {
                 let avail_w = self.ui.available_width();
-                let (rect, _) = self
-                    .ui
-                    .allocate_exact_size(Vec2::new(avail_w, th), egui::Sense::hover());
+                let (rect, _) = self.ui.allocate_exact_size(Vec2::new(avail_w, th), egui::Sense::hover());
                 let y = subpixel_snap(rect.center().y, scale);
-                self.ui.painter().line_segment(
-                    [Pos2::new(rect.left(), y), Pos2::new(rect.right(), y)],
-                    Stroke::new(th, color),
-                );
+                self.ui.painter().line_segment([Pos2::new(rect.left(), y), Pos2::new(rect.right(), y)], Stroke::new(th, color));
             }
             MacStackOrientation::Horizontal => {
                 let avail_h = if let Some(ch) = self.container_height {
@@ -187,14 +174,9 @@ impl<'a> MacStackUi<'a> {
                         self.theme.stack_view().default_item_height.points()
                     }
                 };
-                let (rect, _) = self
-                    .ui
-                    .allocate_exact_size(Vec2::new(th, avail_h), egui::Sense::hover());
+                let (rect, _) = self.ui.allocate_exact_size(Vec2::new(th, avail_h), egui::Sense::hover());
                 let x = subpixel_snap(rect.center().x, scale);
-                self.ui.painter().line_segment(
-                    [Pos2::new(x, rect.top()), Pos2::new(x, rect.bottom())],
-                    Stroke::new(th, color),
-                );
+                self.ui.painter().line_segment([Pos2::new(x, rect.top()), Pos2::new(x, rect.bottom())], Stroke::new(th, color));
             }
         }
         self.ui.add_space(self.spacing * 0.5);
@@ -269,21 +251,13 @@ impl<'a> MacStackView<'a> {
     }
 
     /// Renders the linear stack and executes the items closure.
-    pub fn show<R>(
-        self,
-        ui: &mut Ui,
-        add_contents: impl FnOnce(&mut MacStackUi<'_>) -> R,
-    ) -> MacStackViewOutput<R> {
+    pub fn show<R>(self, ui: &mut Ui, add_contents: impl FnOnce(&mut MacStackUi<'_>) -> R) -> MacStackViewOutput<R> {
         let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
         let theme: &MacTheme = &theme_cow;
 
         let metrics = theme.stack_view();
-        let spacing = self
-            .spacing
-            .unwrap_or_else(|| metrics.default_spacing.points());
-        let padding = self
-            .padding
-            .unwrap_or_else(|| metrics.edge_padding.points());
+        let spacing = self.spacing.unwrap_or_else(|| metrics.default_spacing.points());
+        let padding = self.padding.unwrap_or_else(|| metrics.edge_padding.points());
         let separator_thickness = metrics.separator_thickness.points();
 
         let available = ui.available_rect_before_wrap();
@@ -301,12 +275,7 @@ impl<'a> MacStackView<'a> {
                     MacStackAlignment::Center => egui::Align::Center,
                     MacStackAlignment::Trailing => egui::Align::Max,
                 });
-                ui.new_child(
-                    UiBuilder::new()
-                        .id_salt((stack_id, "stack_v"))
-                        .max_rect(inner_rect)
-                        .layout(layout),
-                )
+                ui.new_child(UiBuilder::new().id_salt((stack_id, "stack_v")).max_rect(inner_rect).layout(layout))
             }
             MacStackOrientation::Horizontal => {
                 let layout = egui::Layout::left_to_right(match self.alignment {
@@ -314,12 +283,7 @@ impl<'a> MacStackView<'a> {
                     MacStackAlignment::Center => egui::Align::Center,
                     MacStackAlignment::Trailing => egui::Align::Max,
                 });
-                ui.new_child(
-                    UiBuilder::new()
-                        .id_salt((stack_id, "stack_h"))
-                        .max_rect(inner_rect)
-                        .layout(layout),
-                )
+                ui.new_child(UiBuilder::new().id_salt((stack_id, "stack_h")).max_rect(inner_rect).layout(layout))
             }
         };
 
@@ -338,27 +302,14 @@ impl<'a> MacStackView<'a> {
 
         let inner = add_contents(&mut stack_ui);
         let items_rect = stack_ui.ui.min_rect();
-        let content_w = if items_rect.is_positive() {
-            items_rect.width() + padding * 2.0
-        } else {
-            padding * 2.0
-        };
-        let content_h = if items_rect.is_positive() {
-            items_rect.height() + padding * 2.0
-        } else {
-            padding * 2.0
-        };
+        let content_w = if items_rect.is_positive() { items_rect.width() + padding * 2.0 } else { padding * 2.0 };
+        let content_h = if items_rect.is_positive() { items_rect.height() + padding * 2.0 } else { padding * 2.0 };
         let final_w = self.width.unwrap_or(content_w).max(content_w);
         let final_h = self.height.unwrap_or(content_h).max(content_h);
         let final_rect = Rect::from_min_size(container_rect.min, Vec2::new(final_w, final_h));
 
         ui.allocate_rect(final_rect, egui::Sense::hover());
 
-        MacStackViewOutput {
-            inner,
-            rect: final_rect,
-            item_count: stack_ui.item_count,
-            section_count: stack_ui.section_count,
-        }
+        MacStackViewOutput { inner, rect: final_rect, item_count: stack_ui.item_count, section_count: stack_ui.section_count }
     }
 }

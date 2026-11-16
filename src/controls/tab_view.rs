@@ -7,10 +7,7 @@
 use crate::controls::MacControlSize;
 use crate::layout::subpixel_snap_rect;
 use crate::theme::MacTheme;
-use egui::{
-    CornerRadius, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, UiBuilder,
-    Vec2, WidgetText,
-};
+use egui::{CornerRadius, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, UiBuilder, Vec2, WidgetText};
 
 /// Content insets in logical points (`f32`) matching AppKit `NSEdgeInsets`.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
@@ -109,10 +106,7 @@ impl<'a> MacTabView<'a> {
 
     /// Appends a tab with a title and content closure.
     pub fn tab(mut self, title: impl Into<WidgetText>, content: impl FnOnce(&mut Ui) + 'a) -> Self {
-        self.tabs.push(MacTabItem {
-            title: title.into(),
-            content: Some(Box::new(content)),
-        });
+        self.tabs.push(MacTabItem { title: title.into(), content: Some(Box::new(content)) });
         self
     }
 
@@ -133,12 +127,7 @@ impl<'a> MacTabView<'a> {
     /// Resolves exact MacBook content insets from outer container bounds.
     pub fn content_insets(&self) -> MacInsets {
         if self.style == MacTabStyle::NoTabsNoBorder {
-            return MacInsets {
-                top: 0.0,
-                bottom: 0.0,
-                left: 0.0,
-                right: 0.0,
-            };
+            return MacInsets { top: 0.0, bottom: 0.0, left: 0.0, right: 0.0 };
         }
         let theme_cow = MacTheme::resolve_or_default(self.theme);
         let m = theme_cow.tab_view();
@@ -169,15 +158,9 @@ impl<'a> MacTabView<'a> {
         let theme_cow = MacTheme::resolve_or_default(self.theme);
         let m = theme_cow.tab_view();
         match self.control_size {
-            MacControlSize::Regular | MacControlSize::Large => {
-                Vec2::new(m.regular_min_width.points(), m.regular_min_height.points())
-            }
-            MacControlSize::Small | MacControlSize::CompactInfobox => {
-                Vec2::new(m.small_min_width.points(), m.small_min_height.points())
-            }
-            MacControlSize::Mini => {
-                Vec2::new(m.mini_min_width.points(), m.mini_min_height.points())
-            }
+            MacControlSize::Regular | MacControlSize::Large => Vec2::new(m.regular_min_width.points(), m.regular_min_height.points()),
+            MacControlSize::Small | MacControlSize::CompactInfobox => Vec2::new(m.small_min_width.points(), m.small_min_height.points()),
+            MacControlSize::Mini => Vec2::new(m.mini_min_width.points(), m.mini_min_height.points()),
         }
     }
 
@@ -190,19 +173,11 @@ impl<'a> MacTabView<'a> {
         let pad = metrics.tab_padding_horizontal.points();
         let mut total_intrinsic_w = 0.0f32;
         for tab in &self.tabs {
-            let g = tab.title.clone().into_galley(
-                ui,
-                Some(egui::TextWrapMode::Extend),
-                f32::INFINITY,
-                egui::TextStyle::Button,
-            );
+            let g = tab.title.clone().into_galley(ui, Some(egui::TextWrapMode::Extend), f32::INFINITY, egui::TextStyle::Button);
             total_intrinsic_w += g.size().x + pad;
         }
         let bar_w = total_intrinsic_w.clamp(min_size.x.min(container_rect.width()), container_rect.width());
-        Rect::from_center_size(
-            Pos2::new(container_rect.center().x, container_rect.min.y + bar_h * 0.5),
-            Vec2::new(bar_w, bar_h),
-        )
+        Rect::from_center_size(Pos2::new(container_rect.center().x, container_rect.min.y + bar_h * 0.5), Vec2::new(bar_w, bar_h))
     }
 
     /// Shows the tab view layout with tab bar and selected content panel.
@@ -231,11 +206,7 @@ impl<'a> MacTabView<'a> {
         let bg_shape_idx = ui.painter().add(egui::Shape::Noop);
         let tab_scope_id = ui.next_auto_id().with("tab_content").with(active_idx);
 
-        let mut child_ui = ui.new_child(
-            UiBuilder::new()
-                .id_salt(tab_scope_id)
-                .max_rect(content_rect),
-        );
+        let mut child_ui = ui.new_child(UiBuilder::new().id_salt(tab_scope_id).max_rect(content_rect));
 
         if active_idx < tab_count {
             if let Some(content_fn) = self.tabs[active_idx].content.take() {
@@ -244,31 +215,19 @@ impl<'a> MacTabView<'a> {
         }
 
         let child_min_rect = child_ui.min_rect();
-        let content_h = if active_idx < tab_count {
-            child_min_rect.height()
-        } else {
-            0.0
-        };
+        let content_h = if active_idx < tab_count { child_min_rect.height() } else { 0.0 };
 
-        let container_h = (if self.style == MacTabStyle::TopTabsBezelBorder {
-            insets.top + content_h + insets.bottom
-        } else {
-            content_h
-        }).max(min_size.y);
+        let container_h = (if self.style == MacTabStyle::TopTabsBezelBorder { insets.top + content_h + insets.bottom } else { content_h })
+            .max(min_size.y);
 
-        let container_rect = Rect::from_min_size(start_pos, Vec2::new(container_w, container_h));
-        let container_rect = subpixel_snap_rect(container_rect, ui.ctx().pixels_per_point());
-
-        let (rect, mut response) = ui.allocate_exact_size(container_rect.size(), Sense::click());
+        let (raw_rect, mut response) = ui.allocate_exact_size(Vec2::new(container_w, container_h), Sense::click());
+        let rect = subpixel_snap_rect(raw_rect, ui.ctx().pixels_per_point());
 
         if self.style == MacTabStyle::TopTabsBezelBorder {
             let corner_r = metrics.corner_radius.points();
 
             // Bezel border frame below tab bar pre-allocated BEHIND child content
-            let body_rect = Rect::from_min_max(
-                Pos2::new(rect.min.x, rect.min.y + bar_h * 0.5),
-                rect.max,
-            );
+            let body_rect = Rect::from_min_max(Pos2::new(rect.min.x, rect.min.y + bar_h * 0.5), rect.max);
             ui.painter().set(
                 bg_shape_idx,
                 egui::epaint::RectShape::new(
@@ -295,21 +254,13 @@ impl<'a> MacTabView<'a> {
 
                 let tab_w = bar_rect.width() / (tab_count as f32);
                 for i in 0..tab_count {
-                    let tab_rect = Rect::from_min_size(
-                        Pos2::new(bar_rect.min.x + (i as f32) * tab_w, bar_rect.min.y),
-                        Vec2::new(tab_w, bar_h),
-                    );
-                    let tab_hovered = ui
-                        .input(|inp| inp.pointer.hover_pos())
-                        .is_some_and(|p| tab_rect.contains(p));
+                    let tab_rect =
+                        Rect::from_min_size(Pos2::new(bar_rect.min.x + (i as f32) * tab_w, bar_rect.min.y), Vec2::new(tab_w, bar_h));
+                    let tab_hovered = ui.input(|inp| inp.pointer.hover_pos()).is_some_and(|p| tab_rect.contains(p));
 
                     let is_active = *self.selected_index == i;
                     if is_active || tab_hovered {
-                        let tab_fill = if is_active {
-                            theme.control_background()
-                        } else {
-                            theme.control()
-                        };
+                        let tab_fill = if is_active { theme.control_background() } else { theme.control() };
 
                         painter.rect(
                             tab_rect,
@@ -320,21 +271,10 @@ impl<'a> MacTabView<'a> {
                         );
                     }
 
-                    let galley = self.tabs[i].title.clone().into_galley(
-                        ui,
-                        Some(egui::TextWrapMode::Extend),
-                        tab_w,
-                        egui::TextStyle::Button,
-                    );
-                    let text_pos = Pos2::new(
-                        tab_rect.center().x - galley.size().x * 0.5,
-                        tab_rect.center().y - galley.size().y * 0.5,
-                    );
-                    let text_color = if is_active {
-                        theme.label()
-                    } else {
-                        theme.secondary_label()
-                    };
+                    let galley =
+                        self.tabs[i].title.clone().into_galley(ui, Some(egui::TextWrapMode::Extend), tab_w, egui::TextStyle::Button);
+                    let text_pos = Pos2::new(tab_rect.center().x - galley.size().x * 0.5, tab_rect.center().y - galley.size().y * 0.5);
+                    let text_color = if is_active { theme.label() } else { theme.secondary_label() };
                     painter.galley(text_pos, galley, text_color);
 
                     if tab_hovered && ui.input(|inp| inp.pointer.primary_clicked()) {

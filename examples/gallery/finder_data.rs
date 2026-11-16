@@ -12,48 +12,25 @@ pub struct StudioAssetRow {
 }
 
 pub const STUDIO_ASSETS: [StudioAssetRow; 6] = [
-    StudioAssetRow {
-        idx: 0,
-        name: "A001_C004_MainTitle.mov",
-        codec: "Apple ProRes 422 HQ",
-        duration: "00:01:24:12",
-        size_mb: 1420,
-    },
-    StudioAssetRow {
-        idx: 1,
-        name: "A001_C009_VFX_Plate.mov",
-        codec: "Apple ProRes 4444",
-        duration: "00:00:42:08",
-        size_mb: 2180,
-    },
-    StudioAssetRow {
-        idx: 2,
-        name: "Master_Mix_Stems_48k.wav",
-        codec: "PCM 24-bit 48kHz",
-        duration: "00:03:18:00",
-        size_mb: 340,
-    },
-    StudioAssetRow {
-        idx: 3,
-        name: "Dailies_Proxy_Reel01.mp4",
-        codec: "HEVC 10-bit HDR10",
-        duration: "00:04:10:00",
-        size_mb: 480,
-    },
-    StudioAssetRow {
-        idx: 4,
-        name: "Studio_ColorGrade_Rec709.cube",
-        codec: "3D LUT Metal Shader",
-        duration: "00:00:01:00",
-        size_mb: 12,
-    },
-    StudioAssetRow {
-        idx: 5,
-        name: "Deliverable_Theatrical_4K.mov",
-        codec: "Apple ProRes 422 HQ",
-        duration: "00:12:45:00",
-        size_mb: 8940,
-    },
+    StudioAssetRow { idx: 0, name: "A001_C004_MainTitle.mov", codec: "Apple ProRes 422 HQ", duration: "00:01:24:12", size_mb: 1420 },
+    StudioAssetRow { idx: 1, name: "A001_C009_VFX_Plate.mov", codec: "Apple ProRes 4444", duration: "00:00:42:08", size_mb: 2180 },
+    StudioAssetRow { idx: 2, name: "Master_Mix_Stems_48k.wav", codec: "PCM 24-bit 48kHz", duration: "00:03:18:00", size_mb: 340 },
+    StudioAssetRow { idx: 3, name: "Dailies_Proxy_Reel01.mp4", codec: "HEVC 10-bit HDR10", duration: "00:04:10:00", size_mb: 480 },
+    StudioAssetRow { idx: 4, name: "Studio_ColorGrade_Rec709.cube", codec: "3D LUT Metal Shader", duration: "00:00:01:00", size_mb: 12 },
+    StudioAssetRow { idx: 5, name: "Deliverable_Theatrical_4K.mov", codec: "Apple ProRes 422 HQ", duration: "00:12:45:00", size_mb: 8940 },
+];
+
+pub const EMBEDDED_NIB_XIB_ASSETS: [(&str, &str); 10] = [
+    ("1_Vector_and_Transform_Inspector.nib", "NIB"),
+    ("1_Vector_and_Transform_Inspector.xib", "XIB"),
+    ("1_Typography_and_Grid_Inspector.xib", "XIB"),
+    ("2_Appearance_and_Theme_Settings.xib", "XIB"),
+    ("2_Theme_and_Appearance_Studio.nib", "NIB"),
+    ("2_Theme_and_Appearance_Studio.xib", "XIB"),
+    ("3_AVKit_Audio_Mastering_Strip.nib", "NIB"),
+    ("3_AVKit_Audio_Mastering_Strip.xib", "XIB"),
+    ("4_Publishing_and_Asset_Queue.nib", "NIB"),
+    ("5_Binary_Varint_Inspector.nib", "NIB"),
 ];
 
 /// Custom file or folder entry loaded into State 4 Finder via disk browsing or OS Drag & Drop.
@@ -117,12 +94,7 @@ pub fn build_parent_chain(current_dir: &Option<PathBuf>) -> (Option<Vec<PathBuf>
     let path_titles: Vec<String> = if let Some(ref parents) = dir_parents {
         parents.iter().map(|p| extract_segment_name(p)).collect()
     } else {
-        vec![
-            "Macintosh HD".to_string(),
-            "Projects".to_string(),
-            "AppKit_Studio_v05".to_string(),
-            "Master_Deliverables".to_string(),
-        ]
+        vec!["Macintosh HD".to_string(), "Projects".to_string(), "AppKit_Studio_v05".to_string(), "Master_Deliverables".to_string()]
     };
 
     (dir_parents, path_titles)
@@ -153,32 +125,32 @@ pub fn collect_finder_rows(
             for entry in entries.flatten() {
                 let path = entry.path();
                 let is_dir = path.is_dir();
-                let name = path
-                    .file_name()
-                    .map(|n| n.to_string_lossy().to_string())
-                    .unwrap_or_default();
-                let size_mb = if is_dir {
-                    0
-                } else {
-                    (entry.metadata().map(|m| m.len()).unwrap_or(0) / 1048576) as u32
-                };
-                let ext = path
-                    .extension()
-                    .and_then(|e| e.to_str())
-                    .unwrap_or(if is_dir { "Folder" } else { "File" });
+                let name = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+                let size_mb = if is_dir { 0 } else { (entry.metadata().map(|m| m.len()).unwrap_or(0) / 1048576) as u32 };
+                let ext = path.extension().and_then(|e| e.to_str()).unwrap_or(if is_dir { "Folder" } else { "File" });
                 list.push(FinderDisplayRow {
                     name,
                     is_dir,
                     codec: ext.to_uppercase(),
-                    duration: if is_dir {
-                        "Directory".into()
-                    } else {
-                        "--:--:--:--".into()
-                    },
+                    duration: if is_dir { "Directory".into() } else { "--:--:--:--".into() },
                     size_mb,
                     rating: 4,
                     tags: vec![ext.to_string()],
                     dir_path: Some(path),
+                });
+            }
+        }
+        if !list.iter().any(|r| !r.is_dir) {
+            for (name, ext) in EMBEDDED_NIB_XIB_ASSETS {
+                list.push(FinderDisplayRow {
+                    name: name.to_string(),
+                    is_dir: false,
+                    codec: ext.to_string(),
+                    duration: "Embedded Scene".into(),
+                    size_mb: 1,
+                    rating: 5,
+                    tags: vec![ext.to_lowercase(), "Studio".into()],
+                    dir_path: Some(PathBuf::from(format!("assets/nib_showcase/{name}"))),
                 });
             }
         }
@@ -197,6 +169,18 @@ pub fn collect_finder_rows(
                 dir_path: None,
             })
             .collect();
+        for (name, ext) in EMBEDDED_NIB_XIB_ASSETS {
+            list.push(FinderDisplayRow {
+                name: name.to_string(),
+                is_dir: false,
+                codec: ext.to_string(),
+                duration: "Embedded Scene".into(),
+                size_mb: 1,
+                rating: 5,
+                tags: vec![ext.to_lowercase(), "Studio".into()],
+                dir_path: Some(PathBuf::from(format!("assets/nib_showcase/{name}"))),
+            });
+        }
         for custom in custom_entries {
             list.push(FinderDisplayRow {
                 name: custom.name.clone(),

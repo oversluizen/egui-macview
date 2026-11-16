@@ -33,9 +33,7 @@ pub struct OriginMatrixMetrics {
 
 impl Default for OriginMatrixMetrics {
     fn default() -> Self {
-        MacDesignTokens::default_shared()
-            .origin_matrix_metrics()
-            .clone()
+        MacDesignTokens::default_shared().origin_matrix_metrics().clone()
     }
 }
 
@@ -90,9 +88,7 @@ pub struct TagColorPickerMetrics {
 
 impl Default for TagColorPickerMetrics {
     fn default() -> Self {
-        MacDesignTokens::default_shared()
-            .tag_color_picker_metrics()
-            .clone()
+        MacDesignTokens::default_shared().tag_color_picker_metrics().clone()
     }
 }
 
@@ -141,8 +137,52 @@ pub struct TableActionBarMetrics {
 
 impl Default for TableActionBarMetrics {
     fn default() -> Self {
-        MacDesignTokens::default_shared()
-            .table_action_bar_metrics()
-            .clone()
+        MacDesignTokens::default_shared().table_action_bar_metrics().clone()
+    }
+}
+
+/// Geometry tokens for `MacImageView` (`NSImageView` / `NSImageCell`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ImageViewMetrics {
+    /// Default bounding box size (`32.0pt`).
+    pub default_size: DimensionValue,
+    /// Inner padding for `NSImageFramePhoto` (`2.0pt`).
+    pub photo_frame_padding: DimensionValue,
+    /// Corner radius for `NSImageFrameGrayBezel` (`4.0pt`).
+    pub bezel_corner_radius: DimensionValue,
+    /// Frame stroke border width (`1.0pt`).
+    pub border_width: DimensionValue,
+}
+
+impl Default for ImageViewMetrics {
+    fn default() -> Self {
+        MacDesignTokens::default_shared().image_view_metrics().clone()
+    }
+}
+
+/// Geometry tokens for `MacTextView` (`NSTextView` multi-line editor).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TextViewMetrics {
+    /// Default proportional font size (`13.0pt`).
+    pub font_size: DimensionValue,
+    /// Default monospace font size (`12.0pt`).
+    pub mono_font_size: DimensionValue,
+    /// Line height pitch (`18.0pt`).
+    pub line_height: DimensionValue,
+    /// Horizontal content inset (`6.0pt`).
+    pub padding_horizontal: DimensionValue,
+    /// Vertical content inset (`6.0pt`).
+    pub padding_vertical: DimensionValue,
+    /// Outer scroll-bezel corner radius (`2.0pt`).
+    pub corner_radius: DimensionValue,
+    /// Outer border stroke width (`1.0pt`).
+    pub border_width: DimensionValue,
+    /// Line-number gutter width (`32.0pt`).
+    pub gutter_width: DimensionValue,
+}
+
+impl Default for TextViewMetrics {
+    fn default() -> Self {
+        MacDesignTokens::default_shared().text_view_metrics().clone()
     }
 }

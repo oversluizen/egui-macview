@@ -213,25 +213,14 @@ impl<T: Clone + PartialEq> NSUndoManager<T> {
             return Err("NSUndoManager capacity must be >= 1".to_string());
         }
         if self.undo_stack.len() > self.capacity {
-            return Err(format!(
-                "undo_stack len ({}) exceeds capacity ({})",
-                self.undo_stack.len(),
-                self.capacity
-            ));
+            return Err(format!("undo_stack len ({}) exceeds capacity ({})", self.undo_stack.len(), self.capacity));
         }
         if self.redo_stack.len() > self.capacity {
-            return Err(format!(
-                "redo_stack len ({}) exceeds capacity ({})",
-                self.redo_stack.len(),
-                self.capacity
-            ));
+            return Err(format!("redo_stack len ({}) exceeds capacity ({})", self.redo_stack.len(), self.capacity));
         }
         for i in 1..self.undo_stack.len() {
             if self.undo_stack[i - 1] == self.undo_stack[i] {
-                return Err(format!(
-                    "duplicate consecutive undo snapshot at index {}",
-                    i
-                ));
+                return Err(format!("duplicate consecutive undo snapshot at index {}", i));
             }
         }
         Ok(())

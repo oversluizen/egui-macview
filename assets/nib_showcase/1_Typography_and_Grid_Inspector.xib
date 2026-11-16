@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="23504" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="NO" customObjectInstantitationMethod="direct">
+    <dependencies>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="23504"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <objects>
+        <customObject id="-2" userLabel="File's Owner" customClass="NSWindowController"/>
+        <customObject id="-1" userLabel="First Responder" customClass="FirstResponder"/>
+        <customObject id="-3" userLabel="Application" customClass="NSObject"/>
+        <window title="Typography &amp; Grid Inspector" allowsToolTipsWhenApplicationIsInactive="NO" autorecalculatesKeyViewLoop="NO" releasedWhenClosed="NO" animationBehavior="default" id="win-root-typo">
+            <windowStyleMask key="styleMask" titled="YES" closable="YES" miniaturizable="YES" resizable="YES"/>
+            <rect key="contentRect" x="196" y="240" width="720" height="660"/>
+            <rect key="screenRect" x="0.0" y="0.0" width="1680" height="1027"/>
+            <view key="contentView" identifier="root-typo" id="root-typo">
+                <rect key="frame" x="0.0" y="0.0" width="720" height="660"/>
+                <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                <subviews>
+                    <textField identifier="s2-hdr" horizontalHuggingPriority="251" verticalHuggingPriority="750" id="s2-hdr">
+                        <rect key="frame" x="12" y="636" width="440" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" editable="NO" title="2. Cupertino Symbols &amp; Layout Primitives" id="cell-s2-hdr">
+                            <font key="font" metaFont="systemSemibold"/>
+                        </textFieldCell>
+                    </textField>
+                    <textField identifier="s2-sub" horizontalHuggingPriority="251" verticalHuggingPriority="750" controlSize="small" id="s2-sub">
+                        <rect key="frame" x="12" y="620" width="680" height="16"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" controlSize="small" lineBreakMode="clipping" editable="NO" title="32+ Embedded Cupertino Symbols, MacFixedView, MacRow, MacScrollView, and Cascading Choreography" id="cell-s2-sub">
+                            <font key="font" metaFont="system"/>
+                            <color key="textColor" name="secondaryLabelColor" catalog="System" colorSpace="catalog"/>
+                        </textFieldCell>
+                    </textField>
+                    <textField identifier="s2-lbl-gscale" horizontalHuggingPriority="251" verticalHuggingPriority="750" id="s2-lbl-gscale">
+                        <rect key="frame" x="12" y="594" width="82" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" editable="NO" title="Glyph Scale:" id="cell-s2-lbl-gscale">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                    </textField>
+                    <segmentedControl identifier="s2-seg-gscale" verticalHuggingPriority="750" controlSize="small" id="s2-seg-gscale">
+                        <rect key="frame" x="98" y="592" width="168" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <segmentedCell key="cell" controlSize="small" borderStyle="border" alignment="left" style="rounded" trackingMode="selectOne" id="cell-s2-seg-gscale">
+                            <font key="font" metaFont="system"/>
+                            <segments>
+                                <segment label="14pt" selected="YES"/>
+                                <segment label="20pt"/>
+                                <segment label="28pt"/>
+                            </segments>
+                        </segmentedCell>
+                        <connections>
+                            <binding destination="-2" name="selectedIndex" keyPath="values.glyphScaleIdx" id="b-s2-seg-gscale"/>
+                        </connections>
+                    </segmentedControl>
+                    <textField identifier="s2-lbl-tint" horizontalHuggingPriority="251" verticalHuggingPriority="750" id="s2-lbl-tint">
+                        <rect key="frame" x="284" y="594" width="84" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" editable="NO" title="Symbol Tint:" id="cell-s2-lbl-tint">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                    </textField>
+                    <colorWell identifier="s2-cw-tint" id="s2-cw-tint">
+                        <rect key="frame" x="372" y="592" width="48" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <color key="color" red="0.0" green="0.47843137250000001" blue="1" alpha="1" colorSpace="calibratedRGB"/>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.symbolTint" id="b-s2-cw-tint"/>
+                        </connections>
+                    </colorWell>
+                    <button identifier="s2-btn-choreo" verticalHuggingPriority="750" id="s2-btn-choreo">
+                        <rect key="frame" x="440" y="592" width="176" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="push" title="Trigger Cascading Spring" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="cell-s2-btn-choreo">
+                            <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <action selector="triggerChoreo:" target="-2" id="a-s2-btn-choreo"/>
+                        </connections>
+                    </button>
+                    <customView identifier="s2-sym-grid" customClass="NSCupertinoSymbolGridView" id="s2-sym-grid">
+                        <rect key="frame" x="12" y="394" width="696" height="192"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                    </customView>
+                    <box identifier="s2-box-layout" title="Layout Primitives &amp; Choreography" id="s2-box-layout">
+                        <rect key="frame" x="12" y="190" width="696" height="196"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <view key="contentView" id="cv-s2-box-layout">
+                            <rect key="frame" x="4" y="5" width="688" height="176"/>
+                            <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        </view>
+                    </box>
+                    <textField identifier="s2-lbl-clip" horizontalHuggingPriority="251" verticalHuggingPriority="750" id="s2-lbl-clip">
+                        <rect key="frame" x="24" y="340" width="88" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" editable="NO" title="MacFixedView:" id="cell-s2-lbl-clip">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                    </textField>
+                    <segmentedControl identifier="s2-seg-clip" verticalHuggingPriority="750" controlSize="small" id="s2-seg-clip">
+                        <rect key="frame" x="116" y="338" width="218" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <segmentedCell key="cell" controlSize="small" borderStyle="border" alignment="left" style="rounded" trackingMode="selectOne" id="cell-s2-seg-clip">
+                            <font key="font" metaFont="system"/>
+                            <segments>
+                                <segment label="Clip ON (Strict)" selected="YES"/>
+                                <segment label="Clip OFF (Overflow)"/>
+                            </segments>
+                        </segmentedCell>
+                        <connections>
+                            <binding destination="-2" name="selectedIndex" keyPath="values.fixedClipMode" id="b-s2-seg-clip"/>
+                        </connections>
+                    </segmentedControl>
+                    <textField identifier="s2-lbl-rowb" horizontalHuggingPriority="251" verticalHuggingPriority="750" id="s2-lbl-rowb">
+                        <rect key="frame" x="352" y="340" width="102" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" editable="NO" title="MacRow Budget:" id="cell-s2-lbl-rowb">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                    </textField>
+                    <slider identifier="s2-sld-rowb" verticalHuggingPriority="750" id="s2-sld-rowb">
+                        <rect key="frame" x="458" y="338" width="140" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <sliderCell key="cell" state="on" alignment="left" minValue="260" maxValue="640" doubleValue="260" tickMarkPosition="above" numberOfTickMarks="0" sliderType="linear" id="cell-s2-sld-rowb"/>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.rowWidthBudget" id="b-s2-sld-rowb"/>
+                        </connections>
+                    </slider>
+                    <button identifier="s2-btn-veca" verticalHuggingPriority="750" controlSize="small" id="s2-btn-veca">
+                        <rect key="frame" x="606" y="338" width="90" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" controlSize="small" type="push" title="Action A" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="cell-s2-btn-veca">
+                            <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <action selector="vectorActionA:" target="-2" id="a-s2-btn-veca"/>
+                        </connections>
+                    </button>
+                    <customView identifier="s2-clip-prev" customClass="NSFixedClippingPreviewView" id="s2-clip-prev">
+                        <rect key="frame" x="24" y="200" width="310" height="130"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                    </customView>
+                    <customView identifier="s2-row-prev" customClass="NSRowAndScrollPreviewView" id="s2-row-prev">
+                        <rect key="frame" x="348" y="200" width="348" height="130"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                    </customView>
+                    <box identifier="s2-box-typo" title="Typography &amp; Grid Inspector (1_Typography_and_Grid_Inspector.xib)" id="s2-box-typo">
+                        <rect key="frame" x="12" y="10" width="696" height="172"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <view key="contentView" id="cv-s2-box-typo">
+                            <rect key="frame" x="4" y="5" width="688" height="152"/>
+                            <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        </view>
+                    </box>
+                    <textField identifier="s2-lbl-font" horizontalHuggingPriority="251" verticalHuggingPriority="750" id="s2-lbl-font">
+                        <rect key="frame" x="28" y="136" width="88" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" editable="NO" title="Font Family:" id="cell-s2-lbl-font">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                    </textField>
+                    <popUpButton identifier="s2-pop-font" verticalHuggingPriority="750" id="s2-pop-font">
+                        <rect key="frame" x="120" y="134" width="218" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <popUpButtonCell key="cell" type="push" title="Inter Regular (OFL)" bezelStyle="rounded" alignment="left" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" imageScaling="proportionallyDown" inset="2" id="cell-s2-pop-font">
+                            <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
+                            <font key="font" metaFont="menu"/>
+                            <menu key="menu" id="menu-s2-pop-font">
+                                <items>
+                                    <menuItem title="Inter Regular (OFL)" state="on" id="mi-s2-pop-font-0"/>
+                                    <menuItem title="Inter SemiBold (OFL)" id="mi-s2-pop-font-1"/>
+                                    <menuItem title="Hack Monospace (MIT)" id="mi-s2-pop-font-2"/>
+                                    <menuItem title="Ubuntu Light (UFL)" id="mi-s2-pop-font-3"/>
+                                </items>
+                            </menu>
+                        </popUpButtonCell>
+                        <connections>
+                            <binding destination="-2" name="selectedIndex" keyPath="values.fontFamily" id="b-s2-pop-font"/>
+                        </connections>
+                    </popUpButton>
+                    <textField identifier="s2-lbl-trk" horizontalHuggingPriority="251" verticalHuggingPriority="750" id="s2-lbl-trk">
+                        <rect key="frame" x="348" y="136" width="92" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" editable="NO" title="Tracking (em):" id="cell-s2-lbl-trk">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                    </textField>
+                    <slider identifier="s2-sld-trk" verticalHuggingPriority="750" id="s2-sld-trk">
+                        <rect key="frame" x="444" y="134" width="242" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <sliderCell key="cell" state="on" alignment="left" minValue="-0.05" maxValue="0.15" doubleValue="-0.05" tickMarkPosition="above" numberOfTickMarks="0" sliderType="linear" id="cell-s2-sld-trk"/>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.trackingEm" id="b-s2-sld-trk"/>
+                        </connections>
+                    </slider>
+                    <textField identifier="s2-lbl-pt" horizontalHuggingPriority="251" verticalHuggingPriority="750" id="s2-lbl-pt">
+                        <rect key="frame" x="28" y="102" width="88" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" editable="NO" title="Point Size:" id="cell-s2-lbl-pt">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                    </textField>
+                    <textField identifier="s2-num-pt" verticalHuggingPriority="750" customClass="GSSteppingTextField" id="s2-num-pt">
+                        <rect key="frame" x="120" y="100" width="76" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" title="" drawsBackground="YES" id="cell-s2-num-pt">
+                            <numberFormatter key="formatter" formatterBehavior="default10_4" numberStyle="decimal" minimumIntegerDigits="1" maximumIntegerDigits="2000000000" maximumFractionDigits="3" id="fmt-s2-num-pt">
+                                <real key="minimum" value="8"/>
+                                <real key="maximum" value="72"/>
+                            </numberFormatter>
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.pointSize" id="b-s2-num-pt"/>
+                        </connections>
+                    </textField>
+                    <stepper identifier="s2-stp-pt" horizontalHuggingPriority="750" verticalHuggingPriority="750" id="s2-stp-pt">
+                        <rect key="frame" x="202" y="100" width="24" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <stepperCell key="cell" continuous="YES" alignment="left" increment="1" minValue="-10000" maxValue="10000" id="cell-s2-stp-pt"/>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.pointSize" id="b-s2-stp-pt"/>
+                        </connections>
+                    </stepper>
+                    <button identifier="s2-sw-grid" verticalHuggingPriority="750" id="s2-sw-grid">
+                        <rect key="frame" x="256" y="100" width="140" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="check" title="Baseline Grid" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="cell-s2-sw-grid">
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.showGrid" id="b-s2-sw-grid"/>
+                        </connections>
+                    </button>
+                    <button identifier="s2-chk-kern" verticalHuggingPriority="750" id="s2-chk-kern">
+                        <rect key="frame" x="444" y="100" width="160" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="check" title="Optical Kerning" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="cell-s2-chk-kern">
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.opticalKern" id="b-s2-chk-kern"/>
+                        </connections>
+                    </button>
+                    <textField identifier="s2-lbl-wt" horizontalHuggingPriority="251" verticalHuggingPriority="750" id="s2-lbl-wt">
+                        <rect key="frame" x="28" y="66" width="88" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" editable="NO" title="Weight Tier:" id="cell-s2-lbl-wt">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                    </textField>
+                    <segmentedControl identifier="s2-seg-wt" verticalHuggingPriority="750" id="s2-seg-wt">
+                        <rect key="frame" x="120" y="62" width="310" height="24"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <segmentedCell key="cell" borderStyle="border" alignment="left" style="rounded" trackingMode="selectOne" id="cell-s2-seg-wt">
+                            <font key="font" metaFont="system"/>
+                            <segments>
+                                <segment label="Regular" selected="YES"/>
+                                <segment label="Medium"/>
+                                <segment label="Semibold"/>
+                                <segment label="Bold"/>
+                                <segment label="Italic"/>
+                            </segments>
+                        </segmentedCell>
+                        <connections>
+                            <binding destination="-2" name="selectedIndex" keyPath="values.fontWeight" id="b-s2-seg-wt"/>
+                        </connections>
+                    </segmentedControl>
+                    <button identifier="s2-help" verticalHuggingPriority="750" id="s2-help">
+                        <rect key="frame" x="444" y="64" width="22" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="help" title="?" bezelStyle="helpButton" inset="2" id="cell-s2-help">
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <action selector="showTypographyHelp:" target="-2" id="a-s2-help"/>
+                        </connections>
+                    </button>
+                    <button identifier="s2-rst" verticalHuggingPriority="750" id="s2-rst">
+                        <rect key="frame" x="478" y="62" width="148" height="24"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="push" title="Reset Metrics" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="cell-s2-rst">
+                            <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <action selector="resetTypography:" target="-2" id="a-s2-rst"/>
+                        </connections>
+                    </button>
+                </subviews>
+            </view>
+        </window>
+    </objects>
+</document>

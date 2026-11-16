@@ -49,10 +49,10 @@ pub fn detect_frameless_resize_dir(
 
 impl GalleryApp {
     pub(crate) fn handle_frameless_resize(&self, ui: &Ui, full_rect: Rect, theme: &MacTheme) -> bool {
-        let Some(pos) = ui.input(|i| i.pointer.hover_pos()) else { return false };
-        let Some((dir, cursor)) = detect_frameless_resize_dir(
-            self.window_controls_style, self.is_maximized, pos, full_rect, theme,
-        ) else {
+        let Some(pos) = ui.input(|i| i.pointer.hover_pos()) else {
+            return false;
+        };
+        let Some((dir, cursor)) = detect_frameless_resize_dir(self.window_controls_style, self.is_maximized, pos, full_rect, theme) else {
             return false;
         };
         ui.ctx().set_cursor_icon(cursor);
@@ -97,7 +97,7 @@ impl GalleryApp {
             "theme.aqua" => self.appearance = MacAppearance::Aqua,
             "theme.anthracite" => self.appearance = MacAppearance::Anthracite,
             "theme.dark" => self.appearance = MacAppearance::DarkAqua,
-            "canvas.pulse" => self.center.bounce_start_time = Some(0.0),
+            "canvas.pulse" => self.center.bounce_start_time = Some(-1.0),
             "matrix.reset" => {
                 let mut c = self.card.borrow_mut();
                 (c.rotation_deg, c.scale_pct, c.skew_deg) = (0.0, 100.0, 0.0);
@@ -154,8 +154,18 @@ impl GalleryApp {
             }
             "edit.paste" => self.toasts.borrow_mut().info("Pasted style"),
             "edit.select_all" => self.toasts.borrow_mut().info("Selected canvas layer"),
-            "file.close" => ctx.send_viewport_cmd(ViewportCommand::Close),
-            "window.minimize" => ctx.send_viewport_cmd(ViewportCommand::Minimized(true)),
+            "file.close" => {
+                if self.center.nib_studio.open {
+                    self.center.nib_studio.open = false;
+                } else {
+                    self.is_window_closed = true;
+                }
+                ctx.send_viewport_cmd(ViewportCommand::Close);
+            }
+            "window.minimize" => {
+                self.is_minimized = !self.is_minimized;
+                ctx.send_viewport_cmd(ViewportCommand::Minimized(true));
+            }
             "help.shortcuts" => self.palette.open = true,
             "help.documentation" | "help.about" => {
                 self.toasts.borrow_mut().info(format!("egui-macview v{}", egui_macview::VERSION));
@@ -166,7 +176,8 @@ impl GalleryApp {
 
     pub(crate) fn render_toolbar(&mut self, ui: &mut Ui, rect: Rect, theme: &MacTheme, on_resize_border: bool) {
         let (mut is_max, mut next_appearance, mut next_style) = (self.is_maximized, self.appearance, self.window_controls_style);
-        let (mut next_mode, mut next_screen_idx, mut toggle_palette, palette_open) = (self.inspector_mode, self.active_screen as usize, false, self.palette.open);
+        let (mut next_mode, mut next_screen_idx, mut toggle_palette, palette_open) =
+            (self.inspector_mode, self.active_screen as usize, false, self.palette.open);
 
         let tb_resp = MacToolbar::new("")
             .id("gallery_main_toolbar")
@@ -182,40 +193,44 @@ impl GalleryApp {
                             .max_rect(right_area)
                             .layout(Layout::right_to_left(Align::Center)),
                     );
-                    right_ui.spacing_mut().item_spacing.x = 6.0;
+                    right_ui.spacing_mut().item_spacing.x = 5.0;
 
                     let current_theme_idx = match next_appearance {
                         MacAppearance::Aqua => 0,
                         MacAppearance::Anthracite => 1,
                         MacAppearance::DarkAqua => 2,
                     };
-                    MacSegmentedControl::new(&["Aqua", "Anthracite", "DarkAqua"], current_theme_idx)
-                        .theme(theme)
-                        .height(24.0)
-                        .show(&mut right_ui, |idx| {
+                    MacSegmentedControl::new(&["Aqua", "Graphite", "Dark"], current_theme_idx).theme(theme).height(24.0).show(
+                        &mut right_ui,
+                        |idx| {
                             next_appearance = [MacAppearance::Aqua, MacAppearance::Anthracite, MacAppearance::DarkAqua][idx.min(2)];
-                        });
+                        },
+                    );
 
                     let current_style_idx = match next_style {
                         WindowControlsStyle::AppleTrafficLights => 0,
                         WindowControlsStyle::WindowsCaptionButtons => 1,
                         WindowControlsStyle::NativeHost => 2,
                     };
-                    MacSegmentedControl::new(&["Apple", "Windows", "Native"], current_style_idx)
-                        .theme(theme)
-                        .height(24.0)
-                        .show(&mut right_ui, |idx| {
-                            next_style = [WindowControlsStyle::AppleTrafficLights, WindowControlsStyle::WindowsCaptionButtons, WindowControlsStyle::NativeHost][idx.min(2)];
-                        });
+                    MacSegmentedControl::new(&["Mac", "Win", "OS"], current_style_idx).theme(theme).height(24.0).show(
+                        &mut right_ui,
+                        |idx| {
+                            next_style = [
+                                WindowControlsStyle::AppleTrafficLights,
+                                WindowControlsStyle::WindowsCaptionButtons,
+                                WindowControlsStyle::NativeHost,
+                            ][idx.min(2)];
+                        },
+                    );
 
-                    MacSegmentedControl::new(&["Default", "Compact", "Expanded"], next_mode as usize)
-                        .theme(theme)
-                        .height(24.0)
-                        .show(&mut right_ui, |idx| {
+                    MacSegmentedControl::new(&["Def", "Hud", "Pro"], next_mode as usize).theme(theme).height(24.0).show(
+                        &mut right_ui,
+                        |idx| {
                             next_mode = [InspectorMode::DefaultNib, InspectorMode::CompactHud, InspectorMode::ExpandedPro][idx.min(2)];
-                        });
+                        },
+                    );
 
-                    MacSegmentedControl::new(&["v0.2", "v0.3", "v0.4", "Finder", "AVKit"], next_screen_idx)
+                    MacSegmentedControl::new(&["Vector", "Symbols", "Tokens", "Finder", "AVKit", "Pro NIB"], next_screen_idx)
                         .theme(theme)
                         .height(24.0)
                         .show(&mut right_ui, |idx| next_screen_idx = idx);
@@ -238,10 +253,13 @@ impl GalleryApp {
             let native_decorations = self.window_controls_style == WindowControlsStyle::NativeHost;
             if prev_was_native != native_decorations || self.pending_decoration_resync_frames > 0 {
                 let target_size = if self.pending_decoration_resync_frames == 0 {
-                    let cur = ui.input(|i| {
-                        let vp = i.viewport();
-                        if prev_was_native { vp.outer_rect.or(vp.inner_rect) } else { vp.inner_rect.or(vp.outer_rect) }.map(|r| r.size())
-                    }).unwrap_or_else(|| ui.ctx().content_rect().size());
+                    let cur = ui
+                        .input(|i| {
+                            let vp = i.viewport();
+                            if prev_was_native { vp.outer_rect.or(vp.inner_rect) } else { vp.inner_rect.or(vp.outer_rect) }
+                                .map(|r| r.size())
+                        })
+                        .unwrap_or_else(|| ui.ctx().content_rect().size());
                     egui::vec2(cur.x.max(900.0), cur.y.max(540.0))
                 } else {
                     self.pending_target_inner_size.unwrap_or_else(|| egui::vec2(1160.0, 740.0))
@@ -276,12 +294,20 @@ impl GalleryApp {
             self.palette.toggle();
         }
         if tb_resp.close_clicked {
+            if self.center.nib_studio.open {
+                self.center.nib_studio.open = false;
+            } else {
+                self.is_window_closed = !self.is_window_closed;
+            }
             ui.ctx().send_viewport_cmd(ViewportCommand::Close);
         }
         if tb_resp.minimize_clicked {
+            self.is_minimized = !self.is_minimized;
             ui.ctx().send_viewport_cmd(ViewportCommand::Minimized(true));
         }
         if tb_resp.zoom_toggled {
+            self.is_minimized = false;
+            self.is_window_closed = false;
             ui.ctx().send_viewport_cmd(ViewportCommand::Maximized(self.is_maximized));
         }
         if tb_resp.drag_started && !on_resize_border {

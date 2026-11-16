@@ -2583,6 +2583,22 @@
           "action_chevron_gap": { "$type": "dimension", "$value": "3.0pt" },
           "action_chevron_half_width": { "$type": "dimension", "$value": "2.25pt" },
           "action_chevron_height": { "$type": "dimension", "$value": "2.0pt" }
+        },
+        "image_view": {
+          "default_size": { "$type": "dimension", "$value": "32.0pt" },
+          "photo_frame_padding": { "$type": "dimension", "$value": "2.0pt" },
+          "bezel_corner_radius": { "$type": "dimension", "$value": "4.0pt" },
+          "border_width": { "$type": "dimension", "$value": "1.0pt" }
+        },
+        "text_view": {
+          "font_size": { "$type": "dimension", "$value": "13.0pt" },
+          "mono_font_size": { "$type": "dimension", "$value": "12.0pt" },
+          "line_height": { "$type": "dimension", "$value": "18.0pt" },
+          "padding_horizontal": { "$type": "dimension", "$value": "6.0pt" },
+          "padding_vertical": { "$type": "dimension", "$value": "6.0pt" },
+          "corner_radius": { "$type": "dimension", "$value": "2.0pt" },
+          "border_width": { "$type": "dimension", "$value": "1.0pt" },
+          "gutter_width": { "$type": "dimension", "$value": "32.0pt" }
         }
       },
       "toolbar": {

@@ -226,20 +226,21 @@ fn test_version_synchronization_invariants() {
             let content = fs::read_to_string(&path).expect("read spec file");
             let file_name = path.file_name().unwrap_or_default().to_string_lossy();
 
-            let (expected_ver, expected_milestone) =
-                if file_name.starts_with("SPEC-007") || file_name.starts_with("SPEC-009") {
-                    ("0.3.0", Some("Milestone 0.3.0"))
-                } else if file_name.starts_with("SPEC-010") {
-                    ("0.3.1", Some("Milestone 0.3.1"))
-                } else if file_name.starts_with("SPEC-008") {
-                    ("0.4.0", Some("Milestone 0.4.0"))
-                } else if file_name.starts_with("SPEC-011") {
-                    ("0.5.0", Some("Milestone 0.5.0"))
-                } else if file_name.starts_with("SPEC-012") || file_name.starts_with("SPEC-INDEX") {
-                    ("0.6.11", Some("Milestone 0.6.11"))
-                } else {
-                    ("0.2.0", None)
-                };
+            let (expected_ver, expected_milestone) = if file_name.starts_with("SPEC-007") || file_name.starts_with("SPEC-009") {
+                ("0.3.0", Some("Milestone 0.3.0"))
+            } else if file_name.starts_with("SPEC-010") {
+                ("0.3.1", Some("Milestone 0.3.1"))
+            } else if file_name.starts_with("SPEC-008") {
+                ("0.4.0", Some("Milestone 0.4.0"))
+            } else if file_name.starts_with("SPEC-011") {
+                ("0.5.0", Some("Milestone 0.5.0"))
+            } else if file_name.starts_with("SPEC-012") || file_name.starts_with("SPEC-INDEX") {
+                ("0.6.11", Some("Milestone 0.6.11"))
+            } else if file_name.starts_with("SPEC-013") {
+                ("0.7.0", Some("Milestone 0.7.0"))
+            } else {
+                ("0.2.0", None)
+            };
 
             assert!(content.contains(&format!("**Document Version** | `{expected_ver}`")), "{file_name} missing `{expected_ver}`");
             if let Some(ms) = expected_milestone {
@@ -276,7 +277,11 @@ fn test_mac_form_cots_zoom_alignment_and_no_overlap() {
         assert_eq!(row_rects.len(), 3);
         let (right_edge_0, left_edge_1) = (row_rects[0].0.max.x, row_rects[0].1.min.x);
         for (idx, (label_rect, control_rect)) in row_rects.iter().enumerate() {
-            assert!((label_rect.max.x - right_edge_0).abs() <= 1.0 && (control_rect.min.x - left_edge_1).abs() <= 1.0 && label_rect.max.x < control_rect.min.x);
+            assert!(
+                (label_rect.max.x - right_edge_0).abs() <= 1.0
+                    && (control_rect.min.x - left_edge_1).abs() <= 1.0
+                    && label_rect.max.x < control_rect.min.x
+            );
             if idx + 1 < row_rects.len() {
                 assert!(label_rect.max.y.max(control_rect.max.y) <= row_rects[idx + 1].0.min.y.min(row_rects[idx + 1].1.min.y) + 0.1);
             }

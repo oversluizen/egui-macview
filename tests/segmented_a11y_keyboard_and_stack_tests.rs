@@ -7,21 +7,13 @@
 //! 3. `NSSegmentedCell.isHighlighted` visual pressed state on inactive segments with drag-out cancellation.
 //! 4. Stack-inline storage (`INLINE_SEGMENT_CAPACITY == 8`) accepting `[SegmentItem; N]` arrays with zero heap `Vec` allocation.
 
-use egui::{
-    output::OutputEvent, pos2, Color32, Event, Key, Modifiers, PointerButton, Pos2, RawInput, Rect,
-    Role, Shape, Vec2,
-};
+use egui::{output::OutputEvent, pos2, Color32, Event, Key, Modifiers, PointerButton, Pos2, RawInput, Rect, Role, Shape, Vec2};
 use egui_macview::{MacSegmentedControl, MacTheme, SegmentEvent, SegmentItem, SegmentMenuTrigger};
 use std::cell::RefCell;
 use std::rc::Rc;
 
 fn make_input(time: f64, events: Vec<Event>) -> RawInput {
-    RawInput {
-        time: Some(time),
-        screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(400.0, 200.0))),
-        events,
-        ..Default::default()
-    }
+    RawInput { time: Some(time), screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(400.0, 200.0))), events, ..Default::default() }
 }
 
 fn count_rect_shapes(shapes: &[egui::epaint::ClippedShape]) -> usize {
@@ -52,10 +44,7 @@ fn test_segmented_accesskit_role_and_screen_reader_metadata() {
             .show(ui, |i| selected = i);
     });
     o0.textures_delta.clear();
-    assert!(
-        o0.platform_output.accesskit_update.is_some(),
-        "AccessKit tree update must be emitted when enabled"
-    );
+    assert!(o0.platform_output.accesskit_update.is_some(), "AccessKit tree update must be emitted when enabled");
 
     // Click segment 1 ("Pen") at x = 60 -> emits ValueChanged / Clicked with Role::RadioGroup, label "Tools", text_value "Pen"
     let mut o1 = ctx.run_ui(
@@ -63,12 +52,7 @@ fn test_segmented_accesskit_role_and_screen_reader_metadata() {
             0.1,
             vec![
                 Event::PointerMoved(pos2(60.0, 12.0)),
-                Event::PointerButton {
-                    pos: pos2(60.0, 12.0),
-                    button: PointerButton::Primary,
-                    pressed: true,
-                    modifiers: Modifiers::NONE,
-                },
+                Event::PointerButton { pos: pos2(60.0, 12.0), button: PointerButton::Primary, pressed: true, modifiers: Modifiers::NONE },
             ],
         ),
         |ui| {
@@ -130,15 +114,12 @@ fn test_segmented_keyboard_menu_trigger_and_multi_select_keyboard_parity() {
                 SegmentItem::new("Draw").with_width(40.0).with_submenu(true),
                 SegmentItem::new("Text").with_width(40.0).with_submenu(false),
             ];
-            let _ = MacSegmentedControl::with_custom_segments(items, *sel)
-                .theme(&theme)
-                .fixed_rect(bar_rect)
-                .show_with_events(ui, |ev| {
-                    if !ev.opens_menu() {
-                        *sel = ev.index;
-                    }
-                    out_ev.push(ev);
-                });
+            let _ = MacSegmentedControl::with_custom_segments(items, *sel).theme(&theme).fixed_rect(bar_rect).show_with_events(ui, |ev| {
+                if !ev.opens_menu() {
+                    *sel = ev.index;
+                }
+                out_ev.push(ev);
+            });
         });
         out.textures_delta.clear();
     };
@@ -256,10 +237,7 @@ fn test_segmented_pressed_highlight_and_drag_out_cancellation() {
                 SegmentItem::new("One").with_width(40.0),
                 SegmentItem::from_icon(move |_p, _r, col| *t_ref.borrow_mut() = col).with_width(40.0),
             ];
-            let _ = MacSegmentedControl::with_custom_segments(items, *sel)
-                .theme(&theme)
-                .fixed_rect(bar_rect)
-                .show(ui, |i| *sel = i);
+            let _ = MacSegmentedControl::with_custom_segments(items, *sel).theme(&theme).fixed_rect(bar_rect).show(ui, |i| *sel = i);
         });
         let rects = count_rect_shapes(&out.shapes);
         out.textures_delta.clear();
@@ -282,11 +260,7 @@ fn test_segmented_pressed_highlight_and_drag_out_cancellation() {
 
     // Drag outside segment 1 to (60, 80) while still holding primary -> cancels highlight visually (focus ring remains)
     let (rects_outside, tint_outside) = run_frame(0.15, vec![Event::PointerMoved(pos2(60.0, 80.0))], &mut selected);
-    assert_eq!(
-        rects_outside + 1,
-        rects_pressed,
-        "Dragging outside segment must cancel the depressed highlight rect"
-    );
+    assert_eq!(rects_outside + 1, rects_pressed, "Dragging outside segment must cancel the depressed highlight rect");
     assert_eq!(tint_outside, tint_idle, "Dragging outside segment must restore idle tint");
 
     // Release outside -> must NOT select segment 1
@@ -302,10 +276,7 @@ fn test_segmented_pressed_highlight_and_drag_out_cancellation() {
 fn test_segmented_stack_inline_array_zero_vec_api_and_large_fallback() {
     assert_eq!(MacSegmentedControl::INLINE_SEGMENT_CAPACITY, 8);
 
-    let inline_ctrl = MacSegmentedControl::with_custom_segments(
-        [SegmentItem::new("A"), SegmentItem::new("B"), SegmentItem::new("C")],
-        1,
-    );
+    let inline_ctrl = MacSegmentedControl::with_custom_segments([SegmentItem::new("A"), SegmentItem::new("B"), SegmentItem::new("C")], 1);
     assert!(inline_ctrl.is_inline_allocated(), "<= 8 segments must reside inline on the stack");
 
     let heap_items: Vec<SegmentItem> = (0..10).map(|i| SegmentItem::new(format!("S{i}")).with_width(24.0)).collect();
@@ -334,20 +305,12 @@ fn test_segmented_momentary_tracking_and_id_salt_stability() {
     let mut id_without_peer = egui::Id::NULL;
     let mut id_with_peer = egui::Id::NULL;
     let mut o1 = ctx.run_ui(make_input(0.0, Vec::new()), |ui| {
-        id_without_peer = MacSegmentedControl::new(&["Back", "Forward"], 0)
-            .id_salt("history_nav")
-            .theme(&theme)
-            .show(ui, |_| {})
-            .id;
+        id_without_peer = MacSegmentedControl::new(&["Back", "Forward"], 0).id_salt("history_nav").theme(&theme).show(ui, |_| {}).id;
     });
     o1.textures_delta.clear();
     let mut o2 = ctx.run_ui(make_input(0.02, Vec::new()), |ui| {
         ui.label("Dynamic Leading Status");
-        id_with_peer = MacSegmentedControl::new(&["Back", "Forward"], 0)
-            .id_salt("history_nav")
-            .theme(&theme)
-            .show(ui, |_| {})
-            .id;
+        id_with_peer = MacSegmentedControl::new(&["Back", "Forward"], 0).id_salt("history_nav").theme(&theme).show(ui, |_| {}).id;
     });
     o2.textures_delta.clear();
     assert_eq!(id_without_peer, id_with_peer, "id_salt must stabilize widget Id across conditional peers");
@@ -357,10 +320,7 @@ fn test_segmented_momentary_tracking_and_id_salt_stability() {
         let act_ref = Rc::clone(&actions);
         let menu_ref = Rc::clone(&menus);
         let mut out = ctx.run_ui(make_input(time, evs), |ui| {
-            let items = [
-                SegmentItem::new("<").with_width(40.0).with_menu(true),
-                SegmentItem::new(">").with_width(40.0),
-            ];
+            let items = [SegmentItem::new("<").with_width(40.0).with_menu(true), SegmentItem::new(">").with_width(40.0)];
             let _ = MacSegmentedControl::momentary(items)
                 .id_salt("momentary_nav")
                 .accessibility_label("History Navigation")

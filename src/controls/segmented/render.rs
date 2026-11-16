@@ -7,10 +7,7 @@ use super::MacSegmentedControl;
 use crate::controls::MacControlSize;
 use crate::layout::subpixel_snap_pos;
 use crate::theme::{alpha_composite, MacTheme};
-use egui::{
-    Align2, Color32, CornerRadius, Galley, Painter, Pos2, Rect, Response, Role, Sense, Stroke,
-    StrokeKind, Ui, Vec2, WidgetInfo,
-};
+use egui::{Align2, Color32, CornerRadius, Galley, Painter, Pos2, Rect, Response, Role, Sense, Stroke, StrokeKind, Ui, Vec2, WidgetInfo};
 use std::sync::Arc;
 
 fn paint_menu_chevron(painter: &Painter, theme: &MacTheme, seg_rect: Rect, tint: Color32, ppp: f32) {
@@ -47,11 +44,7 @@ fn paint_segment_content(
     }
 }
 
-pub(super) fn render_segmented(
-    control: MacSegmentedControl<'_>,
-    ui: &mut Ui,
-    mut on_event: impl FnMut(SegmentEvent),
-) -> Response {
+pub(super) fn render_segmented(control: MacSegmentedControl<'_>, ui: &mut Ui, mut on_event: impl FnMut(SegmentEvent)) -> Response {
     let theme_cow = MacTheme::resolve(control.theme, ui.ctx());
     let theme: &MacTheme = &theme_cow;
     let seg = theme.segmented();
@@ -60,16 +53,8 @@ pub(super) fn render_segmented(
         MacControlSize::Small | MacControlSize::CompactInfobox => (&seg.small, seg.small_font_size.points()),
         MacControlSize::Mini => (&seg.mini, seg.mini_font_size.points()),
     };
-    let height = control
-        .fixed_rect
-        .map(|r| r.height())
-        .or(control.height)
-        .unwrap_or_else(|| tier.height.points());
-    let corner_radius = if control.small_square {
-        seg.small_square_corner_radius.points()
-    } else {
-        tier.corner_radius.points()
-    };
+    let height = control.fixed_rect.map(|r| r.height()).or(control.height).unwrap_or_else(|| tier.height.points());
+    let corner_radius = if control.small_square { seg.small_square_corner_radius.points() } else { tier.corner_radius.points() };
     let enabled = control.enabled && ui.is_enabled();
     let sense = if enabled { Sense::click_and_drag() } else { Sense::hover() };
     let font_id = egui::FontId::proportional(font_sz);
@@ -96,9 +81,7 @@ pub(super) fn render_segmented(
     );
 
     let a11y_group = control.a11y_label.clone();
-    let a11y_active = (!momentary)
-        .then(|| control.segments.get(active_idx).and_then(|s| s.accessible_cow()))
-        .flatten();
+    let a11y_active = (!momentary).then(|| control.segments.get(active_idx).and_then(|s| s.accessible_cow())).flatten();
 
     let alpha_factor = if enabled { 1.0 } else { theme.disabled_opacity() };
     let surface_bg = theme.active_surface_at(ui, rect.center());
@@ -107,11 +90,7 @@ pub(super) fn render_segmented(
         theme.paint_focus_ring(&painter, rect, corner_radius);
     }
 
-    let bg_fill = if control.small_square {
-        theme.segmented_small_square_inactive_bg()
-    } else {
-        theme.control_background()
-    };
+    let bg_fill = if control.small_square { theme.segmented_small_square_inactive_bg() } else { theme.control_background() };
     let border_col = if control.small_square { theme.box_border() } else { theme.separator() };
     let border_width = seg.border_width.points();
     let indicator_inset = seg.indicator_inset.points();
@@ -128,20 +107,12 @@ pub(super) fn render_segmented(
     let div_inset = seg.divider_vertical_inset.points();
     for i in 1..count {
         let suppress_divider = !control.small_square
-            && if momentary {
-                pressed_seg.is_some_and(|p| i == p || i == p + 1)
-            } else {
-                i == active_idx || i == active_idx + 1
-            };
+            && if momentary { pressed_seg.is_some_and(|p| i == p || i == p + 1) } else { i == active_idx || i == active_idx + 1 };
         if suppress_divider {
             continue;
         }
         if let Some(slot) = slots.get(i) {
-            let (y0, y1) = if control.small_square {
-                (rect.min.y, rect.max.y)
-            } else {
-                (rect.min.y + div_inset, rect.max.y - div_inset)
-            };
+            let (y0, y1) = if control.small_square { (rect.min.y, rect.max.y) } else { (rect.min.y + div_inset, rect.max.y - div_inset) };
             if y1 > y0 {
                 painter.line_segment(
                     [Pos2::new(slot.rect.min.x, y0), Pos2::new(slot.rect.min.x, y1)],
@@ -240,10 +211,7 @@ pub(super) fn render_segmented(
             info.selected = Some(true);
             info.current_text_value = a11y_active.as_ref().map(|s| s.as_ref().to_owned());
         }
-        info.label = a11y_group
-            .as_ref()
-            .or(a11y_active.as_ref())
-            .map(|s| s.as_ref().to_owned());
+        info.label = a11y_group.as_ref().or(a11y_active.as_ref()).map(|s| s.as_ref().to_owned());
         info
     });
 

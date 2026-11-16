@@ -4,9 +4,7 @@ use crate::tokens::dtcg::DimensionValue;
 use crate::tokens::MacDesignTokens;
 use serde::{Deserialize, Serialize};
 
-pub use super::selection_and_value::{
-    ColorWellMetrics, SearchFieldMetrics, StepperMetrics, ToggleMetrics,
-};
+pub use super::selection_and_value::{ColorWellMetrics, SearchFieldMetrics, StepperMetrics, ToggleMetrics};
 
 /// NSSlider metrics.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

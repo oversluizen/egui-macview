@@ -54,9 +54,7 @@ pub struct ProgressIndicatorMetrics {
 
 impl Default for ProgressIndicatorMetrics {
     fn default() -> Self {
-        MacDesignTokens::default_shared()
-            .progress_indicator_metrics()
-            .clone()
+        MacDesignTokens::default_shared().progress_indicator_metrics().clone()
     }
 }
 
@@ -167,9 +165,7 @@ pub struct LevelIndicatorMetrics {
 
 impl Default for LevelIndicatorMetrics {
     fn default() -> Self {
-        MacDesignTokens::default_shared()
-            .level_indicator_metrics()
-            .clone()
+        MacDesignTokens::default_shared().level_indicator_metrics().clone()
     }
 }
 
@@ -220,9 +216,7 @@ pub struct TrimScrubberMetrics {
 
 impl Default for TrimScrubberMetrics {
     fn default() -> Self {
-        MacDesignTokens::default_shared()
-            .trim_scrubber_metrics()
-            .clone()
+        MacDesignTokens::default_shared().trim_scrubber_metrics().clone()
     }
 }
 
@@ -263,8 +257,6 @@ pub struct PathControlMetrics {
 
 impl Default for PathControlMetrics {
     fn default() -> Self {
-        MacDesignTokens::default_shared()
-            .path_control_metrics()
-            .clone()
+        MacDesignTokens::default_shared().path_control_metrics().clone()
     }
 }

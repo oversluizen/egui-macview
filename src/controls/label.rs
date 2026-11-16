@@ -167,18 +167,12 @@ impl<'a> Widget for MacLabel<'a> {
                 lm.regular_baseline_from_top.points(),
                 lm.regular_ascender.points(),
             ),
-            MacControlSize::Small | MacControlSize::CompactInfobox => (
-                lm.small_font_size.points(),
-                lm.small_height.points(),
-                lm.small_baseline_from_top.points(),
-                lm.small_ascender.points(),
-            ),
-            MacControlSize::Mini => (
-                lm.mini_font_size.points(),
-                lm.mini_height.points(),
-                lm.mini_baseline_from_top.points(),
-                lm.mini_ascender.points(),
-            ),
+            MacControlSize::Small | MacControlSize::CompactInfobox => {
+                (lm.small_font_size.points(), lm.small_height.points(), lm.small_baseline_from_top.points(), lm.small_ascender.points())
+            }
+            MacControlSize::Mini => {
+                (lm.mini_font_size.points(), lm.mini_height.points(), lm.mini_baseline_from_top.points(), lm.mini_ascender.points())
+            }
         };
 
         let probe_pos = self.fixed_rect.map_or_else(
@@ -191,19 +185,12 @@ impl<'a> Widget for MacLabel<'a> {
         );
         let surface_bg = theme.active_surface_at(ui, probe_pos);
         let text_color = theme.apply_enabled(self.resolved_color_on(theme, surface_bg), ui.is_enabled());
-        let is_heavy = matches!(
-            self.weight,
-            MacFontWeight::Medium | MacFontWeight::Semibold | MacFontWeight::Bold
-        );
-        let (font_id, has_semibold_family) = if is_heavy {
-            theme.semibold_font_id(ui, font_sz)
-        } else {
-            (FontId::proportional(font_sz), false)
-        };
+        let is_heavy = matches!(self.weight, MacFontWeight::Medium | MacFontWeight::Semibold | MacFontWeight::Bold);
+        let (font_id, has_semibold_family) =
+            if is_heavy { theme.semibold_font_id(ui, font_sz) } else { (FontId::proportional(font_sz), false) };
 
         let wrap_w = self.fixed_rect.map_or(f32::INFINITY, |r| r.width());
-        let galley =
-            theme.layout_tracked_galley(ui, self.text.text(), font_id, text_color, wrap_w);
+        let galley = theme.layout_tracked_galley(ui, self.text.text(), font_id, text_color, wrap_w);
 
         let ppp = ui.ctx().pixels_per_point();
         let (rect, response) = if let Some(fixed) = self.fixed_rect {

@@ -62,12 +62,7 @@ pub struct MacOutlineView<'a> {
 impl<'a> MacOutlineView<'a> {
     /// Creates a new `MacOutlineView` identified by `id_source`.
     pub fn new(id_source: impl Hash + Debug) -> Self {
-        Self {
-            id: Id::NULL.with(id_source),
-            theme: None,
-            row_height: None,
-            indent_step: None,
-        }
+        Self { id: Id::NULL.with(id_source), theme: None, row_height: None, indent_step: None }
     }
 
     /// Unique identifier for this outline view.
@@ -103,12 +98,8 @@ impl<'a> MacOutlineView<'a> {
                 id: self.id,
                 ui: child_ui,
                 theme,
-                row_height: self
-                    .row_height
-                    .unwrap_or_else(|| theme.outline_view().row_height.points()),
-                indent_step: self
-                    .indent_step
-                    .unwrap_or_else(|| theme.outline_view().indent_step.points()),
+                row_height: self.row_height.unwrap_or_else(|| theme.outline_view().row_height.points()),
+                indent_step: self.indent_step.unwrap_or_else(|| theme.outline_view().indent_step.points()),
             };
 
             content(&mut tree)
@@ -142,9 +133,7 @@ impl<'t> MacOutlineTree<'t> {
     ) -> MacOutlineRowResponse {
         let row_id = self.id.with(id_source);
         let avail_w = self.ui.available_width();
-        let (row_rect, row_resp) = self
-            .ui
-            .allocate_exact_size(Vec2::new(avail_w, self.row_height), Sense::click());
+        let (row_rect, row_resp) = self.ui.allocate_exact_size(Vec2::new(avail_w, self.row_height), Sense::click());
 
         let metrics = self.theme.outline_view();
         let corner_radius = metrics.corner_radius.points();
@@ -159,29 +148,19 @@ impl<'t> MacOutlineTree<'t> {
                 StrokeKind::Inside,
             );
         } else if row_resp.hovered() {
-            painter.rect(
-                row_rect,
-                CornerRadius::same(corner_radius as u8),
-                self.theme.control(),
-                Stroke::NONE,
-                StrokeKind::Inside,
-            );
+            painter.rect(row_rect, CornerRadius::same(corner_radius as u8), self.theme.control(), Stroke::NONE, StrokeKind::Inside);
         }
 
         let indent_offset = depth as f32 * self.indent_step;
         let disc_size = metrics.disclosure_size.points();
         let disc_margin = metrics.disclosure_margin.points();
         let disc_x = row_rect.left() + indent_offset + disc_margin;
-        let disc_rect = Rect::from_center_size(
-            Pos2::new(disc_x + disc_size * 0.5, row_rect.center().y),
-            Vec2::splat(disc_size + disc_margin),
-        );
+        let disc_rect =
+            Rect::from_center_size(Pos2::new(disc_x + disc_size * 0.5, row_rect.center().y), Vec2::splat(disc_size + disc_margin));
 
         let mut disclosure_clicked = false;
         if expandable {
-            let disc_resp = self
-                .ui
-                .interact(disc_rect, row_id.with("disclosure"), Sense::click());
+            let disc_resp = self.ui.interact(disc_rect, row_id.with("disclosure"), Sense::click());
             if disc_resp.clicked() {
                 *expanded = !*expanded;
                 disclosure_clicked = true;
@@ -195,10 +174,7 @@ impl<'t> MacOutlineTree<'t> {
             let angle = current_frac * std::f32::consts::FRAC_PI_2;
             let (sin_a, cos_a) = angle.sin_cos();
             let rotate = |dx: f32, dy: f32, center: Pos2| -> Pos2 {
-                Pos2::new(
-                    center.x + dx * cos_a - dy * sin_a,
-                    center.y + dx * sin_a + dy * cos_a,
-                )
+                Pos2::new(center.x + dx * cos_a - dy * sin_a, center.y + dx * sin_a + dy * cos_a)
             };
 
             let center = disc_rect.center();
@@ -224,15 +200,8 @@ impl<'t> MacOutlineTree<'t> {
         let content_spacing = metrics.content_spacing.points();
         let accessory_spacing = metrics.accessory_spacing.points();
         let content_left = disc_x + disc_size + content_spacing;
-        let mut row_builder = MacOutlineRow::new(
-            self.ui,
-            self.theme,
-            row_id,
-            row_rect,
-            content_left,
-            row_rect.right() - accessory_spacing,
-            selected,
-        );
+        let mut row_builder =
+            MacOutlineRow::new(self.ui, self.theme, row_id, row_rect, content_left, row_rect.right() - accessory_spacing, selected);
 
         content(&mut row_builder);
 

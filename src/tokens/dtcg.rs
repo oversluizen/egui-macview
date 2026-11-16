@@ -32,24 +32,14 @@ pub struct DimensionValue {
 impl From<RawDimensionValue> for DimensionValue {
     fn from(raw: RawDimensionValue) -> Self {
         let cached_points = parse_points(&raw.value);
-        Self {
-            value: raw.value,
-            token_type: raw.token_type,
-            description: raw.description,
-            cached_points,
-        }
+        Self { value: raw.value, token_type: raw.token_type, description: raw.description, cached_points }
     }
 }
 
 impl DimensionValue {
     /// Constructs a `DimensionValue` from a point value (e.g. `22.0pt`).
     pub fn from_pt(pt: f32) -> Self {
-        Self {
-            value: format!("{:.1}pt", pt),
-            token_type: Some("dimension".to_string()),
-            description: None,
-            cached_points: pt,
-        }
+        Self { value: format!("{:.1}pt", pt), token_type: Some("dimension".to_string()), description: None, cached_points: pt }
     }
 
     /// Extracts numeric value in logical points (AppKit pt) in O(1) from the pre-parsed cache.
@@ -61,10 +51,7 @@ impl DimensionValue {
 
 /// Parses a DTCG dimension string (e.g. `"22.0pt"`) into logical points (`f32`).
 pub fn parse_points(s: &str) -> f32 {
-    s.trim_end_matches("pt")
-        .trim()
-        .parse::<f32>()
-        .unwrap_or(0.0)
+    s.trim_end_matches("pt").trim().parse::<f32>().unwrap_or(0.0)
 }
 
 #[derive(Deserialize)]
@@ -96,24 +83,14 @@ pub struct ColorValue {
 impl From<RawColorValue> for ColorValue {
     fn from(raw: RawColorValue) -> Self {
         let cached_color = parse_color32(&raw.value);
-        Self {
-            value: raw.value,
-            token_type: raw.token_type,
-            description: raw.description,
-            cached_color,
-        }
+        Self { value: raw.value, token_type: raw.token_type, description: raw.description, cached_color }
     }
 }
 
 impl ColorValue {
     /// Constructs a `ColorValue` from a hex or CSS `rgba(...)` string, pre-parsing `Color32`.
     pub fn new(val: &str) -> Self {
-        Self {
-            value: val.to_string(),
-            token_type: Some("color".to_string()),
-            description: None,
-            cached_color: parse_color32(val),
-        }
+        Self { value: val.to_string(), token_type: Some("color".to_string()), description: None, cached_color: parse_color32(val) }
     }
 
     /// Returns the underlying hex or rgba string slice.
@@ -153,18 +130,9 @@ pub fn parse_color32(s: &str) -> Color32 {
             }
             _ => {}
         }
-    } else if let Some(inside) = trimmed
-        .strip_prefix("rgba(")
-        .and_then(|s| s.strip_suffix(')'))
-    {
+    } else if let Some(inside) = trimmed.strip_prefix("rgba(").and_then(|s| s.strip_suffix(')')) {
         let mut parts = inside.split(',').map(str::trim);
-        if let (Some(r_s), Some(g_s), Some(b_s), Some(a_s), None) = (
-            parts.next(),
-            parts.next(),
-            parts.next(),
-            parts.next(),
-            parts.next(),
-        ) {
+        if let (Some(r_s), Some(g_s), Some(b_s), Some(a_s), None) = (parts.next(), parts.next(), parts.next(), parts.next(), parts.next()) {
             let r = r_s.parse::<u8>().unwrap_or(0);
             let g = g_s.parse::<u8>().unwrap_or(0);
             let b = b_s.parse::<u8>().unwrap_or(0);

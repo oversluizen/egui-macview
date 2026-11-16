@@ -211,71 +211,45 @@ impl MacToastManager {
         let fallback_w = theme.palette_metrics().width.points();
         let fallback_h = theme.palette_metrics().max_height.points();
         let fallback_screen = Vec2::new(fallback_w * 2.0, fallback_h * 2.0);
-        let screen_rect = ctx
-            .input(|i| i.raw.screen_rect)
-            .unwrap_or(Rect::from_min_size(Pos2::ZERO, fallback_screen));
+        let screen_rect = ctx.input(|i| i.raw.screen_rect).unwrap_or(Rect::from_min_size(Pos2::ZERO, fallback_screen));
         let area_id = Id::NULL.with("mac_toast_layer");
+        let center_x = screen_rect.center().x;
 
-        Area::new(area_id)
-            .order(Order::Tooltip)
-            .fixed_pos(screen_rect.min)
-            .show(ctx, |ui| {
-                for (idx, toast) in self.toasts.iter_mut().enumerate() {
-                    let fraction = toast.entry_fraction().clamp(0.0, 1.0 + 0.5);
-                    let target_y = start_y + (idx as f32) * (toast_h + spacing);
-                    let anim_y = -toast_h + (target_y - (-toast_h)) * fraction;
-
-                    let galley = ui.painter().layout_no_wrap(
-                        toast.message.clone(),
-                        font_id.clone(),
-                        theme.label(),
-                    );
-                    let toast_w = (galley.size().x + padding_h * 2.0).max(min_w);
-                    let center_x = screen_rect.center().x;
-
-                    let toast_rect = Rect::from_center_size(
-                        Pos2::new(center_x, anim_y + toast_h * 0.5),
-                        Vec2::new(toast_w, toast_h),
-                    );
-
-                    let painter = ui.painter();
-                    let (bg, border) = match toast.level {
-                        ToastLevel::Info => (theme.window_background(), theme.separator()),
-                        ToastLevel::Success => (theme.system_green(), theme.system_green()),
-                        ToastLevel::Warning => (theme.control_accent(), theme.control_accent()),
-                        ToastLevel::Error => {
-                            let (c_fill, c_border) = theme.traffic_light_close();
-                            (c_fill, c_border)
-                        }
-                    };
-
-                    painter.rect(
-                        toast_rect,
-                        CornerRadius::same((toast_h * 0.5) as u8),
-                        bg,
-                        Stroke::new(border_w, border),
-                        StrokeKind::Inside,
-                    );
-
-                    let fg = match toast.level {
-                        ToastLevel::Info => theme.label(),
-                        _ => on_accent,
-                    };
-
-                    painter.galley(
-                        Pos2::new(
-                            toast_rect.center().x - galley.size().x * 0.5,
-                            toast_rect.center().y - galley.size().y * 0.5,
-                        ),
-                        galley,
-                        fg,
-                    );
-
-                    let resp = ui.interact(toast_rect, area_id.with(&toast.id), Sense::click());
-                    if resp.clicked() {
-                        toast.dismiss();
+        for (idx, toast) in self.toasts.iter_mut().enumerate() {
+            let fraction = toast.entry_fraction().clamp(0.0, 1.0 + 0.5);
+            let target_y = start_y + (idx as f32) * (toast_h + spacing);
+            let anim_y = -toast_h + (target_y - (-toast_h)) * fraction;
+            let text_w = ctx.fonts_mut(|f| f.layout_no_wrap(toast.message.clone(), font_id.clone(), theme.label()).size().x);
+            let toast_w = (text_w + padding_h * 2.0).max(min_w);
+            let toast_rect = Rect::from_center_size(Pos2::new(center_x, anim_y + toast_h * 0.5), Vec2::new(toast_w, toast_h));
+            let toast_area_id = area_id.with(&toast.id);
+            Area::new(toast_area_id).order(Order::Tooltip).fixed_pos(toast_rect.min).show(ctx, |ui| {
+                let galley = ui.painter().layout_no_wrap(toast.message.clone(), font_id.clone(), theme.label());
+                let painter = ui.painter();
+                let (bg, border) = match toast.level {
+                    ToastLevel::Info => (theme.window_background(), theme.separator()),
+                    ToastLevel::Success => (theme.system_green(), theme.system_green()),
+                    ToastLevel::Warning => (theme.control_accent(), theme.control_accent()),
+                    ToastLevel::Error => {
+                        let (c_fill, c_border) = theme.traffic_light_close();
+                        (c_fill, c_border)
                     }
+                };
+                painter.rect(toast_rect, CornerRadius::same((toast_h * 0.5) as u8), bg, Stroke::new(border_w, border), StrokeKind::Inside);
+                let fg = match toast.level {
+                    ToastLevel::Info => theme.label(),
+                    _ => on_accent,
+                };
+                painter.galley(
+                    Pos2::new(toast_rect.center().x - galley.size().x * 0.5, toast_rect.center().y - galley.size().y * 0.5),
+                    galley,
+                    fg,
+                );
+                let resp = ui.interact(toast_rect, toast_area_id.with("hit"), Sense::click());
+                if resp.clicked() {
+                    toast.dismiss();
                 }
             });
+        }
     }
 }

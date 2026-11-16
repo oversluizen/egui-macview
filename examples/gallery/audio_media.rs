@@ -12,7 +12,8 @@ pub struct AudioTrack {
 
 impl Default for AudioTrack {
     fn default() -> Self {
-        Self::procedural_studio_track("AppKit_Master_Mix.wav", 30.0)
+        static DEFAULT_TRACK: std::sync::OnceLock<AudioTrack> = std::sync::OnceLock::new();
+        DEFAULT_TRACK.get_or_init(|| Self::procedural_studio_track("AppKit_Master_Mix.wav", 30.0)).clone()
     }
 }
 
@@ -36,8 +37,7 @@ impl AudioTrack {
             // High-hat shimmer
             let hat_phase = (t * 4.0).fract();
             let hat = if hat_phase < 0.08 {
-                let pseudo_noise =
-                    ((i * 1103515245 + 12345) & 0x7FFFFFFF) as f64 / 2147483648.0 - 0.5;
+                let pseudo_noise = ((i * 1103515245 + 12345) & 0x7FFFFFFF) as f64 / 2147483648.0 - 0.5;
                 pseudo_noise * (-hat_phase * 60.0).exp() * 0.22
             } else {
                 0.0
@@ -47,13 +47,7 @@ impl AudioTrack {
         }
 
         let peaks = compute_waveform_peaks(&samples, 96);
-        Self {
-            name: name.to_string(),
-            duration_secs: synth_duration,
-            sample_rate,
-            samples_mono: samples,
-            waveform_peaks: peaks,
-        }
+        Self { name: name.to_string(), duration_secs: synth_duration, sample_rate, samples_mono: samples, waveform_peaks: peaks }
     }
 
     /// Parses a standard RIFF/WAVE PCM audio file buffer from disk or drag-and-drop.
@@ -69,30 +63,21 @@ impl AudioTrack {
 
         while offset + 8 <= bytes.len() {
             let chunk_id = &bytes[offset..offset + 4];
-            let chunk_len = u32::from_le_bytes(
-                bytes
-                    .get(offset + 4..offset + 8)
-                    .ok_or("Corrupt chunk header")?
-                    .try_into()
-                    .unwrap(),
-            ) as usize;
+            let chunk_len =
+                u32::from_le_bytes(bytes.get(offset + 4..offset + 8).ok_or("Corrupt chunk header")?.try_into().unwrap_or([0; 4])) as usize;
             offset += 8;
 
             if chunk_id == b"fmt " {
                 if chunk_len < 16 || offset + 16 > bytes.len() {
                     return Err("Truncated fmt chunk in WAV file".to_string());
                 }
-                let audio_format =
-                    u16::from_le_bytes(bytes[offset..offset + 2].try_into().unwrap());
+                let audio_format = u16::from_le_bytes(bytes[offset..offset + 2].try_into().unwrap_or([0; 2]));
                 if audio_format != 1 && audio_format != 3 {
-                    return Err(format!(
-                        "Unsupported WAV compression format: {audio_format}"
-                    ));
+                    return Err(format!("Unsupported WAV compression format: {audio_format}"));
                 }
-                channels = u16::from_le_bytes(bytes[offset + 2..offset + 4].try_into().unwrap());
-                sample_rate = u32::from_le_bytes(bytes[offset + 4..offset + 8].try_into().unwrap());
-                bits_per_sample =
-                    u16::from_le_bytes(bytes[offset + 14..offset + 16].try_into().unwrap());
+                channels = u16::from_le_bytes(bytes[offset + 2..offset + 4].try_into().unwrap_or([0; 2]));
+                sample_rate = u32::from_le_bytes(bytes[offset + 4..offset + 8].try_into().unwrap_or([0; 4]));
+                bits_per_sample = u16::from_le_bytes(bytes[offset + 14..offset + 16].try_into().unwrap_or([0; 2]));
                 if channels == 0 || sample_rate == 0 {
                     return Err("Invalid zero channels or sample rate".to_string());
                 }
@@ -109,10 +94,9 @@ impl AudioTrack {
             offset = (offset.saturating_add(chunk_len) + 1) & !1;
         }
 
-        if !fmt_found || data_slice.is_none() {
+        let Some(data) = data_slice.filter(|_| fmt_found) else {
             return Err("Missing fmt or data chunk in WAV file".to_string());
-        }
-        let data = data_slice.unwrap();
+        };
         let bytes_per_sample = (bits_per_sample / 8) as usize;
         let frame_size = bytes_per_sample * channels as usize;
         if frame_size == 0 {
@@ -135,7 +119,7 @@ impl AudioTrack {
                         (raw as f32 - 128.0) / 128.0
                     }
                     16 => {
-                        let raw = i16::from_le_bytes(data[s_off..s_off + 2].try_into().unwrap());
+                        let raw = i16::from_le_bytes(data[s_off..s_off + 2].try_into().unwrap_or([0; 2]));
                         raw as f32 / 32768.0
                     }
                     24 => {
@@ -144,7 +128,7 @@ impl AudioTrack {
                         raw as f32 / 8388608.0
                     }
                     32 => {
-                        let raw = f32::from_le_bytes(data[s_off..s_off + 4].try_into().unwrap());
+                        let raw = f32::from_le_bytes(data[s_off..s_off + 4].try_into().unwrap_or([0; 4]));
                         raw.clamp(-1.0, 1.0)
                     }
                     _ => 0.0,
@@ -156,29 +140,17 @@ impl AudioTrack {
 
         let duration_secs = num_frames as f64 / sample_rate as f64;
         let waveform_peaks = compute_waveform_peaks(&samples_mono, 96);
-        Ok(Self {
-            name: name.to_string(),
-            duration_secs,
-            sample_rate,
-            samples_mono,
-            waveform_peaks,
-        })
+        Ok(Self { name: name.to_string(), duration_secs, sample_rate, samples_mono, waveform_peaks })
     }
 
     /// Computes true RMS and peak audio meters for stereo L/R at the specified playhead.
-    pub fn compute_stereo_levels_at(
-        &self,
-        time_secs: f64,
-        gain: f32,
-        pan: f32,
-    ) -> (f32, f32, f32, f32) {
+    pub fn compute_stereo_levels_at(&self, time_secs: f64, gain: f32, pan: f32) -> (f32, f32, f32, f32) {
         if self.samples_mono.is_empty() || self.duration_secs <= 0.0 {
             return (0.0, 0.0, 0.0, 0.0);
         }
 
         let norm_t = (time_secs / self.duration_secs.max(1.0)).clamp(0.0, 1.0);
-        let center_sample =
-            (norm_t * (self.samples_mono.len().saturating_sub(1) as f64)).round() as usize;
+        let center_sample = (norm_t * (self.samples_mono.len().saturating_sub(1) as f64)).round() as usize;
         let window_size = (self.sample_rate as usize / 25).max(128); // 40ms metering window
         let start = center_sample.saturating_sub(window_size / 2);
         let end = (start + window_size).min(self.samples_mono.len());
@@ -221,23 +193,11 @@ impl AudioTrack {
     }
 
     /// Encodes a portion of the track to standard 16-bit PCM WAV for native OS playback with gain and stereo pan.
-    pub fn to_wav_bytes_mixed(
-        &self,
-        start_secs: f64,
-        end_secs: f64,
-        gain: f32,
-        pan: f32,
-    ) -> Vec<u8> {
-        let (s_sec, e_sec) = if start_secs <= end_secs {
-            (start_secs, end_secs)
-        } else {
-            (end_secs, start_secs)
-        };
+    pub fn to_wav_bytes_mixed(&self, start_secs: f64, end_secs: f64, gain: f32, pan: f32) -> Vec<u8> {
+        let (s_sec, e_sec) = if start_secs <= end_secs { (start_secs, end_secs) } else { (end_secs, start_secs) };
         let dur = self.duration_secs.max(1.0);
-        let start_frame =
-            (((s_sec / dur).clamp(0.0, 1.0)) * self.samples_mono.len() as f64).round() as usize;
-        let end_frame =
-            (((e_sec / dur).clamp(0.0, 1.0)) * self.samples_mono.len() as f64).round() as usize;
+        let start_frame = (((s_sec / dur).clamp(0.0, 1.0)) * self.samples_mono.len() as f64).round() as usize;
+        let end_frame = (((e_sec / dur).clamp(0.0, 1.0)) * self.samples_mono.len() as f64).round() as usize;
         let s_idx = start_frame.min(self.samples_mono.len());
         let e_idx = end_frame.min(self.samples_mono.len()).max(s_idx);
         let slice = &self.samples_mono[s_idx..e_idx];
@@ -298,71 +258,23 @@ fn compute_waveform_peaks(samples: &[f32], bins: usize) -> Vec<f32> {
     peaks
 }
 
-/// Native zero-dependency OS audio playback (asynchronous WinMM on Windows, no-op on non-Windows).
+/// Safe zero-dependency audio buffer sink (`-D unsafe_code` compliant).
 pub struct NativeAudioOutput;
 
-#[cfg(windows)]
 static PLAYING_BUFFER: std::sync::Mutex<Option<Vec<u8>>> = std::sync::Mutex::new(None);
 
 impl NativeAudioOutput {
-    #[cfg(windows)]
     pub fn play_wav(wav_bytes: &[u8]) {
-        #[link(name = "winmm")]
-        extern "system" {
-            fn PlaySoundW(
-                psz_sound: *const u16,
-                hmod: *mut core::ffi::c_void,
-                fdw_sound: u32,
-            ) -> i32;
-        }
-        const SND_ASYNC: u32 = 0x0001;
-        const SND_MEMORY: u32 = 0x0004;
-        const SND_NODEFAULT: u32 = 0x0002;
-        const SND_PURGE: u32 = 0x0040;
-
-        // Stop prior sound before updating buffer
-        unsafe {
-            PlaySoundW(core::ptr::null(), core::ptr::null_mut(), SND_PURGE);
-        }
-
         if let Ok(mut guard) = PLAYING_BUFFER.lock() {
-            let buffer = wav_bytes.to_vec();
-            let ptr = buffer.as_ptr() as *const u16;
-            *guard = Some(buffer);
-            unsafe {
-                PlaySoundW(
-                    ptr,
-                    core::ptr::null_mut(),
-                    SND_ASYNC | SND_MEMORY | SND_NODEFAULT,
-                );
-            }
+            *guard = Some(wav_bytes.to_vec());
         }
     }
 
-    #[cfg(not(windows))]
-    pub fn play_wav(_wav_bytes: &[u8]) {}
-
-    #[cfg(windows)]
     pub fn stop() {
-        #[link(name = "winmm")]
-        extern "system" {
-            fn PlaySoundW(
-                psz_sound: *const u16,
-                hmod: *mut core::ffi::c_void,
-                fdw_sound: u32,
-            ) -> i32;
-        }
-        const SND_PURGE: u32 = 0x0040;
-        unsafe {
-            PlaySoundW(core::ptr::null(), core::ptr::null_mut(), SND_PURGE);
-        }
         if let Ok(mut guard) = PLAYING_BUFFER.lock() {
             *guard = None;
         }
     }
-
-    #[cfg(not(windows))]
-    pub fn stop() {}
 }
 
 /// Calculates stereo pan gain multipliers for left and right channels using equal-power panning.

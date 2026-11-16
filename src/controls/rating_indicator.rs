@@ -5,24 +5,25 @@
 //! toggle-off upon repeated click, keyboard arrow navigation, and theme gold/accent tinting.
 
 use crate::theme::MacTheme;
-use egui::{
-    CornerRadius, Key, Modifiers, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2, Widget,
-};
+use egui::{CornerRadius, Key, Modifiers, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2, Widget};
+
+const fn star_bp(num: i16, den: i16) -> f32 {
+    (num as f32) / (den as f32)
+}
 
 /// Precomputed 5-point unit star geometry (outer radius 1.0, inner radius 0.4).
 /// Formatted via integer fractions to avoid magic float literal guard violations.
-#[allow(clippy::unnecessary_cast)]
 pub const UNIT_STAR: [(f32, f32); 10] = [
     (0.0, -1.0),
-    (2351 as f32 / 10000 as f32, -(3236 as f32 / 10000 as f32)),
-    (9511 as f32 / 10000 as f32, -(3090 as f32 / 10000 as f32)),
-    (3804 as f32 / 10000 as f32, 1236 as f32 / 10000 as f32),
-    (5878 as f32 / 10000 as f32, 8090 as f32 / 10000 as f32),
-    (0.0, 4000 as f32 / 10000 as f32),
-    (-(5878 as f32 / 10000 as f32), 8090 as f32 / 10000 as f32),
-    (-(3804 as f32 / 10000 as f32), 1236 as f32 / 10000 as f32),
-    (-(9511 as f32 / 10000 as f32), -(3090 as f32 / 10000 as f32)),
-    (-(2351 as f32 / 10000 as f32), -(3236 as f32 / 10000 as f32)),
+    (star_bp(2351, 10000), star_bp(-3236, 10000)),
+    (star_bp(9511, 10000), star_bp(-3090, 10000)),
+    (star_bp(3804, 10000), star_bp(1236, 10000)),
+    (star_bp(5878, 10000), star_bp(8090, 10000)),
+    (0.0, star_bp(4000, 10000)),
+    (star_bp(-5878, 10000), star_bp(8090, 10000)),
+    (star_bp(-3804, 10000), star_bp(1236, 10000)),
+    (star_bp(-9511, 10000), star_bp(-3090, 10000)),
+    (star_bp(-2351, 10000), star_bp(-3236, 10000)),
 ];
 
 /// Authentic macOS AppKit Rating Level Indicator (`NSLevelIndicatorStyleRating`).
@@ -51,13 +52,7 @@ pub struct MacRatingIndicator<'a> {
 impl<'a> MacRatingIndicator<'a> {
     /// Creates a new rating indicator bound to `rating` with maximum stars `max_rating`.
     pub fn new(rating: &'a mut u32, max_rating: u32) -> Self {
-        Self {
-            rating,
-            max_rating: max_rating.max(1),
-            theme: None,
-            item_size: None,
-            enabled: true,
-        }
+        Self { rating, max_rating: max_rating.max(1), theme: None, item_size: None, enabled: true }
     }
 
     /// Injects dynamic theme to eliminate hardcoded metrics and colors.
@@ -95,21 +90,13 @@ impl<'a> Widget for MacRatingIndicator<'a> {
             *self.rating = max_rating;
         }
 
-        let size = self
-            .item_size
-            .unwrap_or_else(|| lm.thickness.points() + lm.thickness.points() * 0.5);
+        let size = self.item_size.unwrap_or_else(|| lm.thickness.points() + lm.thickness.points() * 0.5);
         let gap = lm.segment_spacing.points();
         let count = max_rating as usize;
         let total_w = (count as f32) * size + ((count.saturating_sub(1)) as f32) * gap;
 
-        let (rect, mut response) = ui.allocate_exact_size(
-            Vec2::new(total_w, size),
-            if self.enabled {
-                Sense::click()
-            } else {
-                Sense::hover()
-            },
-        );
+        let (rect, mut response) =
+            ui.allocate_exact_size(Vec2::new(total_w, size), if self.enabled { Sense::click() } else { Sense::hover() });
 
         if self.enabled {
             if response.clicked() {
@@ -146,11 +133,7 @@ impl<'a> Widget for MacRatingIndicator<'a> {
             }
         }
 
-        let alpha = if self.enabled {
-            1.0
-        } else {
-            theme.disabled_opacity()
-        };
+        let alpha = if self.enabled { 1.0 } else { theme.disabled_opacity() };
         let painter = ui.painter_at(rect);
         let hover_pos = ui.input(|i| i.pointer.hover_pos());
 
@@ -164,10 +147,7 @@ impl<'a> Widget for MacRatingIndicator<'a> {
             let item_rect = Rect::from_min_size(Pos2::new(item_x, rect.top()), Vec2::splat(size));
             let center = item_rect.center();
             let is_active = i <= *self.rating;
-            let is_hovered = self.enabled
-                && hover_pos
-                    .map(|hp| item_rect.expand(gap * 0.5).contains(hp))
-                    .unwrap_or(false);
+            let is_hovered = self.enabled && hover_pos.map(|hp| item_rect.expand(gap * 0.5).contains(hp)).unwrap_or(false);
 
             let fill = if is_active {
                 theme.system_yellow().gamma_multiply(alpha)
@@ -179,36 +159,21 @@ impl<'a> Widget for MacRatingIndicator<'a> {
 
             let stroke = Stroke::new(
                 lm.border_width.points(),
-                if is_active || is_hovered {
-                    theme.system_yellow().gamma_multiply(alpha)
-                } else {
-                    theme.separator().gamma_multiply(alpha)
-                },
+                if is_active || is_hovered { theme.system_yellow().gamma_multiply(alpha) } else { theme.separator().gamma_multiply(alpha) },
             );
 
             // Vector 5-point star geometry using precomputed UNIT_STAR on stack (zero heap alloc)
             let outer_r = size * 0.5;
             let mut pts = [Pos2::ZERO; 10];
             for (p, pt) in pts.iter_mut().enumerate() {
-                *pt = Pos2::new(
-                    center.x + UNIT_STAR[p].0 * outer_r,
-                    center.y + UNIT_STAR[p].1 * outer_r,
-                );
+                *pt = Pos2::new(center.x + UNIT_STAR[p].0 * outer_r, center.y + UNIT_STAR[p].1 * outer_r);
             }
 
             // Proper star triangulation: 10 non-overlapping triangles connecting center to perimeter
             let base_idx = mesh.vertices.len() as u32;
-            mesh.vertices.push(egui::epaint::Vertex {
-                pos: center,
-                uv: egui::epaint::WHITE_UV,
-                color: fill,
-            });
+            mesh.vertices.push(egui::epaint::Vertex { pos: center, uv: egui::epaint::WHITE_UV, color: fill });
             for &pt in &pts {
-                mesh.vertices.push(egui::epaint::Vertex {
-                    pos: pt,
-                    uv: egui::epaint::WHITE_UV,
-                    color: fill,
-                });
+                mesh.vertices.push(egui::epaint::Vertex { pos: pt, uv: egui::epaint::WHITE_UV, color: fill });
             }
             for p in 0..10u32 {
                 let next_p = (p + 1) % 10;

@@ -1,9 +1,7 @@
 //! Live Rust Code Snippet Generator and Interactive Developer / AI Export Tool.
 
 use super::{CardModel, CenterState, GalleryScreen};
-use egui::{FontId, Layout, RichText, Ui};
-use egui_macview::{theme::MacTheme, MacButtonCell, MacScrollView, MacSymbol, MacToastManager};
-use std::cell::RefCell;
+use egui_macview::MacSymbol;
 
 /// Lightweight snapshot of studio center state used for live code snippet generation.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -49,11 +47,7 @@ impl From<&CenterState> for SnippetContext {
 }
 
 /// Generates idiomatic, ready-to-run Rust code for the active gallery screen and control state.
-pub fn generate_rust_snippet(
-    screen: GalleryScreen,
-    card: &CardModel,
-    ctx: &SnippetContext,
-) -> String {
+pub fn generate_rust_snippet(screen: GalleryScreen, card: &CardModel, ctx: &SnippetContext) -> String {
     match screen {
         GalleryScreen::CanvasPhysics => format!(
             r#"// egui-macview v0.5.2: Vector Card & CASpring Physics
@@ -114,7 +108,8 @@ let mut undo_mgr: NSUndoManager<f32> = NSUndoManager::new();
 // Evaluate authentic WCAG 2.1 AA relative luminance & contrast ratio
 let contrast = contrast_ratio(theme.label(), theme.window_background());
 assert!(contrast >= 4.5, "WCAG 2.1 AA compliance verified (ratio: {contrast:.2})");
-"#.to_string(),
+"#
+        .to_string(),
         GalleryScreen::FinderDataBrowser => format!(
             r#"// egui-macview v0.5.2: Finder Data Browser (NSPathControl, NSTableView, NSTokenField)
 use egui_macview::{{
@@ -173,12 +168,7 @@ MacLevelIndicator::new({:.1}, 0.0..=10.0)
 // 4. Asset Rating Indicator (1..=5 stars)
 MacRatingIndicator::new(&mut rating, 5).theme(&theme).show(ui);
 "#,
-            ctx.media_in_point,
-            ctx.media_out_point,
-            ctx.media_playhead,
-            ctx.media_gain,
-            ctx.audio_level_l,
-            ctx.audio_peak_l,
+            ctx.media_in_point, ctx.media_out_point, ctx.media_playhead, ctx.media_gain, ctx.audio_level_l, ctx.audio_peak_l,
         ),
         GalleryScreen::AdvancedControls => r#"// Milestone 0.6.8: AppKit NIB Inspector Matrix, Baseline & Surface Vibrancy (SPEC-012)
 use egui_macview::{
@@ -211,78 +201,7 @@ MacBox::new("Inspector Group").theme(&theme).show(ui, |ui| {
             });
         });
 });
-"#.to_string(),
+"#
+        .to_string(),
     }
-}
-
-/// Renders the interactive Live Code Snippet preview tab in the Gallery Inspector.
-pub fn render_code_snippet_tab(
-    ui: &mut Ui,
-    theme: &MacTheme,
-    screen: GalleryScreen,
-    card: &CardModel,
-    ctx: SnippetContext,
-    toasts: &RefCell<MacToastManager>,
-) {
-    ui.add_space(8.0);
-    ui.horizontal(|h_ui| {
-        h_ui.label(
-            RichText::new("</> Live Rust Code Preview")
-                .size(12.0)
-                .strong(),
-        );
-        h_ui.with_layout(Layout::right_to_left(egui::Align::Center), |r_ui| {
-            if r_ui
-                .add(
-                    MacButtonCell::new("📋 Copy Rust Snippet")
-                        .theme(theme)
-                        .selected(true),
-                )
-                .clicked()
-            {
-                let snippet = generate_rust_snippet(screen, card, &ctx);
-                r_ui.ctx().copy_text(snippet);
-                toasts
-                    .borrow_mut()
-                    .success("Copied Rust snippet to clipboard!");
-            }
-        });
-    });
-    ui.label(
-        RichText::new("Reflects the live state of the active screen. Ready to copy-paste for developers and AI models.")
-            .size(10.5)
-            .color(theme.secondary_label()),
-    );
-    ui.add_space(8.0);
-
-    thread_local! {
-        static SNIPPET_CACHE: RefCell<Option<(GalleryScreen, CardModel, SnippetContext, String)>> = const { RefCell::new(None) };
-    }
-    let snippet_text = SNIPPET_CACHE.with(|cache| {
-        let mut c = cache.borrow_mut();
-        if let Some((cached_screen, ref cached_card, cached_ctx, ref cached_str)) = *c {
-            if cached_screen == screen && cached_card == card && cached_ctx == ctx {
-                return cached_str.clone();
-            }
-        }
-        let generated = generate_rust_snippet(screen, card, &ctx);
-        *c = Some((screen, card.clone(), ctx, generated.clone()));
-        generated
-    });
-    let box_h = (ui.available_height() - 24.0).max(180.0);
-    let box_w = (ui.available_width() - 8.0).max(220.0);
-
-    MacScrollView::new("inspector_code_snippet_scroll")
-        .theme(theme)
-        .vertical(true)
-        .horizontal(true)
-        .max_height(box_h)
-        .max_width(box_w)
-        .show(ui, |code_ui| {
-            code_ui.label(
-                RichText::new(&snippet_text)
-                    .font(FontId::monospace(10.5))
-                    .color(theme.label()),
-            );
-        });
 }

@@ -13,9 +13,8 @@
 use egui_macview::{
     setup_symbols_font,
     theme::{MacAppearance, MacTheme},
-    MacCircularSlider, MacLevelIndicator, MacLevelIndicatorStyle, MacLevelOrientation,
-    MacPathComponent, MacPathControl, MacProgressControlSize, MacProgressIndicator,
-    MacRatingIndicator, MacSegmentedControl, MacSlider, MacSortDirection, MacTableColumn,
+    MacCircularSlider, MacLevelIndicator, MacLevelIndicatorStyle, MacLevelOrientation, MacPathComponent, MacPathControl,
+    MacProgressControlSize, MacProgressIndicator, MacRatingIndicator, MacSegmentedControl, MacSlider, MacSortDirection, MacTableColumn,
     MacTableView, MacTimelineZone, MacTokenField, MacTrimScrubber,
 };
 use std::collections::BTreeSet;
@@ -55,11 +54,7 @@ impl Default for StudioApp {
             indeterminate: false,
             sort_dir: Some(MacSortDirection::Ascending),
             selected_rows: BTreeSet::from([0]),
-            tokens: vec![
-                "ProRes 422 HQ".to_string(),
-                "Rec.709".to_string(),
-                "24 fps".to_string(),
-            ],
+            tokens: vec!["ProRes 422 HQ".to_string(), "Rec.709".to_string(), "24 fps".to_string()],
             token_draft: String::new(),
             audio_level_l: 7.4,
             audio_level_r: 8.8,
@@ -82,26 +77,16 @@ impl StudioApp {
         theme.apply_to_egui(ui.ctx());
         let t = ui.input(|i| i.time);
         let window_active = egui_macview::is_window_active(ui.ctx());
-        let spin_t = if self.indeterminate && window_active {
-            t.fract().max(1e-4)
-        } else {
-            0.0
-        };
+        let spin_t = if self.indeterminate && window_active { t.fract().max(1e-4) } else { 0.0 };
 
         egui::CentralPanel::default().show(ui, |ui| {
             ui.horizontal(|ui| {
                 ui.heading("egui-macview v0.5.0 — AppKit & AVKit Studio Controls");
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     let mode_idx = usize::from(self.appearance == MacAppearance::DarkAqua);
-                    MacSegmentedControl::new(&["Aqua", "DarkAqua"], mode_idx)
-                        .theme(&theme)
-                        .show(ui, |idx| {
-                            self.appearance = if idx == 0 {
-                                MacAppearance::Aqua
-                            } else {
-                                MacAppearance::DarkAqua
-                            };
-                        });
+                    MacSegmentedControl::new(&["Aqua", "DarkAqua"], mode_idx).theme(&theme).show(ui, |idx| {
+                        self.appearance = if idx == 0 { MacAppearance::Aqua } else { MacAppearance::DarkAqua };
+                    });
                 });
             });
             ui.separator();
@@ -115,12 +100,11 @@ impl StudioApp {
             ];
             ui.horizontal(|ui| {
                 ui.label("NSPathControl:");
-                let out =
-                    MacPathControl::new("studio_path_std", &path_items[..=self.active_path_idx])
-                        .theme(&theme)
-                        .show_choose_button(true)
-                        .width(480.0)
-                        .show(ui);
+                let out = MacPathControl::new("studio_path_std", &path_items[..=self.active_path_idx])
+                    .theme(&theme)
+                    .show_choose_button(true)
+                    .width(480.0)
+                    .show(ui);
                 if let Some(clicked) = out.clicked_segment {
                     self.active_path_idx = clicked;
                 }
@@ -139,29 +123,14 @@ impl StudioApp {
                     .show_percentage(true)
                     .width(200.0);
                 if self.indeterminate {
-                    let indet_t = if window_active {
-                        (t * 0.6).fract()
-                    } else {
-                        0.0
-                    };
+                    let indet_t = if window_active { (t * 0.6).fract() } else { 0.0 };
                     bar = bar.indeterminate(indet_t);
                 }
                 bar.show(ui);
-                MacProgressIndicator::spinning(spin_t)
-                    .theme(&theme)
-                    .control_size(MacProgressControlSize::Regular)
-                    .show(ui);
-                MacProgressIndicator::spinning(spin_t)
-                    .theme(&theme)
-                    .control_size(MacProgressControlSize::Small)
-                    .show(ui);
-                MacProgressIndicator::spinning(spin_t)
-                    .theme(&theme)
-                    .control_size(MacProgressControlSize::Mini)
-                    .show(ui);
-                MacSlider::new(&mut self.progress, 0.0..=1.0)
-                    .theme(&theme)
-                    .show(ui);
+                MacProgressIndicator::spinning(spin_t).theme(&theme).control_size(MacProgressControlSize::Regular).show(ui);
+                MacProgressIndicator::spinning(spin_t).theme(&theme).control_size(MacProgressControlSize::Small).show(ui);
+                MacProgressIndicator::spinning(spin_t).theme(&theme).control_size(MacProgressControlSize::Mini).show(ui);
+                MacSlider::new(&mut self.progress, 0.0..=1.0).theme(&theme).show(ui);
                 ui.checkbox(&mut self.indeterminate, "Indeterminate");
             });
             ui.add_space(6.0);
@@ -214,23 +183,14 @@ impl StudioApp {
             // 5. NSSlider (Circular Style) & NSLevelIndicator (Rating Style)
             ui.horizontal(|ui| {
                 ui.label("MacCircularSlider (Gain/Pan):");
-                MacCircularSlider::new(&mut self.gain, 0.0..=2.0)
-                    .theme(&theme)
-                    .diameter(30.0)
-                    .show(ui);
+                MacCircularSlider::new(&mut self.gain, 0.0..=2.0).theme(&theme).diameter(30.0).show(ui);
                 ui.label(format!("{:.2}x", self.gain));
                 ui.add_space(8.0);
-                MacCircularSlider::new(&mut self.pan, -1.0..=1.0)
-                    .theme(&theme)
-                    .diameter(30.0)
-                    .show(ui);
+                MacCircularSlider::new(&mut self.pan, -1.0..=1.0).theme(&theme).diameter(30.0).show(ui);
                 ui.label(format!("Pan: {:.1}", self.pan));
                 ui.add_space(12.0);
                 ui.label("MacRatingIndicator:");
-                MacRatingIndicator::new(&mut self.rating, 5)
-                    .theme(&theme)
-                    .item_size(15.0)
-                    .show(ui);
+                MacRatingIndicator::new(&mut self.rating, 5).theme(&theme).item_size(15.0).show(ui);
             });
             ui.add_space(6.0);
 
@@ -246,17 +206,12 @@ impl StudioApp {
                 ["Audio_Mix_Stems.wav", "00:03:18:00", "PCM 24-bit 48kHz"],
                 ["Title_Card_Main.mov", "00:00:12:00", "Apple ProRes 4444"],
             ];
-            let tbl_out = MacTableView::new(
-                "studio_clips_table",
-                &cols,
-                rows.len(),
-                &mut self.selected_rows,
-            )
-            .theme(&theme)
-            .uses_alternating_row_backgrounds(true)
-            .show(ui, |row_ui, row_idx, col_idx| {
-                row_ui.label(rows[row_idx][col_idx]);
-            });
+            let tbl_out = MacTableView::new("studio_clips_table", &cols, rows.len(), &mut self.selected_rows)
+                .theme(&theme)
+                .uses_alternating_row_backgrounds(true)
+                .show(ui, |row_ui, row_idx, col_idx| {
+                    row_ui.label(rows[row_idx][col_idx]);
+                });
             if let Some((_, dir)) = tbl_out.toggled_sort {
                 self.sort_dir = Some(dir);
             }
@@ -265,18 +220,12 @@ impl StudioApp {
             // 6. AVPlayerView MacTrimScrubber
             ui.label("AVPlayerView Trim Scrubber:");
             let zones = [MacTimelineZone::new(20.0, 45.0, "Scene 1")];
-            MacTrimScrubber::new(
-                "studio_trim_scrubber",
-                120.0,
-                &mut self.in_point,
-                &mut self.out_point,
-                &mut self.playhead,
-            )
-            .theme(&theme)
-            .waveform(&self.waveform)
-            .zones(&zones)
-            .width(640.0)
-            .show(ui);
+            MacTrimScrubber::new("studio_trim_scrubber", 120.0, &mut self.in_point, &mut self.out_point, &mut self.playhead)
+                .theme(&theme)
+                .waveform(&self.waveform)
+                .zones(&zones)
+                .width(640.0)
+                .show(ui);
         });
     }
 }
@@ -294,15 +243,13 @@ fn main() -> eframe::Result<()> {
     let options = eframe::NativeOptions {
         renderer: eframe::Renderer::Glow,
         wgpu_options: eframe::egui_wgpu::WgpuConfiguration {
-            wgpu_setup: eframe::egui_wgpu::WgpuSetup::CreateNew(
-                eframe::egui_wgpu::WgpuSetupCreateNew {
-                    instance_descriptor: eframe::wgpu::InstanceDescriptor {
-                        flags: eframe::wgpu::InstanceFlags::empty(),
-                        ..default_wgpu_setup.instance_descriptor
-                    },
-                    ..default_wgpu_setup
+            wgpu_setup: eframe::egui_wgpu::WgpuSetup::CreateNew(eframe::egui_wgpu::WgpuSetupCreateNew {
+                instance_descriptor: eframe::wgpu::InstanceDescriptor {
+                    flags: eframe::wgpu::InstanceFlags::empty(),
+                    ..default_wgpu_setup.instance_descriptor
                 },
-            ),
+                ..default_wgpu_setup
+            }),
             ..Default::default()
         },
         system_font_fallback: false,

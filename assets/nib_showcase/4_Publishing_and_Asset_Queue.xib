@@ -1,0 +1,295 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="23504" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="NO" customObjectInstantitationMethod="direct">
+    <dependencies>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="23504"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <objects>
+        <customObject id="-2" userLabel="File's Owner" customClass="NSWindowController"/>
+        <customObject id="-1" userLabel="First Responder" customClass="FirstResponder"/>
+        <customObject id="-3" userLabel="Application" customClass="NSObject"/>
+        <window title="Publishing &amp; Asset Queue" allowsToolTipsWhenApplicationIsInactive="NO" autorecalculatesKeyViewLoop="NO" releasedWhenClosed="NO" animationBehavior="default" id="win-root-pub">
+            <windowStyleMask key="styleMask" titled="YES" closable="YES" miniaturizable="YES" resizable="YES"/>
+            <rect key="contentRect" x="196" y="240" width="720" height="660"/>
+            <rect key="screenRect" x="0.0" y="0.0" width="1680" height="1027"/>
+            <view key="contentView" identifier="root-pub" id="root-pub">
+                <rect key="frame" x="0.0" y="0.0" width="720" height="660"/>
+                <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                <subviews>
+                    <textField identifier="s4-hdr" horizontalHuggingPriority="251" verticalHuggingPriority="750" id="s4-hdr">
+                        <rect key="frame" x="12" y="636" width="520" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" editable="NO" title="4. Finder Data Browser, Multi-Column Table &amp; NIB/XIB Studio" id="cell-s4-hdr">
+                            <font key="font" metaFont="systemSemibold"/>
+                        </textFieldCell>
+                    </textField>
+                    <textField identifier="s4-sub" horizontalHuggingPriority="251" verticalHuggingPriority="750" controlSize="small" id="s4-sub">
+                        <rect key="frame" x="12" y="620" width="680" height="16"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" controlSize="small" lineBreakMode="clipping" editable="NO" title="MacPathControl, MacTokenField, Sortable NSTableView, and Live Double-Click .nib/.xib/.wav Inspection" id="cell-s4-sub">
+                            <font key="font" metaFont="system"/>
+                            <color key="textColor" name="secondaryLabelColor" catalog="System" colorSpace="catalog"/>
+                        </textFieldCell>
+                    </textField>
+                    <textField identifier="s4-lbl-url" horizontalHuggingPriority="251" verticalHuggingPriority="750" id="s4-lbl-url">
+                        <rect key="frame" x="12" y="594" width="90" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" editable="NO" title="Path / URL:" id="cell-s4-lbl-url">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                    </textField>
+                    <textField identifier="s4-fld-url" verticalHuggingPriority="750" id="s4-fld-url">
+                        <rect key="frame" x="106" y="592" width="290" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" borderStyle="bezel" title="assets/nib_showcase" drawsBackground="YES" id="cell-s4-fld-url">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.finderUrlInput" id="b-s4-fld-url"/>
+                        </connections>
+                    </textField>
+                    <button identifier="s4-btn-open" verticalHuggingPriority="750" id="s4-btn-open">
+                        <rect key="frame" x="404" y="592" width="124" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="push" title="Open URL / Path" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="cell-s4-btn-open">
+                            <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <action selector="openFinderUrl:" target="-2" id="a-s4-btn-open"/>
+                        </connections>
+                    </button>
+                    <button identifier="s4-btn-local" verticalHuggingPriority="750" id="s4-btn-local">
+                        <rect key="frame" x="536" y="592" width="172" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="push" title="Toggle Local Disk Mode" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="cell-s4-btn-local">
+                            <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <action selector="toggleFinderLocal:" target="-2" id="a-s4-btn-local"/>
+                        </connections>
+                    </button>
+                    <customView identifier="s4-finder-browser" customClass="NSFinderBrowserSurfaceView" id="s4-finder-browser">
+                        <rect key="frame" x="12" y="226" width="696" height="358"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                    </customView>
+                    <textField identifier="s4-lbl-tags" horizontalHuggingPriority="251" verticalHuggingPriority="750" controlSize="small" id="s4-lbl-tags">
+                        <rect key="frame" x="12" y="198" width="64" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" controlSize="small" lineBreakMode="clipping" editable="NO" title="Tags:" id="cell-s4-lbl-tags">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                    </textField>
+                    <tokenField identifier="s4-tok-tags" verticalHuggingPriority="750" id="s4-tok-tags">
+                        <rect key="frame" x="80" y="196" width="628" height="24"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <tokenFieldCell key="cell" selectable="YES" editable="YES" borderStyle="bezel" alignment="left" title="" drawsBackground="YES" allowsEditingTextAttributes="NO" id="cell-s4-tok-tags">
+                            <font key="font" metaFont="system"/>
+                        </tokenFieldCell>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.assetTokens" id="b-s4-tok-tags"/>
+                        </connections>
+                    </tokenField>
+                    <box identifier="s4-box-pub" title="Publishing &amp; Asset Queue (4_Publishing_and_Asset_Queue.xib)" id="s4-box-pub">
+                        <rect key="frame" x="12" y="10" width="696" height="176"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <view key="contentView" id="cv-s4-box-pub">
+                            <rect key="frame" x="4" y="5" width="688" height="156"/>
+                            <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        </view>
+                    </box>
+                    <textField identifier="s4-lbl-dest" horizontalHuggingPriority="251" verticalHuggingPriority="750" id="s4-lbl-dest">
+                        <rect key="frame" x="28" y="140" width="88" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" editable="NO" title="Destination:" id="cell-s4-lbl-dest">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                    </textField>
+                    <textField identifier="s4-fld-dest" verticalHuggingPriority="750" id="s4-fld-dest">
+                        <rect key="frame" x="120" y="138" width="240" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" borderStyle="bezel" title="/Volumes/StudioRAID/Exports" drawsBackground="YES" id="cell-s4-fld-dest">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.exportPath" id="b-s4-fld-dest"/>
+                        </connections>
+                    </textField>
+                    <textField identifier="s4-lbl-fmt" horizontalHuggingPriority="251" verticalHuggingPriority="750" id="s4-lbl-fmt">
+                        <rect key="frame" x="376" y="140" width="64" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" editable="NO" title="Format:" id="cell-s4-lbl-fmt">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                    </textField>
+                    <popUpButton identifier="s4-pop-fmt" verticalHuggingPriority="750" id="s4-pop-fmt">
+                        <rect key="frame" x="444" y="138" width="242" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <popUpButtonCell key="cell" type="push" title="ProRes 4444 XQ" bezelStyle="rounded" alignment="left" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" imageScaling="proportionallyDown" inset="2" id="cell-s4-pop-fmt">
+                            <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
+                            <font key="font" metaFont="menu"/>
+                            <menu key="menu" id="menu-s4-pop-fmt">
+                                <items>
+                                    <menuItem title="ProRes 4444 XQ" state="on" id="mi-s4-pop-fmt-0"/>
+                                    <menuItem title="ProRes 422 HQ" id="mi-s4-pop-fmt-1"/>
+                                    <menuItem title="HEVC 10-bit 4:2:2" id="mi-s4-pop-fmt-2"/>
+                                    <menuItem title="WAV 96kHz 24-bit" id="mi-s4-pop-fmt-3"/>
+                                </items>
+                            </menu>
+                        </popUpButtonCell>
+                        <connections>
+                            <binding destination="-2" name="selectedIndex" keyPath="values.exportFormat" id="b-s4-pop-fmt"/>
+                        </connections>
+                    </popUpButton>
+                    <textField identifier="s4-lbl-bit" horizontalHuggingPriority="251" verticalHuggingPriority="750" id="s4-lbl-bit">
+                        <rect key="frame" x="28" y="104" width="88" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" editable="NO" title="Bitrate:" id="cell-s4-lbl-bit">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                    </textField>
+                    <slider identifier="s4-sld-bit" verticalHuggingPriority="750" id="s4-sld-bit">
+                        <rect key="frame" x="120" y="102" width="240" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <sliderCell key="cell" state="on" alignment="left" minValue="10" maxValue="250" doubleValue="10" tickMarkPosition="above" numberOfTickMarks="0" sliderType="linear" id="cell-s4-sld-bit"/>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.exportBitrate" id="b-s4-sld-bit"/>
+                        </connections>
+                    </slider>
+                    <textField identifier="s4-lbl-wrk" horizontalHuggingPriority="251" verticalHuggingPriority="750" id="s4-lbl-wrk">
+                        <rect key="frame" x="376" y="104" width="64" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" editable="NO" title="Workers:" id="cell-s4-lbl-wrk">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                    </textField>
+                    <textField identifier="s4-num-wrk" verticalHuggingPriority="750" customClass="GSSteppingTextField" id="s4-num-wrk">
+                        <rect key="frame" x="444" y="102" width="68" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" title="" drawsBackground="YES" id="cell-s4-num-wrk">
+                            <numberFormatter key="formatter" formatterBehavior="default10_4" numberStyle="decimal" minimumIntegerDigits="1" maximumIntegerDigits="2000000000" maximumFractionDigits="3" id="fmt-s4-num-wrk">
+                                <real key="minimum" value="1"/>
+                                <real key="maximum" value="32"/>
+                            </numberFormatter>
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.workerCount" id="b-s4-num-wrk"/>
+                        </connections>
+                    </textField>
+                    <stepper identifier="s4-stp-wrk" horizontalHuggingPriority="750" verticalHuggingPriority="750" id="s4-stp-wrk">
+                        <rect key="frame" x="518" y="102" width="24" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <stepperCell key="cell" continuous="YES" alignment="left" increment="1" minValue="-10000" maxValue="10000" id="cell-s4-stp-wrk"/>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.workerCount" id="b-s4-stp-wrk"/>
+                        </connections>
+                    </stepper>
+                    <button identifier="s4-chk-open" verticalHuggingPriority="750" id="s4-chk-open">
+                        <rect key="frame" x="28" y="64" width="220" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="check" title="Open in Finder After Export" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="cell-s4-chk-open">
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.openAfterExport" id="b-s4-chk-open"/>
+                        </connections>
+                    </button>
+                    <button identifier="s4-sw-ver" verticalHuggingPriority="750" id="s4-sw-ver">
+                        <rect key="frame" x="260" y="64" width="160" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="check" title="Verify Checksums" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="cell-s4-sw-ver">
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.verifyChecksums" id="b-s4-sw-ver"/>
+                        </connections>
+                    </button>
+                    <textField identifier="s4-lbl-rate" horizontalHuggingPriority="251" verticalHuggingPriority="750" controlSize="small" id="s4-lbl-rate">
+                        <rect key="frame" x="436" y="66" width="52" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" controlSize="small" lineBreakMode="clipping" editable="NO" title="Rating:" id="cell-s4-lbl-rate">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                    </textField>
+                    <levelIndicator identifier="s4-lvl-rate" verticalHuggingPriority="750" id="s4-lvl-rate">
+                        <rect key="frame" x="492" y="66" width="96" height="20"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <levelIndicatorCell key="cell" alignment="left" doubleValue="0" minValue="0" maxValue="5" numberOfTickMarks="0" levelIndicatorStyle="rating" id="cell-s4-lvl-rate"/>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.assetRating" id="b-s4-lvl-rate"/>
+                        </connections>
+                    </levelIndicator>
+                    <button identifier="s4-help" verticalHuggingPriority="750" id="s4-help">
+                        <rect key="frame" x="28" y="26" width="22" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="help" title="?" bezelStyle="helpButton" inset="2" id="cell-s4-help">
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <action selector="showExportHelp:" target="-2" id="a-s4-help"/>
+                        </connections>
+                    </button>
+                    <button identifier="s4-add" verticalHuggingPriority="750" customClass="NSInlineActionButton" id="s4-add">
+                        <rect key="frame" x="58" y="26" width="26" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="inline" title="+" bezelStyle="inline" inset="2" id="cell-s4-add">
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <action selector="enqueueJob:" target="-2" id="a-s4-add"/>
+                        </connections>
+                    </button>
+                    <progressIndicator identifier="s4-prg-bar" minValue="0" maxValue="1" doubleValue="0" style="bar" id="s4-prg-bar">
+                        <rect key="frame" x="96" y="28" width="140" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.publishProgress" id="b-s4-prg-bar"/>
+                        </connections>
+                    </progressIndicator>
+                    <progressIndicator identifier="s4-prg-spin" controlSize="small" minValue="0" maxValue="1" doubleValue="0" style="spinning" id="s4-prg-spin">
+                        <rect key="frame" x="244" y="28" width="18" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.publishProgress" id="b-s4-prg-spin"/>
+                        </connections>
+                    </progressIndicator>
+                    <textField identifier="s4-lbl-pstat" horizontalHuggingPriority="251" verticalHuggingPriority="750" controlSize="small" id="s4-lbl-pstat">
+                        <rect key="frame" x="268" y="29" width="116" height="16"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" controlSize="small" lineBreakMode="clipping" editable="NO" title="68% Ready" id="cell-s4-lbl-pstat">
+                            <font key="font" metaFont="system"/>
+                            <color key="textColor" name="secondaryLabelColor" catalog="System" colorSpace="catalog"/>
+                        </textFieldCell>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.publishStatusText" id="b-s4-lbl-pstat"/>
+                        </connections>
+                    </textField>
+                    <button identifier="s4-btn-clr" verticalHuggingPriority="750" id="s4-btn-clr">
+                        <rect key="frame" x="392" y="24" width="140" height="24"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="push" title="Clear Completed" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="cell-s4-btn-clr">
+                            <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <action selector="clearCompleted:" target="-2" id="a-s4-btn-clr"/>
+                        </connections>
+                    </button>
+                    <button identifier="s4-btn-pub" verticalHuggingPriority="750" id="s4-btn-pub">
+                        <rect key="frame" x="542" y="24" width="144" height="24"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="push" title="Publish Bundle" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="cell-s4-btn-pub">
+                            <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <action selector="publishNow:" target="-2" id="a-s4-btn-pub"/>
+                        </connections>
+                    </button>
+                </subviews>
+            </view>
+        </window>
+    </objects>
+</document>

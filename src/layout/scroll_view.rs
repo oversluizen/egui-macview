@@ -6,7 +6,7 @@
 //! smooth hardware scroll clipping, virtual viewport computation,
 //! and interactive floating overlay scrollbars that smoothly fade out when inactive.
 
-use crate::layout::scrollbar::render_overlay_thumb;
+use crate::layout::scrollbar::{render_overlay_thumb, OverlayThumbSpec};
 use crate::theme::MacTheme;
 use egui::scroll_area::ScrollBarVisibility;
 use egui::{Color32, Id, Pos2, Rect, ScrollArea, Ui, Vec2};
@@ -150,11 +150,7 @@ impl<'a> MacScrollView<'a> {
     }
 
     /// Renders the scrollable container and child content, overlaying authentic floating scrollbars.
-    pub fn show<R>(
-        mut self,
-        ui: &mut Ui,
-        content: impl FnOnce(&mut Ui) -> R,
-    ) -> MacScrollViewOutput<R> {
+    pub fn show<R>(mut self, ui: &mut Ui, content: impl FnOnce(&mut Ui) -> R) -> MacScrollViewOutput<R> {
         let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
         let theme: &MacTheme = &theme_cow;
 
@@ -189,11 +185,7 @@ impl<'a> MacScrollView<'a> {
         let now = ui.input(|i| i.time);
         let sv_state = ui.data_mut(|d| {
             if let Some(st) = d.get_temp_mut_or_default::<Option<ScrollViewTempState>>(state_id) {
-                let taken_drag = if self.offset_override.is_none() {
-                    st.drag_offset.take()
-                } else {
-                    None
-                };
+                let taken_drag = if self.offset_override.is_none() { st.drag_offset.take() } else { None };
                 Some((*st, taken_drag))
             } else {
                 None
@@ -232,32 +224,19 @@ impl<'a> MacScrollView<'a> {
 
         let is_pointer_in_viewport = ui.rect_contains_pointer(viewport_rect);
         let (has_scroll_delta, pointer_moving) = ui.input(|i| {
-            let wheel = i.smooth_scroll_delta != Vec2::ZERO
-                || i.raw
-                    .events
-                    .iter()
-                    .any(|e| matches!(e, egui::Event::MouseWheel { .. }));
+            let wheel = i.smooth_scroll_delta != Vec2::ZERO || i.raw.events.iter().any(|e| matches!(e, egui::Event::MouseWheel { .. }));
             (wheel, i.pointer.delta() != Vec2::ZERO)
         });
 
         let hit_zone_padding = metrics.hit_zone_padding.points();
         let min_visible_thumb_len = metrics.min_visible_thumb_length.points();
         let zone_span = scrollbar_thickness + hit_zone_padding;
-        let v_zone = Rect::from_min_max(
-            Pos2::new(viewport_rect.right() - zone_span, viewport_rect.top()),
-            viewport_rect.max,
-        );
-        let h_zone = Rect::from_min_max(
-            Pos2::new(viewport_rect.left(), viewport_rect.bottom() - zone_span),
-            viewport_rect.max,
-        );
-        let in_scrollbar_zone = (self.vertical && ui.rect_contains_pointer(v_zone))
-            || (self.horizontal && ui.rect_contains_pointer(h_zone));
+        let v_zone = Rect::from_min_max(Pos2::new(viewport_rect.right() - zone_span, viewport_rect.top()), viewport_rect.max);
+        let h_zone = Rect::from_min_max(Pos2::new(viewport_rect.left(), viewport_rect.bottom() - zone_span), viewport_rect.max);
+        let in_scrollbar_zone =
+            (self.vertical && ui.rect_contains_pointer(v_zone)) || (self.horizontal && ui.rect_contains_pointer(h_zone));
 
-        if scrolled_this_frame
-            || (is_pointer_in_viewport && has_scroll_delta)
-            || (in_scrollbar_zone && pointer_moving)
-        {
+        if scrolled_this_frame || (is_pointer_in_viewport && has_scroll_delta) || (in_scrollbar_zone && pointer_moving) {
             last_active = now;
             st.last_active = now;
         }
@@ -276,14 +255,12 @@ impl<'a> MacScrollView<'a> {
             if remaining > 0.0 {
                 ui.ctx().request_repaint_after_secs(remaining);
             } else {
-                ui.ctx()
-                    .request_repaint_after(std::time::Duration::from_millis(16));
+                ui.ctx().request_repaint_after(std::time::Duration::from_millis(16));
             }
             1.0
         } else if elapsed < timeout_secs + fade_duration {
             let t = ((elapsed - timeout_secs) / fade_duration).clamp(0.0, 1.0) as f32;
-            ui.ctx()
-                .request_repaint_after(std::time::Duration::from_millis(16));
+            ui.ctx().request_repaint_after(std::time::Duration::from_millis(16));
             1.0 - t
         } else {
             0.0
@@ -292,39 +269,35 @@ impl<'a> MacScrollView<'a> {
         let painter = ui.painter_at(viewport_rect);
 
         // Helper for thumb styling derived from MacTheme semantic tokens
-        let get_thumb_color = |hovered: bool, dragged: bool| -> Color32 {
-            theme.scrollbar_thumb_color(hovered || dragged, alpha)
-        };
+        let get_thumb_color = |hovered: bool, dragged: bool| -> Color32 { theme.scrollbar_thumb_color(hovered || dragged, alpha) };
         let track_bg_color = theme.control().gamma_multiply(alpha * 0.5);
         let mut thumb_interacted = false;
 
         // 4. Vertical Floating Overlay Scrollbar
         if has_v {
-            let trail = if has_h {
-                edge_inset * 2.0 + scrollbar_thickness
-            } else {
-                edge_inset
-            };
+            let trail = if has_h { edge_inset * 2.0 + scrollbar_thickness } else { edge_inset };
             if render_overlay_thumb(
                 ui,
                 &painter,
-                self.id.with("v_thumb"),
-                viewport_rect,
-                viewport_rect.height(),
-                content_size.y,
-                edge_inset,
-                trail,
-                edge_inset,
-                scrollbar_thickness,
-                scrollbar_hover_thickness,
-                corner_radius,
-                thumb_min_length,
-                min_visible_thumb_len,
+                OverlayThumbSpec {
+                    id: self.id.with("v_thumb"),
+                    viewport: viewport_rect,
+                    view_span: viewport_rect.height(),
+                    content_span: content_size.y,
+                    lead: edge_inset,
+                    trail,
+                    inset: edge_inset,
+                    thickness: scrollbar_thickness,
+                    hover_thickness: scrollbar_hover_thickness,
+                    radius: corner_radius,
+                    min_len: thumb_min_length,
+                    min_visible_len: min_visible_thumb_len,
+                    max_scroll: max_scroll_y,
+                    is_vertical: true,
+                    alpha,
+                    track_bg_color,
+                },
                 &mut current_offset.y,
-                max_scroll_y,
-                true,
-                alpha,
-                track_bg_color,
                 &get_thumb_color,
                 &mut thumb_interacted,
             ) && self.offset_override.is_none()
@@ -335,31 +308,29 @@ impl<'a> MacScrollView<'a> {
 
         // 5. Horizontal Floating Overlay Scrollbar
         if has_h {
-            let trail = if has_v {
-                edge_inset * 2.0 + scrollbar_thickness
-            } else {
-                edge_inset
-            };
+            let trail = if has_v { edge_inset * 2.0 + scrollbar_thickness } else { edge_inset };
             if render_overlay_thumb(
                 ui,
                 &painter,
-                self.id.with("h_thumb"),
-                viewport_rect,
-                viewport_rect.width(),
-                content_size.x,
-                edge_inset,
-                trail,
-                edge_inset,
-                scrollbar_thickness,
-                scrollbar_hover_thickness,
-                corner_radius,
-                thumb_min_length,
-                min_visible_thumb_len,
+                OverlayThumbSpec {
+                    id: self.id.with("h_thumb"),
+                    viewport: viewport_rect,
+                    view_span: viewport_rect.width(),
+                    content_span: content_size.x,
+                    lead: edge_inset,
+                    trail,
+                    inset: edge_inset,
+                    thickness: scrollbar_thickness,
+                    hover_thickness: scrollbar_hover_thickness,
+                    radius: corner_radius,
+                    min_len: thumb_min_length,
+                    min_visible_len: min_visible_thumb_len,
+                    max_scroll: max_scroll_x,
+                    is_vertical: false,
+                    alpha,
+                    track_bg_color,
+                },
                 &mut current_offset.x,
-                max_scroll_x,
-                false,
-                alpha,
-                track_bg_color,
                 &get_thumb_color,
                 &mut thumb_interacted,
             ) && self.offset_override.is_none()
@@ -372,8 +343,7 @@ impl<'a> MacScrollView<'a> {
             st.last_active = now;
             if self.auto_hide && (has_v || has_h) {
                 if alpha < 1.0 {
-                    ui.ctx()
-                        .request_repaint_after(std::time::Duration::from_millis(16));
+                    ui.ctx().request_repaint_after(std::time::Duration::from_millis(16));
                 } else {
                     ui.ctx().request_repaint_after_secs(fade_timeout);
                 }
@@ -387,11 +357,6 @@ impl<'a> MacScrollView<'a> {
             **o = current_offset;
         }
 
-        MacScrollViewOutput {
-            inner: output.inner,
-            inner_rect: viewport_rect,
-            content_size,
-            offset: current_offset,
-        }
+        MacScrollViewOutput { inner: output.inner, inner_rect: viewport_rect, content_size, offset: current_offset }
     }
 }

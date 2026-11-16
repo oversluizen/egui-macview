@@ -70,13 +70,7 @@ pub struct MacTrimScrubber<'a> {
 
 impl<'a> MacTrimScrubber<'a> {
     /// Creates a new trim scrubber over `0.0..=duration` seconds.
-    pub fn new(
-        id_source: impl Hash + Debug,
-        duration: f64,
-        in_point: &'a mut f64,
-        out_point: &'a mut f64,
-        playhead: &'a mut f64,
-    ) -> Self {
+    pub fn new(id_source: impl Hash + Debug, duration: f64, in_point: &'a mut f64, out_point: &'a mut f64, playhead: &'a mut f64) -> Self {
         #[allow(deprecated)]
         let id = Id::new(id_source);
         Self {
@@ -174,11 +168,7 @@ impl<'a> MacTrimScrubber<'a> {
 
         let clamped_in = orig_in.clamp(0.0, dur);
         let clamped_out = orig_out.clamp(clamped_in, dur);
-        let clamped_play = if self.clamp_playhead_to_trim {
-            orig_play.clamp(clamped_in, clamped_out)
-        } else {
-            orig_play.clamp(0.0, dur)
-        };
+        let clamped_play = if self.clamp_playhead_to_trim { orig_play.clamp(clamped_in, clamped_out) } else { orig_play.clamp(0.0, dur) };
 
         if (clamped_in - orig_in).abs() > f64::EPSILON
             || (clamped_out - orig_out).abs() > f64::EPSILON
@@ -190,18 +180,14 @@ impl<'a> MacTrimScrubber<'a> {
             changed = true;
         }
 
-        let (raw_rect, mut response) =
-            ui.allocate_exact_size(Vec2::new(width, height), Sense::click_and_drag());
+        let (raw_rect, mut response) = ui.allocate_exact_size(Vec2::new(width, height), Sense::click_and_drag());
         let rect = subpixel_snap_rect(raw_rect, ui.ctx().pixels_per_point());
 
         let v_inset = sm.track_inset_vertical.points();
         let badge_h = sm.badge_height.points();
         let track_rect = Rect::from_min_max(
             Pos2::new(rect.left(), rect.top() + badge_h),
-            Pos2::new(
-                rect.right(),
-                (rect.bottom() - v_inset * 0.5).max(rect.top() + badge_h),
-            ),
+            Pos2::new(rect.right(), (rect.bottom() - v_inset * 0.5).max(rect.top() + badge_h)),
         );
 
         let handle_w = sm.handle_width.points();
@@ -220,11 +206,7 @@ impl<'a> MacTrimScrubber<'a> {
 
         let (in_rect, out_rect) = painter::compute_handle_rects(track_rect, in_x, out_x, handle_w);
 
-        let sense = if self.enabled {
-            Sense::click_and_drag()
-        } else {
-            Sense::hover()
-        };
+        let sense = if self.enabled { Sense::click_and_drag() } else { Sense::hover() };
         let in_resp = ui.interact(in_rect, self.id.with("in_handle"), sense);
         let out_resp = ui.interact(out_rect, self.id.with("out_handle"), sense);
 
@@ -242,9 +224,7 @@ impl<'a> MacTrimScrubber<'a> {
                     i.pointer.interact_pos().or_else(|| i.pointer.latest_pos()),
                 )
             });
-            let prev_target = ui
-                .data(|d| d.get_temp::<(bool, bool, bool)>(drag_id))
-                .unwrap_or((false, false, false));
+            let prev_target = ui.data(|d| d.get_temp::<(bool, bool, bool)>(drag_id)).unwrap_or((false, false, false));
             let mut target = prev_target;
 
             if any_pressed {
@@ -265,9 +245,7 @@ impl<'a> MacTrimScrubber<'a> {
             let active_out = target.1 || out_resp.dragged() || out_resp.drag_stopped();
             let active_play = target.2 || response.clicked() || response.dragged();
 
-            if (primary_down || any_released || any_pressed)
-                && (active_in || active_out || active_play)
-            {
+            if (primary_down || any_released || any_pressed) && (active_in || active_out || active_play) {
                 if let Some(pos) = ptr_pos {
                     if active_in {
                         let next_in = x_to_time(pos.x).clamp(0.0, *self.out_point);
@@ -311,27 +289,23 @@ impl<'a> MacTrimScrubber<'a> {
         painter::paint_trim_scrubber(
             &painter,
             theme,
-            rect,
-            track_rect,
-            dur,
-            *self.in_point,
-            *self.out_point,
-            *self.playhead,
-            self.waveform,
-            self.zones,
-            &tc,
+            painter::TrimScrubberPaintArgs {
+                full_rect: rect,
+                track_rect,
+                duration: dur,
+                in_point: *self.in_point,
+                out_point: *self.out_point,
+                playhead: *self.playhead,
+                waveform: self.waveform,
+                zones: self.zones,
+                timecode_text: &tc,
+            },
         );
 
         if changed {
             response.mark_changed();
         }
 
-        MacTrimScrubberResponse {
-            response,
-            in_point_dragged,
-            out_point_dragged,
-            playhead_dragged,
-            changed,
-        }
+        MacTrimScrubberResponse { response, in_point_dragged, out_point_dragged, playhead_dragged, changed }
     }
 }

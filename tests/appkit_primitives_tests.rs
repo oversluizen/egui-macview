@@ -10,8 +10,8 @@ use egui::{Color32, Context, Event, Key, PointerButton, Pos2, RawInput, Rect, Ve
 use egui_macview::{
     theme::{MacAppearance, MacTheme},
     tokens::MacDesignTokens,
-    MacButtonCell, MacColorWell, MacPanel, MacPopUpButton, MacSearchField, MacSegmentedControl,
-    MacSlider, MacStepper, MacThumbnailCell, MacToggle,
+    MacButtonCell, MacColorWell, MacPanel, MacPopUpButton, MacSearchField, MacSegmentedControl, MacSlider, MacStepper, MacThumbnailCell,
+    MacToggle,
 };
 
 #[test]
@@ -89,11 +89,7 @@ fn test_slider_and_thumbnail_headless_execution() {
     let mut recorded_rect = Rect::NOTHING;
 
     let mut output = ctx.run_ui(RawInput::default(), |ui| {
-        let resp = MacSlider::new(&mut val, 0.0..=100.0)
-            .theme(&theme)
-            .ticks(5, true)
-            .width(150.0)
-            .show(ui);
+        let resp = MacSlider::new(&mut val, 0.0..=100.0).theme(&theme).ticks(5, true).width(150.0).show(ui);
         assert_eq!(resp.rect.width(), 150.0);
 
         let t_resp = MacThumbnailCell::new()
@@ -124,23 +120,13 @@ fn test_popup_search_and_color_well_headless_execution() {
     let mut color = Color32::from_rgba_unmultiplied(0, 122, 255, 200);
 
     let mut out = ctx.run_ui(RawInput::default(), |ui| {
-        let p_resp = MacPopUpButton::new(&mut selected, &items)
-            .theme(&theme)
-            .width(130.0)
-            .show(ui);
+        let p_resp = MacPopUpButton::new(&mut selected, &items).theme(&theme).width(130.0).show(ui);
         assert_eq!(p_resp.rect.size(), Vec2::new(130.0, 22.0));
 
-        let s_resp = MacSearchField::new(&mut query)
-            .theme(&theme)
-            .placeholder("Search...")
-            .width(180.0)
-            .show(ui);
+        let s_resp = MacSearchField::new(&mut query).theme(&theme).placeholder("Search...").width(180.0).show(ui);
         assert_eq!(s_resp.rect.size(), Vec2::new(180.0, 22.0));
 
-        let c_resp = MacColorWell::new(&mut color)
-            .theme(&theme)
-            .show_alpha(true)
-            .show(ui);
+        let c_resp = MacColorWell::new(&mut color).theme(&theme).show_alpha(true).show(ui);
         assert_eq!(c_resp.rect.size(), Vec2::new(44.0, 23.0));
     });
     out.textures_delta.clear();
@@ -158,10 +144,7 @@ fn test_stepper_headless_execution_clamping_and_precision_wrapping() {
 
     let mut val = 0.9f64;
     let mut out0 = ctx.run_ui(RawInput::default(), |ui| {
-        let resp = MacStepper::new(&mut val, 0.0..=1.0, 0.1)
-            .theme(&theme)
-            .wraps(true)
-            .show(ui);
+        let resp = MacStepper::new(&mut val, 0.0..=1.0, 0.1).theme(&theme).wraps(true).show(ui);
         assert_eq!(resp.rect.size(), Vec2::new(14.0, 22.0));
         resp.request_focus();
     });
@@ -176,19 +159,13 @@ fn test_stepper_headless_execution_clamping_and_precision_wrapping() {
         modifiers: egui::Modifiers::default(),
     });
     let mut out1 = ctx.run_ui(input_up.clone(), |ui| {
-        MacStepper::new(&mut val, 0.0..=1.0, 0.1)
-            .theme(&theme)
-            .wraps(true)
-            .show(ui);
+        MacStepper::new(&mut val, 0.0..=1.0, 0.1).theme(&theme).wraps(true).show(ui);
     });
     out1.textures_delta.clear();
     assert!((val - 1.0).abs() < 1e-9);
 
     let mut out2 = ctx.run_ui(input_up, |ui| {
-        MacStepper::new(&mut val, 0.0..=1.0, 0.1)
-            .theme(&theme)
-            .wraps(true)
-            .show(ui);
+        MacStepper::new(&mut val, 0.0..=1.0, 0.1).theme(&theme).wraps(true).show(ui);
     });
     out2.textures_delta.clear();
     assert!((val - 0.0).abs() < 1e-9);
@@ -203,10 +180,7 @@ fn test_popup_and_color_well_keyboard_activation_and_escape() {
     let items = ["First", "Second", "Third"];
 
     let mut out1 = ctx.run_ui(RawInput::default(), |ui| {
-        MacPopUpButton::new(&mut selected, &items)
-            .theme(&theme)
-            .show(ui)
-            .request_focus();
+        MacPopUpButton::new(&mut selected, &items).theme(&theme).show(ui).request_focus();
     });
     out1.textures_delta.clear();
 
@@ -219,13 +193,8 @@ fn test_popup_and_color_well_keyboard_activation_and_escape() {
         modifiers: egui::Modifiers::default(),
     });
     let mut out2 = ctx.run_ui(input_space, |ui| {
-        let resp = MacPopUpButton::new(&mut selected, &items)
-            .theme(&theme)
-            .show(ui);
-        let is_open = ui.data(|d| {
-            d.get_temp::<bool>(resp.id.with("mac_popup_is_open"))
-                .unwrap_or(false)
-        });
+        let resp = MacPopUpButton::new(&mut selected, &items).theme(&theme).show(ui);
+        let is_open = ui.data(|d| d.get_temp::<bool>(resp.id.with("mac_popup_is_open")).unwrap_or(false));
         assert!(is_open, "Pressing Space when focused must open popup");
     });
     out2.textures_delta.clear();
@@ -239,13 +208,8 @@ fn test_popup_and_color_well_keyboard_activation_and_escape() {
         modifiers: egui::Modifiers::default(),
     });
     let mut out3 = ctx.run_ui(input_esc, |ui| {
-        let resp = MacPopUpButton::new(&mut selected, &items)
-            .theme(&theme)
-            .show(ui);
-        let is_open = ui.data(|d| {
-            d.get_temp::<bool>(resp.id.with("mac_popup_is_open"))
-                .unwrap_or(false)
-        });
+        let resp = MacPopUpButton::new(&mut selected, &items).theme(&theme).show(ui);
+        let is_open = ui.data(|d| d.get_temp::<bool>(resp.id.with("mac_popup_is_open")).unwrap_or(false));
         assert!(!is_open, "Pressing Escape must close popup");
     });
     out3.textures_delta.clear();
@@ -263,10 +227,7 @@ fn test_mac_toggle_headless_interaction_and_disabled_guard() {
     });
     out1.textures_delta.clear();
 
-    let click_pos = Pos2::new(
-        theme.toggle().width.points() / 2.0,
-        theme.toggle().height.points() / 2.0,
-    );
+    let click_pos = Pos2::new(theme.toggle().width.points() / 2.0, theme.toggle().height.points() / 2.0);
     let mut click_input = RawInput::default();
     click_input.events.push(Event::PointerButton {
         pos: click_pos,
@@ -290,10 +251,7 @@ fn test_mac_toggle_headless_interaction_and_disabled_guard() {
         ui.add(MacToggle::new(&mut toggle_val).theme(&theme));
     });
     out3.textures_delta.clear();
-    assert!(
-        toggle_val,
-        "Clicking enabled toggle must invert value to true"
-    );
+    assert!(toggle_val, "Clicking enabled toggle must invert value to true");
 
     let mut out4 = ctx.run_ui(click_input, |ui| {
         ui.add(MacToggle::new(&mut toggle_val).theme(&theme).enabled(false));
@@ -322,29 +280,19 @@ fn test_button_segmented_from_ctx_inheritance_and_centering() {
         let btn_resp = ui.add(MacButtonCell::new("Test Button").enabled(false));
         assert!(btn_resp.rect.width() > 0.0);
 
-        ui.allocate_ui_with_layout(
-            container_size,
-            egui::Layout::top_down(egui::Align::Min),
-            |p_ui| {
-                p_ui.vertical_centered(|c_ui| {
-                    let resp =
-                        MacSegmentedControl::new(&["Attributes", "Metrics", "Matrix"], selected)
-                            .height(24.0)
-                            .show(c_ui, |idx| {
-                                selected = idx;
-                            });
-                    control_rect = resp.rect;
+        ui.allocate_ui_with_layout(container_size, egui::Layout::top_down(egui::Align::Min), |p_ui| {
+            p_ui.vertical_centered(|c_ui| {
+                let resp = MacSegmentedControl::new(&["Attributes", "Metrics", "Matrix"], selected).height(24.0).show(c_ui, |idx| {
+                    selected = idx;
                 });
-            },
-        );
+                control_rect = resp.rect;
+            });
+        });
 
-        let (panel_resp, _) = MacPanel::new().title("Dark Panel").show(
-            ui,
-            Rect::from_min_size(Pos2::ZERO, Vec2::new(100.0, 60.0)),
-            |pui| {
+        let (panel_resp, _) =
+            MacPanel::new().title("Dark Panel").show(ui, Rect::from_min_size(Pos2::ZERO, Vec2::new(100.0, 60.0)), |pui| {
                 pui.label("Child");
-            },
-        );
+            });
         assert_eq!(panel_resp.rect.width(), 100.0);
     });
     out.textures_delta.clear();

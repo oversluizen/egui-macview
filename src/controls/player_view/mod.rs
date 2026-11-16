@@ -41,16 +41,13 @@ mod inline;
 mod types;
 
 pub use types::{
-    format_remaining_timecode, format_timecode, MacPlayerControlsStyle, MacPlayerViewResponse,
-    PlayerViewGeometry, PlayerViewState,
+    format_remaining_timecode, format_timecode, MacPlayerControlsStyle, MacPlayerViewResponse, PlayerViewGeometry, PlayerViewState,
 };
 
 use crate::layout::subpixel_snap_rect;
 use crate::motion::CASpring;
 use crate::theme::MacTheme;
-use egui::{
-    CornerRadius, Id, Painter, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2, Widget,
-};
+use egui::{CornerRadius, Id, Painter, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2, Widget};
 
 /// Authentic macOS AVKit Media Player View (`AVPlayerView` equivalent).
 ///
@@ -305,12 +302,7 @@ impl<'a> MacPlayerView<'a> {
     }
 
     /// Phase 2: Event handling, state mutation, and mutable binding synchronization.
-    pub fn handle_input(
-        &mut self,
-        ui: &mut Ui,
-        geom: &PlayerViewGeometry,
-        state: &mut PlayerViewState,
-    ) -> MacPlayerViewResponse {
+    pub fn handle_input(&mut self, ui: &mut Ui, geom: &PlayerViewGeometry, state: &mut PlayerViewState) -> MacPlayerViewResponse {
         let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
         let m = theme_cow.player_view();
 
@@ -323,9 +315,7 @@ impl<'a> MacPlayerView<'a> {
         let now = ui.ctx().input(|i| i.time);
         let pointer_pos = ui.input(|i| i.pointer.hover_pos());
         let pointer_in_video = pointer_pos.is_some_and(|pos| rect.contains(pos));
-        let pointer_active = ui.input(|i| {
-            i.pointer.delta() != Vec2::ZERO || i.pointer.any_pressed() || i.pointer.any_released()
-        });
+        let pointer_active = ui.input(|i| i.pointer.delta() != Vec2::ZERO || i.pointer.any_pressed() || i.pointer.any_released());
 
         if pointer_in_video && pointer_active {
             state.last_active_time = now;
@@ -334,11 +324,7 @@ impl<'a> MacPlayerView<'a> {
         let idle_time = (now - state.last_active_time) as f32;
         let auto_hide_thresh = m.auto_hide_seconds.points();
         let is_hovered = pointer_pos.is_some_and(|pos| geom.controls_rect.contains(pos));
-        let target_alpha = if is_hovered || !self.is_playing || idle_time < auto_hide_thresh {
-            1.0
-        } else {
-            0.0
-        };
+        let target_alpha = if is_hovered || !self.is_playing || idle_time < auto_hide_thresh { 1.0 } else { 0.0 };
 
         if self.is_playing && target_alpha > 0.0 && idle_time < auto_hide_thresh {
             let remaining_idle = auto_hide_thresh - idle_time;
@@ -480,13 +466,7 @@ impl<'a> MacPlayerView<'a> {
     }
 
     /// Phase 3: Renders player view controls onto painter.
-    pub fn paint(
-        &self,
-        painter: &Painter,
-        geom: &PlayerViewGeometry,
-        state: &PlayerViewState,
-        theme: &MacTheme,
-    ) {
+    pub fn paint(&self, painter: &Painter, geom: &PlayerViewGeometry, state: &PlayerViewState, theme: &MacTheme) {
         if state.alpha <= 0.0 {
             return;
         }
@@ -497,7 +477,13 @@ impl<'a> MacPlayerView<'a> {
             MacPlayerControlsStyle::Minimal => {
                 let rect = geom.controls_rect;
                 let bg = theme.control_background();
-                painter.rect(rect, CornerRadius::same(geom.corner_radius as u8), bg, Stroke::new(1.0, theme.separator()), StrokeKind::Inside);
+                painter.rect(
+                    rect,
+                    CornerRadius::same(geom.corner_radius as u8),
+                    bg,
+                    Stroke::new(1.0, theme.separator()),
+                    StrokeKind::Inside,
+                );
                 let icon_h = theme.player_view().icon_size.points();
                 let pc = rect.center();
                 if self.is_playing {

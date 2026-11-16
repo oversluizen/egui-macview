@@ -18,10 +18,12 @@ rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
 egui = { version = "0.37.0", default-features = false }
+plist = "1.7"
+roxmltree = "0.20"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
-[dev-dependencies]
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 eframe = { version = "0.37.0", features = ["glow", "wgpu"] }
 image = "0.25"
 proptest = "1.6"
@@ -141,5 +143,25 @@ path = "tests/segmented_vector_icon_parity_tests.rs"
 [[test]]
 name = "segmented_a11y_keyboard_and_stack_tests"
 path = "tests/segmented_a11y_keyboard_and_stack_tests.rs"
+
+[[test]]
+name = "spec013_scene_ir_and_nib_compiler_tests"
+path = "tests/spec013_scene_ir_and_nib_compiler_tests.rs"
+
+[lints.rust]
+unsafe_code = "deny"
+dead_code = "deny"
+
+[lints.rustdoc]
+broken_intra_doc_links = "deny"
+
+[lints.clippy]
+unwrap_used = "deny"
+todo = "deny"
+unimplemented = "deny"
+dbg_macro = "deny"
+should_implement_trait = "allow"
+iter_over_hash_type = "deny"
+
 
 

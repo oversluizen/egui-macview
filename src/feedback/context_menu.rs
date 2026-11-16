@@ -6,17 +6,11 @@
 use crate::navigation::menu::{MacMenuItemKind, NSMenuItem};
 use crate::symbols::MacSymbol;
 use crate::theme::MacTheme;
-use egui::{
-    Align2, Area, CornerRadius, FontId, Key, Modifiers, Order, Pos2, Rect, Sense, Stroke,
-    StrokeKind, Ui, Vec2,
-};
+use egui::{Align2, Area, CornerRadius, FontId, Key, Modifiers, Order, Pos2, Rect, Sense, Stroke, StrokeKind, Ui, Vec2};
 
 /// Clamps menu origin such that the menu rectangle remains strictly inside the viewport bounds.
 pub fn clamp_menu_rect(click_pos: Pos2, menu_size: Vec2, viewport_rect: Rect) -> Rect {
-    let effective_size = Vec2::new(
-        menu_size.x.min(viewport_rect.width()),
-        menu_size.y.min(viewport_rect.height()),
-    );
+    let effective_size = Vec2::new(menu_size.x.min(viewport_rect.width()), menu_size.y.min(viewport_rect.height()));
     let mut x = click_pos.x;
     let mut y = click_pos.y;
 
@@ -73,19 +67,8 @@ pub struct MacContextMenu<'a> {
 
 impl<'a> MacContextMenu<'a> {
     /// Creates a new context menu.
-    pub fn new(
-        items: &'a [NSMenuItem],
-        is_open: &'a mut bool,
-        spawn_pos: &'a mut Pos2,
-        selected_idx: &'a mut Option<usize>,
-    ) -> Self {
-        Self {
-            items,
-            is_open,
-            spawn_pos,
-            selected_idx,
-            theme: None,
-        }
+    pub fn new(items: &'a [NSMenuItem], is_open: &'a mut bool, spawn_pos: &'a mut Pos2, selected_idx: &'a mut Option<usize>) -> Self {
+        Self { items, is_open, spawn_pos, selected_idx, theme: None }
     }
 
     /// Sets the dynamic theme.
@@ -99,9 +82,7 @@ impl<'a> MacContextMenu<'a> {
     pub fn attach_to(&mut self, response: &egui::Response) {
         if response.secondary_clicked() {
             *self.is_open = true;
-            *self.spawn_pos = response
-                .interact_pointer_pos()
-                .unwrap_or_else(|| response.rect.left_top());
+            *self.spawn_pos = response.interact_pointer_pos().unwrap_or_else(|| response.rect.left_top());
             *self.selected_idx = None;
         }
     }
@@ -113,11 +94,7 @@ impl<'a> MacContextMenu<'a> {
     }
 
     fn step_selection(&mut self, forward: bool) {
-        if let Some(candidate) = crate::navigation::submenu::step_enabled_menu_item(
-            self.items,
-            *self.selected_idx,
-            forward,
-        ) {
+        if let Some(candidate) = crate::navigation::submenu::step_enabled_menu_item(self.items, *self.selected_idx, forward) {
             *self.selected_idx = Some(candidate);
         }
     }
@@ -182,9 +159,7 @@ impl<'a> MacContextMenu<'a> {
                 self.step_selection(false);
                 return None;
             }
-            if i.consume_key(Modifiers::NONE, Key::Enter)
-                || i.consume_key(Modifiers::NONE, Key::Space)
-            {
+            if i.consume_key(Modifiers::NONE, Key::Enter) || i.consume_key(Modifiers::NONE, Key::Space) {
                 return self.activate_selected();
             }
             None
@@ -209,39 +184,19 @@ impl<'a> MacContextMenu<'a> {
         let on_accent = theme.on_accent_text();
         let has_any_checked = self.items.iter().any(|it| it.checked);
         let check_col_w = padding_h * 2.0;
-        let lead_offset = if has_any_checked {
-            check_col_w
-        } else {
-            padding_h
-        };
+        let lead_offset = if has_any_checked { check_col_w } else { padding_h };
 
-        let (max_item_w, item_galleys) = crate::navigation::submenu::layout_menu_items(
-            ui.painter(),
-            self.items,
-            &font_id,
-            lead_offset,
-            padding_h,
-            min_clearance,
-        );
+        let (max_item_w, item_galleys) =
+            crate::navigation::submenu::layout_menu_items(ui.painter(), self.items, &font_id, lead_offset, padding_h, min_clearance);
         let menu_width = min_width.max(max_item_w + padding * 2.0);
         let total_h = (self.items.len() as f32) * item_height + padding * 2.0;
 
-        let viewport_rect = ui
-            .ctx()
-            .input(|i| i.raw.screen_rect)
-            .unwrap_or_else(|| ui.clip_rect());
-        let menu_rect = clamp_menu_rect(
-            *self.spawn_pos,
-            Vec2::new(menu_width, total_h),
-            viewport_rect,
-        );
+        let viewport_rect = ui.ctx().input(|i| i.raw.screen_rect).unwrap_or_else(|| ui.clip_rect());
+        let menu_rect = clamp_menu_rect(*self.spawn_pos, Vec2::new(menu_width, total_h), viewport_rect);
 
         let clicked_outside = ui.input(|i| {
             for ev in &i.events {
-                if let egui::Event::PointerButton {
-                    pos, pressed: true, ..
-                } = ev
-                {
+                if let egui::Event::PointerButton { pos, pressed: true, .. } = ev {
                     if !menu_rect.contains(*pos) {
                         return true;
                     }
@@ -257,100 +212,81 @@ impl<'a> MacContextMenu<'a> {
         let mut triggered = None;
         let area_id = ui.scope_id().with("mac_context_menu_area");
 
-        Area::new(area_id)
-            .order(Order::Foreground)
-            .fixed_pos(menu_rect.min)
-            .show(ui.ctx(), |menu_ui| {
-                let _ = menu_ui.allocate_rect(menu_rect, Sense::click());
-                let painter = menu_ui.painter();
+        Area::new(area_id).order(Order::Foreground).fixed_pos(menu_rect.min).show(ui.ctx(), |menu_ui| {
+            let _ = menu_ui.allocate_rect(menu_rect, Sense::click());
+            let painter = menu_ui.painter();
 
-                painter.rect(
-                    menu_rect,
-                    CornerRadius::same(corner_r),
-                    theme.window_background(),
-                    Stroke::new(border_w, theme.separator()),
-                    StrokeKind::Inside,
+            painter.rect(
+                menu_rect,
+                CornerRadius::same(corner_r),
+                theme.window_background(),
+                Stroke::new(border_w, theme.separator()),
+                StrokeKind::Inside,
+            );
+
+            for ((idx, item), galleys) in self.items.iter().enumerate().zip(item_galleys) {
+                let item_y = menu_rect.top() + padding + (idx as f32) * item_height;
+                let item_rect = Rect::from_min_size(
+                    Pos2::new(menu_rect.left() + padding, item_y),
+                    Vec2::new(menu_rect.width() - padding * 2.0, item_height),
                 );
 
-                for ((idx, item), galleys) in self.items.iter().enumerate().zip(item_galleys) {
-                    let item_y = menu_rect.top() + padding + (idx as f32) * item_height;
-                    let item_rect = Rect::from_min_size(
-                        Pos2::new(menu_rect.left() + padding, item_y),
-                        Vec2::new(menu_rect.width() - padding * 2.0, item_height),
+                let Some((title_galley, trailing_galley)) = galleys else {
+                    painter.line_segment(
+                        [Pos2::new(item_rect.left(), item_rect.center().y), Pos2::new(item_rect.right(), item_rect.center().y)],
+                        Stroke::new(border_w, theme.separator()),
                     );
+                    continue;
+                };
 
-                    let Some((title_galley, trailing_galley)) = galleys else {
-                        painter.line_segment(
-                            [
-                                Pos2::new(item_rect.left(), item_rect.center().y),
-                                Pos2::new(item_rect.right(), item_rect.center().y),
-                            ],
-                            Stroke::new(border_w, theme.separator()),
-                        );
-                        continue;
-                    };
+                let is_highlighted = *self.selected_idx == Some(idx);
+                let resp = menu_ui.interact(item_rect, area_id.with(idx), Sense::click());
 
-                    let is_highlighted = *self.selected_idx == Some(idx);
-                    let resp = menu_ui.interact(item_rect, area_id.with(idx), Sense::click());
+                if resp.hovered() && item.enabled {
+                    *self.selected_idx = Some(idx);
+                }
 
-                    if resp.hovered() && item.enabled {
-                        *self.selected_idx = Some(idx);
-                    }
+                if is_highlighted && item.enabled {
+                    painter.rect(item_rect, CornerRadius::same(item_corner_r), theme.control_accent(), Stroke::NONE, StrokeKind::Inside);
+                }
 
-                    if is_highlighted && item.enabled {
-                        painter.rect(
-                            item_rect,
-                            CornerRadius::same(item_corner_r),
-                            theme.control_accent(),
-                            Stroke::NONE,
-                            StrokeKind::Inside,
-                        );
-                    }
+                let fg = if !item.enabled {
+                    theme.placeholder_text()
+                } else if is_highlighted {
+                    on_accent
+                } else {
+                    theme.label()
+                };
 
-                    let fg = if !item.enabled {
-                        theme.placeholder_text()
-                    } else if is_highlighted {
-                        on_accent
-                    } else {
-                        theme.label()
-                    };
+                if item.checked {
+                    painter.text(
+                        Pos2::new(item_rect.left() + lead_offset * 0.5, item_rect.center().y),
+                        Align2::CENTER_CENTER,
+                        MacSymbol::Checkmark.as_str(),
+                        font_id.clone(),
+                        fg,
+                    );
+                }
 
-                    if item.checked {
-                        painter.text(
-                            Pos2::new(item_rect.left() + lead_offset * 0.5, item_rect.center().y),
-                            Align2::CENTER_CENTER,
-                            MacSymbol::Checkmark.as_str(),
-                            font_id.clone(),
-                            fg,
-                        );
-                    }
+                let title_pos = Align2::LEFT_CENTER
+                    .anchor_size(Pos2::new(item_rect.left() + lead_offset, item_rect.center().y), title_galley.size())
+                    .min;
+                painter.galley(title_pos, title_galley, fg);
 
-                    let title_pos = Align2::LEFT_CENTER
-                        .anchor_size(
-                            Pos2::new(item_rect.left() + lead_offset, item_rect.center().y),
-                            title_galley.size(),
-                        )
-                        .min;
-                    painter.galley(title_pos, title_galley, fg);
+                if let Some(tg) = trailing_galley {
+                    let tr_pos =
+                        Align2::RIGHT_CENTER.anchor_size(Pos2::new(item_rect.right() - padding_h, item_rect.center().y), tg.size()).min;
+                    painter.galley(tr_pos, tg, fg);
+                }
 
-                    if let Some(tg) = trailing_galley {
-                        let tr_pos = Align2::RIGHT_CENTER
-                            .anchor_size(
-                                Pos2::new(item_rect.right() - padding_h, item_rect.center().y),
-                                tg.size(),
-                            )
-                            .min;
-                        painter.galley(tr_pos, tg, fg);
-                    }
-
-                    if resp.clicked() && item.enabled {
-                        if let MacMenuItemKind::Action { id, .. } = &item.kind {
-                            triggered = Some(id.clone());
-                            self.close();
-                        }
+                if resp.clicked() && item.enabled {
+                    if let MacMenuItemKind::Action { id, .. } = &item.kind {
+                        triggered = Some(id.clone());
+                        self.close();
                     }
                 }
-            });
+            }
+        });
 
         triggered
     }

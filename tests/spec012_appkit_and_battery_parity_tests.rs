@@ -5,9 +5,8 @@
 
 use egui::{Context, Id, Key, Modifiers, Pos2, RawInput, Rect, Vec2, ViewportId};
 use egui_macview::controls::{
-    MacCollectionView, MacCollectionViewFlowLayout, MacComboBox, MacControlSize, MacDate,
-    MacDatePicker, MacDatePickerElementFlags, MacDatePickerStyle, MacPlayerControlsStyle,
-    MacPlayerView, MacRuleEditor, MacRuleRow, MacTabView,
+    MacCollectionView, MacCollectionViewFlowLayout, MacComboBox, MacControlSize, MacDate, MacDatePicker, MacDatePickerElementFlags,
+    MacDatePickerStyle, MacPlayerControlsStyle, MacPlayerView, MacRuleEditor, MacRuleRow, MacTabView,
 };
 use egui_macview::theme::{MacAppearance, MacTheme};
 use std::time::Duration;
@@ -26,7 +25,8 @@ fn run_pass_with_delay(ctx: &Context, input: RawInput, f: impl FnMut(&mut egui::
 
 fn click_at(ctx: &Context, pos: Pos2, mut f: impl FnMut(&mut egui::Ui)) {
     let make_input = |pressed: bool| {
-        let mut input = RawInput { focused: true, screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(600.0, 400.0))), ..Default::default() };
+        let mut input =
+            RawInput { focused: true, screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(600.0, 400.0))), ..Default::default() };
         input.events.push(egui::Event::PointerMoved(pos));
         input.events.push(egui::Event::PointerButton { pos, button: egui::PointerButton::Primary, pressed, modifiers: Modifiers::NONE });
         input
@@ -36,7 +36,8 @@ fn click_at(ctx: &Context, pos: Pos2, mut f: impl FnMut(&mut egui::Ui)) {
 }
 
 fn press_key(ctx: &Context, key: Key, mut f: impl FnMut(&mut egui::Ui)) {
-    let mut input = RawInput { focused: true, screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(600.0, 400.0))), ..Default::default() };
+    let mut input =
+        RawInput { focused: true, screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(600.0, 400.0))), ..Default::default() };
     input.events.push(egui::Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers: Modifiers::NONE });
     let _ = run_pass(ctx, input, &mut f);
 }
@@ -51,7 +52,15 @@ struct PlayerClickState<'a> {
 
 fn click_player(ctx: &Context, theme: &MacTheme, pos: Pos2, s: &mut PlayerClickState<'_>) {
     click_at(ctx, pos, |ui| {
-        ui.add(MacPlayerView::new().progress_mut(s.progress).volume_mut(s.volume).muted_mut(s.muted).playback_rate_mut(s.rate).duration_secs(s.duration).theme(theme));
+        ui.add(
+            MacPlayerView::new()
+                .progress_mut(s.progress)
+                .volume_mut(s.volume)
+                .muted_mut(s.muted)
+                .playback_rate_mut(s.rate)
+                .duration_secs(s.duration)
+                .theme(theme),
+        );
     });
 }
 
@@ -59,13 +68,26 @@ fn click_inline(ctx: &Context, theme: &MacTheme, pos: Pos2, p: &mut bool, m: &mu
     click_at(ctx, pos, |ui| {
         ui.set_max_width(300.0);
         ui.set_min_size(Vec2::new(300.0, 24.0));
-        ui.add(MacPlayerView::new().controls_style(MacPlayerControlsStyle::Inline).is_playing_mut(p).muted_mut(m).progress_mut(pr).theme(theme));
+        ui.add(
+            MacPlayerView::new()
+                .controls_style(MacPlayerControlsStyle::Inline)
+                .is_playing_mut(p)
+                .muted_mut(m)
+                .progress_mut(pr)
+                .theme(theme),
+        );
     });
 }
 
 fn step_date_segment(ctx: &Context, theme: &MacTheme, date: &mut MacDate, click_pos: Pos2) {
     let mut add_dp = |ui: &mut egui::Ui| {
-        ui.add(MacDatePicker::new().date(date).style(MacDatePickerStyle::TextFieldAndStepper).elements(MacDatePickerElementFlags::DateOnly).theme(theme));
+        ui.add(
+            MacDatePicker::new()
+                .date(date)
+                .style(MacDatePickerStyle::TextFieldAndStepper)
+                .elements(MacDatePickerElementFlags::DateOnly)
+                .theme(theme),
+        );
     };
     click_at(ctx, click_pos, &mut add_dp);
     press_key(ctx, Key::ArrowUp, &mut add_dp);
@@ -84,8 +106,16 @@ fn test_spec012_player_view_appkit_audio_and_stationary_cursor_autohide() {
     let duration = 120.0f32;
 
     let player = MacPlayerView::new()
-        .progress_mut(&mut progress).volume(0.85).volume_mut(&mut volume).muted(false).muted_mut(&mut muted)
-        .playback_rate(1.0).playback_rate_mut(&mut rate).buffered_progress(0.65).duration_secs(duration).theme(&theme);
+        .progress_mut(&mut progress)
+        .volume(0.85)
+        .volume_mut(&mut volume)
+        .muted(false)
+        .muted_mut(&mut muted)
+        .playback_rate(1.0)
+        .playback_rate_mut(&mut rate)
+        .buffered_progress(0.65)
+        .duration_secs(duration)
+        .theme(&theme);
 
     assert_eq!(player.playback_rates(), [0.5, 1.0, 1.25, 1.5, 2.0]);
 
@@ -114,8 +144,14 @@ fn test_spec012_player_view_appkit_audio_and_stationary_cursor_autohide() {
     assert!(*st.muted, "Clicking mute button must toggle muted to true");
 
     // Test Volume Slider drag/click (center at 168.0, 33.0)
-    let mut click_vol = RawInput { focused: true, screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(600.0, 400.0))), ..Default::default() };
-    click_vol.events.push(egui::Event::PointerButton { pos: Pos2::new(168.0, 33.0), button: egui::PointerButton::Primary, pressed: true, modifiers: Modifiers::NONE });
+    let mut click_vol =
+        RawInput { focused: true, screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(600.0, 400.0))), ..Default::default() };
+    click_vol.events.push(egui::Event::PointerButton {
+        pos: Pos2::new(168.0, 33.0),
+        button: egui::PointerButton::Primary,
+        pressed: true,
+        modifiers: Modifiers::NONE,
+    });
     run_pass(&ctx, click_vol, |ui| {
         ui.add(MacPlayerView::new().volume_mut(st.volume).muted_mut(st.muted).duration_secs(duration).theme(&theme));
     });
@@ -134,10 +170,8 @@ fn test_spec012_player_view_appkit_audio_and_stationary_cursor_autohide() {
         let m = theme.player_view();
         let pod = Vec2::new(m.hud_width.points(), m.hud_height.points());
         let total_size = Vec2::new(available_w.max(pod.x), pod.y + m.hud_bottom_margin.points() * 2.0);
-        let avail_rect = egui_macview::layout::subpixel_snap_rect(
-            Rect::from_min_size(ui.cursor().min, total_size),
-            ui.ctx().pixels_per_point(),
-        );
+        let avail_rect =
+            egui_macview::layout::subpixel_snap_rect(Rect::from_min_size(ui.cursor().min, total_size), ui.ctx().pixels_per_point());
         let pv = MacPlayerView::new()
             .controls_style(MacPlayerControlsStyle::Floating)
             .is_playing(false)
@@ -271,12 +305,24 @@ fn test_spec012_date_picker_direct_mouse_selection_and_bezel_layout() {
     assert_eq!(clock_date.minute, 15, "Clicking 3 o'clock on analog clock face must set minute to 15");
 
     click_at(&ctx, Pos2::new(61.0, 26.5), |ui| {
-        ui.add(MacDatePicker::new().date(&mut clock_date).style(MacDatePickerStyle::ClockAndCalendar).elements(MacDatePickerElementFlags::TimeOnly).theme(&theme));
+        ui.add(
+            MacDatePicker::new()
+                .date(&mut clock_date)
+                .style(MacDatePickerStyle::ClockAndCalendar)
+                .elements(MacDatePickerElementFlags::TimeOnly)
+                .theme(&theme),
+        );
     });
     assert_eq!(clock_date.minute, 0, "Clicking 12 o'clock must set minute to 0");
 
     let clk_shapes = run_pass(&ctx, RawInput::default(), |ui| {
-        ui.add(MacDatePicker::new().date(&mut clock_date).style(MacDatePickerStyle::ClockAndCalendar).elements(MacDatePickerElementFlags::TimeOnly).theme(&theme));
+        ui.add(
+            MacDatePicker::new()
+                .date(&mut clock_date)
+                .style(MacDatePickerStyle::ClockAndCalendar)
+                .elements(MacDatePickerElementFlags::TimeOnly)
+                .theme(&theme),
+        );
     });
     let tick_count = clk_shapes.iter().filter(|c| matches!(&c.shape, egui::Shape::LineSegment { .. })).count();
     assert_eq!(tick_count, 14, "Clock must render 12 hour tick marks and 2 hands");
@@ -304,7 +350,13 @@ fn test_spec012_combo_box_text_inset_and_scroll_isolation() {
 
     // 3. Open ComboBox popover and verify scroll isolation when no arrow keys are pressed
     let mut open_input = RawInput { focused: true, ..Default::default() };
-    open_input.events.push(egui::Event::Key { key: Key::ArrowDown, physical_key: None, pressed: true, repeat: false, modifiers: Modifiers::ALT });
+    open_input.events.push(egui::Event::Key {
+        key: Key::ArrowDown,
+        physical_key: None,
+        pressed: true,
+        repeat: false,
+        modifiers: Modifiers::ALT,
+    });
     run_pass(&ctx, open_input, |ui| {
         MacComboBox::new("cb_scroll_iso", &mut text, &items).theme(&theme).show(ui);
     });
@@ -359,7 +411,14 @@ fn test_spec012_tab_view_centered_pill_and_min_container_sizes() {
 
     let tab_shapes = run_pass(&ctx, RawInput::default(), |ui| {
         ui.set_min_width(400.0);
-        let tab_view = MacTabView::new(&mut tab_idx).theme(&theme).tab("Alpha", |ui| { ui.label("A"); }).tab("Beta", |ui| { ui.label("B"); });
+        let tab_view = MacTabView::new(&mut tab_idx)
+            .theme(&theme)
+            .tab("Alpha", |ui| {
+                ui.label("A");
+            })
+            .tab("Beta", |ui| {
+                ui.label("B");
+            });
         let container_rect = Rect::from_min_size(Pos2::ZERO, Vec2::new(400.0, 100.0));
         let bar_rect = tab_view.tab_bar_rect(container_rect, ui);
         assert!(bar_rect.width() < container_rect.width(), "Segmented bar must be narrower than 400pt container");
@@ -389,12 +448,12 @@ fn test_spec012_collection_view_o1_row_range_culling() {
     let mut invocations = 0usize;
     run_pass(&ctx, RawInput::default(), |ui| {
         ui.set_clip_rect(Rect::from_min_size(Pos2::new(0.0, 0.0), Vec2::new(200.0, 200.0)));
-        MacCollectionView::new(&items, &mut selected)
-            .layout(MacCollectionViewFlowLayout::default())
-            .theme(&theme)
-            .show_with_item_tracker(ui, |_ui, _item| {
+        MacCollectionView::new(&items, &mut selected).layout(MacCollectionViewFlowLayout::default()).theme(&theme).show_with_item_tracker(
+            ui,
+            |_ui, _item| {
                 invocations += 1;
-            });
+            },
+        );
     });
 
     assert!(invocations <= 30, "10,000 items in 200pt viewport must invoke closure <= 30 times (got {invocations})");
@@ -410,7 +469,13 @@ fn test_spec012_collection_view_o1_row_range_culling() {
 
     // Immediate next frame has focus and navigates with arrow keys
     let mut arrow_in = RawInput { focused: true, ..Default::default() };
-    arrow_in.events.push(egui::Event::Key { key: Key::ArrowRight, physical_key: None, pressed: true, repeat: false, modifiers: Modifiers::NONE });
+    arrow_in.events.push(egui::Event::Key {
+        key: Key::ArrowRight,
+        physical_key: None,
+        pressed: true,
+        repeat: false,
+        modifiers: Modifiers::NONE,
+    });
     run_pass(&ctx, arrow_in, |ui| {
         let resp = MacCollectionView::new(&click_items, &mut click_selected).theme(&theme).show(ui);
         assert!(resp.has_focus(), "Collection view must have focus after item click");
@@ -422,7 +487,12 @@ fn test_spec012_collection_view_o1_row_range_culling() {
     let screen_rect = Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(400.0, 400.0)));
     let mut raw_down = RawInput { focused: true, screen_rect, ..Default::default() };
     raw_down.events.push(egui::Event::PointerMoved(Pos2::new(5.0, 5.0)));
-    raw_down.events.push(egui::Event::PointerButton { pos: Pos2::new(5.0, 5.0), button: egui::PointerButton::Primary, pressed: true, modifiers: Modifiers::NONE });
+    raw_down.events.push(egui::Event::PointerButton {
+        pos: Pos2::new(5.0, 5.0),
+        button: egui::PointerButton::Primary,
+        pressed: true,
+        modifiers: Modifiers::NONE,
+    });
     run_pass(&ctx, raw_down, |ui| {
         MacCollectionView::new(&click_items, &mut drag_selected).theme(&theme).show(ui);
     });
@@ -441,10 +511,7 @@ fn test_spec012_rule_editor_predicate_rows_and_mutations() {
     let (ctx, theme) = (Context::default(), MacTheme::new(MacAppearance::Aqua));
 
     let mut rows = vec![MacRuleRow::new(vec![0, 0]), MacRuleRow::new(vec![1, 1])];
-    let criteria: &[&[&str]] = &[
-        &["Name", "Kind", "Date", "Size"],
-        &["contains", "is", "begins with", "ends with"],
-    ];
+    let criteria: &[&[&str]] = &[&["Name", "Kind", "Date", "Size"], &["contains", "is", "begins with", "ends with"]];
 
     let editor = MacRuleEditor::new("rule_test", &mut rows, criteria).theme(&theme);
     assert_eq!((editor.row_height(), editor.button_size(), editor.row_spacing()), (32.0, 20.0, 8.0));

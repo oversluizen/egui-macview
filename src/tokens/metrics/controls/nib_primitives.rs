@@ -140,9 +140,7 @@ pub struct HelpButtonMetrics {
 
 impl Default for HelpButtonMetrics {
     fn default() -> Self {
-        MacDesignTokens::default_shared()
-            .help_button_metrics()
-            .clone()
+        MacDesignTokens::default_shared().help_button_metrics().clone()
     }
 }
 
@@ -161,8 +159,6 @@ pub struct InlineActionButtonMetrics {
 
 impl Default for InlineActionButtonMetrics {
     fn default() -> Self {
-        MacDesignTokens::default_shared()
-            .inline_action_button_metrics()
-            .clone()
+        MacDesignTokens::default_shared().inline_action_button_metrics().clone()
     }
 }

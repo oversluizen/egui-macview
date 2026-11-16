@@ -2,7 +2,7 @@
 
 use super::MacTheme;
 use crate::tokens::{
-    MacTagLabelColors, OriginMatrixMetrics, TableActionBarMetrics, TagColorPickerMetrics,
+    ImageViewMetrics, MacTagLabelColors, OriginMatrixMetrics, TableActionBarMetrics, TagColorPickerMetrics, TextViewMetrics,
 };
 use egui::Color32;
 
@@ -85,5 +85,15 @@ impl MacTheme {
     /// Returns the AppKit `NSPopover` container subtle perimeter border color (`popover_border`).
     pub fn popover_border(&self) -> Color32 {
         self.colors().popover_border.to_color32()
+    }
+
+    /// Returns `NSImageView` metrics tokens (`metrics.control.image_view`).
+    pub fn image_view(&self) -> &ImageViewMetrics {
+        self.tokens.image_view_metrics()
+    }
+
+    /// Returns `NSTextView` multi-line editor metrics tokens (`metrics.control.text_view`).
+    pub fn text_view(&self) -> &TextViewMetrics {
+        self.tokens.text_view_metrics()
     }
 }

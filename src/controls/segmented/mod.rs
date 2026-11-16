@@ -11,8 +11,7 @@ mod render;
 mod storage;
 
 pub use item::{
-    MacSegmentEvent, MacSegmentItem, SegmentContent, SegmentEvent, SegmentIconFn,
-    SegmentIconPainter, SegmentItem, SegmentMenuTrigger,
+    MacSegmentEvent, MacSegmentItem, SegmentContent, SegmentEvent, SegmentIconFn, SegmentIconPainter, SegmentItem, SegmentMenuTrigger,
 };
 
 use crate::controls::MacControlSize;
@@ -67,10 +66,7 @@ impl<'a> MacSegmentedControl<'a> {
     }
 
     /// Creates a segmented control from any array or iterator of [`SegmentItem`] descriptors.
-    pub fn with_custom_segments(
-        segments: impl IntoIterator<Item = SegmentItem<'a>>,
-        selected_idx: usize,
-    ) -> Self {
+    pub fn with_custom_segments(segments: impl IntoIterator<Item = SegmentItem<'a>>, selected_idx: usize) -> Self {
         Self {
             segments: segments.into_iter().collect(),
             selected_idx,
@@ -182,11 +178,7 @@ impl<'a> MacSegmentedControl<'a> {
     }
 
     /// Renders a momentary segmented strip (`NSSegmentedSwitchTrackingMomentary`) and dispatches both click and menu [`SegmentEvent`]s.
-    pub fn show_momentary_with_events(
-        mut self,
-        ui: &mut Ui,
-        on_event: impl FnMut(SegmentEvent),
-    ) -> Response {
+    pub fn show_momentary_with_events(mut self, ui: &mut Ui, on_event: impl FnMut(SegmentEvent)) -> Response {
         self.momentary = true;
         render::render_segmented(self, ui, on_event)
     }

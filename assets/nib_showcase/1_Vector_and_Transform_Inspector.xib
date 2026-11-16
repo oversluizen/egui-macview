@@ -1,0 +1,353 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="23504" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="NO" customObjectInstantitationMethod="direct">
+    <dependencies>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="23504"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <objects>
+        <customObject id="-2" userLabel="File's Owner" customClass="NSWindowController"/>
+        <customObject id="-1" userLabel="First Responder" customClass="FirstResponder"/>
+        <customObject id="-3" userLabel="Application" customClass="NSObject"/>
+        <window title="Vector &amp; Transform Inspector" allowsToolTipsWhenApplicationIsInactive="NO" autorecalculatesKeyViewLoop="NO" releasedWhenClosed="NO" animationBehavior="default" id="win-root-vec">
+            <windowStyleMask key="styleMask" titled="YES" closable="YES" miniaturizable="YES" resizable="YES"/>
+            <rect key="contentRect" x="196" y="240" width="720" height="680"/>
+            <rect key="screenRect" x="0.0" y="0.0" width="1680" height="1027"/>
+            <view key="contentView" identifier="root-vec" id="root-vec">
+                <rect key="frame" x="0.0" y="0.0" width="720" height="680"/>
+                <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                <subviews>
+                    <textField identifier="s1-hdr" horizontalHuggingPriority="251" verticalHuggingPriority="750" id="s1-hdr">
+                        <rect key="frame" x="12" y="656" width="420" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" editable="NO" title="1. Canvas &amp; CASpring Physics Lab" id="cell-s1-hdr">
+                            <font key="font" metaFont="systemSemibold"/>
+                        </textFieldCell>
+                    </textField>
+                    <textField identifier="s1-sub" horizontalHuggingPriority="251" verticalHuggingPriority="750" controlSize="small" id="s1-sub">
+                        <rect key="frame" x="12" y="640" width="680" height="16"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" controlSize="small" lineBreakMode="clipping" editable="NO" title="Interactive 2D Affine Canvas, Multi-Stage CASpringAnimation, Undo/Redo, and Popover Anchor" id="cell-s1-sub">
+                            <font key="font" metaFont="system"/>
+                            <color key="textColor" name="secondaryLabelColor" catalog="System" colorSpace="catalog"/>
+                        </textFieldCell>
+                    </textField>
+                    <customView identifier="s1-canvas" customClass="NSAffineVectorCanvasView" id="s1-canvas">
+                        <rect key="frame" x="12" y="326" width="696" height="310"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                    </customView>
+                    <button identifier="s1-pulse" verticalHuggingPriority="750" id="s1-pulse">
+                        <rect key="frame" x="12" y="294" width="164" height="24"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="push" title="Trigger CASpring Pulse" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="cell-s1-pulse">
+                            <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <action selector="pulseSpring:" target="-2" id="a-s1-pulse"/>
+                        </connections>
+                    </button>
+                    <button identifier="s1-reset" verticalHuggingPriority="750" id="s1-reset">
+                        <rect key="frame" x="184" y="294" width="116" height="24"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="push" title="Reset Identity" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="cell-s1-reset">
+                            <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <action selector="resetTransform:" target="-2" id="a-s1-reset"/>
+                        </connections>
+                    </button>
+                    <button identifier="s1-undo" verticalHuggingPriority="750" id="s1-undo">
+                        <rect key="frame" x="308" y="294" width="84" height="24"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="push" title="Undo" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="cell-s1-undo">
+                            <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <action selector="undoTransform:" target="-2" id="a-s1-undo"/>
+                        </connections>
+                    </button>
+                    <button identifier="s1-redo" verticalHuggingPriority="750" id="s1-redo">
+                        <rect key="frame" x="400" y="294" width="84" height="24"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="push" title="Redo" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="cell-s1-redo">
+                            <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <action selector="redoTransform:" target="-2" id="a-s1-redo"/>
+                        </connections>
+                    </button>
+                    <button identifier="s1-pop" verticalHuggingPriority="750" id="s1-pop">
+                        <rect key="frame" x="492" y="294" width="180" height="24"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="push" title="Present Spring Popover" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="cell-s1-pop">
+                            <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <action selector="togglePopover:" target="-2" id="a-s1-pop"/>
+                        </connections>
+                    </button>
+                    <box identifier="s1-box" title="Vector &amp; Transform Inspector (1_Vector_and_Transform_Inspector.xib)" id="s1-box">
+                        <rect key="frame" x="12" y="12" width="696" height="272"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <view key="contentView" id="cv-s1-box">
+                            <rect key="frame" x="4" y="5" width="688" height="252"/>
+                            <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        </view>
+                    </box>
+                    <textField identifier="s1-lbl-name" horizontalHuggingPriority="251" verticalHuggingPriority="750" id="s1-lbl-name">
+                        <rect key="frame" x="28" y="236" width="88" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" editable="NO" title="Layer Name:" id="cell-s1-lbl-name">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                    </textField>
+                    <textField identifier="s1-fld-name" verticalHuggingPriority="750" id="s1-fld-name">
+                        <rect key="frame" x="120" y="234" width="210" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" borderStyle="bezel" title="Hero Vector Shape" drawsBackground="YES" id="cell-s1-fld-name">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.layerName" id="b-s1-fld-name"/>
+                        </connections>
+                    </textField>
+                    <textField identifier="s1-lbl-blend" horizontalHuggingPriority="251" verticalHuggingPriority="750" id="s1-lbl-blend">
+                        <rect key="frame" x="350" y="236" width="84" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" editable="NO" title="Blend Mode:" id="cell-s1-lbl-blend">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                    </textField>
+                    <popUpButton identifier="s1-pop-blend" verticalHuggingPriority="750" id="s1-pop-blend">
+                        <rect key="frame" x="438" y="234" width="248" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <popUpButtonCell key="cell" type="push" title="Normal" bezelStyle="rounded" alignment="left" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" imageScaling="proportionallyDown" inset="2" id="cell-s1-pop-blend">
+                            <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
+                            <font key="font" metaFont="menu"/>
+                            <menu key="menu" id="menu-s1-pop-blend">
+                                <items>
+                                    <menuItem title="Normal" state="on" id="mi-s1-pop-blend-0"/>
+                                    <menuItem title="Multiply" id="mi-s1-pop-blend-1"/>
+                                    <menuItem title="Screen" id="mi-s1-pop-blend-2"/>
+                                    <menuItem title="Overlay" id="mi-s1-pop-blend-3"/>
+                                </items>
+                            </menu>
+                        </popUpButtonCell>
+                        <connections>
+                            <binding destination="-2" name="selectedIndex" keyPath="values.blendMode" id="b-s1-pop-blend"/>
+                        </connections>
+                    </popUpButton>
+                    <textField identifier="s1-lbl-scale" horizontalHuggingPriority="251" verticalHuggingPriority="750" id="s1-lbl-scale">
+                        <rect key="frame" x="28" y="202" width="88" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" editable="NO" title="Scale (%):" id="cell-s1-lbl-scale">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                    </textField>
+                    <slider identifier="s1-sld-scale" verticalHuggingPriority="750" id="s1-sld-scale">
+                        <rect key="frame" x="120" y="200" width="210" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <sliderCell key="cell" state="on" alignment="left" minValue="25" maxValue="250" doubleValue="25" tickMarkPosition="above" numberOfTickMarks="0" sliderType="linear" id="cell-s1-sld-scale"/>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.scalePercent" id="b-s1-sld-scale"/>
+                        </connections>
+                    </slider>
+                    <textField identifier="s1-num-scale" verticalHuggingPriority="750" customClass="GSSteppingTextField" id="s1-num-scale">
+                        <rect key="frame" x="340" y="200" width="76" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" title="" drawsBackground="YES" id="cell-s1-num-scale">
+                            <numberFormatter key="formatter" formatterBehavior="default10_4" numberStyle="decimal" minimumIntegerDigits="1" maximumIntegerDigits="2000000000" maximumFractionDigits="3" id="fmt-s1-num-scale">
+                                <real key="minimum" value="25"/>
+                                <real key="maximum" value="250"/>
+                            </numberFormatter>
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.scalePercent" id="b-s1-num-scale"/>
+                        </connections>
+                    </textField>
+                    <button identifier="s1-sw-grid" verticalHuggingPriority="750" id="s1-sw-grid">
+                        <rect key="frame" x="438" y="200" width="140" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="check" title="Show Grid" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="cell-s1-sw-grid">
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.showGrid" id="b-s1-sw-grid"/>
+                        </connections>
+                    </button>
+                    <textField identifier="s1-lbl-rot" horizontalHuggingPriority="251" verticalHuggingPriority="750" id="s1-lbl-rot">
+                        <rect key="frame" x="28" y="168" width="88" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" editable="NO" title="Rotation:" id="cell-s1-lbl-rot">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                    </textField>
+                    <slider identifier="s1-sld-rot" verticalHuggingPriority="750" id="s1-sld-rot">
+                        <rect key="frame" x="120" y="166" width="210" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <sliderCell key="cell" state="on" alignment="left" minValue="-180" maxValue="180" doubleValue="-180" tickMarkPosition="above" numberOfTickMarks="0" sliderType="linear" id="cell-s1-sld-rot"/>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.rotationDeg" id="b-s1-sld-rot"/>
+                        </connections>
+                    </slider>
+                    <stepper identifier="s1-stp-rot" horizontalHuggingPriority="750" verticalHuggingPriority="750" id="s1-stp-rot">
+                        <rect key="frame" x="340" y="166" width="24" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <stepperCell key="cell" continuous="YES" alignment="left" increment="5" minValue="-10000" maxValue="10000" id="cell-s1-stp-rot"/>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.rotationDeg" id="b-s1-stp-rot"/>
+                        </connections>
+                    </stepper>
+                    <button identifier="s1-chk-snap" verticalHuggingPriority="750" id="s1-chk-snap">
+                        <rect key="frame" x="438" y="166" width="180" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="check" title="Snap to 8pt Grid" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="cell-s1-chk-snap">
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.snapToGrid" id="b-s1-chk-snap"/>
+                        </connections>
+                    </button>
+                    <textField identifier="s1-lbl-op" horizontalHuggingPriority="251" verticalHuggingPriority="750" id="s1-lbl-op">
+                        <rect key="frame" x="28" y="134" width="88" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" editable="NO" title="Opacity:" id="cell-s1-lbl-op">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                    </textField>
+                    <slider identifier="s1-sld-op" verticalHuggingPriority="750" id="s1-sld-op">
+                        <rect key="frame" x="120" y="132" width="210" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <sliderCell key="cell" state="on" alignment="left" minValue="10" maxValue="100" doubleValue="10" tickMarkPosition="above" numberOfTickMarks="0" sliderType="linear" id="cell-s1-sld-op"/>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.opacityPct" id="b-s1-sld-op"/>
+                        </connections>
+                    </slider>
+                    <textField identifier="s1-lbl-width" horizontalHuggingPriority="251" verticalHuggingPriority="750" id="s1-lbl-width">
+                        <rect key="frame" x="350" y="134" width="84" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" editable="NO" title="Card Width:" id="cell-s1-lbl-width">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                    </textField>
+                    <textField identifier="s1-num-width" verticalHuggingPriority="750" customClass="GSSteppingTextField" id="s1-num-width">
+                        <rect key="frame" x="438" y="132" width="110" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" title="" drawsBackground="YES" id="cell-s1-num-width">
+                            <numberFormatter key="formatter" formatterBehavior="default10_4" numberStyle="decimal" minimumIntegerDigits="1" maximumIntegerDigits="2000000000" maximumFractionDigits="3" id="fmt-s1-num-width">
+                                <real key="minimum" value="80"/>
+                                <real key="maximum" value="640"/>
+                            </numberFormatter>
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.cardWidth" id="b-s1-num-width"/>
+                        </connections>
+                    </textField>
+                    <textField identifier="s1-lbl-origin" horizontalHuggingPriority="251" verticalHuggingPriority="750" id="s1-lbl-origin">
+                        <rect key="frame" x="28" y="96" width="88" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" editable="NO" title="Origin:" id="cell-s1-lbl-origin">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                    </textField>
+                    <customView identifier="s1-origin" customClass="GSOriginPointControl" id="s1-origin">
+                        <rect key="frame" x="120" y="66" width="54" height="54"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.originAnchor" id="b-s1-origin"/>
+                        </connections>
+                    </customView>
+                    <textField identifier="s1-lbl-align" horizontalHuggingPriority="251" verticalHuggingPriority="750" id="s1-lbl-align">
+                        <rect key="frame" x="210" y="86" width="60" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" editable="NO" title="Align:" id="cell-s1-lbl-align">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                    </textField>
+                    <segmentedControl identifier="s1-seg-align" verticalHuggingPriority="750" id="s1-seg-align">
+                        <rect key="frame" x="276" y="82" width="240" height="24"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <segmentedCell key="cell" borderStyle="border" alignment="left" style="rounded" trackingMode="selectOne" id="cell-s1-seg-align">
+                            <font key="font" metaFont="system"/>
+                            <segments>
+                                <segment label="Left" selected="YES"/>
+                                <segment label="Center"/>
+                                <segment label="Right"/>
+                            </segments>
+                        </segmentedCell>
+                        <connections>
+                            <binding destination="-2" name="selectedIndex" keyPath="values.alignmentMode" id="b-s1-seg-align"/>
+                        </connections>
+                    </segmentedControl>
+                    <box identifier="s1-sep" verticalHuggingPriority="750" boxType="separator" id="s1-sep">
+                        <rect key="frame" x="28" y="56" width="658" height="2"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                    </box>
+                    <button identifier="s1-help" verticalHuggingPriority="750" id="s1-help">
+                        <rect key="frame" x="28" y="26" width="22" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="help" title="?" bezelStyle="helpButton" inset="2" id="cell-s1-help">
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <action selector="showVectorHelp:" target="-2" id="a-s1-help"/>
+                        </connections>
+                    </button>
+                    <button identifier="s1-add-kf" verticalHuggingPriority="750" customClass="NSInlineActionButton" id="s1-add-kf">
+                        <rect key="frame" x="58" y="26" width="26" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="inline" title="+" bezelStyle="inline" inset="2" id="cell-s1-add-kf">
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <action selector="addKeyframe:" target="-2" id="a-s1-add-kf"/>
+                        </connections>
+                    </button>
+                    <textField identifier="s1-lbl-rad" horizontalHuggingPriority="251" verticalHuggingPriority="750" id="s1-lbl-rad">
+                        <rect key="frame" x="120" y="28" width="64" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" editable="NO" title="Radius:" id="cell-s1-lbl-rad">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                    </textField>
+                    <slider identifier="s1-sld-rad" verticalHuggingPriority="750" id="s1-sld-rad">
+                        <rect key="frame" x="188" y="26" width="210" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <sliderCell key="cell" state="on" alignment="left" minValue="0" maxValue="48" doubleValue="0" tickMarkPosition="above" numberOfTickMarks="0" sliderType="linear" id="cell-s1-sld-rad"/>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.cornerRadius" id="b-s1-sld-rad"/>
+                        </connections>
+                    </slider>
+                    <textField identifier="s1-num-rad" verticalHuggingPriority="750" customClass="GSSteppingTextField" id="s1-num-rad">
+                        <rect key="frame" x="408" y="26" width="76" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" title="" drawsBackground="YES" id="cell-s1-num-rad">
+                            <numberFormatter key="formatter" formatterBehavior="default10_4" numberStyle="decimal" minimumIntegerDigits="1" maximumIntegerDigits="2000000000" maximumFractionDigits="3" id="fmt-s1-num-rad">
+                                <real key="minimum" value="0"/>
+                                <real key="maximum" value="48"/>
+                            </numberFormatter>
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.cornerRadius" id="b-s1-num-rad"/>
+                        </connections>
+                    </textField>
+                    <stepper identifier="s1-stp-rad" horizontalHuggingPriority="750" verticalHuggingPriority="750" id="s1-stp-rad">
+                        <rect key="frame" x="490" y="26" width="24" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <stepperCell key="cell" continuous="YES" alignment="left" increment="2" minValue="-10000" maxValue="10000" id="cell-s1-stp-rad"/>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.cornerRadius" id="b-s1-stp-rad"/>
+                        </connections>
+                    </stepper>
+                </subviews>
+            </view>
+        </window>
+    </objects>
+</document>

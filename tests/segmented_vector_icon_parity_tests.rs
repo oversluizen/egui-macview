@@ -9,10 +9,7 @@
 //! - macOS Sonoma divider suppression adjacent to the active floating selection pill.
 
 use egui::{pos2, Color32, Event, Key, Modifiers, PointerButton, Pos2, RawInput, Rect, Shape, Vec2};
-use egui_macview::{
-    setup_macview_fonts, MacSegmentedControl, MacSymbol, MacTheme, SegmentEvent, SegmentItem,
-    SegmentMenuTrigger,
-};
+use egui_macview::{setup_macview_fonts, MacSegmentedControl, MacSymbol, MacTheme, SegmentEvent, SegmentItem, SegmentMenuTrigger};
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Duration;
@@ -45,22 +42,12 @@ fn has_convex_polygon(shapes: &[egui::epaint::ClippedShape]) -> bool {
 }
 
 fn make_input(time: f64, events: Vec<Event>) -> RawInput {
-    RawInput {
-        time: Some(time),
-        screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(400.0, 200.0))),
-        events,
-        ..Default::default()
-    }
+    RawInput { time: Some(time), screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(400.0, 200.0))), events, ..Default::default() }
 }
 
 fn pointer_events(pos: Pos2, button: PointerButton, pressed: bool) -> Vec<Event> {
     let mut evs = vec![Event::PointerMoved(pos)];
-    evs.push(Event::PointerButton {
-        pos,
-        button,
-        pressed,
-        modifiers: Modifiers::NONE,
-    });
+    evs.push(Event::PointerButton { pos, button, pressed, modifiers: Modifiers::NONE });
     evs
 }
 
@@ -69,27 +56,19 @@ fn test_sonoma_segmented_control_custom_widths_and_total_width() {
     let widths = [34.0, 33.0, 33.0, 33.0, 33.0, 33.0, 35.0];
     assert_eq!(widths.iter().sum::<f32>(), 234.0);
 
-    let segments: Vec<SegmentItem> = widths
-        .iter()
-        .enumerate()
-        .map(|(i, &w)| SegmentItem::new(format!("S{i}")).with_width(w).with_submenu(i != 1))
-        .collect();
+    let segments: Vec<SegmentItem> =
+        widths.iter().enumerate().map(|(i, &w)| SegmentItem::new(format!("S{i}")).with_width(w).with_submenu(i != 1)).collect();
 
     let ctx = egui::Context::default();
     let theme = MacTheme::default();
     let mut selected = 2;
     let mut output = ctx.run_ui(make_input(0.0, Vec::new()), |ui| {
-        let resp = MacSegmentedControl::with_custom_segments(segments.clone(), selected)
-            .theme(&theme)
-            .height(24.0)
-            .show(ui, |idx| selected = idx);
+        let resp =
+            MacSegmentedControl::with_custom_segments(segments.clone(), selected).theme(&theme).height(24.0).show(ui, |idx| selected = idx);
         assert_eq!(resp.rect.width(), 234.0);
         assert_eq!(resp.rect.height(), 24.0);
     });
-    assert!(
-        !has_convex_polygon(&output.shapes),
-        "Segmented control must never emit closed triangle convex_polygon shapes"
-    );
+    assert!(!has_convex_polygon(&output.shapes), "Segmented control must never emit closed triangle convex_polygon shapes");
     output.textures_delta.clear();
 }
 
@@ -106,9 +85,7 @@ fn test_segmented_control_vector_icon_items_receive_appkit_state_tints() {
     let mut output = ctx.run_ui(make_input(0.0, Vec::new()), |ui| {
         let (r0, r1, r2) = (Rc::clone(&recorded), Rc::clone(&recorded), Rc::clone(&recorded));
         let segments = vec![
-            SegmentItem::from_icon(move |_p, rect, col| r0.borrow_mut().push((0, rect, col)))
-                .with_width(34.0)
-                .with_tooltip("Active Tool"),
+            SegmentItem::from_icon(move |_p, rect, col| r0.borrow_mut().push((0, rect, col))).with_width(34.0).with_tooltip("Active Tool"),
             SegmentItem::from_icon(move |_p, rect, col| r1.borrow_mut().push((1, rect, col)))
                 .with_width(33.0)
                 .with_tooltip("Inactive Tool"),
@@ -118,10 +95,7 @@ fn test_segmented_control_vector_icon_items_receive_appkit_state_tints() {
                 .with_tooltip("Disabled Tool"),
             SegmentItem::from_symbol(MacSymbol::Search).with_width(33.0),
         ];
-        let _ = MacSegmentedControl::with_custom_segments(segments, 0)
-            .theme(&theme)
-            .height(24.0)
-            .show(ui, |_| {});
+        let _ = MacSegmentedControl::with_custom_segments(segments, 0).theme(&theme).height(24.0).show(ui, |_| {});
     });
     output.textures_delta.clear();
 
@@ -139,10 +113,7 @@ fn test_segmented_control_orthogonal_menu_vs_shows_menu_indicator() {
     let bar_rect = Rect::from_min_size(Pos2::ZERO, Vec2::new(80.0, 24.0));
 
     let segs_hidden = vec![
-        SegmentItem::new("Action")
-            .with_width(40.0)
-            .with_menu(true)
-            .with_shows_menu_indicator(false),
+        SegmentItem::new("Action").with_width(40.0).with_menu(true).with_shows_menu_indicator(false),
         SegmentItem::new("Plain").with_width(40.0).with_menu(false),
     ];
     let mut out_a = ctx.run_ui(make_input(0.0, Vec::new()), |ui| {
@@ -155,10 +126,7 @@ fn test_segmented_control_orthogonal_menu_vs_shows_menu_indicator() {
     out_a.textures_delta.clear();
 
     let segs_visible = vec![
-        SegmentItem::new("Action")
-            .with_width(40.0)
-            .with_menu(true)
-            .with_shows_menu_indicator(true),
+        SegmentItem::new("Action").with_width(40.0).with_menu(true).with_shows_menu_indicator(true),
         SegmentItem::new("Plain").with_width(40.0).with_menu(false),
     ];
     let mut out_b = ctx.run_ui(make_input(0.1, Vec::new()), |ui| {
@@ -169,11 +137,7 @@ fn test_segmented_control_orthogonal_menu_vs_shows_menu_indicator() {
     });
     let lines_b = collect_line_segments(&out_b.shapes);
     out_b.textures_delta.clear();
-    assert_eq!(
-        lines_b.len(),
-        lines_a.len() + 2,
-        "shows_menu_indicator(true) must add exactly 2 analytical chevron line segments"
-    );
+    assert_eq!(lines_b.len(), lines_a.len() + 2, "shows_menu_indicator(true) must add exactly 2 analytical chevron line segments");
 
     let mut events: Vec<SegmentEvent> = Vec::new();
     for (idx, pos) in [pos2(15.0, 12.0), pos2(60.0, 12.0)].into_iter().enumerate() {
@@ -201,10 +165,8 @@ fn test_segmented_control_orthogonal_menu_vs_shows_menu_indicator() {
 fn test_segmented_control_press_and_hold_and_pull_down_open_menu_with_zero_idle_repaint() {
     let ctx = egui::Context::default();
     let theme = MacTheme::default();
-    let segs = vec![
-        SegmentItem::new("Draw").with_width(36.0).with_submenu(true),
-        SegmentItem::new("Text").with_width(36.0).with_submenu(false),
-    ];
+    let segs =
+        vec![SegmentItem::new("Draw").with_width(36.0).with_submenu(true), SegmentItem::new("Text").with_width(36.0).with_submenu(false)];
     let bar_rect = Rect::from_min_size(Pos2::ZERO, Vec2::new(72.0, 24.0));
     let mut events: Vec<SegmentEvent> = Vec::new();
 
@@ -263,10 +225,8 @@ fn test_segmented_control_per_segment_enabled_and_keyboard_skip() {
 
     let step = |time: f64, evs: Vec<Event>, sel: &mut usize| {
         let mut out = ctx.run_ui(make_input(time, evs), |ui| {
-            let _ = MacSegmentedControl::with_custom_segments(segs.clone(), *sel)
-                .theme(&theme)
-                .fixed_rect(bar_rect)
-                .show(ui, |idx| *sel = idx);
+            let _ =
+                MacSegmentedControl::with_custom_segments(segs.clone(), *sel).theme(&theme).fixed_rect(bar_rect).show(ui, |idx| *sel = idx);
         });
         out.textures_delta.clear();
     };
@@ -281,13 +241,7 @@ fn test_segmented_control_per_segment_enabled_and_keyboard_skip() {
     step(2.05, pointer_events(pos2(20.0, 12.0), PointerButton::Primary, false), &mut selected);
     step(
         2.10,
-        vec![Event::Key {
-            key: Key::ArrowRight,
-            physical_key: None,
-            pressed: true,
-            repeat: false,
-            modifiers: Modifiers::NONE,
-        }],
+        vec![Event::Key { key: Key::ArrowRight, physical_key: None, pressed: true, repeat: false, modifiers: Modifiers::NONE }],
         &mut selected,
     );
     assert_eq!(selected, 2, "ArrowRight must skip disabled segment 1 and select segment 2");
@@ -306,10 +260,7 @@ fn test_segmented_control_sonoma_divider_suppression_adjacent_to_active_pill() {
             SegmentItem::new("C").with_width(30.0),
             SegmentItem::new("D").with_width(30.0),
         ];
-        let _ = MacSegmentedControl::with_custom_segments(segs, 1)
-            .theme(&theme)
-            .fixed_rect(bar_rect)
-            .show(ui, |_| {});
+        let _ = MacSegmentedControl::with_custom_segments(segs, 1).theme(&theme).fixed_rect(bar_rect).show(ui, |_| {});
     });
     let vertical_dividers: Vec<f32> = collect_line_segments(&out.shapes)
         .into_iter()

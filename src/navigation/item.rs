@@ -22,42 +22,22 @@ pub struct MacKeyboardShortcut {
 impl MacKeyboardShortcut {
     /// Constructs a basic shortcut without modifiers.
     pub const fn new(key: Key) -> Self {
-        Self {
-            key,
-            command: false,
-            shift: false,
-            alt: false,
-        }
+        Self { key, command: false, shift: false, alt: false }
     }
 
     /// Constructs a Cmd/Ctrl shortcut (`Ctrl+key` or `Cmd+key`).
     pub const fn cmd(key: Key) -> Self {
-        Self {
-            key,
-            command: true,
-            shift: false,
-            alt: false,
-        }
+        Self { key, command: true, shift: false, alt: false }
     }
 
     /// Constructs a Cmd+Shift shortcut (`Ctrl+Shift+key` or `Cmd+Shift+key`).
     pub const fn cmd_shift(key: Key) -> Self {
-        Self {
-            key,
-            command: true,
-            shift: true,
-            alt: false,
-        }
+        Self { key, command: true, shift: true, alt: false }
     }
 
     /// Constructs a Cmd+Alt shortcut (`Ctrl+Alt+key` or `Cmd+Option+key`).
     pub const fn cmd_alt(key: Key) -> Self {
-        Self {
-            key,
-            command: true,
-            shift: false,
-            alt: true,
-        }
+        Self { key, command: true, shift: false, alt: true }
     }
 
     /// Checks if the input state matches this keyboard shortcut.
@@ -66,28 +46,16 @@ impl MacKeyboardShortcut {
         let input_shift = input.modifiers.shift;
         let input_alt = input.modifiers.alt;
 
-        if input_cmd == self.command
-            && input_shift == self.shift
-            && input_alt == self.alt
-            && input.key_pressed(self.key)
-        {
+        if input_cmd == self.command && input_shift == self.shift && input_alt == self.alt && input.key_pressed(self.key) {
             return true;
         }
 
         // Check matching key-press event in current frame events
         input.events.iter().any(|ev| {
-            if let egui::Event::Key {
-                key,
-                pressed: true,
-                modifiers,
-                ..
-            } = ev
-            {
+            if let egui::Event::Key { key, pressed: true, modifiers, .. } = ev {
                 if *key == self.key {
                     let ev_cmd = modifiers.command || modifiers.ctrl || modifiers.mac_cmd;
-                    return ev_cmd == self.command
-                        && modifiers.shift == self.shift
-                        && modifiers.alt == self.alt;
+                    return ev_cmd == self.command && modifiers.shift == self.shift && modifiers.alt == self.alt;
                 }
             }
             false
@@ -101,19 +69,10 @@ impl MacKeyboardShortcut {
         }
         input.keys_down.remove(&self.key);
         input.events.retain(|ev| {
-            if let egui::Event::Key {
-                key,
-                pressed: true,
-                modifiers,
-                ..
-            } = ev
-            {
+            if let egui::Event::Key { key, pressed: true, modifiers, .. } = ev {
                 if *key == self.key {
                     let ev_cmd = modifiers.command || modifiers.ctrl || modifiers.mac_cmd;
-                    if ev_cmd == self.command
-                        && modifiers.shift == self.shift
-                        && modifiers.alt == self.alt
-                    {
+                    if ev_cmd == self.command && modifiers.shift == self.shift && modifiers.alt == self.alt {
                         return false;
                     }
                 }
@@ -189,29 +148,14 @@ pub struct NSMenuItem {
 impl NSMenuItem {
     /// Creates an action item with title and identifier.
     pub fn action(title: impl Into<String>, id: impl Into<String>) -> Self {
-        Self {
-            title: title.into(),
-            kind: MacMenuItemKind::Action {
-                id: id.into(),
-                shortcut: None,
-            },
-            enabled: true,
-            checked: false,
-        }
+        Self { title: title.into(), kind: MacMenuItemKind::Action { id: id.into(), shortcut: None }, enabled: true, checked: false }
     }
 
     /// Creates an action item with title, identifier, and keyboard shortcut accelerator.
-    pub fn action_with_shortcut(
-        title: impl Into<String>,
-        id: impl Into<String>,
-        shortcut: MacKeyboardShortcut,
-    ) -> Self {
+    pub fn action_with_shortcut(title: impl Into<String>, id: impl Into<String>, shortcut: MacKeyboardShortcut) -> Self {
         Self {
             title: title.into(),
-            kind: MacMenuItemKind::Action {
-                id: id.into(),
-                shortcut: Some(shortcut),
-            },
+            kind: MacMenuItemKind::Action { id: id.into(), shortcut: Some(shortcut) },
             enabled: true,
             checked: false,
         }
@@ -219,22 +163,12 @@ impl NSMenuItem {
 
     /// Creates a cascading submenu item.
     pub fn submenu(title: impl Into<String>, menu: NSMenu) -> Self {
-        Self {
-            title: title.into(),
-            kind: MacMenuItemKind::Submenu { menu },
-            enabled: true,
-            checked: false,
-        }
+        Self { title: title.into(), kind: MacMenuItemKind::Submenu { menu }, enabled: true, checked: false }
     }
 
     /// Creates a visual horizontal separator.
     pub fn separator() -> Self {
-        Self {
-            title: String::new(),
-            kind: MacMenuItemKind::Separator,
-            enabled: false,
-            checked: false,
-        }
+        Self { title: String::new(), kind: MacMenuItemKind::Separator, enabled: false, checked: false }
     }
 
     /// Enables or disables the menu item.

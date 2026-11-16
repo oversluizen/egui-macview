@@ -7,10 +7,7 @@ pub use popover::ComboBoxPopoverGeometry;
 use crate::controls::MacControlSize;
 use crate::layout::subpixel_snap_rect;
 use crate::theme::MacTheme;
-use egui::{
-    CornerRadius, FontId, Id, Key, Modifiers, Pos2, Rect, Response, Sense, Stroke, StrokeKind,
-    TextEdit, Ui, UiBuilder, Vec2,
-};
+use egui::{CornerRadius, FontId, Id, Key, Modifiers, Pos2, Rect, Response, Sense, Stroke, StrokeKind, TextEdit, Ui, UiBuilder, Vec2};
 use std::hash::Hash;
 
 /// Computed layout geometry for the combo box text field and trigger button header.
@@ -161,8 +158,7 @@ impl<'a, T: AsRef<str>> MacComboBox<'a, T> {
     /// Phase 1: Computes the layout rectangles of the outer frame, text area, and trigger button.
     pub fn compute_header_layout(&self, ui: &Ui) -> ComboBoxHeaderLayout {
         let (height, btn_w, corner_r) = (self.frame_height(), self.button_width(), self.corner_radius());
-        let desired_w = self.fixed_rect.map(|r| r.width()).or(self.width)
-            .unwrap_or_else(|| ui.available_width().max(btn_w * 2.0));
+        let desired_w = self.fixed_rect.map(|r| r.width()).or(self.width).unwrap_or_else(|| ui.available_width().max(btn_w * 2.0));
         let raw = self.fixed_rect.unwrap_or_else(|| Rect::from_min_size(ui.cursor().min, Vec2::new(desired_w, height)));
         let rect = subpixel_snap_rect(raw, ui.ctx().pixels_per_point());
         let text_inset = self.text_inset();
@@ -210,21 +206,28 @@ impl<'a, T: AsRef<str>> MacComboBox<'a, T> {
             Pos2::new(visual_rect.max.x - btn_w, visual_rect.max.y),
         );
 
-        if enabled && (ui.input_mut(|i| i.consume_key(Modifiers::ALT, Key::ArrowDown))
-            || ui.input(|i| i.modifiers.alt && i.key_pressed(Key::ArrowDown)))
+        if enabled
+            && (ui.input_mut(|i| i.consume_key(Modifiers::ALT, Key::ArrowDown))
+                || ui.input(|i| i.modifiers.alt && i.key_pressed(Key::ArrowDown)))
         {
             is_open = true;
         }
 
         let painter = ui.painter_at(frame_rect);
-        let border_col = if enabled && response.has_focus() {
-            theme.control_accent()
-        } else {
-            theme.apply_enabled(theme.separator(), enabled)
-        };
+        let border_col =
+            if enabled && response.has_focus() { theme.control_accent() } else { theme.apply_enabled(theme.separator(), enabled) };
         let bg_fill = theme.apply_enabled(theme.control_background(), enabled);
-        painter.rect(visual_rect, CornerRadius::same(layout.corner_radius as u8), bg_fill, Stroke::new(1.0, border_col), StrokeKind::Inside);
-        painter.line_segment([Pos2::new(btn_rect.min.x, visual_rect.min.y), Pos2::new(btn_rect.min.x, visual_rect.max.y)], Stroke::new(1.0, theme.apply_enabled(theme.separator(), enabled)));
+        painter.rect(
+            visual_rect,
+            CornerRadius::same(layout.corner_radius as u8),
+            bg_fill,
+            Stroke::new(1.0, border_col),
+            StrokeKind::Inside,
+        );
+        painter.line_segment(
+            [Pos2::new(btn_rect.min.x, visual_rect.min.y), Pos2::new(btn_rect.min.x, visual_rect.max.y)],
+            Stroke::new(1.0, theme.apply_enabled(theme.separator(), enabled)),
+        );
 
         let pointer_pos = ui.input(|i| i.pointer.hover_pos());
         let btn_hovered = enabled && pointer_pos.is_some_and(|p| btn_rect.contains(p));
@@ -240,12 +243,19 @@ impl<'a, T: AsRef<str>> MacComboBox<'a, T> {
         }
 
         // Right accent button badge (`NSComboBoxCell` 17pt badge, 2pt inset, 4pt radius)
-        let (badge_w, badge_inset, badge_r) = (metrics.badge_button_width.points(), metrics.button_inset.points(), metrics.button_corner_radius.points());
+        let (badge_w, badge_inset, badge_r) =
+            (metrics.badge_button_width.points(), metrics.button_inset.points(), metrics.button_corner_radius.points());
         let badge_rect = Rect::from_min_max(
             Pos2::new((visual_rect.max.x - badge_inset - badge_w).max(btn_rect.min.x), visual_rect.min.y + badge_inset),
             Pos2::new(visual_rect.max.x - badge_inset, visual_rect.max.y - badge_inset),
         );
-        let badge_fill = if !enabled { theme.control().gamma_multiply(theme.disabled_opacity()) } else if btn_down { theme.selected_control() } else { theme.control_accent() };
+        let badge_fill = if !enabled {
+            theme.control().gamma_multiply(theme.disabled_opacity())
+        } else if btn_down {
+            theme.selected_control()
+        } else {
+            theme.control_accent()
+        };
         painter.rect_filled(badge_rect, CornerRadius::same(badge_r as u8), badge_fill);
 
         let (cx, cy) = (badge_rect.center().x, badge_rect.center().y);
@@ -261,11 +271,21 @@ impl<'a, T: AsRef<str>> MacComboBox<'a, T> {
             MacControlSize::Mini => theme.text_field().mini.font_size.points(),
         };
         let edit_id = self.id_salt.with("combo_input_id");
+        let pointer_in_text = enabled
+            && pointer_pos.is_some_and(|p| text_rect.contains(p))
+            && ui.input(|i| i.pointer.primary_pressed() || i.pointer.primary_clicked());
+        if pointer_in_text {
+            ui.memory_mut(|m| m.request_focus(edit_id));
+        }
         let is_edit_focused = enabled && ui.memory(|m| m.has_focus(edit_id));
         if is_edit_focused {
             let edit_res = child_ui.add_sized(
                 text_rect.size(),
-                TextEdit::singleline(self.text).id(edit_id).font(FontId::proportional(font_sz)).text_color(theme.label()).frame(egui::Frame::NONE),
+                TextEdit::singleline(self.text)
+                    .id(edit_id)
+                    .font(FontId::proportional(font_sz))
+                    .text_color(theme.label())
+                    .frame(egui::Frame::NONE),
             );
             if edit_res.changed() {
                 response.mark_changed();
@@ -279,20 +299,41 @@ impl<'a, T: AsRef<str>> MacComboBox<'a, T> {
             if !self.text.is_empty() {
                 let lm = theme.label_metrics();
                 let (baseline_from_top, ascender) = match self.control_size {
-                    MacControlSize::Regular | MacControlSize::Large => (metrics.regular_first_baseline_offset.points(), lm.regular_ascender.points()),
-                    MacControlSize::Small | MacControlSize::CompactInfobox => (metrics.small_first_baseline_offset.points(), lm.small_ascender.points()),
+                    MacControlSize::Regular | MacControlSize::Large => {
+                        (metrics.regular_first_baseline_offset.points(), lm.regular_ascender.points())
+                    }
+                    MacControlSize::Small | MacControlSize::CompactInfobox => {
+                        (metrics.small_first_baseline_offset.points(), lm.small_ascender.points())
+                    }
                     MacControlSize::Mini => (metrics.mini_first_baseline_offset.points(), lm.mini_ascender.points()),
                 };
                 let text_col = theme.apply_enabled(theme.label(), enabled);
-                let galley = theme.layout_tracked_galley(ui, self.text.as_str(), FontId::proportional(font_sz), text_col, text_rect.width().max(0.0));
+                let galley = theme.layout_tracked_galley(
+                    ui,
+                    self.text.as_str(),
+                    FontId::proportional(font_sz),
+                    text_col,
+                    text_rect.width().max(0.0),
+                );
                 let text_y = theme.baseline_text_y(visual_rect, baseline_from_top, ascender, ppp);
                 painter.with_clip_rect(text_rect).galley(Pos2::new(text_rect.left(), text_y), galley, text_col);
             }
         }
 
         popover::handle_combo_popover(
-            &mut self, ui, theme, visual_rect, layout.corner_radius, &mut is_open,
-            stored_sel_idx, open_id, selected_item_id, pointer_pos, &mut response,
+            &mut self,
+            ui,
+            theme,
+            popover::ComboPopoverCtx {
+                rect: visual_rect,
+                corner_radius: layout.corner_radius,
+                stored_sel_idx,
+                open_id,
+                selected_item_id,
+                pointer_pos,
+            },
+            &mut is_open,
+            &mut response,
         );
         response
     }

@@ -29,10 +29,7 @@ mod types;
 use crate::controls::MacControlSize;
 use crate::layout::subpixel_snap_rect;
 use crate::theme::MacTheme;
-use egui::{
-    CornerRadius, Key, Modifiers, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2,
-    Widget,
-};
+use egui::{CornerRadius, Key, Modifiers, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2, Widget};
 
 pub use matrix::paint_clock_and_calendar;
 pub use types::{MacDate, MacDatePickerElementFlags, MacDatePickerStyle};
@@ -205,10 +202,7 @@ impl<'a> Widget for MacDatePicker<'a> {
             },
         };
 
-        let (rect, mut response) = ui.allocate_exact_size(
-            desired_size,
-            Sense::click() | Sense::focusable_noninteractive(),
-        );
+        let (rect, mut response) = ui.allocate_exact_size(desired_size, Sense::click() | Sense::focusable_noninteractive());
         let rect = subpixel_snap_rect(rect, ui.ctx().pixels_per_point());
 
         let corner_r = match self.control_size {
@@ -222,8 +216,7 @@ impl<'a> Widget for MacDatePicker<'a> {
         let mut active_segment = ui.data_mut(|d| d.get_temp::<usize>(segment_key).unwrap_or(0));
 
         let is_clicked = response.clicked()
-            || (ui.input(|i| i.pointer.primary_clicked())
-                && ui.input(|i| i.pointer.interact_pos()).is_some_and(|pos| rect.contains(pos)));
+            || (ui.input(|i| i.pointer.primary_clicked()) && ui.input(|i| i.pointer.interact_pos()).is_some_and(|pos| rect.contains(pos)));
         if is_clicked {
             response.request_focus();
         }
@@ -249,16 +242,10 @@ impl<'a> Widget for MacDatePicker<'a> {
                 );
 
                 let st_w = metrics.stepper_width.points();
-                let stepper_rect = Rect::from_min_max(
-                    Pos2::new(rect.max.x - st_w, rect.min.y),
-                    rect.max,
-                );
+                let stepper_rect = Rect::from_min_max(Pos2::new(rect.max.x - st_w, rect.min.y), rect.max);
 
                 painter.line_segment(
-                    [
-                        Pos2::new(stepper_rect.min.x, rect.min.y),
-                        Pos2::new(stepper_rect.min.x, rect.max.y),
-                    ],
+                    [Pos2::new(stepper_rect.min.x, rect.min.y), Pos2::new(stepper_rect.min.x, rect.max.y)],
                     Stroke::new(1.0, theme.separator()),
                 );
 
@@ -363,13 +350,10 @@ impl<'a> Widget for MacDatePicker<'a> {
                     );
                     let seg_w = galley.size().x;
                     let seg_h = galley.size().y;
-                    let seg_rect = Rect::from_min_size(
-                        Pos2::new(cur_x, text_y - seg_h * 0.5),
-                        Vec2::new(seg_w, seg_h),
-                    );
+                    let seg_rect = Rect::from_min_size(Pos2::new(cur_x, text_y - seg_h * 0.5), Vec2::new(seg_w, seg_h));
 
-                    let is_token_clicked = is_clicked
-                        && ui.input(|i| i.pointer.interact_pos()).is_some_and(|pos| seg_rect.expand(1.0).contains(pos));
+                    let is_token_clicked =
+                        is_clicked && ui.input(|i| i.pointer.interact_pos()).is_some_and(|pos| seg_rect.expand(1.0).contains(pos));
                     if is_token_clicked && seg_idx != usize::MAX {
                         active_segment = seg_idx;
                         response.mark_changed();
@@ -436,15 +420,7 @@ impl<'a> Widget for MacDatePicker<'a> {
                     StrokeKind::Inside,
                 );
 
-                matrix::paint_clock_and_calendar(
-                    &painter,
-                    rect,
-                    self.elements,
-                    &mut current_date,
-                    theme,
-                    &mut response,
-                    ui,
-                );
+                matrix::paint_clock_and_calendar(&painter, rect, self.elements, &mut current_date, theme, &mut response, ui);
             }
         }
 

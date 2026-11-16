@@ -47,9 +47,7 @@ pub struct DisclosureGroupMetrics {
 
 impl Default for DisclosureGroupMetrics {
     fn default() -> Self {
-        MacDesignTokens::default_shared()
-            .disclosure_group_metrics()
-            .clone()
+        MacDesignTokens::default_shared().disclosure_group_metrics().clone()
     }
 }
 
@@ -184,9 +182,7 @@ pub struct RuleEditorMetrics {
 
 impl Default for RuleEditorMetrics {
     fn default() -> Self {
-        MacDesignTokens::default_shared()
-            .rule_editor_metrics()
-            .clone()
+        MacDesignTokens::default_shared().rule_editor_metrics().clone()
     }
 }
 

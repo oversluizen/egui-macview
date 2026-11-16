@@ -8,9 +8,7 @@ use crate::layout::subpixel_snap_rect;
 use crate::motion::CASpring;
 use crate::theme::MacTheme;
 use crate::tokens::ProgressSizeMetrics;
-use egui::{
-    Align2, CornerRadius, FontId, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2, Widget,
-};
+use egui::{Align2, CornerRadius, FontId, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2, Widget};
 
 /// Presentation style for [`MacProgressIndicator`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -93,9 +91,7 @@ impl<'a> MacProgressIndicator<'a> {
 
     /// Creates a radial spinning fin indicator animated by `time` in seconds.
     pub fn spinning(time: f64) -> Self {
-        Self::new()
-            .style(MacProgressStyle::Spinning)
-            .indeterminate(time)
+        Self::new().style(MacProgressStyle::Spinning).indeterminate(time)
     }
 
     /// Sets the presentation style (`Bar` or `Spinning`).
@@ -207,14 +203,9 @@ impl<'a> Widget for MacProgressIndicator<'a> {
             MacProgressStyle::Bar => {
                 let bar_w = self.width.unwrap_or_else(|| pm.default_bar_width.points());
                 let bar_h = sm.bar_height.points();
-                let total_h = if status_text.is_some() {
-                    bar_h + label_spacing + font_sz
-                } else {
-                    bar_h
-                };
+                let total_h = if status_text.is_some() { bar_h + label_spacing + font_sz } else { bar_h };
 
-                let (raw_rect, response) =
-                    ui.allocate_exact_size(Vec2::new(bar_w, total_h), Sense::hover());
+                let (raw_rect, response) = ui.allocate_exact_size(Vec2::new(bar_w, total_h), Sense::hover());
                 let rect = subpixel_snap_rect(raw_rect, ui.ctx().pixels_per_point());
                 let track_rect = Rect::from_min_size(rect.min, Vec2::new(rect.width(), bar_h));
                 let radius = CornerRadius::same(sm.bar_corner_radius.points() as u8);
@@ -228,29 +219,18 @@ impl<'a> Widget for MacProgressIndicator<'a> {
                     StrokeKind::Inside,
                 );
 
-                let fill_color = if self.enabled {
-                    theme.control_accent()
-                } else {
-                    theme.selected_control_inactive()
-                };
+                let fill_color = if self.enabled { theme.control_accent() } else { theme.selected_control_inactive() };
 
                 if let Some(target_p) = self.clamped_progress() {
                     let spring_preset = &theme.motion().swiftui_smooth;
                     let spring = CASpring::new(spring_preset.response, spring_preset.damping_ratio);
                     let anim_id = response.id.with("spring_progress");
-                    let now = if self.time > 0.0 {
-                        self.time
-                    } else {
-                        ui.input(|i| i.time)
-                    };
-                    let smooth_p = spring
-                        .animate_f32_at(ui.ctx(), anim_id, target_p, now, true)
-                        .clamp(0.0, 1.0);
+                    let now = if self.time > 0.0 { self.time } else { ui.input(|i| i.time) };
+                    let smooth_p = spring.animate_f32_at(ui.ctx(), anim_id, target_p, now, true).clamp(0.0, 1.0);
 
                     if smooth_p > 0.0 {
                         let fill_w = track_rect.width() * smooth_p;
-                        let fill_rect =
-                            Rect::from_min_size(track_rect.min, Vec2::new(fill_w, bar_h));
+                        let fill_rect = Rect::from_min_size(track_rect.min, Vec2::new(fill_w, bar_h));
                         painter.rect_filled(fill_rect, radius, fill_color);
                     }
                 } else {
@@ -261,14 +241,10 @@ impl<'a> Widget for MacProgressIndicator<'a> {
                     let tau = pm.tau_radians.points() as f64;
                     let phase = (((self.time * freq * tau).sin() + 1.0) * 0.5) as f32;
                     let pill_x = track_rect.left() + travel * phase;
-                    let pill_rect = Rect::from_min_size(
-                        Pos2::new(pill_x, track_rect.top()),
-                        Vec2::new(pill_w, bar_h),
-                    );
+                    let pill_rect = Rect::from_min_size(Pos2::new(pill_x, track_rect.top()), Vec2::new(pill_w, bar_h));
                     painter.rect_filled(pill_rect, radius, fill_color);
                     if self.time > 0.0 && crate::layout::is_window_active(ui.ctx()) {
-                        ui.ctx()
-                            .request_repaint_after(std::time::Duration::from_millis(33));
+                        ui.ctx().request_repaint_after(std::time::Duration::from_millis(33));
                     }
                 }
 
@@ -287,8 +263,7 @@ impl<'a> Widget for MacProgressIndicator<'a> {
             }
             MacProgressStyle::Spinning => {
                 let spin_sz = sm.spinner_size.points();
-                let (raw_rect, response) =
-                    ui.allocate_exact_size(Vec2::splat(spin_sz), Sense::hover());
+                let (raw_rect, response) = ui.allocate_exact_size(Vec2::splat(spin_sz), Sense::hover());
                 let rect = subpixel_snap_rect(raw_rect, ui.ctx().pixels_per_point());
                 let painter = ui.painter_at(rect);
 
@@ -303,8 +278,7 @@ impl<'a> Widget for MacProgressIndicator<'a> {
                 let tau = pm.tau_radians.points();
                 let min_alpha = pm.min_spoke_alpha.points();
                 let speed_hz = pm.spin_speed_hz.points() as f64;
-                let active_step =
-                    ((self.time * speed_hz * spoke_count as f64).floor() as usize) % spoke_count;
+                let active_step = ((self.time * speed_hz * spoke_count as f64).floor() as usize) % spoke_count;
 
                 let base_color = theme.secondary_label();
 

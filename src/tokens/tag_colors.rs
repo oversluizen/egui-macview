@@ -37,10 +37,7 @@ pub struct MacTagLabelColors {
 
 impl Default for MacTagLabelColors {
     fn default() -> Self {
-        crate::tokens::MacDesignTokens::default_shared()
-            .colors()
-            .tag_labels
-            .clone()
+        crate::tokens::MacDesignTokens::default_shared().colors().tag_labels.clone()
     }
 }
 

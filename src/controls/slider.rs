@@ -5,10 +5,7 @@
 
 use crate::controls::MacControlSize;
 use crate::theme::MacTheme;
-use egui::{
-    Color32, CornerRadius, Key, Modifiers, Pos2, Rect, Response, Stroke, StrokeKind, Ui, Vec2,
-    Widget,
-};
+use egui::{Color32, CornerRadius, Key, Modifiers, Pos2, Rect, Response, Stroke, StrokeKind, Ui, Vec2, Widget};
 use std::ops::RangeInclusive;
 
 /// Authentic macOS AppKit continuous slider (`NSSlider` equivalent).
@@ -141,12 +138,9 @@ impl<'a> Widget for MacSlider<'a> {
         let track_width = (track_right - track_left).max(min_track_w);
         let center_y = rect.top() + thumb_radius;
 
-        if self.enabled && response.clicked() {
+        if self.enabled && (response.clicked() || response.dragged() || response.is_pointer_button_down_on()) {
             ui.memory_mut(|m| m.request_focus(response.id));
-        }
-
-        if self.enabled && (response.clicked() || response.dragged()) {
-            if let Some(mouse_pos) = response.interact_pointer_pos() {
+            if let Some(mouse_pos) = response.interact_pointer_pos().or_else(|| ui.input(|i| i.pointer.interact_pos())) {
                 let mut fraction = ((mouse_pos.x - track_left) / track_width).clamp(0.0, 1.0);
                 if self.snap_to_ticks {
                     if let Some(ticks) = self.num_ticks.filter(|&t| t >= 2) {
@@ -192,11 +186,8 @@ impl<'a> Widget for MacSlider<'a> {
             Pos2::new(track_right, center_y + eff_track_height * 0.5),
         );
         let track_radius = eff_track_height * 0.5;
-        let track_fill = if has_ticks {
-            theme.slider_track_bg().gamma_multiply(alpha_factor)
-        } else {
-            theme.control().gamma_multiply(alpha_factor)
-        };
+        let track_fill =
+            if has_ticks { theme.slider_track_bg().gamma_multiply(alpha_factor) } else { theme.control().gamma_multiply(alpha_factor) };
         let track_stroke = if has_ticks {
             Stroke::new(metrics.ticked_track_border_width.points(), theme.slider_track_border().gamma_multiply(alpha_factor))
         } else {
@@ -246,7 +237,8 @@ impl<'a> Widget for MacSlider<'a> {
             let pill_rect = Rect::from_center_size(thumb_pos, Vec2::new(pw, ph));
             let pill_r = CornerRadius::same(metrics.ticked_thumb_corner_radius.points() as u8);
             let pill_bg = theme.slider_thumb_bg().gamma_multiply(alpha_factor);
-            let pill_stroke = Stroke::new(metrics.thumb_stroke_width.points(), theme.slider_thumb_border_color().gamma_multiply(alpha_factor));
+            let pill_stroke =
+                Stroke::new(metrics.thumb_stroke_width.points(), theme.slider_thumb_border_color().gamma_multiply(alpha_factor));
             painter.rect(pill_rect, pill_r, pill_bg, pill_stroke, StrokeKind::Inside);
         } else {
             let thumb_bg = if !self.enabled || is_pressed_or_dragged {

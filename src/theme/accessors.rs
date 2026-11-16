@@ -2,16 +2,13 @@
 
 use super::{MacBackgroundStyle, MacTheme};
 use crate::tokens::{
-    BoxViewMetrics, ButtonMetrics, CheckboxMetrics, CollectionViewMetrics, ColorWellMetrics,
-    ComboBoxMetrics, ContextMenuMetrics, DatePickerMetrics, DisclosureGroupMetrics,
-    FocusRingMetrics, FooterMetrics, HelpButtonMetrics, InlineActionButtonMetrics, LabelMetrics,
-    LayoutMetrics, LevelIndicatorMetrics, MacControlMetrics, MacMotionTokens, MacTypographyTokens,
-    MenuBarMetrics, NavigationMetrics, OutlineViewMetrics, PaletteMetrics, PathControlMetrics,
-    PlayerViewMetrics, PopUpButtonMetrics, PopoverMetrics, ProgressIndicatorMetrics,
-    RuleEditorMetrics, ScrollViewMetrics, SearchFieldMetrics, SegmentedMetrics, SliderMetrics,
-    SplitViewMetrics, StackViewMetrics, StepperMetrics, TabViewMetrics, TableViewMetrics,
-    TextFieldMetrics, ThumbnailCellMetrics, ToastMetrics, ToggleMetrics, TokenFieldMetrics,
-    ToolbarMetrics, TrimScrubberMetrics,
+    BoxViewMetrics, ButtonMetrics, CheckboxMetrics, CollectionViewMetrics, ColorWellMetrics, ComboBoxMetrics, ContextMenuMetrics,
+    DatePickerMetrics, DisclosureGroupMetrics, FocusRingMetrics, FooterMetrics, HelpButtonMetrics, InlineActionButtonMetrics, LabelMetrics,
+    LayoutMetrics, LevelIndicatorMetrics, MacControlMetrics, MacMotionTokens, MacTypographyTokens, MenuBarMetrics, NavigationMetrics,
+    OutlineViewMetrics, PaletteMetrics, PathControlMetrics, PlayerViewMetrics, PopUpButtonMetrics, PopoverMetrics,
+    ProgressIndicatorMetrics, RuleEditorMetrics, ScrollViewMetrics, SearchFieldMetrics, SegmentedMetrics, SliderMetrics, SplitViewMetrics,
+    StackViewMetrics, StepperMetrics, TabViewMetrics, TableViewMetrics, TextFieldMetrics, ThumbnailCellMetrics, ToastMetrics,
+    ToggleMetrics, TokenFieldMetrics, ToolbarMetrics, TrimScrubberMetrics,
 };
 use egui::{Color32, FontId, Galley, TextFormat, Ui};
 use std::sync::Arc;
@@ -61,11 +58,8 @@ impl MacTheme {
     /// to [`FontId::proportional`], returning `(font_id, has_semibold_family)` with zero
     /// per-widget `Arc<str>` or `Vec<FontFamily>` heap allocations.
     pub fn semibold_font_id(&self, ui: &Ui, size_pt: f32) -> (FontId, bool) {
-        static INTER_SEMIBOLD_FAMILY: std::sync::OnceLock<egui::FontFamily> =
-            std::sync::OnceLock::new();
-        let family = INTER_SEMIBOLD_FAMILY.get_or_init(|| {
-            egui::FontFamily::Name(crate::symbols::INTER_SEMIBOLD_FONT_NAME.into())
-        });
+        static INTER_SEMIBOLD_FAMILY: std::sync::OnceLock<egui::FontFamily> = std::sync::OnceLock::new();
+        let family = INTER_SEMIBOLD_FAMILY.get_or_init(|| egui::FontFamily::Name(crate::symbols::INTER_SEMIBOLD_FONT_NAME.into()));
         let cache_id = egui::Id::unique("macview_has_inter_semibold");
         let pass_nr = ui.ctx().cumulative_pass_nr();
         let cached = ui.ctx().data(|d| d.get_temp::<(u64, bool)>(cache_id));
@@ -98,112 +92,192 @@ impl MacTheme {
 
     /// Lays out a text [`Galley`] with Apple HIG optical tracking (`extra_letter_spacing`)
     /// automatically applied from `self.typography().tracking_table`.
-    pub fn layout_tracked_galley(
-        &self,
-        ui: &Ui,
-        text: &str,
-        font_id: FontId,
-        color: Color32,
-        wrap_width: f32,
-    ) -> Arc<Galley> {
-        let mut job = egui::text::LayoutJob::single_section(
-            text.to_owned(),
-            self.tracked_text_format(font_id, color),
-        );
+    pub fn layout_tracked_galley(&self, ui: &Ui, text: &str, font_id: FontId, color: Color32, wrap_width: f32) -> Arc<Galley> {
+        let mut job = egui::text::LayoutJob::single_section(text.to_owned(), self.tracked_text_format(font_id, color));
         job.wrap.max_width = wrap_width;
         ui.painter().layout_job(job)
     }
 
     /// Returns control metrics tokens.
-    pub fn control_metrics(&self) -> &MacControlMetrics { self.tokens.control_metrics() }
+    pub fn control_metrics(&self) -> &MacControlMetrics {
+        self.tokens.control_metrics()
+    }
     /// Returns button size and geometry tokens.
-    pub fn button(&self) -> &ButtonMetrics { &self.tokens.control_metrics().button }
+    pub fn button(&self) -> &ButtonMetrics {
+        &self.tokens.control_metrics().button
+    }
     /// Returns text field and input cell size/geometry tokens.
-    pub fn text_field(&self) -> &TextFieldMetrics { &self.tokens.control_metrics().text_field }
+    pub fn text_field(&self) -> &TextFieldMetrics {
+        &self.tokens.control_metrics().text_field
+    }
     /// Returns segmented control geometry tokens.
-    pub fn segmented(&self) -> &SegmentedMetrics { &self.tokens.control_metrics().segmented }
+    pub fn segmented(&self) -> &SegmentedMetrics {
+        &self.tokens.control_metrics().segmented
+    }
     /// Returns focus ring halo tokens.
-    pub fn focus_ring(&self) -> &FocusRingMetrics { &self.tokens.control_metrics().focus_ring }
+    pub fn focus_ring(&self) -> &FocusRingMetrics {
+        &self.tokens.control_metrics().focus_ring
+    }
     /// Returns toolbar layout and hit-target tokens.
-    pub fn toolbar_metrics(&self) -> &ToolbarMetrics { self.tokens.toolbar_metrics() }
+    pub fn toolbar_metrics(&self) -> &ToolbarMetrics {
+        self.tokens.toolbar_metrics()
+    }
     /// Returns popover and floating panel geometry tokens.
-    pub fn popover_metrics(&self) -> &PopoverMetrics { self.tokens.popover_metrics() }
+    pub fn popover_metrics(&self) -> &PopoverMetrics {
+        self.tokens.popover_metrics()
+    }
     /// Returns split view divider and pane geometry tokens.
-    pub fn split_view(&self) -> &SplitViewMetrics { self.tokens.split_view_metrics() }
+    pub fn split_view(&self) -> &SplitViewMetrics {
+        self.tokens.split_view_metrics()
+    }
     /// Returns layout container metrics (`scroll_view`, `stack_view`).
-    pub fn layout_metrics(&self) -> &LayoutMetrics { self.tokens.layout_metrics() }
+    pub fn layout_metrics(&self) -> &LayoutMetrics {
+        self.tokens.layout_metrics()
+    }
     /// Returns scroll view overlay scrollbar geometry tokens.
-    pub fn scroll_view(&self) -> &ScrollViewMetrics { self.tokens.scroll_view_metrics() }
+    pub fn scroll_view(&self) -> &ScrollViewMetrics {
+        self.tokens.scroll_view_metrics()
+    }
     /// Returns stack view spacing, padding, and header tokens.
-    pub fn stack_view(&self) -> &StackViewMetrics { self.tokens.stack_view_metrics() }
+    pub fn stack_view(&self) -> &StackViewMetrics {
+        self.tokens.stack_view_metrics()
+    }
     /// Returns outline view row, indentation, and chevron tokens.
-    pub fn outline_view(&self) -> &OutlineViewMetrics { self.tokens.outline_view_metrics() }
+    pub fn outline_view(&self) -> &OutlineViewMetrics {
+        self.tokens.outline_view_metrics()
+    }
     /// Returns slider track, thumb, and tick tokens.
-    pub fn slider(&self) -> &SliderMetrics { self.tokens.slider_metrics() }
+    pub fn slider(&self) -> &SliderMetrics {
+        self.tokens.slider_metrics()
+    }
     /// Returns thumbnail cell preview tokens.
-    pub fn thumbnail(&self) -> &ThumbnailCellMetrics { self.tokens.thumbnail_metrics() }
+    pub fn thumbnail(&self) -> &ThumbnailCellMetrics {
+        self.tokens.thumbnail_metrics()
+    }
     /// Returns pop-up button bezel and menu tokens.
-    pub fn popup_button(&self) -> &PopUpButtonMetrics { self.tokens.popup_button_metrics() }
+    pub fn popup_button(&self) -> &PopUpButtonMetrics {
+        self.tokens.popup_button_metrics()
+    }
     /// Returns search field pill, icon, and clear button tokens.
-    pub fn search_field(&self) -> &SearchFieldMetrics { self.tokens.search_field_metrics() }
+    pub fn search_field(&self) -> &SearchFieldMetrics {
+        self.tokens.search_field_metrics()
+    }
     /// Returns numeric stepper control tokens.
-    pub fn stepper(&self) -> &StepperMetrics { self.tokens.stepper_metrics() }
+    pub fn stepper(&self) -> &StepperMetrics {
+        self.tokens.stepper_metrics()
+    }
     /// Returns color well swatch and picker tokens.
-    pub fn color_well(&self) -> &ColorWellMetrics { self.tokens.color_well_metrics() }
+    pub fn color_well(&self) -> &ColorWellMetrics {
+        self.tokens.color_well_metrics()
+    }
     /// Returns toggle switch (`NSSwitch`) tokens.
-    pub fn toggle(&self) -> &ToggleMetrics { self.tokens.toggle_metrics() }
+    pub fn toggle(&self) -> &ToggleMetrics {
+        self.tokens.toggle_metrics()
+    }
     /// Returns navigation and feedback metrics tokens.
-    pub fn navigation_metrics(&self) -> &NavigationMetrics { self.tokens.navigation_metrics() }
+    pub fn navigation_metrics(&self) -> &NavigationMetrics {
+        self.tokens.navigation_metrics()
+    }
     /// Returns menu bar and dropdown menu tokens.
-    pub fn menu_bar_metrics(&self) -> &MenuBarMetrics { self.tokens.menu_bar_metrics() }
+    pub fn menu_bar_metrics(&self) -> &MenuBarMetrics {
+        self.tokens.menu_bar_metrics()
+    }
     /// Returns canvas footer bar tokens.
-    pub fn footer_metrics(&self) -> &FooterMetrics { self.tokens.footer_metrics() }
+    pub fn footer_metrics(&self) -> &FooterMetrics {
+        self.tokens.footer_metrics()
+    }
     /// Returns Spotlight command palette tokens.
-    pub fn palette_metrics(&self) -> &PaletteMetrics { self.tokens.palette_metrics() }
+    pub fn palette_metrics(&self) -> &PaletteMetrics {
+        self.tokens.palette_metrics()
+    }
     /// Returns context menu popup tokens.
-    pub fn context_menu_metrics(&self) -> &ContextMenuMetrics { self.tokens.context_menu_metrics() }
+    pub fn context_menu_metrics(&self) -> &ContextMenuMetrics {
+        self.tokens.context_menu_metrics()
+    }
     /// Returns floating toast notification tokens.
-    pub fn toast_metrics(&self) -> &ToastMetrics { self.tokens.toast_metrics() }
+    pub fn toast_metrics(&self) -> &ToastMetrics {
+        self.tokens.toast_metrics()
+    }
     /// Returns progress indicator bar and spinning fin tokens.
-    pub fn progress_indicator(&self) -> &ProgressIndicatorMetrics { self.tokens.progress_indicator_metrics() }
+    pub fn progress_indicator(&self) -> &ProgressIndicatorMetrics {
+        self.tokens.progress_indicator_metrics()
+    }
     /// Returns table view and sortable header tokens.
-    pub fn table_view(&self) -> &TableViewMetrics { self.tokens.table_view_metrics() }
+    pub fn table_view(&self) -> &TableViewMetrics {
+        self.tokens.table_view_metrics()
+    }
     /// Returns token field pill capsule tokens.
-    pub fn token_field(&self) -> &TokenFieldMetrics { self.tokens.token_field_metrics() }
+    pub fn token_field(&self) -> &TokenFieldMetrics {
+        self.tokens.token_field_metrics()
+    }
     /// Returns level indicator VU meter tokens.
-    pub fn level_indicator(&self) -> &LevelIndicatorMetrics { self.tokens.level_indicator_metrics() }
+    pub fn level_indicator(&self) -> &LevelIndicatorMetrics {
+        self.tokens.level_indicator_metrics()
+    }
     /// Returns AVKit trim scrubber timeline tokens.
-    pub fn trim_scrubber(&self) -> &TrimScrubberMetrics { self.tokens.trim_scrubber_metrics() }
+    pub fn trim_scrubber(&self) -> &TrimScrubberMetrics {
+        self.tokens.trim_scrubber_metrics()
+    }
     /// Returns path control breadcrumb bar tokens.
-    pub fn path_control(&self) -> &PathControlMetrics { self.tokens.path_control_metrics() }
+    pub fn path_control(&self) -> &PathControlMetrics {
+        self.tokens.path_control_metrics()
+    }
     /// Returns disclosure group & button tokens.
-    pub fn disclosure_group(&self) -> &DisclosureGroupMetrics { self.tokens.disclosure_group_metrics() }
+    pub fn disclosure_group(&self) -> &DisclosureGroupMetrics {
+        self.tokens.disclosure_group_metrics()
+    }
     /// Returns combo box tokens.
-    pub fn combo_box(&self) -> &ComboBoxMetrics { self.tokens.combo_box_metrics() }
+    pub fn combo_box(&self) -> &ComboBoxMetrics {
+        self.tokens.combo_box_metrics()
+    }
     /// Returns tab view tokens.
-    pub fn tab_view(&self) -> &TabViewMetrics { self.tokens.tab_view_metrics() }
+    pub fn tab_view(&self) -> &TabViewMetrics {
+        self.tokens.tab_view_metrics()
+    }
     /// Returns date picker tokens.
-    pub fn date_picker(&self) -> &DatePickerMetrics { self.tokens.date_picker_metrics() }
+    pub fn date_picker(&self) -> &DatePickerMetrics {
+        self.tokens.date_picker_metrics()
+    }
     /// Returns collection view tokens.
-    pub fn collection_view(&self) -> &CollectionViewMetrics { self.tokens.collection_view_metrics() }
+    pub fn collection_view(&self) -> &CollectionViewMetrics {
+        self.tokens.collection_view_metrics()
+    }
     /// Returns player view tokens.
-    pub fn player_view(&self) -> &PlayerViewMetrics { self.tokens.player_view_metrics() }
+    pub fn player_view(&self) -> &PlayerViewMetrics {
+        self.tokens.player_view_metrics()
+    }
     /// Returns box view tokens.
-    pub fn box_view(&self) -> &BoxViewMetrics { self.tokens.box_view_metrics() }
+    pub fn box_view(&self) -> &BoxViewMetrics {
+        self.tokens.box_view_metrics()
+    }
     /// Returns rule editor tokens.
-    pub fn rule_editor(&self) -> &RuleEditorMetrics { self.tokens.rule_editor_metrics() }
+    pub fn rule_editor(&self) -> &RuleEditorMetrics {
+        self.tokens.rule_editor_metrics()
+    }
     /// Returns square AppKit checkbox (`NSButtonTypeSwitch`) tokens.
-    pub fn checkbox(&self) -> &CheckboxMetrics { self.tokens.checkbox_metrics() }
+    pub fn checkbox(&self) -> &CheckboxMetrics {
+        self.tokens.checkbox_metrics()
+    }
     /// Returns non-editable AppKit label (`NSTextField.labelWithString:`) tokens.
-    pub fn label_metrics(&self) -> &LabelMetrics { self.tokens.label_metrics() }
+    pub fn label_metrics(&self) -> &LabelMetrics {
+        self.tokens.label_metrics()
+    }
     /// Returns circular AppKit help button (`NSBezelStyleHelpButton`) tokens.
-    pub fn help_button(&self) -> &HelpButtonMetrics { self.tokens.help_button_metrics() }
+    pub fn help_button(&self) -> &HelpButtonMetrics {
+        self.tokens.help_button_metrics()
+    }
     /// Returns circular inline action badge button (`16x16pt`) tokens.
-    pub fn inline_action_button(&self) -> &InlineActionButtonMetrics { self.tokens.inline_action_button_metrics() }
+    pub fn inline_action_button(&self) -> &InlineActionButtonMetrics {
+        self.tokens.inline_action_button_metrics()
+    }
     /// Returns typography and SF Pro optical tracking tokens.
-    pub fn typography(&self) -> &MacTypographyTokens { self.tokens.typography() }
+    pub fn typography(&self) -> &MacTypographyTokens {
+        self.tokens.typography()
+    }
     /// Returns CoreAnimation spring physics preset tokens.
-    pub fn motion(&self) -> &MacMotionTokens { self.tokens.motion() }
+    pub fn motion(&self) -> &MacMotionTokens {
+        self.tokens.motion()
+    }
 
     /// Evaluates [`MacBackgroundStyle`] for the given background surface color.
     pub fn background_style(&self, surface_bg: Color32) -> MacBackgroundStyle {
@@ -223,7 +297,11 @@ impl MacTheme {
     }
     /// Scales `color` alpha by [`Self::disabled_opacity`] when `enabled` is `false`.
     pub fn apply_enabled(&self, color: Color32, enabled: bool) -> Color32 {
-        if enabled { color } else { color.gamma_multiply(self.disabled_opacity()) }
+        if enabled {
+            color
+        } else {
+            color.gamma_multiply(self.disabled_opacity())
+        }
     }
 
     /// Renders an AppKit outer keyboard focus ring (`NSFocusRingPlacementOutside`) around `rect`.
@@ -242,34 +320,17 @@ impl MacTheme {
     /// Computes the subpixel-snapped top-Y coordinate for a text galley so that its
     /// typographic ascender lands on `rect.top() + first_baseline_from_top`
     /// (`NSLayoutConstraint` `firstBaseline` parity).
-    pub fn baseline_text_y(
-        &self,
-        rect: egui::Rect,
-        first_baseline_from_top: f32,
-        ascender: f32,
-        ppp: f32,
-    ) -> f32 {
+    pub fn baseline_text_y(&self, rect: egui::Rect, first_baseline_from_top: f32, ascender: f32, ppp: f32) -> f32 {
         crate::layout::subpixel_snap(rect.top() + (first_baseline_from_top - ascender), ppp)
     }
 
     /// Clamps an AppKit NIB layout `frame_rect` (which may include outer shadow or focus-ring
     /// insets) to the control's `visual_height`, centering the visual bezel vertically and
     /// snapping to physical pixel boundaries.
-    pub fn clamp_nib_visual_rect(
-        &self,
-        frame_rect: egui::Rect,
-        visual_height: f32,
-        ppp: f32,
-    ) -> egui::Rect {
+    pub fn clamp_nib_visual_rect(&self, frame_rect: egui::Rect, visual_height: f32, ppp: f32) -> egui::Rect {
         let sf = crate::layout::subpixel_snap_rect(frame_rect, ppp);
         if sf.height() > visual_height {
-            crate::layout::subpixel_snap_rect(
-                egui::Rect::from_center_size(
-                    sf.center(),
-                    egui::Vec2::new(sf.width(), visual_height),
-                ),
-                ppp,
-            )
+            crate::layout::subpixel_snap_rect(egui::Rect::from_center_size(sf.center(), egui::Vec2::new(sf.width(), visual_height)), ppp)
         } else {
             sf
         }

@@ -77,9 +77,7 @@ pub struct DatePickerMetrics {
 
 impl Default for DatePickerMetrics {
     fn default() -> Self {
-        MacDesignTokens::default_shared()
-            .date_picker_metrics()
-            .clone()
+        MacDesignTokens::default_shared().date_picker_metrics().clone()
     }
 }
 
@@ -106,9 +104,7 @@ pub struct CollectionViewMetrics {
 
 impl Default for CollectionViewMetrics {
     fn default() -> Self {
-        MacDesignTokens::default_shared()
-            .collection_view_metrics()
-            .clone()
+        MacDesignTokens::default_shared().collection_view_metrics().clone()
     }
 }
 
@@ -191,8 +187,6 @@ pub struct PlayerViewMetrics {
 
 impl Default for PlayerViewMetrics {
     fn default() -> Self {
-        MacDesignTokens::default_shared()
-            .player_view_metrics()
-            .clone()
+        MacDesignTokens::default_shared().player_view_metrics().clone()
     }
 }

@@ -34,12 +34,7 @@ impl<'a> Default for MacHelpButton<'a> {
 impl<'a> MacHelpButton<'a> {
     /// Creates a new circular AppKit help button (`?`).
     pub fn new() -> Self {
-        Self {
-            control_size: MacControlSize::Regular,
-            fixed_rect: None,
-            enabled: true,
-            theme: None,
-        }
+        Self { control_size: MacControlSize::Regular, fixed_rect: None, enabled: true, theme: None }
     }
 
     /// Sets the AppKit control size (`Regular` `20pt`, `Small` `16pt`, `Mini` `13pt`).
@@ -128,11 +123,7 @@ impl<'a> Widget for MacHelpButton<'a> {
             theme.paint_focus_ring(&painter, Rect::from_center_size(center, Vec2::splat(visual_diam)), radius);
         }
 
-        painter.circle_filled(
-            Pos2::new(center.x, center.y + shadow_dy),
-            radius,
-            theme.drop_shadow().gamma_multiply(alpha),
-        );
+        painter.circle_filled(Pos2::new(center.x, center.y + shadow_dy), radius, theme.drop_shadow().gamma_multiply(alpha));
 
         let fill = if !enabled {
             theme.control_background().gamma_multiply(alpha)
@@ -180,12 +171,7 @@ pub struct MacInlineActionButton<'a> {
 impl<'a> MacInlineActionButton<'a> {
     /// Creates an inline action badge button displaying `glyph` (such as `"+"`, `"-"`, or `"×"`).
     pub fn new(glyph: &'a str) -> Self {
-        Self {
-            glyph,
-            fixed_rect: None,
-            enabled: true,
-            theme: None,
-        }
+        Self { glyph, fixed_rect: None, enabled: true, theme: None }
     }
 
     /// Creates an inline action badge button displaying a [`MacSymbol`].

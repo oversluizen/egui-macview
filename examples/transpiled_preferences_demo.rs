@@ -10,8 +10,7 @@
 use egui::{pos2, vec2, CornerRadius, Id, Rect, Response, Sense, Stroke, StrokeKind, Ui};
 use egui_macview::{
     theme::{MacAppearance, MacTheme},
-    MacInputCell, MacPopUpButton, MacSegmentedControl, MacStackOrientation, MacStackView,
-    MacToggle, MacToolbar,
+    MacInputCell, MacPopUpButton, MacSegmentedControl, MacStackOrientation, MacStackView, MacToggle, MacToolbar,
 };
 
 // ----------------------------------------------------------------------------
@@ -63,29 +62,20 @@ impl SettingsNibGSAppearancePreferencesState {
                 stack.add_section(Some("Edit View"), |sec_ui| {
                     sec_ui.horizontal(|h| {
                         h.label("Text View width:");
-                        MacInputCell::with_id(Id::NULL.with("_NS:67"), &mut self.text_view_width)
-                            .theme(theme)
-                            .width(90.0)
-                            .show(h);
+                        MacInputCell::with_id(Id::NULL.with("_NS:67"), &mut self.text_view_width).theme(theme).width(90.0).show(h);
                     });
                     sec_ui.add_space(2.0);
                     sec_ui.horizontal(|h| {
                         h.label("Handle size:");
-                        MacPopUpButton::new(&mut self.handle_size, &["Small", "Normal", "Large"])
-                            .theme(theme)
-                            .width(110.0)
-                            .show(h);
+                        MacPopUpButton::new(&mut self.handle_size, &["Small", "Normal", "Large"]).theme(theme).width(110.0).show(h);
                     });
                     sec_ui.add_space(2.0);
                     sec_ui.horizontal(|h| {
                         h.label("Info box size:");
-                        MacPopUpButton::new(
-                            &mut self.info_box_size,
-                            &["Small", "Normal", "Large", "Extra Large"],
-                        )
-                        .theme(theme)
-                        .width(110.0)
-                        .show(h);
+                        MacPopUpButton::new(&mut self.info_box_size, &["Small", "Normal", "Large", "Extra Large"])
+                            .theme(theme)
+                            .width(110.0)
+                            .show(h);
                     });
                     sec_ui.add_space(4.0);
                     sec_ui.horizontal(|h| {
@@ -139,56 +129,38 @@ impl SettingsNibPanelViewStrokeSettingsState {
                 stack.add_section(Some("Dimensions & Alignment"), |sec_ui| {
                     sec_ui.horizontal(|h| {
                         h.label("Width:");
-                        MacInputCell::with_id(Id::NULL.with("w"), &mut self.w)
-                            .theme(theme)
-                            .width(60.0)
-                            .show(h);
+                        MacInputCell::with_id(Id::NULL.with("w"), &mut self.w).theme(theme).width(60.0).show(h);
                         h.add_space(8.0);
                         h.label("Height:");
-                        MacInputCell::with_id(Id::NULL.with("h"), &mut self.h)
-                            .theme(theme)
-                            .width(60.0)
-                            .show(h);
+                        MacInputCell::with_id(Id::NULL.with("h"), &mut self.h).theme(theme).width(60.0).show(h);
                     });
                     sec_ui.add_space(4.0);
                     sec_ui.horizontal(|h| {
                         h.label("Align:");
-                        MacSegmentedControl::new(
-                            &["Left", "Center", "Right"],
-                            self.selected_segment_2,
-                        )
-                        .theme(theme)
-                        .show(h, |idx| self.selected_segment_2 = idx);
+                        MacSegmentedControl::new(&["Left", "Center", "Right"], self.selected_segment_2)
+                            .theme(theme)
+                            .show(h, |idx| self.selected_segment_2 = idx);
                     });
                 });
 
                 stack.add_section(Some("Stroke Caps & Joins"), |sec_ui| {
                     sec_ui.horizontal(|h| {
                         h.label("Cap:");
-                        MacSegmentedControl::new(
-                            &["Butt", "Square", "Round", "Axis"],
-                            self.selected_segment_7,
-                        )
-                        .theme(theme)
-                        .show(h, |idx| self.selected_segment_7 = idx);
+                        MacSegmentedControl::new(&["Butt", "Square", "Round", "Axis"], self.selected_segment_7)
+                            .theme(theme)
+                            .show(h, |idx| self.selected_segment_7 = idx);
                     });
                     sec_ui.add_space(4.0);
                     sec_ui.horizontal(|h| {
                         h.label("Join:");
-                        MacSegmentedControl::new(
-                            &["Bevel", "Round", "Miter"],
-                            self.selected_segment_13,
-                        )
-                        .theme(theme)
-                        .show(h, |idx| self.selected_segment_13 = idx);
+                        MacSegmentedControl::new(&["Bevel", "Round", "Miter"], self.selected_segment_13)
+                            .theme(theme)
+                            .show(h, |idx| self.selected_segment_13 = idx);
                     });
                     sec_ui.add_space(4.0);
                     sec_ui.horizontal(|h| {
                         h.label("Dash Ratio:");
-                        MacInputCell::with_id(Id::NULL.with("_NS:38"), &mut self.input_6)
-                            .theme(theme)
-                            .width(60.0)
-                            .show(h);
+                        MacInputCell::with_id(Id::NULL.with("_NS:38"), &mut self.input_6).theme(theme).width(60.0).show(h);
                     });
                 });
             });
@@ -236,46 +208,26 @@ impl eframe::App for PreferencesApp {
 
         // Unified macOS Window Titlebar & Traffic Lights
         let titlebar_rect = Rect::from_min_size(full_rect.min, vec2(full_rect.width(), 46.0));
-        let mut titlebar_ui = ui.new_child(
-            egui::UiBuilder::new()
-                .id_salt("prefs_titlebar")
-                .max_rect(titlebar_rect),
-        );
+        let mut titlebar_ui = ui.new_child(egui::UiBuilder::new().id_salt("prefs_titlebar").max_rect(titlebar_rect));
         let mut dark_mode = is_dark;
-        MacToolbar::new("Glyphs Preferences (Transpiled NIBs)")
-            .height(46.0)
-            .theme(&self.theme)
-            .show(&mut titlebar_ui, |tb| {
-                tb.with_layout(egui::Layout::right_to_left(egui::Align::Center), |right| {
-                    right.label(if is_dark { "Dark" } else { "Light" });
-                    right.add(MacToggle::new(&mut dark_mode).theme(&self.theme));
-                });
+        MacToolbar::new("Glyphs Preferences (Transpiled NIBs)").height(46.0).theme(&self.theme).show(&mut titlebar_ui, |tb| {
+            tb.with_layout(egui::Layout::right_to_left(egui::Align::Center), |right| {
+                right.label(if is_dark { "Dark" } else { "Light" });
+                right.add(MacToggle::new(&mut dark_mode).theme(&self.theme));
             });
+        });
         if dark_mode != is_dark {
-            self.theme = if dark_mode {
-                MacTheme::new(MacAppearance::DarkAqua)
-            } else {
-                MacTheme::new(MacAppearance::Aqua)
-            };
+            self.theme = if dark_mode { MacTheme::new(MacAppearance::DarkAqua) } else { MacTheme::new(MacAppearance::Aqua) };
         }
 
         // Toolbar / Tab Segmented Control
-        let toolbar_rect = Rect::from_min_size(
-            pos2(full_rect.left() + 24.0, titlebar_rect.bottom() + 10.0),
-            vec2(full_rect.width() - 48.0, 28.0),
-        );
-        let mut tab_ui = ui.new_child(
-            egui::UiBuilder::new()
-                .id_salt("prefs_tab_bar")
-                .max_rect(toolbar_rect),
-        );
+        let toolbar_rect =
+            Rect::from_min_size(pos2(full_rect.left() + 24.0, titlebar_rect.bottom() + 10.0), vec2(full_rect.width() - 48.0, 28.0));
+        let mut tab_ui = ui.new_child(egui::UiBuilder::new().id_salt("prefs_tab_bar").max_rect(toolbar_rect));
         tab_ui.centered_and_justified(|c| {
-            MacSegmentedControl::new(
-                &["Appearance (GSAppearance)", "Stroke Settings (PanelView)"],
-                self.selected_tab,
-            )
-            .theme(&self.theme)
-            .show(c, |idx| self.selected_tab = idx);
+            MacSegmentedControl::new(&["Appearance (GSAppearance)", "Stroke Settings (PanelView)"], self.selected_tab)
+                .theme(&self.theme)
+                .show(c, |idx| self.selected_tab = idx);
         });
 
         // Content Area
@@ -283,11 +235,7 @@ impl eframe::App for PreferencesApp {
             pos2(full_rect.left() + 20.0, toolbar_rect.bottom() + 12.0),
             pos2(full_rect.right() - 20.0, full_rect.bottom() - 16.0),
         );
-        let mut content_ui = ui.new_child(
-            egui::UiBuilder::new()
-                .id_salt("prefs_content")
-                .max_rect(content_rect),
-        );
+        let mut content_ui = ui.new_child(egui::UiBuilder::new().id_salt("prefs_content").max_rect(content_rect));
 
         if self.selected_tab == 0 {
             self.appearance_state.render(&mut content_ui, &self.theme);
@@ -308,24 +256,18 @@ fn main() -> eframe::Result<()> {
             .with_title("Glyphs Preferences — egui-macview"),
         renderer: eframe::Renderer::Glow,
         wgpu_options: eframe::egui_wgpu::WgpuConfiguration {
-            wgpu_setup: eframe::egui_wgpu::WgpuSetup::CreateNew(
-                eframe::egui_wgpu::WgpuSetupCreateNew {
-                    instance_descriptor: eframe::wgpu::InstanceDescriptor {
-                        flags: eframe::wgpu::InstanceFlags::empty(),
-                        ..default_wgpu_setup.instance_descriptor
-                    },
-                    ..default_wgpu_setup
+            wgpu_setup: eframe::egui_wgpu::WgpuSetup::CreateNew(eframe::egui_wgpu::WgpuSetupCreateNew {
+                instance_descriptor: eframe::wgpu::InstanceDescriptor {
+                    flags: eframe::wgpu::InstanceFlags::empty(),
+                    ..default_wgpu_setup.instance_descriptor
                 },
-            ),
+                ..default_wgpu_setup
+            }),
             ..Default::default()
         },
         system_font_fallback: false,
         persist_window: false,
         ..Default::default()
     };
-    eframe::run_native(
-        "transpiled_preferences_demo",
-        options,
-        Box::new(|_cc| Ok(Box::new(PreferencesApp::new()))),
-    )
+    eframe::run_native("transpiled_preferences_demo", options, Box::new(|_cc| Ok(Box::new(PreferencesApp::new()))))
 }

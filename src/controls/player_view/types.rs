@@ -31,11 +31,7 @@ pub struct PlayerViewState {
 
 impl Default for PlayerViewState {
     fn default() -> Self {
-        Self {
-            last_active_time: 0.0,
-            is_scrubbing: false,
-            alpha: 1.0,
-        }
+        Self { last_active_time: 0.0, is_scrubbing: false, alpha: 1.0 }
     }
 }
 
@@ -115,4 +111,3 @@ pub fn format_timecode(secs: u32, total_dur_secs: f32) -> String {
 pub fn format_remaining_timecode(rem_secs: u32, total_dur_secs: f32) -> String {
     format!("-{}", format_timecode(rem_secs, total_dur_secs))
 }
-

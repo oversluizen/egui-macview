@@ -5,9 +5,7 @@
 
 use crate::symbols::MacSymbol;
 use crate::theme::MacTheme;
-use egui::{
-    Align2, Area, CornerRadius, FontId, Id, Order, Pos2, Rect, Sense, Stroke, StrokeKind, Ui, Vec2,
-};
+use egui::{Align2, Area, CornerRadius, FontId, Id, Order, Pos2, Rect, Sense, Stroke, StrokeKind, Ui, Vec2};
 
 pub use super::item::{MacKeyboardShortcut, MacMenuItemKind, NSMenuItem};
 pub use super::model::NSMenu;
@@ -47,17 +45,8 @@ pub struct MacMenuBar<'a> {
 
 impl<'a> MacMenuBar<'a> {
     /// Creates a new menu bar.
-    pub fn new(
-        menus: &'a [NSMenu],
-        open_menu_idx: &'a mut Option<usize>,
-        highlighted_item_idx: &'a mut Option<usize>,
-    ) -> Self {
-        Self {
-            menus,
-            theme: None,
-            open_menu_idx,
-            highlighted_item_idx,
-        }
+    pub fn new(menus: &'a [NSMenu], open_menu_idx: &'a mut Option<usize>, highlighted_item_idx: &'a mut Option<usize>) -> Self {
+        Self { menus, theme: None, open_menu_idx, highlighted_item_idx }
     }
 
     /// Sets the dynamic theme.
@@ -114,13 +103,7 @@ impl<'a> MacMenuBar<'a> {
     /// Handles keyboard navigation events when a menu is open.
     pub fn handle_navigation_input(&mut self, input: &egui::InputState) -> Option<String> {
         let mut sub = None;
-        super::submenu::handle_menu_bar_navigation(
-            self.menus,
-            self.open_menu_idx,
-            self.highlighted_item_idx,
-            &mut sub,
-            input,
-        )
+        super::submenu::handle_menu_bar_navigation(self.menus, self.open_menu_idx, self.highlighted_item_idx, &mut sub, input)
     }
 
     /// Returns the currently active submenu highlight index, if any.
@@ -136,17 +119,11 @@ impl<'a> MacMenuBar<'a> {
 
         let sub_temp_id = Id::NULL.with("mac_menu_bar_submenu_highlight");
         let was_open = self.open_menu_idx.is_some();
-        let mut sub_highlight: Option<usize> = if was_open {
-            ui.ctx().data(|d| d.get_temp(sub_temp_id))
-        } else {
-            None
-        };
+        let mut sub_highlight: Option<usize> = if was_open { ui.ctx().data(|d| d.get_temp(sub_temp_id)) } else { None };
 
         // Guard global shortcut interception when a text editor has keyboard focus
         if !ui.ctx().egui_wants_keyboard_input() && ui.memory(|m| m.focused().is_none()) {
-            if let Some(action) =
-                ui.input_mut(|i| self.menus.iter().find_map(|m| m.consume_shortcut(i)))
-            {
+            if let Some(action) = ui.input_mut(|i| self.menus.iter().find_map(|m| m.consume_shortcut(i))) {
                 self.close();
                 if was_open {
                     ui.ctx().data_mut(|d| d.remove_temp::<usize>(sub_temp_id));
@@ -209,39 +186,19 @@ impl<'a> MacMenuBar<'a> {
                 let text = &menu.title;
                 let text_color = if is_open { on_accent } else { theme.label() };
 
-                let galley = ui.painter().layout_no_wrap(
-                    text.clone(),
-                    font_id.clone(),
-                    egui::Color32::PLACEHOLDER,
-                );
+                let galley = ui.painter().layout_no_wrap(text.clone(), font_id.clone(), egui::Color32::PLACEHOLDER);
                 let item_width = galley.size().x + padding_h * 2.0;
-                let (rect, resp) =
-                    ui.allocate_exact_size(Vec2::new(item_width, bar_height), Sense::click());
+                let (rect, resp) = ui.allocate_exact_size(Vec2::new(item_width, bar_height), Sense::click());
                 bar_union_rect = bar_union_rect.union(rect);
 
                 if is_open {
-                    ui.painter().rect_filled(
-                        rect,
-                        CornerRadius::same(item_corner_r),
-                        theme.control_accent(),
-                    );
+                    ui.painter().rect_filled(rect, CornerRadius::same(item_corner_r), theme.control_accent());
                     open_rect = Some(rect);
                 } else if resp.hovered() {
-                    ui.painter().rect_filled(
-                        rect,
-                        CornerRadius::same(item_corner_r),
-                        theme.control(),
-                    );
+                    ui.painter().rect_filled(rect, CornerRadius::same(item_corner_r), theme.control());
                 }
 
-                ui.painter().galley(
-                    Pos2::new(
-                        rect.min.x + padding_h,
-                        rect.center().y - galley.size().y * 0.5,
-                    ),
-                    galley,
-                    text_color,
-                );
+                ui.painter().galley(Pos2::new(rect.min.x + padding_h, rect.center().y - galley.size().y * 0.5), galley, text_color);
 
                 if resp.clicked() {
                     if is_open {
@@ -264,20 +221,10 @@ impl<'a> MacMenuBar<'a> {
                 let min_clearance = mb_metrics.shortcut_clearance.points();
                 let check_col_w = mb_metrics.dropdown_padding_x.points() * 2.0;
                 let has_any_checked = menu.items.iter().any(|it| it.checked);
-                let lead_offset = if has_any_checked {
-                    check_col_w
-                } else {
-                    padding_h
-                };
+                let lead_offset = if has_any_checked { check_col_w } else { padding_h };
 
-                let (max_item_w, item_galleys) = super::submenu::layout_menu_items(
-                    ui.painter(),
-                    &menu.items,
-                    &font_id,
-                    lead_offset,
-                    padding_h,
-                    min_clearance,
-                );
+                let (max_item_w, item_galleys) =
+                    super::submenu::layout_menu_items(ui.painter(), &menu.items, &font_id, lead_offset, padding_h, min_clearance);
 
                 let menu_width = base_min_width.max(max_item_w + menu_padding * 2.0);
                 let popup_pos = Pos2::new(anchor.left(), anchor.bottom());
@@ -285,148 +232,113 @@ impl<'a> MacMenuBar<'a> {
                 let area_id = ui.scope_id().with("menu_dropdown_area").with(m_idx);
                 let mut active_sub_rect: Option<Rect> = None;
 
-                Area::new(area_id)
-                    .order(Order::Foreground)
-                    .fixed_pos(popup_pos)
-                    .show(ui.ctx(), |pop_ui| {
-                        let _ = pop_ui.allocate_rect(menu_rect, Sense::hover());
-                        let painter = pop_ui.painter();
-                        let drop_corner_r = mb_metrics.dropdown_corner_radius.points() as u8;
+                Area::new(area_id).order(Order::Foreground).fixed_pos(popup_pos).show(ui.ctx(), |pop_ui| {
+                    let _ = pop_ui.allocate_rect(menu_rect, Sense::hover());
+                    let painter = pop_ui.painter();
+                    let drop_corner_r = mb_metrics.dropdown_corner_radius.points() as u8;
 
-                        painter.rect(
-                            menu_rect,
-                            CornerRadius::same(drop_corner_r),
-                            theme.window_background(),
-                            Stroke::new(border_w, theme.separator()),
-                            StrokeKind::Inside,
+                    painter.rect(
+                        menu_rect,
+                        CornerRadius::same(drop_corner_r),
+                        theme.window_background(),
+                        Stroke::new(border_w, theme.separator()),
+                        StrokeKind::Inside,
+                    );
+
+                    for ((i_idx, item), galleys) in menu.items.iter().enumerate().zip(item_galleys) {
+                        let item_y = popup_pos.y + menu_padding + (i_idx as f32) * item_height;
+                        let item_rect = Rect::from_min_size(
+                            Pos2::new(popup_pos.x + menu_padding, item_y),
+                            Vec2::new(menu_width - menu_padding * 2.0, item_height),
                         );
 
-                        for ((i_idx, item), galleys) in
-                            menu.items.iter().enumerate().zip(item_galleys)
-                        {
-                            let item_y = popup_pos.y + menu_padding + (i_idx as f32) * item_height;
-                            let item_rect = Rect::from_min_size(
-                                Pos2::new(popup_pos.x + menu_padding, item_y),
-                                Vec2::new(menu_width - menu_padding * 2.0, item_height),
+                        let Some((title_galley, trailing_galley)) = galleys else {
+                            painter.line_segment(
+                                [Pos2::new(item_rect.left(), item_rect.center().y), Pos2::new(item_rect.right(), item_rect.center().y)],
+                                Stroke::new(border_w, theme.separator()),
                             );
+                            continue;
+                        };
 
-                            let Some((title_galley, trailing_galley)) = galleys else {
-                                painter.line_segment(
-                                    [
-                                        Pos2::new(item_rect.left(), item_rect.center().y),
-                                        Pos2::new(item_rect.right(), item_rect.center().y),
-                                    ],
-                                    Stroke::new(border_w, theme.separator()),
-                                );
-                                continue;
-                            };
+                        let is_highlighted = *self.highlighted_item_idx == Some(i_idx);
+                        let resp = pop_ui.interact(item_rect, area_id.with(i_idx), Sense::click());
 
-                            let is_highlighted = *self.highlighted_item_idx == Some(i_idx);
-                            let resp =
-                                pop_ui.interact(item_rect, area_id.with(i_idx), Sense::click());
+                        if resp.hovered() && item.enabled {
+                            *self.highlighted_item_idx = Some(i_idx);
+                        }
 
-                            if resp.hovered() && item.enabled {
-                                *self.highlighted_item_idx = Some(i_idx);
-                            }
+                        if is_highlighted && item.enabled {
+                            painter.rect(
+                                item_rect,
+                                CornerRadius::same(item_corner_r),
+                                theme.control_accent(),
+                                Stroke::NONE,
+                                StrokeKind::Inside,
+                            );
+                        }
 
-                            if is_highlighted && item.enabled {
-                                painter.rect(
-                                    item_rect,
-                                    CornerRadius::same(item_corner_r),
-                                    theme.control_accent(),
-                                    Stroke::NONE,
-                                    StrokeKind::Inside,
-                                );
-                            }
+                        let item_text_color = if !item.enabled {
+                            theme.placeholder_text()
+                        } else if is_highlighted {
+                            on_accent
+                        } else {
+                            theme.label()
+                        };
 
-                            let item_text_color = if !item.enabled {
-                                theme.placeholder_text()
-                            } else if is_highlighted {
-                                on_accent
-                            } else {
-                                theme.label()
-                            };
+                        if item.checked {
+                            painter.text(
+                                Pos2::new(item_rect.left() + lead_offset * 0.5, item_rect.center().y),
+                                Align2::CENTER_CENTER,
+                                MacSymbol::Checkmark.as_str(),
+                                font_id.clone(),
+                                item_text_color,
+                            );
+                        }
 
-                            if item.checked {
-                                painter.text(
-                                    Pos2::new(
-                                        item_rect.left() + lead_offset * 0.5,
-                                        item_rect.center().y,
-                                    ),
-                                    Align2::CENTER_CENTER,
-                                    MacSymbol::Checkmark.as_str(),
-                                    font_id.clone(),
-                                    item_text_color,
-                                );
-                            }
+                        let title_pos = Align2::LEFT_CENTER
+                            .anchor_size(Pos2::new(item_rect.left() + lead_offset, item_rect.center().y), title_galley.size())
+                            .min;
+                        painter.galley(title_pos, title_galley, item_text_color);
 
-                            let title_pos = Align2::LEFT_CENTER
-                                .anchor_size(
-                                    Pos2::new(item_rect.left() + lead_offset, item_rect.center().y),
-                                    title_galley.size(),
-                                )
+                        if let Some(tg) = trailing_galley {
+                            let tr_pos = Align2::RIGHT_CENTER
+                                .anchor_size(Pos2::new(item_rect.right() - padding_h, item_rect.center().y), tg.size())
                                 .min;
-                            painter.galley(title_pos, title_galley, item_text_color);
+                            painter.galley(tr_pos, tg, item_text_color);
+                        }
 
-                            if let Some(tg) = trailing_galley {
-                                let tr_pos = Align2::RIGHT_CENTER
-                                    .anchor_size(
-                                        Pos2::new(
-                                            item_rect.right() - padding_h,
-                                            item_rect.center().y,
-                                        ),
-                                        tg.size(),
-                                    )
-                                    .min;
-                                painter.galley(tr_pos, tg, item_text_color);
+                        if resp.clicked() && item.enabled {
+                            if let MacMenuItemKind::Action { id, .. } = &item.kind {
+                                triggered_action = Some(id.clone());
+                                self.close();
                             }
+                        }
 
-                            if resp.clicked() && item.enabled {
-                                if let MacMenuItemKind::Action { id, .. } = &item.kind {
-                                    triggered_action = Some(id.clone());
+                        if let MacMenuItemKind::Submenu { menu: child_menu } = &item.kind {
+                            let sub_is_active = is_highlighted && sub_highlight.is_some();
+                            if (is_highlighted || resp.hovered() || sub_is_active) && item.enabled {
+                                let sub_id = area_id.with("submenu").with(i_idx);
+                                let sub_pos = Pos2::new(popup_pos.x + menu_width, item_y);
+                                let child_hl = if is_highlighted { sub_highlight } else { None };
+                                active_sub_rect = Some(Rect::from_min_size(
+                                    sub_pos,
+                                    Vec2::new(base_min_width, (child_menu.items.len() as f32) * item_height + menu_padding * 2.0),
+                                ));
+                                if let Some(act) =
+                                    super::submenu::render_submenu_popover(child_menu, sub_id, sub_pos, theme, pop_ui.ctx(), child_hl)
+                                {
+                                    triggered_action = Some(act);
                                     self.close();
                                 }
                             }
-
-                            if let MacMenuItemKind::Submenu { menu: child_menu } = &item.kind {
-                                let sub_is_active = is_highlighted && sub_highlight.is_some();
-                                if (is_highlighted || resp.hovered() || sub_is_active)
-                                    && item.enabled
-                                {
-                                    let sub_id = area_id.with("submenu").with(i_idx);
-                                    let sub_pos = Pos2::new(popup_pos.x + menu_width, item_y);
-                                    let child_hl =
-                                        if is_highlighted { sub_highlight } else { None };
-                                    active_sub_rect = Some(Rect::from_min_size(
-                                        sub_pos,
-                                        Vec2::new(
-                                            base_min_width,
-                                            (child_menu.items.len() as f32) * item_height
-                                                + menu_padding * 2.0,
-                                        ),
-                                    ));
-                                    if let Some(act) = super::submenu::render_submenu_popover(
-                                        child_menu,
-                                        sub_id,
-                                        sub_pos,
-                                        theme,
-                                        pop_ui.ctx(),
-                                        child_hl,
-                                    ) {
-                                        triggered_action = Some(act);
-                                        self.close();
-                                    }
-                                }
-                            }
                         }
-                    });
+                    }
+                });
 
                 // Dismiss open dropdown if pointer clicked outside bar, dropdown, and submenu
                 let clicked_outside = ui.input(|i| {
                     if i.pointer.any_pressed() || i.pointer.any_click() {
-                        if let Some(pos) =
-                            i.pointer.interact_pos().or_else(|| i.pointer.latest_pos())
-                        {
+                        if let Some(pos) = i.pointer.interact_pos().or_else(|| i.pointer.latest_pos()) {
                             let in_bar = bar_union_rect.contains(pos);
                             let in_menu = menu_rect.contains(pos);
                             let in_sub = active_sub_rect.is_some_and(|r| r.contains(pos));

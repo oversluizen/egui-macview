@@ -1,0 +1,340 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="23504" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="NO" customObjectInstantitationMethod="direct">
+    <dependencies>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="23504"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <objects>
+        <customObject id="-2" userLabel="File's Owner" customClass="NSWindowController"/>
+        <customObject id="-1" userLabel="First Responder" customClass="FirstResponder"/>
+        <customObject id="-3" userLabel="Application" customClass="NSObject"/>
+        <window title="AVKit Audio Mastering Strip" allowsToolTipsWhenApplicationIsInactive="NO" autorecalculatesKeyViewLoop="NO" releasedWhenClosed="NO" animationBehavior="default" id="win-root-audio">
+            <windowStyleMask key="styleMask" titled="YES" closable="YES" miniaturizable="YES" resizable="YES"/>
+            <rect key="contentRect" x="196" y="240" width="720" height="664"/>
+            <rect key="screenRect" x="0.0" y="0.0" width="1680" height="1027"/>
+            <view key="contentView" identifier="root-audio" id="root-audio">
+                <rect key="frame" x="0.0" y="0.0" width="720" height="664"/>
+                <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                <subviews>
+                    <textField identifier="s5-hdr" horizontalHuggingPriority="251" verticalHuggingPriority="750" id="s5-hdr">
+                        <rect key="frame" x="12" y="640" width="520" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" editable="NO" title="5. AVKit Media Studio, Trim Scrubber &amp; Audio Mastering" id="cell-s5-hdr">
+                            <font key="font" metaFont="systemSemibold"/>
+                        </textFieldCell>
+                    </textField>
+                    <textField identifier="s5-sub" horizontalHuggingPriority="251" verticalHuggingPriority="750" controlSize="small" id="s5-sub">
+                        <rect key="frame" x="12" y="624" width="680" height="16"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" controlSize="small" lineBreakMode="clipping" editable="NO" title="4K Procedural Video Viewport, Frame-Accurate Trim Scrubber, Rotary Knobs, and Stereo Peak/RMS VU Meters" id="cell-s5-sub">
+                            <font key="font" metaFont="system"/>
+                            <color key="textColor" name="secondaryLabelColor" catalog="System" colorSpace="catalog"/>
+                        </textFieldCell>
+                    </textField>
+                    <customView identifier="s5-video-view" customClass="NSAvKitVideoAndScrubberView" id="s5-video-view">
+                        <rect key="frame" x="12" y="344" width="696" height="276"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                    </customView>
+                    <button identifier="s5-btn-play" verticalHuggingPriority="750" id="s5-btn-play">
+                        <rect key="frame" x="12" y="312" width="110" height="24"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="push" title="Play / Pause" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="cell-s5-btn-play">
+                            <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <action selector="togglePlay:" target="-2" id="a-s5-btn-play"/>
+                        </connections>
+                    </button>
+                    <button identifier="s5-btn-prev" verticalHuggingPriority="750" id="s5-btn-prev">
+                        <rect key="frame" x="130" y="312" width="84" height="24"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="push" title="Step -1f" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="cell-s5-btn-prev">
+                            <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <action selector="stepFramePrev:" target="-2" id="a-s5-btn-prev"/>
+                        </connections>
+                    </button>
+                    <button identifier="s5-btn-next" verticalHuggingPriority="750" id="s5-btn-next">
+                        <rect key="frame" x="222" y="312" width="84" height="24"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="push" title="Step +1f" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="cell-s5-btn-next">
+                            <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <action selector="stepFrameNext:" target="-2" id="a-s5-btn-next"/>
+                        </connections>
+                    </button>
+                    <textField identifier="s5-lbl-nudge" horizontalHuggingPriority="251" verticalHuggingPriority="750" id="s5-lbl-nudge">
+                        <rect key="frame" x="318" y="316" width="68" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" editable="NO" title="Nudge (s):" id="cell-s5-lbl-nudge">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                    </textField>
+                    <stepper identifier="s5-stp-play" horizontalHuggingPriority="750" verticalHuggingPriority="750" id="s5-stp-play">
+                        <rect key="frame" x="390" y="314" width="24" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <stepperCell key="cell" continuous="YES" alignment="left" increment="0.5" minValue="-10000" maxValue="10000" id="cell-s5-stp-play"/>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.mediaPlayhead" id="b-s5-stp-play"/>
+                        </connections>
+                    </stepper>
+                    <button identifier="s5-sw-loop" verticalHuggingPriority="750" id="s5-sw-loop">
+                        <rect key="frame" x="428" y="314" width="116" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="check" title="Loop In/Out" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="cell-s5-sw-loop">
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.loopPlayback" id="b-s5-sw-loop"/>
+                        </connections>
+                    </button>
+                    <button identifier="s5-btn-wav" verticalHuggingPriority="750" id="s5-btn-wav">
+                        <rect key="frame" x="556" y="312" width="152" height="24"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="push" title="Export Trimmed WAV" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="cell-s5-btn-wav">
+                            <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <action selector="exportTrimmedWav:" target="-2" id="a-s5-btn-wav"/>
+                        </connections>
+                    </button>
+                    <box identifier="s5-box-rotary" title="AVKit Rotary Mastering Strip &amp; Stereo Peak/RMS VU Meters" id="s5-box-rotary">
+                        <rect key="frame" x="12" y="182" width="696" height="122"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <view key="contentView" id="cv-s5-box-rotary">
+                            <rect key="frame" x="4" y="5" width="688" height="102"/>
+                            <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        </view>
+                    </box>
+                    <textField identifier="s5-lbl-kgain" horizontalHuggingPriority="251" verticalHuggingPriority="750" controlSize="small" id="s5-lbl-kgain">
+                        <rect key="frame" x="28" y="262" width="44" height="14"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" controlSize="small" lineBreakMode="clipping" editable="NO" title="Gain" id="cell-s5-lbl-kgain">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                    </textField>
+                    <slider identifier="s5-knb-gain" verticalHuggingPriority="750" id="s5-knb-gain">
+                        <rect key="frame" x="24" y="216" width="42" height="42"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <sliderCell key="cell" state="on" alignment="left" minValue="0" maxValue="2" doubleValue="0" tickMarkPosition="above" numberOfTickMarks="9" sliderType="circular" id="cell-s5-knb-gain"/>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.mediaGain" id="b-s5-knb-gain"/>
+                        </connections>
+                    </slider>
+                    <textField identifier="s5-lbl-kpan" horizontalHuggingPriority="251" verticalHuggingPriority="750" controlSize="small" id="s5-lbl-kpan">
+                        <rect key="frame" x="92" y="262" width="44" height="14"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" controlSize="small" lineBreakMode="clipping" editable="NO" title="Pan" id="cell-s5-lbl-kpan">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                    </textField>
+                    <slider identifier="s5-knb-pan" verticalHuggingPriority="750" id="s5-knb-pan">
+                        <rect key="frame" x="88" y="216" width="42" height="42"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <sliderCell key="cell" state="on" alignment="left" minValue="-1" maxValue="1" doubleValue="-1" tickMarkPosition="above" numberOfTickMarks="9" sliderType="circular" id="cell-s5-knb-pan"/>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.mediaPan" id="b-s5-knb-pan"/>
+                        </connections>
+                    </slider>
+                    <textField identifier="s5-lbl-kzoom" horizontalHuggingPriority="251" verticalHuggingPriority="750" controlSize="small" id="s5-lbl-kzoom">
+                        <rect key="frame" x="156" y="262" width="44" height="14"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" controlSize="small" lineBreakMode="clipping" editable="NO" title="Zoom" id="cell-s5-lbl-kzoom">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                    </textField>
+                    <slider identifier="s5-knb-zoom" verticalHuggingPriority="750" id="s5-knb-zoom">
+                        <rect key="frame" x="152" y="216" width="42" height="42"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <sliderCell key="cell" state="on" alignment="left" minValue="0.5" maxValue="2.5" doubleValue="0.5" tickMarkPosition="above" numberOfTickMarks="9" sliderType="circular" id="cell-s5-knb-zoom"/>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.mediaZoom" id="b-s5-knb-zoom"/>
+                        </connections>
+                    </slider>
+                    <textField identifier="s5-lbl-krate" horizontalHuggingPriority="251" verticalHuggingPriority="750" controlSize="small" id="s5-lbl-krate">
+                        <rect key="frame" x="220" y="262" width="44" height="14"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" controlSize="small" lineBreakMode="clipping" editable="NO" title="Speed" id="cell-s5-lbl-krate">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                    </textField>
+                    <slider identifier="s5-knb-rate" verticalHuggingPriority="750" id="s5-knb-rate">
+                        <rect key="frame" x="216" y="216" width="42" height="42"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <sliderCell key="cell" state="on" alignment="left" minValue="0.25" maxValue="2" doubleValue="0.25" tickMarkPosition="above" numberOfTickMarks="9" sliderType="circular" id="cell-s5-knb-rate"/>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.mediaSpeed" id="b-s5-knb-rate"/>
+                        </connections>
+                    </slider>
+                    <textField identifier="s5-lbl-kdrv" horizontalHuggingPriority="251" verticalHuggingPriority="750" controlSize="small" id="s5-lbl-kdrv">
+                        <rect key="frame" x="284" y="262" width="44" height="14"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" controlSize="small" lineBreakMode="clipping" editable="NO" title="Drive" id="cell-s5-lbl-kdrv">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                    </textField>
+                    <slider identifier="s5-knb-drv" verticalHuggingPriority="750" id="s5-knb-drv">
+                        <rect key="frame" x="280" y="216" width="42" height="42"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <sliderCell key="cell" state="on" alignment="left" minValue="0" maxValue="1" doubleValue="0" tickMarkPosition="above" numberOfTickMarks="9" sliderType="circular" id="cell-s5-knb-drv"/>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.satDrive" id="b-s5-knb-drv"/>
+                        </connections>
+                    </slider>
+                    <customView identifier="s5-vu-meters" customClass="NSAvKitStereoVuMetersView" id="s5-vu-meters">
+                        <rect key="frame" x="344" y="192" width="352" height="86"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                    </customView>
+                    <box identifier="s5-box-master" title="AVKit Audio Mastering Strip (3_AVKit_Audio_Mastering_Strip.xib)" id="s5-box-master">
+                        <rect key="frame" x="12" y="12" width="696" height="162"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <view key="contentView" id="cv-s5-box-master">
+                            <rect key="frame" x="4" y="5" width="688" height="142"/>
+                            <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        </view>
+                    </box>
+                    <textField identifier="s5-lbl-mgain" horizontalHuggingPriority="251" verticalHuggingPriority="750" id="s5-lbl-mgain">
+                        <rect key="frame" x="28" y="128" width="88" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" editable="NO" title="Master Gain:" id="cell-s5-lbl-mgain">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                    </textField>
+                    <slider identifier="s5-sld-mgain" verticalHuggingPriority="750" id="s5-sld-mgain">
+                        <rect key="frame" x="120" y="126" width="210" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <sliderCell key="cell" state="on" alignment="left" minValue="0" maxValue="2" doubleValue="0" tickMarkPosition="above" numberOfTickMarks="0" sliderType="linear" id="cell-s5-sld-mgain"/>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.mediaGain" id="b-s5-sld-mgain"/>
+                        </connections>
+                    </slider>
+                    <textField identifier="s5-num-mgain" verticalHuggingPriority="750" customClass="GSSteppingTextField" id="s5-num-mgain">
+                        <rect key="frame" x="340" y="126" width="76" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" title="" drawsBackground="YES" id="cell-s5-num-mgain">
+                            <numberFormatter key="formatter" formatterBehavior="default10_4" numberStyle="decimal" minimumIntegerDigits="1" maximumIntegerDigits="2000000000" maximumFractionDigits="3" id="fmt-s5-num-mgain">
+                                <real key="minimum" value="0"/>
+                                <real key="maximum" value="2"/>
+                            </numberFormatter>
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.mediaGain" id="b-s5-num-mgain"/>
+                        </connections>
+                    </textField>
+                    <button identifier="s5-sw-lim" verticalHuggingPriority="750" id="s5-sw-lim">
+                        <rect key="frame" x="438" y="126" width="180" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="check" title="Brickwall Limiter" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="cell-s5-sw-lim">
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.brickwallLimiter" id="b-s5-sw-lim"/>
+                        </connections>
+                    </button>
+                    <textField identifier="s5-lbl-mpan" horizontalHuggingPriority="251" verticalHuggingPriority="750" id="s5-lbl-mpan">
+                        <rect key="frame" x="28" y="92" width="88" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" editable="NO" title="Stereo Pan:" id="cell-s5-lbl-mpan">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                    </textField>
+                    <slider identifier="s5-sld-mpan" verticalHuggingPriority="750" id="s5-sld-mpan">
+                        <rect key="frame" x="120" y="90" width="210" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <sliderCell key="cell" state="on" alignment="left" minValue="-1" maxValue="1" doubleValue="-1" tickMarkPosition="above" numberOfTickMarks="0" sliderType="linear" id="cell-s5-sld-mpan"/>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.mediaPan" id="b-s5-sld-mpan"/>
+                        </connections>
+                    </slider>
+                    <textField identifier="s5-lbl-bus" horizontalHuggingPriority="251" verticalHuggingPriority="750" id="s5-lbl-bus">
+                        <rect key="frame" x="348" y="92" width="76" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" editable="NO" title="Bus Mode:" id="cell-s5-lbl-bus">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                    </textField>
+                    <segmentedControl identifier="s5-seg-bus" verticalHuggingPriority="750" id="s5-seg-bus">
+                        <rect key="frame" x="428" y="88" width="258" height="24"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <segmentedCell key="cell" borderStyle="border" alignment="left" style="rounded" trackingMode="selectOne" id="cell-s5-seg-bus">
+                            <font key="font" metaFont="system"/>
+                            <segments>
+                                <segment label="Stereo" selected="YES"/>
+                                <segment label="Mono"/>
+                                <segment label="Mid-Side"/>
+                            </segments>
+                        </segmentedCell>
+                        <connections>
+                            <binding destination="-2" name="selectedIndex" keyPath="values.busMode" id="b-s5-seg-bus"/>
+                        </connections>
+                    </segmentedControl>
+                    <textField identifier="s5-lbl-codec" horizontalHuggingPriority="251" verticalHuggingPriority="750" id="s5-lbl-codec">
+                        <rect key="frame" x="28" y="54" width="88" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" editable="NO" title="Codec Preset:" id="cell-s5-lbl-codec">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                    </textField>
+                    <popUpButton identifier="s5-pop-codec" verticalHuggingPriority="750" id="s5-pop-codec">
+                        <rect key="frame" x="120" y="52" width="210" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <popUpButtonCell key="cell" type="push" title="Apple ProRes 422 HQ" bezelStyle="rounded" alignment="left" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" imageScaling="proportionallyDown" inset="2" id="cell-s5-pop-codec">
+                            <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
+                            <font key="font" metaFont="menu"/>
+                            <menu key="menu" id="menu-s5-pop-codec">
+                                <items>
+                                    <menuItem title="Apple ProRes 422 HQ" state="on" id="mi-s5-pop-codec-0"/>
+                                    <menuItem title="Linear PCM 24-bit" id="mi-s5-pop-codec-1"/>
+                                    <menuItem title="AAC 320 kbps" id="mi-s5-pop-codec-2"/>
+                                    <menuItem title="FLAC Lossless" id="mi-s5-pop-codec-3"/>
+                                </items>
+                            </menu>
+                        </popUpButtonCell>
+                        <connections>
+                            <binding destination="-2" name="selectedIndex" keyPath="values.codecPreset" id="b-s5-pop-codec"/>
+                        </connections>
+                    </popUpButton>
+                    <button identifier="s5-help" verticalHuggingPriority="750" id="s5-help">
+                        <rect key="frame" x="348" y="52" width="22" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="help" title="?" bezelStyle="helpButton" inset="2" id="cell-s5-help">
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <action selector="showAudioHelp:" target="-2" id="a-s5-help"/>
+                        </connections>
+                    </button>
+                    <button identifier="s5-btn-rst" verticalHuggingPriority="750" id="s5-btn-rst">
+                        <rect key="frame" x="380" y="50" width="136" height="24"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="push" title="Reset Channel" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="cell-s5-btn-rst">
+                            <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <action selector="resetAudioStrip:" target="-2" id="a-s5-btn-rst"/>
+                        </connections>
+                    </button>
+                    <button identifier="s5-btn-bnc" verticalHuggingPriority="750" id="s5-btn-bnc">
+                        <rect key="frame" x="526" y="50" width="160" height="24"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="push" title="Bounce Master" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="cell-s5-btn-bnc">
+                            <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <action selector="bounceMaster:" target="-2" id="a-s5-btn-bnc"/>
+                        </connections>
+                    </button>
+                </subviews>
+            </view>
+        </window>
+    </objects>
+</document>

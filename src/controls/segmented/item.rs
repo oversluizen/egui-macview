@@ -37,14 +37,7 @@ pub struct SegmentItem<'a> {
 
 impl<'a> SegmentItem<'a> {
     const fn with_content(content: SegmentContent<'a>) -> Self {
-        Self {
-            content,
-            width: None,
-            enabled: true,
-            has_menu: false,
-            shows_menu_indicator: false,
-            tooltip: None,
-        }
+        Self { content, width: None, enabled: true, has_menu: false, shows_menu_indicator: false, tooltip: None }
     }
 
     pub(crate) fn accessible_cow(&self) -> Option<Cow<'a, str>> {

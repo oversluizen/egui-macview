@@ -77,22 +77,12 @@ impl<'a> MacPanel<'a> {
     }
 
     /// Renders the panel within `rect` and invokes `add_contents` for child widgets.
-    pub fn show<R>(
-        self,
-        ui: &mut Ui,
-        rect: Rect,
-        add_contents: impl FnOnce(&mut Ui) -> R,
-    ) -> (Response, R) {
+    pub fn show<R>(self, ui: &mut Ui, rect: Rect, add_contents: impl FnOnce(&mut Ui) -> R) -> (Response, R) {
         let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
         let theme: &MacTheme = &theme_cow;
 
         let panel_id = self.id.unwrap_or_else(|| {
-            ui.scope_id().with((
-                "mac_panel",
-                self.title.as_deref().unwrap_or(""),
-                rect.min.x.to_bits(),
-                rect.min.y.to_bits(),
-            ))
+            ui.scope_id().with(("mac_panel", self.title.as_deref().unwrap_or(""), rect.min.x.to_bits(), rect.min.y.to_bits()))
         });
         let resp = ui.interact(rect, panel_id, egui::Sense::click_and_drag());
         if ui.rect_contains_pointer(rect) {
@@ -102,31 +92,20 @@ impl<'a> MacPanel<'a> {
         }
 
         let popover_metrics = theme.popover_metrics();
-        let rounding = self
-            .rounding
-            .unwrap_or_else(|| popover_metrics.corner_radius.points() as u8);
+        let rounding = self.rounding.unwrap_or_else(|| popover_metrics.corner_radius.points() as u8);
 
         let bg_color = theme.window_background();
         let border_stroke = Stroke::new(popover_metrics.border_width.points(), theme.separator());
 
         let painter = ui.painter_at(rect);
-        painter.rect(
-            rect,
-            CornerRadius::same(rounding),
-            bg_color,
-            border_stroke,
-            StrokeKind::Inside,
-        );
+        painter.rect(rect, CornerRadius::same(rounding), bg_color, border_stroke, StrokeKind::Inside);
 
         let header_height = popover_metrics.header_height.points();
 
         let content_rect = if let Some(title) = self.title {
             let title_rect = Rect::from_min_size(rect.min, Vec2::new(rect.width(), header_height));
             painter.line_segment(
-                [
-                    Pos2::new(rect.min.x, rect.min.y + header_height),
-                    Pos2::new(rect.max.x, rect.min.y + header_height),
-                ],
+                [Pos2::new(rect.min.x, rect.min.y + header_height), Pos2::new(rect.max.x, rect.min.y + header_height)],
                 border_stroke,
             );
             painter.text(

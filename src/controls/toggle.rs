@@ -2,8 +2,12 @@
 //!
 //! Grounded in macOS HIG and W3C DTCG tokens via [`MacTheme`].
 
+use crate::controls::MacControlSize;
 use crate::theme::MacTheme;
-use egui::{CornerRadius, Pos2, Response, Sense, Stroke, StrokeKind, Ui, Vec2, Widget};
+use egui::{CornerRadius, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2, Widget};
+
+/// Standalone AppKit `NSSwitch` pill switch alias (`REQ-013-02A`).
+pub type MacSwitch<'a> = MacToggle<'a>;
 
 /// Authentic macOS Toggle / Switch.
 ///
@@ -27,17 +31,15 @@ use egui::{CornerRadius, Pos2, Response, Sense, Stroke, StrokeKind, Ui, Vec2, Wi
 pub struct MacToggle<'a> {
     value: &'a mut bool,
     enabled: bool,
+    control_size: MacControlSize,
+    fixed_rect: Option<Rect>,
     theme: Option<&'a MacTheme>,
 }
 
 impl<'a> MacToggle<'a> {
     /// Creates a new toggle switch bound to a mutable `bool` reference.
     pub fn new(value: &'a mut bool) -> Self {
-        Self {
-            value,
-            enabled: true,
-            theme: None,
-        }
+        Self { value, enabled: true, control_size: MacControlSize::Regular, fixed_rect: None, theme: None }
     }
 
     /// Enables or disables the toggle switch.
@@ -46,10 +48,27 @@ impl<'a> MacToggle<'a> {
         self
     }
 
+    /// Configures the AppKit control size (`Regular`, `Small`, `Mini`).
+    pub fn control_size(mut self, size: MacControlSize) -> Self {
+        self.control_size = size;
+        self
+    }
+
+    /// Pins the switch to an exact NIB or scene layout rectangle.
+    pub fn fixed_rect(mut self, rect: Rect) -> Self {
+        self.fixed_rect = Some(rect);
+        self
+    }
+
     /// Injects dynamic theme to eliminate hardcoded metrics and colors.
     pub fn theme(mut self, theme: &'a MacTheme) -> Self {
         self.theme = Some(theme);
         self
+    }
+
+    /// Renders the switch inside `ui` and returns the interaction [`Response`].
+    pub fn show(self, ui: &mut Ui) -> Response {
+        ui.add(self)
     }
 }
 
@@ -64,13 +83,16 @@ impl<'a> Widget for MacToggle<'a> {
         let radius = metrics.corner_radius.points() as u8;
 
         let desired_size = Vec2::new(width, height);
-        let sense = if self.enabled {
-            Sense::click()
+        let sense = if self.enabled && ui.is_enabled() { Sense::click() } else { Sense::hover() };
+        let (rect, mut response) = if let Some(fixed) = self.fixed_rect {
+            let id = ui.next_auto_id().with("mac_switch_fixed");
+            ui.skip_ahead_auto_ids(1);
+            let resp = ui.interact(fixed, id, sense);
+            (fixed, resp)
         } else {
-            Sense::hover()
+            ui.allocate_exact_size(desired_size, sense)
         };
-        let (rect, mut response) = ui.allocate_exact_size(desired_size, sense);
-        if self.enabled && response.clicked() {
+        if self.enabled && ui.is_enabled() && response.clicked() {
             *self.value = !*self.value;
             response.mark_changed();
         }
@@ -79,29 +101,17 @@ impl<'a> Widget for MacToggle<'a> {
         let spring = theme.motion().swiftui_bouncy.to_spring();
         let spring_key = response.id.with("toggle_caspring");
         let target_val = if *self.value { 1.0f32 } else { 0.0f32 };
-        let anim_progress = spring
-            .animate_f32(ui.ctx(), spring_key, target_val)
-            .clamp(0.0, 1.0);
+        let anim_progress = spring.animate_f32(ui.ctx(), spring_key, target_val).clamp(0.0, 1.0);
 
-        let alpha_factor = if self.enabled {
-            1.0
-        } else {
-            theme.disabled_opacity()
-        };
+        let alpha_factor = if self.enabled { 1.0 } else { theme.disabled_opacity() };
         let painter = ui.painter_at(rect);
-        let bg_color = theme
-            .control()
-            .lerp_to_gamma(theme.system_green(), anim_progress)
-            .gamma_multiply(alpha_factor);
+        let bg_color = theme.control().lerp_to_gamma(theme.system_green(), anim_progress).gamma_multiply(alpha_factor);
 
         painter.rect(
             rect,
             CornerRadius::same(radius),
             bg_color,
-            Stroke::new(
-                metrics.border_width.points(),
-                theme.separator().gamma_multiply(alpha_factor),
-            ),
+            Stroke::new(metrics.border_width.points(), theme.separator().gamma_multiply(alpha_factor)),
             StrokeKind::Inside,
         );
 
@@ -116,11 +126,7 @@ impl<'a> Widget for MacToggle<'a> {
             knob_radius,
             theme.drop_shadow().gamma_multiply(alpha_factor),
         );
-        painter.circle_filled(
-            knob_center,
-            knob_radius,
-            theme.knob_fill().gamma_multiply(alpha_factor),
-        );
+        painter.circle_filled(knob_center, knob_radius, theme.knob_fill().gamma_multiply(alpha_factor));
 
         response
     }

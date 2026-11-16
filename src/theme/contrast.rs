@@ -22,12 +22,8 @@ struct PassSurfaceRects {
 }
 
 impl PassSurfaceRects {
-    const EMPTY: Self = Self {
-        pass_nr: u64::MAX,
-        ctx_token: 0,
-        len: 0,
-        entries: [(egui::Rect::NOTHING, Color32::TRANSPARENT); MAX_PASS_SURFACE_RECTS],
-    };
+    const EMPTY: Self =
+        Self { pass_nr: u64::MAX, ctx_token: 0, len: 0, entries: [(egui::Rect::NOTHING, Color32::TRANSPARENT); MAX_PASS_SURFACE_RECTS] };
 }
 
 thread_local! {
@@ -105,11 +101,7 @@ pub fn plus_darker(fg: Color32, surface_bg: Color32, reference_bg: Color32, gain
     let dr = ((reference_bg.r() as i16 - surface_bg.r() as i16).unsigned_abs() as f32 * gain).round() as u8;
     let dg = ((reference_bg.g() as i16 - surface_bg.g() as i16).unsigned_abs() as f32 * gain).round() as u8;
     let db = ((reference_bg.b() as i16 - surface_bg.b() as i16).unsigned_abs() as f32 * gain).round() as u8;
-    Color32::from_rgb(
-        base.r().saturating_sub(dr),
-        base.g().saturating_sub(dg),
-        base.b().saturating_sub(db),
-    )
+    Color32::from_rgb(base.r().saturating_sub(dr), base.g().saturating_sub(dg), base.b().saturating_sub(db))
 }
 
 /// Apple CoreGraphics / AppKit `PlusLighter` (`kCGBlendModePlusLighter`) surface-relative vibrancy
@@ -122,11 +114,7 @@ pub fn plus_lighter(fg: Color32, surface_bg: Color32, reference_bg: Color32, gai
     let dr = ((reference_bg.r() as i16 - surface_bg.r() as i16).unsigned_abs() as f32 * gain).round() as u8;
     let dg = ((reference_bg.g() as i16 - surface_bg.g() as i16).unsigned_abs() as f32 * gain).round() as u8;
     let db = ((reference_bg.b() as i16 - surface_bg.b() as i16).unsigned_abs() as f32 * gain).round() as u8;
-    Color32::from_rgb(
-        base.r().saturating_add(dr),
-        base.g().saturating_add(dg),
-        base.b().saturating_add(db),
-    )
+    Color32::from_rgb(base.r().saturating_add(dr), base.g().saturating_add(dg), base.b().saturating_add(db))
 }
 
 /// Clamps `fg` against `bg` so that the resulting opaque [`Color32`] satisfies a WCAG 2.1 contrast
@@ -184,8 +172,8 @@ impl MacTheme {
     }
 
     fn is_default_panel_fill(&self, panel_fill: Color32) -> bool {
-        let (egui_light, egui_dark) = *EGUI_DEFAULT_PANEL_FILLS
-            .get_or_init(|| (egui::Visuals::light().panel_fill, egui::Visuals::dark().panel_fill));
+        let (egui_light, egui_dark) =
+            *EGUI_DEFAULT_PANEL_FILLS.get_or_init(|| (egui::Visuals::light().panel_fill, egui::Visuals::dark().panel_fill));
         let colors = self.tokens().colors();
         panel_fill == egui_light
             || panel_fill == egui_dark
@@ -197,29 +185,18 @@ impl MacTheme {
     /// Registers a painted container surface `(rect, surface_bg)` for the current `egui::Context`
     /// pass so flat NIB peer controls rendered after the container (such as via `.fixed_rect(rect)`)
     /// automatically detect `surface_bg` when their geometry lies within `rect`.
-    pub fn register_surface_rect(
-        &self,
-        ctx: &egui::Context,
-        rect: egui::Rect,
-        surface_bg: Color32,
-    ) {
+    pub fn register_surface_rect(&self, ctx: &egui::Context, rect: egui::Rect, surface_bg: Color32) {
         let _ = self.register_surface_rect_slot(ctx, rect, surface_bg);
     }
 
-    pub(crate) fn register_surface_rect_slot(
-        &self,
-        ctx: &egui::Context,
-        rect: egui::Rect,
-        surface_bg: Color32,
-    ) -> usize {
+    pub(crate) fn register_surface_rect_slot(&self, ctx: &egui::Context, rect: egui::Rect, surface_bg: Color32) -> usize {
         let pass_nr = ctx.cumulative_pass_nr();
         let pass_id = egui::Id::unique("macview_surface_pass_token");
         PASS_SURFACE_RECTS.with(|cell| {
             let mut state = cell.get();
             let same_pass = state.pass_nr == pass_nr
                 && state.ctx_token != 0
-                && ctx.data(|d| d.get_temp::<(u64, u64)>(pass_id))
-                    == Some((pass_nr, state.ctx_token));
+                && ctx.data(|d| d.get_temp::<(u64, u64)>(pass_id)) == Some((pass_nr, state.ctx_token));
             if !same_pass {
                 let token = NEXT_PASS_TOKEN.with(|t| {
                     let next = t.get().wrapping_add(1).max(1);
@@ -246,12 +223,7 @@ impl MacTheme {
         })
     }
 
-    pub(crate) fn update_surface_rect_slot(
-        &self,
-        ctx: &egui::Context,
-        slot: usize,
-        rect: egui::Rect,
-    ) {
+    pub(crate) fn update_surface_rect_slot(&self, ctx: &egui::Context, slot: usize, rect: egui::Rect) {
         let pass_nr = ctx.cumulative_pass_nr();
         PASS_SURFACE_RECTS.with(|cell| {
             let mut state = cell.get();
@@ -328,9 +300,7 @@ impl MacTheme {
             MacBackgroundStyle::Dark => {
                 let pal = match self.appearance {
                     MacAppearance::Anthracite => &self.tokens().colors().anthracite,
-                    MacAppearance::Aqua | MacAppearance::DarkAqua => {
-                        &self.tokens().colors().dark_aqua
-                    }
+                    MacAppearance::Aqua | MacAppearance::DarkAqua => &self.tokens().colors().dark_aqua,
                 };
                 let ref_bg = pal.window_background.to_color32();
                 let base = match tier {

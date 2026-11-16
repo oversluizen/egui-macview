@@ -44,17 +44,7 @@ pub struct MacStepper<'a> {
 impl<'a> MacStepper<'a> {
     /// Creates a new stepper bound to a value, inclusive range, and step delta.
     pub fn new(value: &'a mut f64, range: RangeInclusive<f64>, step: f64) -> Self {
-        Self {
-            value,
-            range,
-            step,
-            theme: None,
-            width: None,
-            height: None,
-            corner_radius: None,
-            wraps: false,
-            enabled: true,
-        }
+        Self { value, range, step, theme: None, width: None, height: None, corner_radius: None, wraps: false, enabled: true }
     }
 
     /// Sets the dynamic theme.
@@ -101,12 +91,7 @@ impl<'a> MacStepper<'a> {
 
 /// Consumes an arrow key (`ArrowUp` / `ArrowDown`) with optional `Cmd`/`Ctrl` (`cmd_mult`)
 /// or `Shift` (`shift_mult`) accelerator multiplier.
-pub(crate) fn consume_step_arrow_mult(
-    ui: &mut Ui,
-    key: Key,
-    cmd_mult: f64,
-    shift_mult: f64,
-) -> Option<f64> {
+pub(crate) fn consume_step_arrow_mult(ui: &mut Ui, key: Key, cmd_mult: f64, shift_mult: f64) -> Option<f64> {
     ui.input_mut(|i| {
         if i.consume_key(egui::Modifiers::COMMAND, key)
             || i.consume_key(egui::Modifiers::CTRL, key)
@@ -123,14 +108,7 @@ pub(crate) fn consume_step_arrow_mult(
     })
 }
 
-fn eval_auto_repeat(
-    ui: &mut Ui,
-    held: bool,
-    state_id: egui::Id,
-    now: f64,
-    repeat_delay: f64,
-    repeat_interval: f64,
-) -> bool {
+fn eval_auto_repeat(ui: &mut Ui, held: bool, state_id: egui::Id, now: f64, repeat_delay: f64, repeat_interval: f64) -> bool {
     if held {
         ui.ctx().request_repaint_after_secs(repeat_interval as f32);
         match ui.data_mut(|d| d.get_temp::<(f64, f64)>(state_id)) {
@@ -160,15 +138,12 @@ impl<'a> Widget for MacStepper<'a> {
         let metrics = theme.stepper();
         let width = self.width.unwrap_or_else(|| metrics.width.points());
         let height = self.height.unwrap_or_else(|| metrics.height.points());
-        let corner_radius = self
-            .corner_radius
-            .unwrap_or_else(|| metrics.corner_radius.points());
+        let corner_radius = self.corner_radius.unwrap_or_else(|| metrics.corner_radius.points());
         let divider_thickness = metrics.divider_thickness.points();
         let arrow_size = metrics.arrow_size.points();
         let arrow_stroke = metrics.arrow_stroke_width.points();
 
-        let (raw_rect, mut response) =
-            ui.allocate_exact_size(Vec2::new(width, height), Sense::click());
+        let (raw_rect, mut response) = ui.allocate_exact_size(Vec2::new(width, height), Sense::click());
         let rect = subpixel_snap_rect(raw_rect, ui.ctx().pixels_per_point());
 
         let top_rect = Rect::from_min_max(rect.min, Pos2::new(rect.max.x, rect.center().y));
@@ -177,24 +152,8 @@ impl<'a> Widget for MacStepper<'a> {
         let top_id = response.id.with("mac_stepper_up");
         let bottom_id = response.id.with("mac_stepper_down");
 
-        let top_resp = ui.interact(
-            top_rect,
-            top_id,
-            if self.enabled {
-                Sense::click()
-            } else {
-                Sense::hover()
-            },
-        );
-        let bottom_resp = ui.interact(
-            bottom_rect,
-            bottom_id,
-            if self.enabled {
-                Sense::click()
-            } else {
-                Sense::hover()
-            },
-        );
+        let top_resp = ui.interact(top_rect, top_id, if self.enabled { Sense::click() } else { Sense::hover() });
+        let bottom_resp = ui.interact(bottom_rect, bottom_id, if self.enabled { Sense::click() } else { Sense::hover() });
 
         let min_val = *self.range.start();
         let max_val = *self.range.end();
@@ -207,11 +166,7 @@ impl<'a> Widget for MacStepper<'a> {
 
         let clicked_top = top_resp.clicked();
         let clicked_bottom = bottom_resp.clicked();
-        if clicked_top
-            || clicked_bottom
-            || top_resp.is_pointer_button_down_on()
-            || bottom_resp.is_pointer_button_down_on()
-        {
+        if clicked_top || clicked_bottom || top_resp.is_pointer_button_down_on() || bottom_resp.is_pointer_button_down_on() {
             response.request_focus();
         }
 
@@ -219,22 +174,10 @@ impl<'a> Widget for MacStepper<'a> {
         let repeat_delay = metrics.auto_repeat_delay.points() as f64;
         let repeat_interval = metrics.auto_repeat_interval.points() as f64;
 
-        let repeat_top = eval_auto_repeat(
-            ui,
-            self.enabled && top_resp.is_pointer_button_down_on(),
-            top_id,
-            now,
-            repeat_delay,
-            repeat_interval,
-        );
-        let repeat_bottom = eval_auto_repeat(
-            ui,
-            self.enabled && bottom_resp.is_pointer_button_down_on(),
-            bottom_id,
-            now,
-            repeat_delay,
-            repeat_interval,
-        );
+        let repeat_top =
+            eval_auto_repeat(ui, self.enabled && top_resp.is_pointer_button_down_on(), top_id, now, repeat_delay, repeat_interval);
+        let repeat_bottom =
+            eval_auto_repeat(ui, self.enabled && bottom_resp.is_pointer_button_down_on(), bottom_id, now, repeat_delay, repeat_interval);
 
         let ptr_mods = ui.input(|i| {
             let mut m = i.modifiers;
@@ -255,24 +198,14 @@ impl<'a> Widget for MacStepper<'a> {
             1.0
         };
 
-        let key_up_mult = (self.enabled && response.has_focus())
-            .then(|| consume_step_arrow_mult(ui, Key::ArrowUp, cmd_mult, shift_mult))
-            .flatten();
-        let key_down_mult = (self.enabled && response.has_focus())
-            .then(|| consume_step_arrow_mult(ui, Key::ArrowDown, cmd_mult, shift_mult))
-            .flatten();
+        let key_up_mult =
+            (self.enabled && response.has_focus()).then(|| consume_step_arrow_mult(ui, Key::ArrowUp, cmd_mult, shift_mult)).flatten();
+        let key_down_mult =
+            (self.enabled && response.has_focus()).then(|| consume_step_arrow_mult(ui, Key::ArrowDown, cmd_mult, shift_mult)).flatten();
 
-        let step_up_mult = if self.enabled && (clicked_top || repeat_top) {
-            Some(ptr_mult)
-        } else {
-            key_up_mult
-        };
+        let step_up_mult = if self.enabled && (clicked_top || repeat_top) { Some(ptr_mult) } else { key_up_mult };
 
-        let step_down_mult = if self.enabled && (clicked_bottom || repeat_bottom) {
-            Some(ptr_mult)
-        } else {
-            key_down_mult
-        };
+        let step_down_mult = if self.enabled && (clicked_bottom || repeat_bottom) { Some(ptr_mult) } else { key_down_mult };
 
         let eps = 1e-9 * self.step.abs().max(1.0);
 
@@ -321,36 +254,20 @@ impl<'a> Widget for MacStepper<'a> {
             Stroke::new(metrics.border_width.points(), theme.separator())
         };
 
-        painter.rect(
-            rect,
-            CornerRadius::same(corner_radius as u8),
-            bg_color,
-            border_stroke,
-            StrokeKind::Inside,
-        );
+        painter.rect(rect, CornerRadius::same(corner_radius as u8), bg_color, border_stroke, StrokeKind::Inside);
 
         // Highlight compartments on hover / click
         if self.enabled {
             if top_resp.is_pointer_button_down_on() {
                 painter.rect_filled(
                     top_rect,
-                    CornerRadius {
-                        nw: corner_radius as u8,
-                        ne: corner_radius as u8,
-                        sw: 0,
-                        se: 0,
-                    },
+                    CornerRadius { nw: corner_radius as u8, ne: corner_radius as u8, sw: 0, se: 0 },
                     theme.selected_control_inactive(),
                 );
             } else if top_resp.hovered() {
                 painter.rect_filled(
                     top_rect,
-                    CornerRadius {
-                        nw: corner_radius as u8,
-                        ne: corner_radius as u8,
-                        sw: 0,
-                        se: 0,
-                    },
+                    CornerRadius { nw: corner_radius as u8, ne: corner_radius as u8, sw: 0, se: 0 },
                     theme.control(),
                 );
             }
@@ -358,23 +275,13 @@ impl<'a> Widget for MacStepper<'a> {
             if bottom_resp.is_pointer_button_down_on() {
                 painter.rect_filled(
                     bottom_rect,
-                    CornerRadius {
-                        nw: 0,
-                        ne: 0,
-                        sw: corner_radius as u8,
-                        se: corner_radius as u8,
-                    },
+                    CornerRadius { nw: 0, ne: 0, sw: corner_radius as u8, se: corner_radius as u8 },
                     theme.selected_control_inactive(),
                 );
             } else if bottom_resp.hovered() {
                 painter.rect_filled(
                     bottom_rect,
-                    CornerRadius {
-                        nw: 0,
-                        ne: 0,
-                        sw: corner_radius as u8,
-                        se: corner_radius as u8,
-                    },
+                    CornerRadius { nw: 0, ne: 0, sw: corner_radius as u8, se: corner_radius as u8 },
                     theme.control(),
                 );
             }
@@ -383,19 +290,12 @@ impl<'a> Widget for MacStepper<'a> {
         // Divider line between segments
         let divider_y = rect.center().y;
         painter.line_segment(
-            [
-                Pos2::new(rect.left(), divider_y),
-                Pos2::new(rect.right(), divider_y),
-            ],
+            [Pos2::new(rect.left(), divider_y), Pos2::new(rect.right(), divider_y)],
             Stroke::new(divider_thickness, theme.separator()),
         );
 
         // Chevrons
-        let arrow_color = if !self.enabled {
-            theme.placeholder_text()
-        } else {
-            theme.label()
-        };
+        let arrow_color = if !self.enabled { theme.placeholder_text() } else { theme.label() };
         let arrow_stroke_style = Stroke::new(arrow_stroke, arrow_color);
         let arrow_half_w = arrow_size * 0.5;
         let arrow_delta = metrics.arrow_delta.points();

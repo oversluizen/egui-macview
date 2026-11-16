@@ -119,10 +119,7 @@ impl<'a> MacTableActionBar<'a> {
 
     /// Computes the exact center position of the 3rd `[ action ]` gear/menu segment inside `rect`.
     pub fn action_button_center(rect: Rect, button_width: f32, action_button_width: f32) -> Pos2 {
-        Pos2::new(
-            rect.min.x + button_width * 2.0 + action_button_width * 0.5,
-            rect.center().y,
-        )
+        Pos2::new(rect.min.x + button_width * 2.0 + action_button_width * 0.5, rect.center().y)
     }
 
     /// Renders the table action bar into `ui` and returns [`MacTableActionResponse`].
@@ -133,16 +130,25 @@ impl<'a> MacTableActionBar<'a> {
 
         let (bar_h, btn_w, act_w, glyph_sz, arm_half) = match self.control_size {
             MacControlSize::Regular | MacControlSize::Large => (
-                ab.bar_height.points(), ab.button_width.points(), ab.action_button_width.points(),
-                ab.glyph_size.points(), ab.glyph_arm_half.points(),
+                ab.bar_height.points(),
+                ab.button_width.points(),
+                ab.action_button_width.points(),
+                ab.glyph_size.points(),
+                ab.glyph_arm_half.points(),
             ),
             MacControlSize::Small | MacControlSize::CompactInfobox => (
-                ab.small_bar_height.points(), ab.small_button_width.points(), ab.small_action_button_width.points(),
-                ab.small_glyph_size.points(), ab.small_glyph_arm_half.points(),
+                ab.small_bar_height.points(),
+                ab.small_button_width.points(),
+                ab.small_action_button_width.points(),
+                ab.small_glyph_size.points(),
+                ab.small_glyph_arm_half.points(),
             ),
             MacControlSize::Mini => (
-                ab.mini_bar_height.points(), ab.mini_button_width.points(), ab.mini_action_button_width.points(),
-                ab.small_glyph_size.points(), ab.small_glyph_arm_half.points(),
+                ab.mini_bar_height.points(),
+                ab.mini_button_width.points(),
+                ab.mini_action_button_width.points(),
+                ab.small_glyph_size.points(),
+                ab.small_glyph_arm_half.points(),
             ),
         };
 
@@ -162,8 +168,11 @@ impl<'a> MacTableActionBar<'a> {
 
         let visual_rect = theme.clamp_nib_visual_rect(rect, bar_h, ppp);
         let add_rect = Rect::from_min_size(visual_rect.min, Vec2::new(btn_w, visual_rect.height())).intersect(visual_rect);
-        let rem_rect = Rect::from_min_size(Pos2::new(visual_rect.min.x + btn_w, visual_rect.min.y), Vec2::new(btn_w, visual_rect.height())).intersect(visual_rect);
-        let act_rect = Rect::from_min_size(Pos2::new(visual_rect.min.x + btn_w * 2.0, visual_rect.min.y), Vec2::new(act_w, visual_rect.height())).intersect(visual_rect);
+        let rem_rect = Rect::from_min_size(Pos2::new(visual_rect.min.x + btn_w, visual_rect.min.y), Vec2::new(btn_w, visual_rect.height()))
+            .intersect(visual_rect);
+        let act_rect =
+            Rect::from_min_size(Pos2::new(visual_rect.min.x + btn_w * 2.0, visual_rect.min.y), Vec2::new(act_w, visual_rect.height()))
+                .intersect(visual_rect);
 
         let (mut add_clicked, mut remove_clicked, mut action_clicked) = (false, false, false);
         if enabled && response.clicked() {
@@ -188,41 +197,25 @@ impl<'a> MacTableActionBar<'a> {
         let border_stroke = Stroke::new(border_w, theme.separator().gamma_multiply(alpha));
 
         painter.rect_filled(visual_rect, radius, theme.box_background().gamma_multiply(alpha));
-        let active_cluster_rect = Rect::from_min_size(
-            visual_rect.min,
-            Vec2::new(cluster_w.min(visual_rect.width()), visual_rect.height()),
-        );
+        let active_cluster_rect = Rect::from_min_size(visual_rect.min, Vec2::new(cluster_w.min(visual_rect.width()), visual_rect.height()));
         painter.rect_filled(active_cluster_rect, radius, theme.control().gamma_multiply(alpha));
 
         let hover_pos = ui.input(|i| i.pointer.hover_pos());
         let pointer_down = response.is_pointer_button_down_on();
-        for (seg_r, seg_ok) in [
-            (add_rect, enabled && self.can_add),
-            (rem_rect, enabled && self.can_remove),
-            (act_rect, enabled && self.with_action_menu),
-        ] {
+        for (seg_r, seg_ok) in
+            [(add_rect, enabled && self.can_add), (rem_rect, enabled && self.can_remove), (act_rect, enabled && self.with_action_menu)]
+        {
             if seg_ok && seg_r.is_positive() && hover_pos.is_some_and(|p| seg_r.contains(p)) {
-                let hi = if pointer_down {
-                    theme.selected_control_inactive()
-                } else {
-                    theme.control_background()
-                };
+                let hi = if pointer_down { theme.selected_control_inactive() } else { theme.control_background() };
                 painter.rect_filled(seg_r, CornerRadius::ZERO, hi);
             }
         }
 
-        let div_xs = [
-            visual_rect.min.x + btn_w,
-            visual_rect.min.x + btn_w * 2.0,
-            visual_rect.min.x + cluster_w,
-        ];
+        let div_xs = [visual_rect.min.x + btn_w, visual_rect.min.x + btn_w * 2.0, visual_rect.min.x + cluster_w];
         let div_count = if self.with_action_menu { 3 } else { 2 };
         for &x in &div_xs[..div_count] {
             if x < visual_rect.max.x - border_w {
-                painter.line_segment(
-                    [Pos2::new(x, visual_rect.top()), Pos2::new(x, visual_rect.bottom())],
-                    border_stroke,
-                );
+                painter.line_segment([Pos2::new(x, visual_rect.top()), Pos2::new(x, visual_rect.bottom())], border_stroke);
             }
         }
         painter.rect_stroke(visual_rect, radius, border_stroke, StrokeKind::Inside);
@@ -248,13 +241,7 @@ impl<'a> MacTableActionBar<'a> {
 
         if self.with_action_menu && act_rect.width() >= act_w * 0.5 {
             let act_fg = base_fg.gamma_multiply(alpha);
-            let galley = theme.layout_tracked_galley(
-                ui,
-                MacSymbol::Gear.as_str(),
-                FontId::proportional(glyph_sz),
-                act_fg,
-                f32::INFINITY,
-            );
+            let galley = theme.layout_tracked_galley(ui, MacSymbol::Gear.as_str(), FontId::proportional(glyph_sz), act_fg, f32::INFINITY);
             let gap = ab.action_chevron_gap.points();
             let chw = ab.action_chevron_half_width.points();
             let ch = ab.action_chevron_height.points();

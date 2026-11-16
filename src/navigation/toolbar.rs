@@ -6,10 +6,7 @@
 //! center/trailing content region.
 
 use crate::theme::{MacTheme, WindowControlsStyle};
-use egui::{
-    Align, Align2, CornerRadius, FontId, Id, Layout, Pos2, Rect, Response, Sense, Stroke, Ui,
-    UiBuilder, Vec2,
-};
+use egui::{Align, Align2, CornerRadius, FontId, Id, Layout, Pos2, Rect, Response, Sense, Stroke, Ui, UiBuilder, Vec2};
 use std::hash::Hash;
 
 /// Interaction result returned by [`MacToolbar::show`].
@@ -62,15 +59,7 @@ impl<'a> MacToolbar<'a> {
     /// Creates a new `MacToolbar` with the given ID or window title.
     pub fn new(title: impl Into<String>) -> Self {
         let title_str = title.into();
-        Self {
-            id: Id::NULL.with(&title_str),
-            title: title_str,
-            style: None,
-            is_maximized: None,
-            compact: true,
-            height: None,
-            theme: None,
-        }
+        Self { id: Id::NULL.with(&title_str), title: title_str, style: None, is_maximized: None, compact: true, height: None, theme: None }
     }
 
     /// Overrides the widget `Id`.
@@ -116,12 +105,7 @@ impl<'a> MacToolbar<'a> {
     }
 
     /// Renders the toolbar inside `rect` with center/trailing controls closure.
-    pub fn show_in_rect(
-        self,
-        ui: &mut Ui,
-        rect: Rect,
-        contents: impl FnOnce(&mut Ui),
-    ) -> MacToolbarResponse {
+    pub fn show_in_rect(self, ui: &mut Ui, rect: Rect, contents: impl FnOnce(&mut Ui)) -> MacToolbarResponse {
         let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
         let theme: &MacTheme = &theme_cow;
 
@@ -136,10 +120,7 @@ impl<'a> MacToolbar<'a> {
         let painter = ui.painter_at(rect);
         painter.rect_filled(rect, CornerRadius::ZERO, theme.window_background());
         painter.line_segment(
-            [
-                Pos2::new(rect.left(), rect.bottom()),
-                Pos2::new(rect.right(), rect.bottom()),
-            ],
+            [Pos2::new(rect.left(), rect.bottom()), Pos2::new(rect.right(), rect.bottom())],
             Stroke::new(border_w, theme.separator()),
         );
 
@@ -160,8 +141,7 @@ impl<'a> MacToolbar<'a> {
                 let c2_x = c1_x + diameter + spacing;
                 let c3_x = c2_x + diameter + spacing;
 
-                let cluster_rect =
-                    Rect::from_min_max(Pos2::new(c1_x - r, cy - r), Pos2::new(c3_x + r, cy + r));
+                let cluster_rect = Rect::from_min_max(Pos2::new(c1_x - r, cy - r), Pos2::new(c3_x + r, cy + r));
                 let cluster_hovered = ui.rect_contains_pointer(cluster_rect);
 
                 let close_rect = Rect::from_center_size(Pos2::new(c1_x, cy), Vec2::splat(diameter));
@@ -176,24 +156,9 @@ impl<'a> MacToolbar<'a> {
                 let (min_fill, min_border) = theme.traffic_light_minimize();
                 let (zoom_fill, zoom_border) = theme.traffic_light_zoom();
 
-                painter.circle(
-                    close_rect.center(),
-                    r,
-                    close_fill,
-                    Stroke::new(border_w * 0.5, close_border),
-                );
-                painter.circle(
-                    min_rect.center(),
-                    r,
-                    min_fill,
-                    Stroke::new(border_w * 0.5, min_border),
-                );
-                painter.circle(
-                    zoom_rect.center(),
-                    r,
-                    zoom_fill,
-                    Stroke::new(border_w * 0.5, zoom_border),
-                );
+                painter.circle(close_rect.center(), r, close_fill, Stroke::new(border_w * 0.5, close_border));
+                painter.circle(min_rect.center(), r, min_fill, Stroke::new(border_w * 0.5, min_border));
+                painter.circle(zoom_rect.center(), r, zoom_fill, Stroke::new(border_w * 0.5, zoom_border));
 
                 if cluster_hovered {
                     let glyph_col = theme.traffic_light_glyph();
@@ -204,26 +169,17 @@ impl<'a> MacToolbar<'a> {
 
                     let m_box = min_rect.shrink(r * 0.5);
                     painter.line_segment(
-                        [
-                            Pos2::new(m_box.left(), m_box.center().y),
-                            Pos2::new(m_box.right(), m_box.center().y),
-                        ],
+                        [Pos2::new(m_box.left(), m_box.center().y), Pos2::new(m_box.right(), m_box.center().y)],
                         glyph_stroke,
                     );
 
                     let z_box = zoom_rect.shrink(r * 0.5);
                     painter.line_segment(
-                        [
-                            Pos2::new(z_box.left(), z_box.center().y),
-                            Pos2::new(z_box.right(), z_box.center().y),
-                        ],
+                        [Pos2::new(z_box.left(), z_box.center().y), Pos2::new(z_box.right(), z_box.center().y)],
                         glyph_stroke,
                     );
                     painter.line_segment(
-                        [
-                            Pos2::new(z_box.center().x, z_box.top()),
-                            Pos2::new(z_box.center().x, z_box.bottom()),
-                        ],
+                        [Pos2::new(z_box.center().x, z_box.top()), Pos2::new(z_box.center().x, z_box.bottom())],
                         glyph_stroke,
                     );
                 }
@@ -245,18 +201,9 @@ impl<'a> MacToolbar<'a> {
                 let btn_h = tb.caption_button_height.points().min(rect.height());
                 let icon_sz = tb.caption_icon_size.points();
 
-                let close_rect = Rect::from_min_size(
-                    Pos2::new(rect.right() - btn_w, rect.top()),
-                    Vec2::new(btn_w, btn_h),
-                );
-                let max_rect = Rect::from_min_size(
-                    Pos2::new(close_rect.left() - btn_w, rect.top()),
-                    Vec2::new(btn_w, btn_h),
-                );
-                let min_rect = Rect::from_min_size(
-                    Pos2::new(max_rect.left() - btn_w, rect.top()),
-                    Vec2::new(btn_w, btn_h),
-                );
+                let close_rect = Rect::from_min_size(Pos2::new(rect.right() - btn_w, rect.top()), Vec2::new(btn_w, btn_h));
+                let max_rect = Rect::from_min_size(Pos2::new(close_rect.left() - btn_w, rect.top()), Vec2::new(btn_w, btn_h));
+                let min_rect = Rect::from_min_size(Pos2::new(max_rect.left() - btn_w, rect.top()), Vec2::new(btn_w, btn_h));
 
                 let min_resp = ui.interact(min_rect, self.id.with("win_min"), Sense::click());
                 let max_resp = ui.interact(max_rect, self.id.with("win_max"), Sense::click());
@@ -292,32 +239,14 @@ impl<'a> MacToolbar<'a> {
                 let close_icon = Rect::from_center_size(close_rect.center(), Vec2::splat(icon_sz));
 
                 painter.line_segment(
-                    [
-                        Pos2::new(min_icon.left(), min_icon.center().y),
-                        Pos2::new(min_icon.right(), min_icon.center().y),
-                    ],
+                    [Pos2::new(min_icon.left(), min_icon.center().y), Pos2::new(min_icon.right(), min_icon.center().y)],
                     Stroke::new(border_w, theme.label()),
                 );
-                painter.rect_stroke(
-                    max_icon,
-                    CornerRadius::ZERO,
-                    Stroke::new(border_w, theme.label()),
-                    egui::StrokeKind::Inside,
-                );
-                let close_fg = if close_resp.hovered() {
-                    theme.on_accent_text()
-                } else {
-                    theme.label()
-                };
+                painter.rect_stroke(max_icon, CornerRadius::ZERO, Stroke::new(border_w, theme.label()), egui::StrokeKind::Inside);
+                let close_fg = if close_resp.hovered() { theme.on_accent_text() } else { theme.label() };
                 let close_stroke = Stroke::new(border_w, close_fg);
-                painter.line_segment(
-                    [close_icon.left_top(), close_icon.right_bottom()],
-                    close_stroke,
-                );
-                painter.line_segment(
-                    [close_icon.left_bottom(), close_icon.right_top()],
-                    close_stroke,
-                );
+                painter.line_segment([close_icon.left_top(), close_icon.right_bottom()], close_stroke);
+                painter.line_segment([close_icon.left_bottom(), close_icon.right_top()], close_stroke);
 
                 if close_resp.clicked() {
                     close_clicked = true;
@@ -341,44 +270,22 @@ impl<'a> MacToolbar<'a> {
         }
 
         if !self.title.is_empty() {
-            let title_galley = painter.layout_no_wrap(
-                self.title,
-                FontId::proportional(title_font_pt),
-                egui::Color32::PLACEHOLDER,
-            );
-            let title_pos = Align2::LEFT_CENTER
-                .anchor_size(
-                    Pos2::new(content_left, rect.center().y),
-                    title_galley.size(),
-                )
-                .min;
+            let title_galley = painter.layout_no_wrap(self.title, FontId::proportional(title_font_pt), egui::Color32::PLACEHOLDER);
+            let title_pos = Align2::LEFT_CENTER.anchor_size(Pos2::new(content_left, rect.center().y), title_galley.size()).min;
             content_left += title_galley.size().x + tb.item_spacing.points() * 2.0;
             painter.galley(title_pos, title_galley, theme.label());
         }
 
-        let inner_rect = Rect::from_min_max(
-            Pos2::new(content_left.min(content_right), rect.top()),
-            Pos2::new(content_right, rect.bottom()),
-        );
+        let inner_rect =
+            Rect::from_min_max(Pos2::new(content_left.min(content_right), rect.top()), Pos2::new(content_right, rect.bottom()));
         let mut child_ui = ui.new_child(
-            UiBuilder::new()
-                .id_salt((self.id, "toolbar_contents"))
-                .max_rect(inner_rect)
-                .layout(Layout::left_to_right(Align::Center)),
+            UiBuilder::new().id_salt((self.id, "toolbar_contents")).max_rect(inner_rect).layout(Layout::left_to_right(Align::Center)),
         );
         contents(&mut child_ui);
 
-        let drag_started =
-            bg_resp.drag_started() && !close_clicked && !minimize_clicked && !zoom_toggled;
+        let drag_started = bg_resp.drag_started() && !close_clicked && !minimize_clicked && !zoom_toggled;
 
-        MacToolbarResponse {
-            response: bg_resp,
-            close_clicked,
-            minimize_clicked,
-            zoom_toggled,
-            drag_started,
-            rect,
-        }
+        MacToolbarResponse { response: bg_resp, close_clicked, minimize_clicked, zoom_toggled, drag_started, rect }
     }
 
     /// Allocates full width and renders the toolbar with center/trailing controls closure.
@@ -386,13 +293,7 @@ impl<'a> MacToolbar<'a> {
         let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
         let theme: &MacTheme = &theme_cow;
         let tb = theme.toolbar_metrics();
-        let target_h = self.height.unwrap_or_else(|| {
-            if self.compact {
-                tb.height_compact.points()
-            } else {
-                tb.height_unified.points()
-            }
-        });
+        let target_h = self.height.unwrap_or_else(|| if self.compact { tb.height_compact.points() } else { tb.height_unified.points() });
         let avail_w = ui.available_width().max(tb.traffic_lights_inset.points());
         let (rect, _) = ui.allocate_exact_size(Vec2::new(avail_w, target_h), Sense::hover());
         self.show_in_rect(ui, rect, contents)

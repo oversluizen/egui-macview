@@ -3,9 +3,7 @@
 //! Normative Reference: SPEC-007 §2.3.
 //! Grounded in Single Responsibility Principle to maintain modularity ceilings.
 
-use egui::{
-    Align2, Area, CornerRadius, FontId, Id, Order, Pos2, Rect, Sense, Stroke, StrokeKind, Vec2,
-};
+use egui::{Align2, Area, CornerRadius, FontId, Id, Order, Pos2, Rect, Sense, Stroke, StrokeKind, Vec2};
 
 use super::item::MacMenuItemKind;
 use super::model::NSMenu;
@@ -23,26 +21,14 @@ pub struct SubmenuKeyboardResult {
 }
 
 /// Advances or decrements index to the next enabled non-separator item in `items`.
-pub(crate) fn step_enabled_menu_item(
-    items: &[super::item::NSMenuItem],
-    curr: Option<usize>,
-    forward: bool,
-) -> Option<usize> {
+pub(crate) fn step_enabled_menu_item(items: &[super::item::NSMenuItem], curr: Option<usize>, forward: bool) -> Option<usize> {
     let len = items.len();
     if len == 0 {
         return None;
     }
-    let start = if forward {
-        curr.map_or(0, |c| (c + 1) % len)
-    } else {
-        curr.map_or(len.saturating_sub(1), |c| (c + len - 1) % len)
-    };
+    let start = if forward { curr.map_or(0, |c| (c + 1) % len) } else { curr.map_or(len.saturating_sub(1), |c| (c + len - 1) % len) };
     for step in 0..len {
-        let candidate = if forward {
-            (start + step) % len
-        } else {
-            (start + len - (step % len)) % len
-        };
+        let candidate = if forward { (start + step) % len } else { (start + len - (step % len)) % len };
         if let Some(it) = items.get(candidate) {
             if it.enabled && !matches!(it.kind, MacMenuItemKind::Separator) {
                 return Some(candidate);
@@ -53,75 +39,40 @@ pub(crate) fn step_enabled_menu_item(
 }
 
 /// Advances or decrements index to the next enabled non-separator item in a submenu.
-pub fn step_submenu_highlight(
-    child_menu: &NSMenu,
-    curr: Option<usize>,
-    forward: bool,
-) -> Option<usize> {
+pub fn step_submenu_highlight(child_menu: &NSMenu, curr: Option<usize>, forward: bool) -> Option<usize> {
     step_enabled_menu_item(&child_menu.items, curr, forward)
 }
 
 /// Processes keyboard navigation events targeting an active submenu.
-pub fn handle_submenu_input(
-    child_menu: &NSMenu,
-    sub_highlight: Option<usize>,
-    input: &egui::InputState,
-) -> SubmenuKeyboardResult {
+pub fn handle_submenu_input(child_menu: &NSMenu, sub_highlight: Option<usize>, input: &egui::InputState) -> SubmenuKeyboardResult {
     if let Some(curr) = sub_highlight {
         if input.key_pressed(egui::Key::Escape) || input.key_pressed(egui::Key::ArrowLeft) {
-            return SubmenuKeyboardResult {
-                action: None,
-                new_sub_highlight: None,
-                consumed: true,
-            };
+            return SubmenuKeyboardResult { action: None, new_sub_highlight: None, consumed: true };
         }
         if input.key_pressed(egui::Key::ArrowDown) {
             let next = step_submenu_highlight(child_menu, Some(curr), true);
-            return SubmenuKeyboardResult {
-                action: None,
-                new_sub_highlight: next.or(Some(curr)),
-                consumed: true,
-            };
+            return SubmenuKeyboardResult { action: None, new_sub_highlight: next.or(Some(curr)), consumed: true };
         }
         if input.key_pressed(egui::Key::ArrowUp) {
             let prev = step_submenu_highlight(child_menu, Some(curr), false);
-            return SubmenuKeyboardResult {
-                action: None,
-                new_sub_highlight: prev.or(Some(curr)),
-                consumed: true,
-            };
+            return SubmenuKeyboardResult { action: None, new_sub_highlight: prev.or(Some(curr)), consumed: true };
         }
         if input.key_pressed(egui::Key::Enter) || input.key_pressed(egui::Key::Space) {
             if let Some(item) = child_menu.items.get(curr) {
                 if item.enabled {
                     if let MacMenuItemKind::Action { id, .. } = &item.kind {
-                        return SubmenuKeyboardResult {
-                            action: Some(id.clone()),
-                            new_sub_highlight: None,
-                            consumed: true,
-                        };
+                        return SubmenuKeyboardResult { action: Some(id.clone()), new_sub_highlight: None, consumed: true };
                     }
                 }
             }
-            return SubmenuKeyboardResult {
-                action: None,
-                new_sub_highlight: Some(curr),
-                consumed: true,
-            };
+            return SubmenuKeyboardResult { action: None, new_sub_highlight: Some(curr), consumed: true };
         }
     }
-    SubmenuKeyboardResult {
-        action: None,
-        new_sub_highlight: sub_highlight,
-        consumed: false,
-    }
+    SubmenuKeyboardResult { action: None, new_sub_highlight: sub_highlight, consumed: false }
 }
 
 /// Pre-laid-out text galleys for a single non-separator menu item (`Color32::PLACEHOLDER`).
-pub(crate) type MenuItemGalleys = (
-    std::sync::Arc<egui::Galley>,
-    Option<std::sync::Arc<egui::Galley>>,
-);
+pub(crate) type MenuItemGalleys = (std::sync::Arc<egui::Galley>, Option<std::sync::Arc<egui::Galley>>);
 
 /// Lays out each menu item once with `Color32::PLACEHOLDER` and returns `(max_item_width, galleys)`.
 pub(crate) fn layout_menu_items(
@@ -139,25 +90,13 @@ pub(crate) fn layout_menu_items(
             laid_out.push(None);
             continue;
         }
-        let title_galley = painter.layout_no_wrap(
-            item.title.clone(),
-            font_id.clone(),
-            egui::Color32::PLACEHOLDER,
-        );
+        let title_galley = painter.layout_no_wrap(item.title.clone(), font_id.clone(), egui::Color32::PLACEHOLDER);
         let title_w = title_galley.size().x;
         let trailing_galley = match &item.kind {
-            MacMenuItemKind::Action {
-                shortcut: Some(sc), ..
-            } => Some(painter.layout_no_wrap(
-                sc.format_text(),
-                font_id.clone(),
-                egui::Color32::PLACEHOLDER,
-            )),
-            MacMenuItemKind::Submenu { .. } => Some(painter.layout_no_wrap(
-                "›".to_owned(),
-                font_id.clone(),
-                egui::Color32::PLACEHOLDER,
-            )),
+            MacMenuItemKind::Action { shortcut: Some(sc), .. } => {
+                Some(painter.layout_no_wrap(sc.format_text(), font_id.clone(), egui::Color32::PLACEHOLDER))
+            }
+            MacMenuItemKind::Submenu { .. } => Some(painter.layout_no_wrap("›".to_owned(), font_id.clone(), egui::Color32::PLACEHOLDER)),
             _ => None,
         };
         let trailing_w = trailing_galley.as_ref().map_or(0.0, |g| g.size().x);
@@ -196,98 +135,67 @@ pub fn render_submenu_popover(
 
     let mut triggered = None;
 
-    Area::new(sub_id)
-        .order(Order::Foreground)
-        .fixed_pos(sub_pos)
-        .show(ctx, |sub_ui| {
-            let (max_item_w, item_galleys) = layout_menu_items(
-                sub_ui.painter(),
-                &child_menu.items,
-                &font_id,
-                padding_h,
-                padding_h,
-                min_clearance,
-            );
+    Area::new(sub_id).order(Order::Foreground).fixed_pos(sub_pos).show(ctx, |sub_ui| {
+        let (max_item_w, item_galleys) =
+            layout_menu_items(sub_ui.painter(), &child_menu.items, &font_id, padding_h, padding_h, min_clearance);
 
-            let sub_menu_w = base_sub_min_w.max(max_item_w + menu_padding * 2.0);
-            let sub_rect = Rect::from_min_size(sub_pos, Vec2::new(sub_menu_w, sub_total_h));
-            let _ = sub_ui.allocate_rect(sub_rect, Sense::hover());
-            let painter = sub_ui.painter();
-            painter.rect(
-                sub_rect,
-                CornerRadius::same(drop_corner_r),
-                theme.window_background(),
-                Stroke::new(border_w, theme.separator()),
-                StrokeKind::Inside,
-            );
+        let sub_menu_w = base_sub_min_w.max(max_item_w + menu_padding * 2.0);
+        let sub_rect = Rect::from_min_size(sub_pos, Vec2::new(sub_menu_w, sub_total_h));
+        let _ = sub_ui.allocate_rect(sub_rect, Sense::hover());
+        let painter = sub_ui.painter();
+        painter.rect(
+            sub_rect,
+            CornerRadius::same(drop_corner_r),
+            theme.window_background(),
+            Stroke::new(border_w, theme.separator()),
+            StrokeKind::Inside,
+        );
 
-            for ((s_idx, sub_item), galleys) in
-                child_menu.items.iter().enumerate().zip(item_galleys)
-            {
-                let s_y = sub_pos.y + menu_padding + (s_idx as f32) * item_height;
-                let s_rect = Rect::from_min_size(
-                    Pos2::new(sub_pos.x + menu_padding, s_y),
-                    Vec2::new(sub_menu_w - menu_padding * 2.0, item_height),
+        for ((s_idx, sub_item), galleys) in child_menu.items.iter().enumerate().zip(item_galleys) {
+            let s_y = sub_pos.y + menu_padding + (s_idx as f32) * item_height;
+            let s_rect =
+                Rect::from_min_size(Pos2::new(sub_pos.x + menu_padding, s_y), Vec2::new(sub_menu_w - menu_padding * 2.0, item_height));
+
+            let Some((title_galley, trailing_galley)) = galleys else {
+                painter.line_segment(
+                    [Pos2::new(s_rect.left(), s_rect.center().y), Pos2::new(s_rect.right(), s_rect.center().y)],
+                    Stroke::new(border_w, theme.separator()),
                 );
+                continue;
+            };
 
-                let Some((title_galley, trailing_galley)) = galleys else {
-                    painter.line_segment(
-                        [
-                            Pos2::new(s_rect.left(), s_rect.center().y),
-                            Pos2::new(s_rect.right(), s_rect.center().y),
-                        ],
-                        Stroke::new(border_w, theme.separator()),
-                    );
-                    continue;
-                };
+            let s_resp = sub_ui.interact(s_rect, sub_id.with(s_idx), Sense::click());
+            let is_highlighted = highlighted_idx == Some(s_idx);
+            let s_active = (s_resp.hovered() || is_highlighted) && sub_item.enabled;
 
-                let s_resp = sub_ui.interact(s_rect, sub_id.with(s_idx), Sense::click());
-                let is_highlighted = highlighted_idx == Some(s_idx);
-                let s_active = (s_resp.hovered() || is_highlighted) && sub_item.enabled;
+            if s_active {
+                painter.rect(s_rect, CornerRadius::same(item_corner_r), theme.control_accent(), Stroke::NONE, StrokeKind::Inside);
+            }
 
-                if s_active {
-                    painter.rect(
-                        s_rect,
-                        CornerRadius::same(item_corner_r),
-                        theme.control_accent(),
-                        Stroke::NONE,
-                        StrokeKind::Inside,
-                    );
-                }
+            let s_color = if !sub_item.enabled {
+                theme.placeholder_text()
+            } else if s_active {
+                on_accent
+            } else {
+                theme.label()
+            };
 
-                let s_color = if !sub_item.enabled {
-                    theme.placeholder_text()
-                } else if s_active {
-                    on_accent
-                } else {
-                    theme.label()
-                };
+            let title_pos =
+                Align2::LEFT_CENTER.anchor_size(Pos2::new(s_rect.left() + padding_h, s_rect.center().y), title_galley.size()).min;
+            painter.galley(title_pos, title_galley, s_color);
 
-                let title_pos = Align2::LEFT_CENTER
-                    .anchor_size(
-                        Pos2::new(s_rect.left() + padding_h, s_rect.center().y),
-                        title_galley.size(),
-                    )
-                    .min;
-                painter.galley(title_pos, title_galley, s_color);
+            if let Some(tg) = trailing_galley {
+                let tr_pos = Align2::RIGHT_CENTER.anchor_size(Pos2::new(s_rect.right() - padding_h, s_rect.center().y), tg.size()).min;
+                painter.galley(tr_pos, tg, s_color);
+            }
 
-                if let Some(tg) = trailing_galley {
-                    let tr_pos = Align2::RIGHT_CENTER
-                        .anchor_size(
-                            Pos2::new(s_rect.right() - padding_h, s_rect.center().y),
-                            tg.size(),
-                        )
-                        .min;
-                    painter.galley(tr_pos, tg, s_color);
-                }
-
-                if s_resp.clicked() && sub_item.enabled {
-                    if let MacMenuItemKind::Action { id, .. } = &sub_item.kind {
-                        triggered = Some(id.clone());
-                    }
+            if s_resp.clicked() && sub_item.enabled {
+                if let MacMenuItemKind::Action { id, .. } = &sub_item.kind {
+                    triggered = Some(id.clone());
                 }
             }
-        });
+        }
+    });
 
     triggered
 }
@@ -303,12 +211,10 @@ pub fn handle_menu_bar_navigation(
     let m_idx = (*open_menu_idx)?;
     let menu = menus.get(m_idx)?;
 
-    let current_is_sub = highlighted_item_idx
-        .and_then(|i| menu.items.get(i))
-        .and_then(|it| match &it.kind {
-            MacMenuItemKind::Submenu { menu: c } => Some(c),
-            _ => None,
-        });
+    let current_is_sub = highlighted_item_idx.and_then(|i| menu.items.get(i)).and_then(|it| match &it.kind {
+        MacMenuItemKind::Submenu { menu: c } => Some(c),
+        _ => None,
+    });
 
     if let Some(child_menu) = current_is_sub {
         let res = handle_submenu_input(child_menu, *sub_highlight, input);
@@ -346,17 +252,13 @@ pub fn handle_menu_bar_navigation(
             return None;
         }
         if input.key_pressed(egui::Key::ArrowDown) {
-            if let Some(next) =
-                step_enabled_menu_item(&menu.items, Some(highlighted_item_idx.unwrap_or(0)), true)
-            {
+            if let Some(next) = step_enabled_menu_item(&menu.items, Some(highlighted_item_idx.unwrap_or(0)), true) {
                 *highlighted_item_idx = Some(next);
             }
             return None;
         }
         if input.key_pressed(egui::Key::ArrowUp) {
-            if let Some(prev) =
-                step_enabled_menu_item(&menu.items, Some(highlighted_item_idx.unwrap_or(0)), false)
-            {
+            if let Some(prev) = step_enabled_menu_item(&menu.items, Some(highlighted_item_idx.unwrap_or(0)), false) {
                 *highlighted_item_idx = Some(prev);
             }
             return None;

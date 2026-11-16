@@ -9,8 +9,7 @@ use egui_macview::{
     clamp_menu_rect,
     motion::CASpring,
     theme::{MacAppearance, MacTheme},
-    MacContextMenu, MacToast, MacToastManager, NSMenuItem, NSUndoManager, ToastLevel,
-    DEFAULT_UNDO_CAPACITY,
+    MacContextMenu, MacToast, MacToastManager, NSMenuItem, NSUndoManager, ToastLevel, DEFAULT_UNDO_CAPACITY,
 };
 use proptest::prelude::*;
 
@@ -22,11 +21,7 @@ enum UndoOp {
 }
 
 fn undo_op_strategy() -> impl Strategy<Value = UndoOp> {
-    prop_oneof![
-        any::<i32>().prop_map(UndoOp::Mutate),
-        Just(UndoOp::Undo),
-        Just(UndoOp::Redo),
-    ]
+    prop_oneof![any::<i32>().prop_map(UndoOp::Mutate), Just(UndoOp::Undo), Just(UndoOp::Redo),]
 }
 
 proptest! {
@@ -228,8 +223,7 @@ fn test_context_menu_keyboard_and_action() {
     });
 
     let mut out1 = ctx.run_ui(raw_down, |ui| {
-        let menu = MacContextMenu::new(&items, &mut is_open, &mut spawn_pos, &mut selected_idx)
-            .theme(&theme);
+        let menu = MacContextMenu::new(&items, &mut is_open, &mut spawn_pos, &mut selected_idx).theme(&theme);
 
         menu.show(ui);
     });
@@ -249,8 +243,7 @@ fn test_context_menu_keyboard_and_action() {
 
     let mut triggered = None;
     let mut out2 = ctx.run_ui(raw_enter, |ui| {
-        let menu = MacContextMenu::new(&items, &mut is_open, &mut spawn_pos, &mut selected_idx)
-            .theme(&theme);
+        let menu = MacContextMenu::new(&items, &mut is_open, &mut spawn_pos, &mut selected_idx).theme(&theme);
 
         triggered = menu.show(ui);
     });
@@ -261,9 +254,7 @@ fn test_context_menu_keyboard_and_action() {
 
 #[test]
 fn test_toast_timing_and_spring_settling() {
-    let mut toast = MacToast::new("Item saved to cloud")
-        .level(ToastLevel::Success)
-        .duration(2.5);
+    let mut toast = MacToast::new("Item saved to cloud").level(ToastLevel::Success).duration(2.5);
 
     // Initial state: elapsed 0.0, active
     assert_eq!(toast.elapsed, 0.0);
@@ -378,17 +369,12 @@ fn test_context_menu_arrow_down_when_unselected() {
     });
 
     let mut out = ctx.run_ui(raw_down, |ui| {
-        let menu = MacContextMenu::new(&items, &mut is_open, &mut spawn_pos, &mut selected_idx)
-            .theme(&theme);
+        let menu = MacContextMenu::new(&items, &mut is_open, &mut spawn_pos, &mut selected_idx).theme(&theme);
         menu.show(ui);
     });
     out.textures_delta.clear();
 
-    assert_eq!(
-        selected_idx,
-        Some(0),
-        "ArrowDown when unselected must highlight item 0, not skip it"
-    );
+    assert_eq!(selected_idx, Some(0), "ArrowDown when unselected must highlight item 0, not skip it");
 }
 
 #[test]
@@ -442,14 +428,8 @@ fn test_context_menu_secondary_click_trigger() {
     });
     out3.textures_delta.clear();
 
-    assert!(
-        is_open,
-        "Secondary click (right-click) on interactive widget must trigger context menu"
-    );
-    assert_eq!(
-        spawn_pos, click_pos,
-        "Context menu spawn position must match pointer position"
-    );
+    assert!(is_open, "Secondary click (right-click) on interactive widget must trigger context menu");
+    assert_eq!(spawn_pos, click_pos, "Context menu spawn position must match pointer position");
 }
 
 #[test]
@@ -457,10 +437,7 @@ fn test_context_menu_click_outside_dismissal() {
     let ctx = Context::default();
     let theme = MacTheme::new(MacAppearance::Aqua);
 
-    let items = vec![
-        NSMenuItem::action("Action 1", "act.1"),
-        NSMenuItem::action("Action 2", "act.2"),
-    ];
+    let items = vec![NSMenuItem::action("Action 1", "act.1"), NSMenuItem::action("Action 2", "act.2")];
 
     let click_outside_pos = Pos2::new(10.0, 10.0);
 
@@ -479,8 +456,7 @@ fn test_context_menu_click_outside_dismissal() {
 
     let mut triggered = None;
     let mut out1 = ctx.run_ui(raw_primary, |ui| {
-        let menu = MacContextMenu::new(&items, &mut is_open, &mut spawn_pos, &mut selected_idx)
-            .theme(&theme);
+        let menu = MacContextMenu::new(&items, &mut is_open, &mut spawn_pos, &mut selected_idx).theme(&theme);
         triggered = menu.show(ui);
     });
     out1.textures_delta.clear();
@@ -489,8 +465,7 @@ fn test_context_menu_click_outside_dismissal() {
     assert_eq!(triggered, None);
 
     // 2. Secondary (right) click outside menu bounds also dismisses menu without action
-    let (mut is_open_sec, mut spawn_pos_sec, mut selected_idx_sec) =
-        (true, Pos2::new(100.0, 100.0), None);
+    let (mut is_open_sec, mut spawn_pos_sec, mut selected_idx_sec) = (true, Pos2::new(100.0, 100.0), None);
     let mut raw_sec = RawInput::default();
     raw_sec.events.push(Event::PointerButton {
         pos: click_outside_pos,
@@ -501,13 +476,7 @@ fn test_context_menu_click_outside_dismissal() {
 
     let mut triggered_sec = None;
     let mut out2 = ctx.run_ui(raw_sec, |ui| {
-        let menu = MacContextMenu::new(
-            &items,
-            &mut is_open_sec,
-            &mut spawn_pos_sec,
-            &mut selected_idx_sec,
-        )
-        .theme(&theme);
+        let menu = MacContextMenu::new(&items, &mut is_open_sec, &mut spawn_pos_sec, &mut selected_idx_sec).theme(&theme);
         triggered_sec = menu.show(ui);
     });
     out2.textures_delta.clear();

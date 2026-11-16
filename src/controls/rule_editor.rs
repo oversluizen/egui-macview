@@ -17,9 +17,7 @@ pub struct MacRuleRow {
 impl MacRuleRow {
     /// Creates a new rule row with initial slice selections.
     pub fn new(slices: impl Into<Vec<usize>>) -> Self {
-        Self {
-            slices: slices.into(),
-        }
+        Self { slices: slices.into() }
     }
 }
 
@@ -54,17 +52,8 @@ pub struct MacRuleEditor<'a> {
 
 impl<'a> MacRuleEditor<'a> {
     /// Creates a new rule editor widget bound to a mutable row list and slice options.
-    pub fn new(
-        id_salt: impl Hash + std::fmt::Debug,
-        rows: &'a mut Vec<MacRuleRow>,
-        criteria: &'a [&'a [&'a str]],
-    ) -> Self {
-        Self {
-            id_salt: Id::NULL.with(id_salt),
-            rows,
-            criteria,
-            theme: None,
-        }
+    pub fn new(id_salt: impl Hash + std::fmt::Debug, rows: &'a mut Vec<MacRuleRow>, criteria: &'a [&'a [&'a str]]) -> Self {
+        Self { id_salt: Id::NULL.with(id_salt), rows, criteria, theme: None }
     }
 
     /// Injects dynamic theme.
@@ -122,17 +111,12 @@ impl<'a> Widget for MacRuleEditor<'a> {
 
             // Draw row separator hairline
             if r_idx + 1 < row_count {
-                painter.line_segment(
-                    [row_rect.left_bottom(), row_rect.right_bottom()],
-                    Stroke::new(1.0, theme.separator()),
-                );
+                painter.line_segment([row_rect.left_bottom(), row_rect.right_bottom()], Stroke::new(1.0, theme.separator()));
             }
 
             // Right-aligned [-] and [+] action buttons
-            let plus_rect = Rect::from_min_size(
-                Pos2::new(row_rect.max.x - btn_sz, row_y + (row_h - btn_sz) * 0.5),
-                Vec2::new(btn_sz, btn_sz),
-            );
+            let plus_rect =
+                Rect::from_min_size(Pos2::new(row_rect.max.x - btn_sz, row_y + (row_h - btn_sz) * 0.5), Vec2::new(btn_sz, btn_sz));
             let minus_rect = Rect::from_min_size(
                 Pos2::new(plus_rect.min.x - btn_sz - spacing * 0.5, row_y + (row_h - btn_sz) * 0.5),
                 Vec2::new(btn_sz, btn_sz),
@@ -151,8 +135,14 @@ impl<'a> Widget for MacRuleEditor<'a> {
             );
             let plus_center = plus_rect.center();
             let arm = (btn_sz * 0.5) * 0.5;
-            painter.line_segment([Pos2::new(plus_center.x - arm, plus_center.y), Pos2::new(plus_center.x + arm, plus_center.y)], Stroke::new(1.0, theme.label()));
-            painter.line_segment([Pos2::new(plus_center.x, plus_center.y - arm), Pos2::new(plus_center.x, plus_center.y + arm)], Stroke::new(1.0, theme.label()));
+            painter.line_segment(
+                [Pos2::new(plus_center.x - arm, plus_center.y), Pos2::new(plus_center.x + arm, plus_center.y)],
+                Stroke::new(1.0, theme.label()),
+            );
+            painter.line_segment(
+                [Pos2::new(plus_center.x, plus_center.y - arm), Pos2::new(plus_center.x, plus_center.y + arm)],
+                Stroke::new(1.0, theme.label()),
+            );
 
             let is_plus_clicked = plus_resp.clicked()
                 || (ui.input(|i| i.pointer.primary_clicked())
@@ -174,7 +164,10 @@ impl<'a> Widget for MacRuleEditor<'a> {
                 StrokeKind::Inside,
             );
             let minus_center = minus_rect.center();
-            painter.line_segment([Pos2::new(minus_center.x - arm, minus_center.y), Pos2::new(minus_center.x + arm, minus_center.y)], Stroke::new(1.0, theme.label()));
+            painter.line_segment(
+                [Pos2::new(minus_center.x - arm, minus_center.y), Pos2::new(minus_center.x + arm, minus_center.y)],
+                Stroke::new(1.0, theme.label()),
+            );
 
             let is_minus_clicked = minus_resp.clicked()
                 || (ui.input(|i| i.pointer.primary_clicked())
@@ -198,10 +191,7 @@ impl<'a> Widget for MacRuleEditor<'a> {
                 let galley = painter.layout_no_wrap(label.to_string(), text_style, theme.label());
                 let pill_w = galley.size().x + spacing * 2.0;
                 let pill_h = btn_sz;
-                let pill_rect = Rect::from_min_size(
-                    Pos2::new(cur_x, row_y + (row_h - pill_h) * 0.5),
-                    Vec2::new(pill_w, pill_h),
-                );
+                let pill_rect = Rect::from_min_size(Pos2::new(cur_x, row_y + (row_h - pill_h) * 0.5), Vec2::new(pill_w, pill_h));
 
                 let pill_id = self.id_salt.with("pill").with(r_idx).with(c_idx);
                 let pill_resp = ui.interact(pill_rect, pill_id, Sense::click());
@@ -232,11 +222,8 @@ impl<'a> Widget for MacRuleEditor<'a> {
         }
 
         if let Some(ins_idx) = row_to_add {
-            let new_slices = if let Some(last) = self.rows.get(ins_idx.saturating_sub(1)) {
-                last.slices.clone()
-            } else {
-                vec![0; self.criteria.len()]
-            };
+            let new_slices =
+                if let Some(last) = self.rows.get(ins_idx.saturating_sub(1)) { last.slices.clone() } else { vec![0; self.criteria.len()] };
             self.rows.insert(ins_idx.min(self.rows.len()), MacRuleRow::new(new_slices));
         }
 

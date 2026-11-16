@@ -39,11 +39,8 @@ pub fn paint_clock_and_calendar(
         let month_names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
         let m_idx = (date.month.saturating_sub(1) as usize).min(11);
         let title = format!("{} {}", month_names[m_idx], date.year);
-        let title_galley = painter.layout_no_wrap(
-            title,
-            ui.style().text_styles.get(&egui::TextStyle::Body).cloned().unwrap_or_default(),
-            theme.label(),
-        );
+        let title_galley =
+            painter.layout_no_wrap(title, ui.style().text_styles.get(&egui::TextStyle::Body).cloned().unwrap_or_default(), theme.label());
         painter.galley(
             Pos2::new(header_rect.center().x - title_galley.size().x * 0.5, header_rect.center().y - title_galley.size().y * 0.5),
             title_galley,
@@ -53,36 +50,44 @@ pub fn paint_clock_and_calendar(
         // Header navigation buttons
         let left_btn = Rect::from_min_size(header_rect.min, Vec2::new(header_h, header_h));
         let right_btn = Rect::from_min_size(Pos2::new(header_rect.max.x - header_h, header_rect.min.y), Vec2::new(header_h, header_h));
-        painter.line_segment([left_btn.center(), Pos2::new(left_btn.center().x + 2.0, left_btn.center().y - 2.0)], Stroke::new(1.0, theme.label()));
-        painter.line_segment([left_btn.center(), Pos2::new(left_btn.center().x + 2.0, left_btn.center().y + 2.0)], Stroke::new(1.0, theme.label()));
-        painter.line_segment([right_btn.center(), Pos2::new(right_btn.center().x - 2.0, right_btn.center().y - 2.0)], Stroke::new(1.0, theme.label()));
-        painter.line_segment([right_btn.center(), Pos2::new(right_btn.center().x - 2.0, right_btn.center().y + 2.0)], Stroke::new(1.0, theme.label()));
+        painter.line_segment(
+            [left_btn.center(), Pos2::new(left_btn.center().x + 2.0, left_btn.center().y - 2.0)],
+            Stroke::new(1.0, theme.label()),
+        );
+        painter.line_segment(
+            [left_btn.center(), Pos2::new(left_btn.center().x + 2.0, left_btn.center().y + 2.0)],
+            Stroke::new(1.0, theme.label()),
+        );
+        painter.line_segment(
+            [right_btn.center(), Pos2::new(right_btn.center().x - 2.0, right_btn.center().y - 2.0)],
+            Stroke::new(1.0, theme.label()),
+        );
+        painter.line_segment(
+            [right_btn.center(), Pos2::new(right_btn.center().x - 2.0, right_btn.center().y + 2.0)],
+            Stroke::new(1.0, theme.label()),
+        );
 
-        if response.clicked() {
-            if let Some(pos) = ui.input(|i| i.pointer.interact_pos()) {
-                if left_btn.contains(pos) {
+        let ptr_pos = ui.input(|i| i.pointer.interact_pos().or(i.pointer.latest_pos()));
+        let any_click = response.clicked() || (ui.input(|i| i.pointer.primary_clicked()) && ptr_pos.is_some_and(|p| rect.contains(p)));
+        if any_click {
+            if let Some(pos) = ptr_pos {
+                if left_btn.expand(2.0).contains(pos) {
                     if date.month <= 1 {
                         date.month = 12;
                         date.year = (date.year - 1).max(1);
                     } else {
                         date.month -= 1;
                     }
-                    let max_d = date.days_in_month();
-                    if date.day > max_d {
-                        date.day = max_d;
-                    }
+                    date.day = date.day.min(date.days_in_month());
                     response.mark_changed();
-                } else if right_btn.contains(pos) {
+                } else if right_btn.expand(2.0).contains(pos) {
                     if date.month >= 12 {
                         date.month = 1;
                         date.year += 1;
                     } else {
                         date.month += 1;
                     }
-                    let max_d = date.days_in_month();
-                    if date.day > max_d {
-                        date.day = max_d;
-                    }
+                    date.day = date.day.min(date.days_in_month());
                     response.mark_changed();
                 }
             }
@@ -141,8 +146,8 @@ pub fn paint_clock_and_calendar(
                     if is_today { theme.on_accent_text() } else { theme.label() },
                 );
 
-                if response.clicked() {
-                    if let Some(pos) = ui.input(|i| i.pointer.interact_pos()) {
+                if any_click {
+                    if let Some(pos) = ptr_pos {
                         if cell_rect.contains(pos) {
                             date.day = d;
                             response.mark_changed();
@@ -193,19 +198,27 @@ pub fn paint_clock_and_calendar(
         let min_tip = Pos2::new(clock_center.x + min_angle.cos() * min_len, clock_center.y + min_angle.sin() * min_len);
         painter.line_segment([clock_center, min_tip], Stroke::new(1.0, theme.label()));
 
-        // Interactive click-to-set-minute
-        if response.clicked() {
-            if let Some(pos) = ui.input(|i| i.pointer.interact_pos()) {
+        let ptr_pos = ui.input(|i| i.pointer.interact_pos().or(i.pointer.latest_pos()));
+        let clk_click = response.clicked()
+            || ((ui.input(|i| i.pointer.primary_clicked()) || ui.input(|i| i.pointer.primary_down()))
+                && ptr_pos.is_some_and(|p| clock_rect.contains(p)));
+        if clk_click {
+            if let Some(pos) = ptr_pos {
                 if clock_rect.contains(pos) {
                     let dx = pos.x - clock_center.x;
                     let dy = pos.y - clock_center.y;
+                    let dist = (dx * dx + dy * dy).sqrt();
                     let mut angle = dy.atan2(dx) + std::f32::consts::FRAC_PI_2;
                     if angle < 0.0 {
                         angle += std::f32::consts::TAU;
                     }
-                    let minute_frac = angle / std::f32::consts::TAU;
-                    let minute = ((minute_frac * (clock_minutes as f32)).round() as u32) % (clock_minutes as u32);
-                    date.minute = minute;
+                    let frac = angle / std::f32::consts::TAU;
+                    if dist < hr_len {
+                        let hr12 = ((frac * (clock_hours as f32)).round() as u32) % clock_hours;
+                        date.hour = if date.hour >= 12 { hr12 + 12 } else { hr12 };
+                    } else {
+                        date.minute = ((frac * (clock_minutes as f32)).round() as u32) % clock_minutes;
+                    }
                     response.mark_changed();
                 }
             }

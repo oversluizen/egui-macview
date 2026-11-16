@@ -39,12 +39,7 @@ pub struct MacTableColumn<'a> {
 impl<'a> MacTableColumn<'a> {
     /// Creates a new column with the given `title` and `width` in points.
     pub fn new(title: &'a str, width: f32) -> Self {
-        Self {
-            title,
-            width,
-            alignment: Align::Min,
-            sort_direction: None,
-        }
+        Self { title, width, alignment: Align::Min, sort_direction: None }
     }
 
     /// Sets horizontal alignment for cells in this column.
@@ -87,17 +82,10 @@ pub(crate) fn render_table_header(
     for (col_idx, col) in columns.iter().enumerate() {
         let col_rect = Rect::from_min_max(
             Pos2::new(cursor_x, header_rect.top()),
-            Pos2::new(
-                (cursor_x + col.width).min(header_rect.right()),
-                header_rect.bottom(),
-            ),
+            Pos2::new((cursor_x + col.width).min(header_rect.right()), header_rect.bottom()),
         );
         let hdr_id = table_id.with(("hdr_col", col_idx));
-        let sense = if enabled {
-            Sense::click()
-        } else {
-            Sense::hover()
-        };
+        let sense = if enabled { Sense::click() } else { Sense::hover() };
         let resp = ui.interact(col_rect, hdr_id, sense);
 
         if resp.hovered() && enabled {
@@ -106,39 +94,16 @@ pub(crate) fn render_table_header(
 
         if resp.clicked() && enabled {
             clicked_header = Some(col_idx);
-            let next_dir = col
-                .sort_direction
-                .map(MacSortDirection::toggled)
-                .unwrap_or(MacSortDirection::Ascending);
+            let next_dir = col.sort_direction.map(MacSortDirection::toggled).unwrap_or(MacSortDirection::Ascending);
             toggled_sort = Some((col_idx, next_dir));
         }
 
-        let right_reserve = if col.sort_direction.is_some() {
-            chevron_sz + pad_h
-        } else {
-            pad_h
-        };
-        let title_clip_rect = Rect::from_min_max(
-            col_rect.min,
-            Pos2::new(
-                (col_rect.right() - right_reserve).max(col_rect.left()),
-                col_rect.max.y,
-            ),
-        );
-        let title_galley = theme.layout_tracked_galley(
-            ui,
-            col.title,
-            FontId::proportional(font_sz),
-            theme.label(),
-            f32::INFINITY,
-        );
-        let title_pos = Pos2::new(
-            col_rect.left() + pad_h,
-            col_rect.center().y - title_galley.size().y * 0.5,
-        );
-        painter
-            .with_clip_rect(title_clip_rect)
-            .galley(title_pos, title_galley, theme.label());
+        let right_reserve = if col.sort_direction.is_some() { chevron_sz + pad_h } else { pad_h };
+        let title_clip_rect =
+            Rect::from_min_max(col_rect.min, Pos2::new((col_rect.right() - right_reserve).max(col_rect.left()), col_rect.max.y));
+        let title_galley = theme.layout_tracked_galley(ui, col.title, FontId::proportional(font_sz), theme.label(), f32::INFINITY);
+        let title_pos = Pos2::new(col_rect.left() + pad_h, col_rect.center().y - title_galley.size().y * 0.5);
+        painter.with_clip_rect(title_clip_rect).galley(title_pos, title_galley, theme.label());
 
         if let Some(dir) = col.sort_direction {
             let symbol = match dir {
@@ -158,20 +123,14 @@ pub(crate) fn render_table_header(
         cursor_x += col.width;
         if col_idx + 1 < columns.len() && cursor_x < header_rect.right() {
             painter.line_segment(
-                [
-                    Pos2::new(cursor_x, header_rect.top() + div_inset),
-                    Pos2::new(cursor_x, header_rect.bottom() - div_inset),
-                ],
+                [Pos2::new(cursor_x, header_rect.top() + div_inset), Pos2::new(cursor_x, header_rect.bottom() - div_inset)],
                 Stroke::new(sep_w, theme.separator()),
             );
         }
     }
 
     painter.line_segment(
-        [
-            Pos2::new(header_rect.left(), header_rect.bottom()),
-            Pos2::new(header_rect.right(), header_rect.bottom()),
-        ],
+        [Pos2::new(header_rect.left(), header_rect.bottom()), Pos2::new(header_rect.right(), header_rect.bottom())],
         Stroke::new(sep_w, theme.separator()),
     );
 

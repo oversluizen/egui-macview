@@ -23,16 +23,8 @@ pub const fn unit_row_labels(unit_idx: usize) -> (&'static str, &'static str, &'
 
 /// Blends `top` over `base` using Porter-Duff / Quartz blend mode (`0=Normal, 1=Multiply, 2=Screen, 3=Overlay`).
 pub fn apply_blend_mode(base: Color32, top: Color32, mode_idx: usize) -> Color32 {
-    let (br, bg, bb) = (
-        base.r() as f32 / 255.0,
-        base.g() as f32 / 255.0,
-        base.b() as f32 / 255.0,
-    );
-    let (tr, tg, tb) = (
-        top.r() as f32 / 255.0,
-        top.g() as f32 / 255.0,
-        top.b() as f32 / 255.0,
-    );
+    let (br, bg, bb) = (base.r() as f32 / 255.0, base.g() as f32 / 255.0, base.b() as f32 / 255.0);
+    let (tr, tg, tb) = (top.r() as f32 / 255.0, top.g() as f32 / 255.0, top.b() as f32 / 255.0);
     let blend_ch = |b: f32, t: f32| -> f32 {
         match mode_idx {
             1 => b * t,
@@ -71,15 +63,8 @@ pub fn format_tracked_small_caps(text: &str) -> String {
 pub fn setup_system_or_custom_fonts(ctx: &egui::Context) {
     let mut fonts = egui::FontDefinitions::default();
     if let Ok(bytes) = std::fs::read("C:\\Windows\\Fonts\\CascadiaMono.ttf") {
-        fonts.font_data.insert(
-            "cascadia_mono".to_owned(),
-            std::sync::Arc::new(egui::FontData::from_owned(bytes)),
-        );
-        fonts
-            .families
-            .entry(egui::FontFamily::Monospace)
-            .or_default()
-            .insert(0, "cascadia_mono".to_owned());
+        fonts.font_data.insert("cascadia_mono".to_owned(), std::sync::Arc::new(egui::FontData::from_owned(bytes)));
+        fonts.families.entry(egui::FontFamily::Monospace).or_default().insert(0, "cascadia_mono".to_owned());
     }
     setup_symbols_font(&mut fonts);
     ctx.set_fonts(fonts);
@@ -133,27 +118,17 @@ impl GalleryScreen {
             Self::CanvasPhysics => "Search canvas geometry, transforms, CASpring physics...",
             Self::VectorAssets => "Filter 14 AppKit vector symbols (e.g. search, chevron, gear)...",
             Self::DesignTokensWcag => "Filter W3C design tokens (e.g. button, metric, motion)...",
-            Self::FinderDataBrowser => {
-                "Filter v0.5 table assets by name, codec, or NSTokenField tag..."
-            }
+            Self::FinderDataBrowser => "Filter v0.5 table assets by name, codec, or NSTokenField tag...",
             Self::AvKitMediaStudio => "Search AVKit timeline scenes and audio channels...",
-            Self::AdvancedControls => {
-                "Filter advanced controls (combo, date, tab, collection, player, box)..."
-            }
+            Self::AdvancedControls => "Filter advanced controls (combo, date, tab, collection, player, box)...",
         }
     }
 
     pub fn breadcrumb_path(&self) -> [&'static str; 3] {
         match self {
-            Self::CanvasPhysics => [
-                "macview_gallery",
-                "State 1 (v0.2)",
-                "Vector & Inspector Studio",
-            ],
+            Self::CanvasPhysics => ["macview_gallery", "State 1 (v0.2)", "Vector & Inspector Studio"],
             Self::VectorAssets => ["macview_gallery", "State 2 (v0.3)", "Symbols & Layout Lab"],
-            Self::DesignTokensWcag => {
-                ["macview_gallery", "State 3 (v0.4.1)", "Command & State Lab"]
-            }
+            Self::DesignTokensWcag => ["macview_gallery", "State 3 (v0.4.1)", "Command & State Lab"],
             Self::FinderDataBrowser => ["macview_gallery", "State 4 (v0.5)", "Finder & Publishing"],
             Self::AvKitMediaStudio => ["macview_gallery", "State 5 (v0.5)", "AVKit Media Timeline"],
             Self::AdvancedControls => ["macview_gallery", "State 6 (v0.6)", "Advanced Controls"],
@@ -178,90 +153,20 @@ pub enum ExpandedProTab {
 
 /// Metadata table for the 14 embedded Cupertino vector symbols.
 pub const SYMBOLS_META: [(MacSymbol, &str, &str, &str); 14] = [
-    (
-        MacSymbol::Search,
-        "Search",
-        "Search fields, Spotlight",
-        "U+F4A5",
-    ),
-    (
-        MacSymbol::ChevronRight,
-        "Chevron Right",
-        "Navigation forward, disclosure",
-        "U+F3D3",
-    ),
-    (
-        MacSymbol::ChevronLeft,
-        "Chevron Left",
-        "Navigation back",
-        "U+F3D2",
-    ),
-    (
-        MacSymbol::ChevronDown,
-        "Chevron Down",
-        "Popup buttons, dropdown menus",
-        "U+F5D5",
-    ),
-    (
-        MacSymbol::ChevronUp,
-        "Chevron Up",
-        "Steppers, navigation up",
-        "U+F5E5",
-    ),
-    (
-        MacSymbol::SidebarLeading,
-        "Sidebar Leading",
-        "Sidebar toggle, window layout",
-        "U+F7D6",
-    ),
-    (
-        MacSymbol::Gear,
-        "Gear",
-        "Settings, preferences, metrics",
-        "U+F43C",
-    ),
-    (
-        MacSymbol::Sliders,
-        "Sliders",
-        "Filters, display adjustments",
-        "U+F7DC",
-    ),
-    (
-        MacSymbol::Checkmark,
-        "Checkmark",
-        "Menu checkmarks, verification",
-        "U+F3FD",
-    ),
-    (
-        MacSymbol::Xmark,
-        "Xmark",
-        "Close button, cancel, clear",
-        "U+F404",
-    ),
-    (
-        MacSymbol::Plus,
-        "Plus",
-        "Add layer, expand, zoom in",
-        "U+F489",
-    ),
-    (
-        MacSymbol::Minus,
-        "Minus",
-        "Remove layer, collapse, zoom out",
-        "U+F70F",
-    ),
-    (
-        MacSymbol::ArrowClockwise,
-        "Arrow Clockwise",
-        "Reload, refresh, repeat",
-        "U+F49A",
-    ),
-    (
-        MacSymbol::ArrowCounterClockwise,
-        "Arrow Counter Clockwise",
-        "Undo action, reset",
-        "U+F21C",
-    ),
+    (MacSymbol::Search, "Search", "Search fields, Spotlight", "U+F4A5"),
+    (MacSymbol::ChevronRight, "Chevron Right", "Navigation forward, disclosure", "U+F3D3"),
+    (MacSymbol::ChevronLeft, "Chevron Left", "Navigation back", "U+F3D2"),
+    (MacSymbol::ChevronDown, "Chevron Down", "Popup buttons, dropdown menus", "U+F5D5"),
+    (MacSymbol::ChevronUp, "Chevron Up", "Steppers, navigation up", "U+F5E5"),
+    (MacSymbol::SidebarLeading, "Sidebar Leading", "Sidebar toggle, window layout", "U+F7D6"),
+    (MacSymbol::Gear, "Gear", "Settings, preferences, metrics", "U+F43C"),
+    (MacSymbol::Sliders, "Sliders", "Filters, display adjustments", "U+F7DC"),
+    (MacSymbol::Checkmark, "Checkmark", "Menu checkmarks, verification", "U+F3FD"),
+    (MacSymbol::Xmark, "Xmark", "Close button, cancel, clear", "U+F404"),
+    (MacSymbol::Plus, "Plus", "Add layer, expand, zoom in", "U+F489"),
+    (MacSymbol::Minus, "Minus", "Remove layer, collapse, zoom out", "U+F70F"),
+    (MacSymbol::ArrowClockwise, "Arrow CW", "Reload, refresh, repeat", "U+F49A"),
+    (MacSymbol::ArrowCounterClockwise, "Arrow CCW", "Undo action, reset", "U+F21C"),
 ];
 
 /// Serializable / undoable snapshot for AVKit Studio controls.

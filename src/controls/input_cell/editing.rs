@@ -23,11 +23,8 @@ fn decimal_places_if_valid(s: &str) -> usize {
 
 fn format_stepped_number(reference: &str, fallback_ref: &str, step: f64, val: f64) -> String {
     let ref_decimals = decimal_places_if_valid(reference).max(decimal_places_if_valid(fallback_ref));
-    let step_decimals = if (step - step.round()).abs() > f64::EPSILON {
-        format!("{step}").split_once('.').map_or(1, |(_, f)| f.len())
-    } else {
-        0
-    };
+    let step_decimals =
+        if (step - step.round()).abs() > f64::EPSILON { format!("{step}").split_once('.').map_or(1, |(_, f)| f.len()) } else { 0 };
     let prec = ref_decimals.max(step_decimals);
     format!("{val:.prec$}")
 }
@@ -59,16 +56,21 @@ pub(super) fn show_input_cell(cell: MacInputCell<'_>, ui: &mut Ui) -> Response {
         (subpixel_snap_rect(r, ppp), resp)
     };
 
-    if enabled && (response.clicked() || response.has_focus()) {
+    let pointer_in_rect = enabled
+        && ui.is_rect_visible(rect)
+        && ui.input(|i| {
+            (i.pointer.primary_pressed() || i.pointer.primary_clicked())
+                && i.pointer.interact_pos().or_else(|| i.pointer.latest_pos()).is_some_and(|p| rect.contains(p))
+        });
+    if enabled && (response.clicked() || response.has_focus() || pointer_in_rect) {
         ui.memory_mut(|m| m.request_focus(cell.id));
     }
 
     let is_focused = enabled && ui.memory(|m| m.has_focus(cell.id));
     let alpha_factor = if enabled { 1.0 } else { theme.disabled_opacity() };
     let tx_key = cell.id.with("mac_input_tx_state");
-    let (mut tx, injected_buf) = ui.data_mut(|d| {
-        (d.get_temp::<InputCellTransactionState>(tx_key), d.remove_temp::<String>(cell.id.with("mac_input_buffer")))
-    });
+    let (mut tx, injected_buf) =
+        ui.data_mut(|d| (d.get_temp::<InputCellTransactionState>(tx_key), d.remove_temp::<String>(cell.id.with("mac_input_buffer"))));
     let mut tx_dirty = false;
     let was_active = tx.as_ref().is_some_and(|s| s.active);
 
@@ -80,15 +82,26 @@ pub(super) fn show_input_cell(cell: MacInputCell<'_>, ui: &mut Ui) -> Response {
         let initial = cell.value.clone();
         tx = Some(InputCellTransactionState { active: true, snapshot: initial.clone(), buffer: initial });
         tx_dirty = true;
+    } else if is_focused && was_active && !esc_pressed {
+        if let Some(ref mut st) = tx {
+            if st.buffer == st.snapshot && *cell.value != st.snapshot {
+                st.snapshot = cell.value.clone();
+                st.buffer = cell.value.clone();
+                tx_dirty = true;
+            }
+        }
     } else if !is_focused && was_active && !esc_pressed {
         if let Some(ref mut st) = tx {
-            *cell.value = st.buffer.clone();
+            if st.buffer != st.snapshot {
+                *cell.value = st.buffer.clone();
+            }
             st.active = false;
             tx_dirty = true;
         }
     }
     if let Some(override_buf) = injected_buf {
-        let st = tx.get_or_insert_with(|| InputCellTransactionState { active: is_focused, snapshot: cell.value.clone(), buffer: String::new() });
+        let st =
+            tx.get_or_insert_with(|| InputCellTransactionState { active: is_focused, snapshot: cell.value.clone(), buffer: String::new() });
         st.buffer = override_buf;
         tx_dirty = true;
     }
@@ -240,11 +253,17 @@ pub(super) fn show_input_cell(cell: MacInputCell<'_>, ui: &mut Ui) -> Response {
         }
         r
     } else {
-        egui::text_edit::TextEditState::load(ui.ctx(), cell.id)
-            .unwrap_or_default()
-            .store(ui.ctx(), cell.id);
-        child_ui.interact(inner_rect, cell.id, sense)
+        egui::text_edit::TextEditState::load(ui.ctx(), cell.id).unwrap_or_default().store(ui.ctx(), cell.id);
+        let r = child_ui.interact(inner_rect, cell.id, sense);
+        if enabled && (r.clicked() || r.is_pointer_button_down_on() || r.has_focus()) {
+            ui.memory_mut(|m| m.request_focus(cell.id));
+        }
+        r
     };
+
+    if is_focused && !surrender_now && pointer_in_rect {
+        ui.memory_mut(|m| m.request_focus(cell.id));
+    }
 
     if is_focused && !surrender_now {
         ui.input_mut(|i| {
@@ -264,7 +283,9 @@ pub(super) fn show_input_cell(cell: MacInputCell<'_>, ui: &mut Ui) -> Response {
     let post_focused = ui.memory(|m| m.has_focus(cell.id));
     if is_focused && !post_focused && !surrender_now && focus_transition_to.is_none() {
         if let Some(ref mut st) = tx {
-            *cell.value = st.buffer.clone();
+            if st.buffer != st.snapshot {
+                *cell.value = st.buffer.clone();
+            }
             st.active = false;
             tx_dirty = true;
         }

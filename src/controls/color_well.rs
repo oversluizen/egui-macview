@@ -7,8 +7,7 @@ use crate::layout::subpixel_snap_rect;
 use crate::theme::MacTheme;
 use egui::{
     color_picker::{color_picker_color32, Alpha},
-    Area, Color32, CornerRadius, Key, Modifiers, Order, Pos2, Rect, Response, Sense, Stroke,
-    StrokeKind, Ui, Vec2, Widget,
+    Area, Color32, CornerRadius, Key, Modifiers, Order, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2, Widget,
 };
 
 /// Authentic macOS AppKit Color Well (`NSColorWell` equivalent).
@@ -41,6 +40,7 @@ pub struct MacColorWell<'a> {
     height: Option<f32>,
     corner_radius: Option<f32>,
     border_width: Option<f32>,
+    fixed_rect: Option<Rect>,
     show_alpha: bool,
     enabled: bool,
 }
@@ -56,9 +56,16 @@ impl<'a> MacColorWell<'a> {
             height: None,
             corner_radius: None,
             border_width: None,
+            fixed_rect: None,
             show_alpha: true,
             enabled: true,
         }
+    }
+
+    /// Pins the color well to an exact `.nib` / `.xib` rectangle on `ui`.
+    pub fn fixed_rect(mut self, rect: Rect) -> Self {
+        self.fixed_rect = Some(rect);
+        self
     }
 
     /// Explicitly binds an ID salt for isolated popup and interaction state.
@@ -124,21 +131,21 @@ impl<'a> Widget for MacColorWell<'a> {
         let metrics = theme.color_well();
         let width = self.width.unwrap_or_else(|| metrics.width.points());
         let height = self.height.unwrap_or_else(|| metrics.height.points());
-        let corner_radius = self
-            .corner_radius
-            .unwrap_or_else(|| metrics.corner_radius.points());
-        let border_width = self
-            .border_width
-            .unwrap_or_else(|| metrics.border_width.points());
+        let corner_radius = self.corner_radius.unwrap_or_else(|| metrics.corner_radius.points());
+        let border_width = self.border_width.unwrap_or_else(|| metrics.border_width.points());
         let swatch_inset = metrics.swatch_inset.points();
         let swatch_radius = metrics.swatch_radius.points();
 
-        let sense = if self.enabled {
-            Sense::click()
-        } else {
-            Sense::hover()
-        };
-        let (raw_rect, mut response) = if let Some(explicit_id) = self.id {
+        let sense = if self.enabled { Sense::click() } else { Sense::hover() };
+        let (raw_rect, mut response) = if let Some(fixed) = self.fixed_rect {
+            let id = self.id.unwrap_or_else(|| {
+                let auto_id = ui.next_auto_id().with("mac_color_well_fixed");
+                ui.skip_ahead_auto_ids(1);
+                auto_id
+            });
+            let resp = ui.interact(fixed, id, sense);
+            (fixed, resp)
+        } else if let Some(explicit_id) = self.id {
             let (r, _) = ui.allocate_exact_size(Vec2::new(width, height), Sense::hover());
             let resp = ui.interact(r, explicit_id, sense);
             (r, resp)
@@ -147,11 +154,7 @@ impl<'a> Widget for MacColorWell<'a> {
         };
         let rect = subpixel_snap_rect(raw_rect, ui.ctx().pixels_per_point());
 
-        let alpha_factor = if self.enabled {
-            1.0
-        } else {
-            theme.disabled_opacity()
-        };
+        let alpha_factor = if self.enabled { 1.0 } else { theme.disabled_opacity() };
         let painter = ui.painter_at(rect);
 
         // Outer focus ring
@@ -176,13 +179,7 @@ impl<'a> Widget for MacColorWell<'a> {
             Stroke::new(border_width, theme.separator().gamma_multiply(alpha_factor))
         };
 
-        painter.rect(
-            rect,
-            CornerRadius::same(corner_radius as u8),
-            bg_color,
-            border_stroke,
-            StrokeKind::Inside,
-        );
+        painter.rect(rect, CornerRadius::same(corner_radius as u8), bg_color, border_stroke, StrokeKind::Inside);
 
         // Inner color swatch compartment
         let swatch_rect = rect.shrink(swatch_inset);
@@ -194,11 +191,7 @@ impl<'a> Widget for MacColorWell<'a> {
                 for r in 0..rows {
                     for c in 0..cols {
                         let is_dark = (r + c) % 2 == 1;
-                        let tile_color = if is_dark {
-                            theme.control()
-                        } else {
-                            theme.control_background()
-                        };
+                        let tile_color = if is_dark { theme.control() } else { theme.control_background() };
                         let tile_min = Pos2::new(
                             (swatch_rect.left() + (c as f32) * cell_size).min(swatch_rect.right()),
                             (swatch_rect.top() + (r as f32) * cell_size).min(swatch_rect.bottom()),
@@ -227,84 +220,121 @@ impl<'a> Widget for MacColorWell<'a> {
 
         // Color picker popup handling
         let is_open_id = response.id.with("mac_color_picker_is_open");
+        let press_id = response.id.with("mac_color_well_pressed");
+        let pointer_pos = ui.input(|i| i.pointer.interact_pos().or_else(|| i.pointer.latest_pos()));
+        let primary_pressed = ui.input(|i| i.pointer.button_pressed(egui::PointerButton::Primary));
+        let primary_released = ui.input(|i| i.pointer.button_released(egui::PointerButton::Primary));
+        let primary_clicked = ui.input(|i| i.pointer.button_clicked(egui::PointerButton::Primary));
+        let escape_pressed = ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Escape));
+        let space_or_enter = self.enabled
+            && response.has_focus()
+            && (ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Space))
+                || ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Enter)));
         let mut is_popup_open = ui.data(|d| d.get_temp::<bool>(is_open_id).unwrap_or(false));
+        let mut was_pressed = ui.data(|d| d.get_temp::<bool>(press_id).unwrap_or(false));
+        let in_well = pointer_pos.is_some_and(|p| rect.contains(p));
+        if primary_pressed && in_well {
+            was_pressed = true;
+            ui.data_mut(|d| d.insert_temp(press_id, true));
+        }
+        let well_clicked = response.clicked() || (primary_clicked && in_well) || (primary_released && (was_pressed || in_well));
+        if primary_released {
+            ui.data_mut(|d| d.insert_temp(press_id, false));
+        }
+        let mut just_opened = false;
 
-        if self.enabled {
-            if response.clicked() {
+        if self.enabled && (well_clicked || space_or_enter) {
+            if well_clicked {
                 response.request_focus();
-                is_popup_open = !is_popup_open;
-                ui.data_mut(|d| d.insert_temp(is_open_id, is_popup_open));
-            } else if response.has_focus()
-                && (ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Space))
-                    || ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Enter)))
-            {
-                is_popup_open = !is_popup_open;
-                ui.data_mut(|d| d.insert_temp(is_open_id, is_popup_open));
             }
+            is_popup_open = !is_popup_open;
+            just_opened = is_popup_open;
+            ui.data_mut(|d| d.insert_temp(is_open_id, is_popup_open));
         }
 
         if self.enabled && is_popup_open {
             let picker_dim = metrics.picker_size.points();
             let picker_size = Vec2::new(picker_dim, picker_dim);
             let popup_gap = metrics.popup_gap.points();
-            let screen_rect = ui
-                .ctx()
-                .input(|i| i.raw.screen_rect)
-                .unwrap_or_else(|| ui.clip_rect());
+            let screen_rect = ui.ctx().input(|i| i.raw.screen_rect).unwrap_or_else(|| ui.clip_rect());
             let popup_y = if rect.bottom() + popup_gap + picker_size.y > screen_rect.bottom()
                 && rect.top() - popup_gap - picker_size.y >= screen_rect.top()
             {
                 rect.top() - popup_gap - picker_size.y
             } else {
-                rect.bottom() + popup_gap
+                (rect.bottom() + popup_gap).min((screen_rect.bottom() - picker_size.y).max(screen_rect.top()))
             };
             let popup_x = if rect.left() + picker_size.x > screen_rect.right() {
                 (screen_rect.right() - picker_size.x).max(screen_rect.left())
             } else {
-                rect.left()
+                rect.left().max(screen_rect.left())
             };
             let popup_pos = Pos2::new(popup_x, popup_y);
             let area_id = response.id.with("mac_color_picker_area");
-            let area_resp = Area::new(area_id)
-                .order(Order::Foreground)
-                .fixed_pos(popup_pos)
-                .show(ui.ctx(), |picker_ui| {
+            let mut swatch_clicked = false;
+            let area_resp = Area::new(area_id).order(Order::Foreground).sense(Sense::click()).fade_in(false).fixed_pos(popup_pos).show(
+                ui.ctx(),
+                |picker_ui| {
                     let frame = egui::Frame::window(picker_ui.style())
                         .fill(theme.window_background())
-                        .stroke(Stroke::new(
-                            metrics.border_width.points(),
-                            theme.separator(),
-                        ))
-                        .corner_radius(CornerRadius::same(
-                            metrics.popup_corner_radius.points() as u8
-                        ));
+                        .stroke(Stroke::new(metrics.border_width.points(), theme.separator()))
+                        .corner_radius(CornerRadius::same(metrics.popup_corner_radius.points() as u8));
 
                     frame.show(picker_ui, |inner_ui| {
-                        let alpha_mode = if self.show_alpha {
-                            Alpha::OnlyBlend
-                        } else {
-                            Alpha::Opaque
-                        };
+                        let swatches = [
+                            theme.control_accent(),
+                            theme.system_green(),
+                            theme.system_yellow(),
+                            theme.system_orange(),
+                            theme.system_red(),
+                            theme.traffic_light_close().0,
+                            theme.traffic_light_minimize().0,
+                            theme.traffic_light_zoom().0,
+                            theme.on_accent_text(),
+                            theme.label(),
+                            theme.secondary_label(),
+                            theme.window_background(),
+                        ];
+                        inner_ui.horizontal_wrapped(|sw_ui| {
+                            let sw_sz = metrics.popup_corner_radius.points() + metrics.popup_gap.points() + metrics.swatch_inset.points();
+                            for sw_col in swatches {
+                                let (sr, sresp) = sw_ui.allocate_exact_size(Vec2::splat(sw_sz), Sense::click());
+                                sw_ui.painter().rect(
+                                    sr,
+                                    CornerRadius::same(metrics.swatch_radius.points() as u8),
+                                    sw_col,
+                                    Stroke::new(metrics.border_width.points(), theme.separator()),
+                                    StrokeKind::Inside,
+                                );
+                                if sresp.clicked()
+                                    || ((primary_clicked || primary_pressed || primary_released)
+                                        && pointer_pos.is_some_and(|p| sr.contains(p)))
+                                {
+                                    *self.color = sw_col;
+                                    response.mark_changed();
+                                    swatch_clicked = true;
+                                }
+                            }
+                        });
+                        let alpha_mode = if self.show_alpha { Alpha::OnlyBlend } else { Alpha::Opaque };
                         if color_picker_color32(inner_ui, self.color, alpha_mode) {
                             response.mark_changed();
                         }
                     });
-                });
+                },
+            );
 
-            let pointer_pos = ui.input(|i| i.pointer.interact_pos().or(i.pointer.latest_pos()));
-            if ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Escape)) {
+            if escape_pressed {
                 ui.data_mut(|d| d.insert_temp(is_open_id, false));
-            } else if ui.input(|i| i.pointer.button_clicked(egui::PointerButton::Primary))
-                && !response.clicked()
-            {
-                let popup_rect = area_resp
-                    .response
-                    .rect
-                    .union(Rect::from_min_size(popup_pos, picker_size));
-                let inside_popup = pointer_pos.map(|p| popup_rect.contains(p)).unwrap_or(false);
+            } else if !just_opened && !well_clicked && !swatch_clicked && (primary_clicked || primary_pressed) {
+                let popup_rect =
+                    area_resp.response.rect.union(Rect::from_min_size(popup_pos, picker_size)).expand(metrics.popup_gap.points());
+                let inside_popup = pointer_pos.is_some_and(|p| popup_rect.contains(p));
                 if !inside_popup {
                     ui.data_mut(|d| d.insert_temp(is_open_id, false));
                 }
+            } else {
+                ui.data_mut(|d| d.insert_temp(is_open_id, true));
             }
         }
 

@@ -98,23 +98,14 @@ impl<'a> MacCard<'a> {
 
     /// Renders the card within the specified `rect` and invokes `add_contents`
     /// passing child UI and resolved [`MacBackgroundStyle`].
-    pub fn show<R>(
-        self,
-        ui: &mut Ui,
-        rect: Rect,
-        add_contents: impl FnOnce(&mut Ui, MacBackgroundStyle) -> R,
-    ) -> (Response, R) {
+    pub fn show<R>(self, ui: &mut Ui, rect: Rect, add_contents: impl FnOnce(&mut Ui, MacBackgroundStyle) -> R) -> (Response, R) {
         let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
         let theme: &MacTheme = &theme_cow;
 
         let metrics = theme.popover_metrics();
-        let rounding = self
-            .corner_radius
-            .unwrap_or_else(|| metrics.corner_radius.points());
+        let rounding = self.corner_radius.unwrap_or_else(|| metrics.corner_radius.points());
         let bg_fill = self.fill.unwrap_or_else(|| theme.control_background());
-        let border_stroke = self
-            .stroke
-            .unwrap_or_else(|| Stroke::new(metrics.border_width.points(), theme.separator()));
+        let border_stroke = self.stroke.unwrap_or_else(|| Stroke::new(metrics.border_width.points(), theme.separator()));
 
         let card_id = ui.next_auto_id().with("mac_card");
         ui.skip_ahead_auto_ids(1);
@@ -126,21 +117,11 @@ impl<'a> MacCard<'a> {
         if self.shadow {
             let shadow_offset = metrics.border_width.points() * 2.0;
             let shadow_rect = rect.translate(Vec2::new(0.0, shadow_offset));
-            painter.rect_filled(
-                shadow_rect,
-                CornerRadius::same((rounding + metrics.border_width.points()) as u8),
-                theme.drop_shadow(),
-            );
+            painter.rect_filled(shadow_rect, CornerRadius::same((rounding + metrics.border_width.points()) as u8), theme.drop_shadow());
         }
 
         // Card body surface
-        painter.rect(
-            rect,
-            CornerRadius::same(rounding as u8),
-            bg_fill,
-            border_stroke,
-            StrokeKind::Inside,
-        );
+        painter.rect(rect, CornerRadius::same(rounding as u8), bg_fill, border_stroke, StrokeKind::Inside);
 
         let bg_style = MacBackgroundStyle::from_color(bg_fill);
         let inner_padding = metrics.inner_padding.points();
@@ -163,11 +144,7 @@ impl<'a> MacCard<'a> {
     }
 
     /// Automatically allocates card size and renders contents.
-    pub fn show_content<R>(
-        self,
-        ui: &mut Ui,
-        add_contents: impl FnOnce(&mut Ui, MacBackgroundStyle) -> R,
-    ) -> (Response, R) {
+    pub fn show_content<R>(self, ui: &mut Ui, add_contents: impl FnOnce(&mut Ui, MacBackgroundStyle) -> R) -> (Response, R) {
         let desired_w = self.width.unwrap_or_else(|| ui.available_width());
         let desired_h = self.height.unwrap_or_else(|| {
             if let Some(t) = self.theme {

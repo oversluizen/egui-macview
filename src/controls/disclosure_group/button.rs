@@ -30,11 +30,7 @@ pub struct MacDisclosureButton<'a> {
 impl<'a> MacDisclosureButton<'a> {
     /// Creates a new rounded pill disclosure button.
     pub fn new(is_expanded: &'a mut bool) -> Self {
-        Self {
-            is_expanded,
-            size: MacControlSize::Regular,
-            theme: None,
-        }
+        Self { is_expanded, size: MacControlSize::Regular, theme: None }
     }
 
     /// Sets the control size (`Regular`, `Small`, or `Mini`).
@@ -54,15 +50,11 @@ impl<'a> MacDisclosureButton<'a> {
         let theme_cow = MacTheme::resolve_or_default(self.theme);
         let m = theme_cow.disclosure_group();
         match self.size {
-            MacControlSize::Regular | MacControlSize::Large => {
-                Vec2::new(m.button_regular_width.points(), m.button_regular_height.points())
-            }
+            MacControlSize::Regular | MacControlSize::Large => Vec2::new(m.button_regular_width.points(), m.button_regular_height.points()),
             MacControlSize::Small | MacControlSize::CompactInfobox => {
                 Vec2::new(m.button_small_width.points(), m.button_small_height.points())
             }
-            MacControlSize::Mini => {
-                Vec2::new(m.button_mini_width.points(), m.button_mini_height.points())
-            }
+            MacControlSize::Mini => Vec2::new(m.button_mini_width.points(), m.button_mini_height.points()),
         }
     }
 
@@ -123,11 +115,8 @@ impl<'a> Widget for MacDisclosureButton<'a> {
                 StrokeKind::Inside,
             );
 
-            let spring = CASpring::from_physical(
-                metrics.spring_mass.points(),
-                metrics.spring_stiffness.points(),
-                metrics.spring_damping.points(),
-            );
+            let spring =
+                CASpring::from_physical(metrics.spring_mass.points(), metrics.spring_stiffness.points(), metrics.spring_damping.points());
             let target_angle = MacDisclosureGroup::rotation_angle(*self.is_expanded);
             let anim_angle = if ui.is_rect_visible(rect) && crate::is_window_active(ui.ctx()) {
                 spring.animate_f32(ui.ctx(), response.id.with("pill_rot"), target_angle)
@@ -150,17 +139,9 @@ impl<'a> Widget for MacDisclosureButton<'a> {
             let p2 = rotate(-chevron_sz * 0.5, chevron_sz);
             let p3 = rotate(chevron_sz, 0.0);
 
-            let base_glyph = if enabled && response.hovered() {
-                theme.label_on(base_fill)
-            } else {
-                theme.secondary_label_on(base_fill)
-            };
+            let base_glyph = if enabled && response.hovered() { theme.label_on(base_fill) } else { theme.secondary_label_on(base_fill) };
             let glyph_color = theme.apply_enabled(base_glyph, enabled);
-            painter.add(Shape::convex_polygon(
-                vec![p1, p2, p3],
-                glyph_color,
-                Stroke::NONE,
-            ));
+            painter.add(Shape::convex_polygon(vec![p1, p2, p3], glyph_color, Stroke::NONE));
         }
 
         response

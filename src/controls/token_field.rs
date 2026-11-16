@@ -7,8 +7,8 @@
 use crate::layout::subpixel_snap_rect;
 use crate::theme::MacTheme;
 use egui::{
-    Align2, CornerRadius, FontId, Id, Key, Modifiers, Pos2, Rect, Response, Sense, Stroke,
-    StrokeKind, TextEdit, Ui, UiBuilder, Vec2, Widget,
+    Align2, CornerRadius, FontId, Id, Key, Modifiers, Pos2, Rect, Response, Sense, Stroke, StrokeKind, TextEdit, Ui, UiBuilder, Vec2,
+    Widget,
 };
 use std::fmt::Debug;
 use std::hash::Hash;
@@ -46,23 +46,10 @@ pub struct MacTokenField<'a> {
 
 impl<'a> MacTokenField<'a> {
     /// Creates a new `MacTokenField` bound to `tokens` and `input_buffer`.
-    pub fn new(
-        id_src: impl Hash + Debug,
-        tokens: &'a mut Vec<String>,
-        input_buffer: &'a mut String,
-    ) -> Self {
+    pub fn new(id_src: impl Hash + Debug, tokens: &'a mut Vec<String>, input_buffer: &'a mut String) -> Self {
         #[allow(deprecated)]
         let id = Id::new(id_src);
-        Self {
-            id,
-            tokens,
-            input_buffer,
-            placeholder: "Add token...",
-            max_chars: None,
-            width: None,
-            enabled: true,
-            theme: None,
-        }
+        Self { id, tokens, input_buffer, placeholder: "Add token...", max_chars: None, width: None, enabled: true, theme: None }
     }
 
     /// Sets placeholder text shown when no tokens or input text are present.
@@ -184,11 +171,7 @@ impl<'a> Widget for MacTokenField<'a> {
         let (mut cursor_x, mut cursor_y) = (0.0f32, 0.0f32);
 
         for (idx, tok) in self.tokens.iter().enumerate() {
-            let galley = ui.painter().layout_no_wrap(
-                tok.clone(),
-                font_id.clone(),
-                egui::Color32::PLACEHOLDER,
-            );
+            let galley = ui.painter().layout_no_wrap(tok.clone(), font_id.clone(), egui::Color32::PLACEHOLDER);
             let text_w = galley.size().x;
             let w = (pill_pad_h * 2.0 + text_w + remove_sz).min(max_inner_w);
             if cursor_x > 0.0 && cursor_x + w > max_inner_w {
@@ -205,31 +188,41 @@ impl<'a> Widget for MacTokenField<'a> {
         }
         let (input_rel_x, input_rel_y) = (cursor_x, cursor_y);
         let input_w = (max_inner_w - input_rel_x).max(min_input_w);
-        let cnt_h = self
-            .max_chars
-            .map_or(0.0, |_| tfm.counter_row_height.points());
+        let cnt_h = self.max_chars.map_or(0.0, |_| tfm.counter_row_height.points());
         let total_h = (input_rel_y + pill_h + pad_v * 2.0 + cnt_h).max(tfm.min_height.points());
 
         let alloc_sz = Vec2::new(width, total_h);
         let (raw_rect, response) = ui.allocate_exact_size(alloc_sz, Sense::click());
         let rect = subpixel_snap_rect(raw_rect, ui.ctx().pixels_per_point());
-        if response.clicked() && self.enabled {
+        let pointer_in_rect = self.enabled
+            && ui.is_rect_visible(rect)
+            && ui.input(|i| {
+                (i.pointer.primary_pressed() || i.pointer.primary_clicked())
+                    && i.pointer.interact_pos().or_else(|| i.pointer.latest_pos()).is_some_and(|p| rect.contains(p))
+            });
+        if (response.clicked() || pointer_in_rect) && self.enabled {
             ui.memory_mut(|m| m.request_focus(input_id));
         }
+
+        let is_focused = self.enabled && (response.has_focus() || ui.memory(|m| m.has_focus(input_id)));
+        let painter = ui.painter_at(rect);
+        let bezel_r = tfm.corner_radius.points();
+
+        if self.enabled && is_focused {
+            theme.paint_focus_ring(&painter, rect, bezel_r);
+        }
+
+        let border_col = if is_focused { theme.control_accent() } else { theme.separator() };
+        let border_s = Stroke::new(tfm.border_width.points(), border_col);
+        let bezel_cr = CornerRadius::same(bezel_r as u8);
+        let ctrl_bg = theme.control_background();
+        painter.rect(rect, bezel_cr, ctrl_bg, border_s, StrokeKind::Inside);
 
         let in_x = rect.left() + pad_h + input_rel_x;
         let in_y = rect.top() + pad_v + input_rel_y;
         let input_rect = Rect::from_min_size(Pos2::new(in_x, in_y), Vec2::new(input_w, pill_h));
-        let txt_col = if self.enabled {
-            theme.label()
-        } else {
-            theme.placeholder_text()
-        };
-        let mut child_ui = ui.new_child(
-            UiBuilder::new()
-                .id_salt((self.id, "token_field_inner"))
-                .max_rect(input_rect),
-        );
+        let txt_col = if self.enabled { theme.label() } else { theme.placeholder_text() };
+        let mut child_ui = ui.new_child(UiBuilder::new().id_salt((self.id, "token_field_inner")).max_rect(input_rect));
         let edit_w = TextEdit::singleline(self.input_buffer)
             .id(input_id)
             .font(font_id.clone())
@@ -247,33 +240,8 @@ impl<'a> Widget for MacTokenField<'a> {
             }
         }
 
-        let has_mem_focus = ui.memory(|m| m.has_focus(input_id));
-        let is_focused = edit_resp.has_focus() || response.has_focus() || has_mem_focus;
-        let painter = ui.painter_at(rect);
-        let bezel_r = tfm.corner_radius.points();
-
-        if self.enabled && is_focused {
-            theme.paint_focus_ring(&painter, rect, bezel_r);
-        }
-
-        let border_col = if is_focused {
-            theme.control_accent()
-        } else {
-            theme.separator()
-        };
-        let border_s = Stroke::new(tfm.border_width.points(), border_col);
-        let bezel_cr = CornerRadius::same(bezel_r as u8);
-        let ctrl_bg = theme.control_background();
-        painter.rect(rect, bezel_cr, ctrl_bg, border_s, StrokeKind::Inside);
-
-        let sense = if self.enabled {
-            Sense::click()
-        } else {
-            Sense::hover()
-        };
-        let sel_fg = theme
-            .selected_control_background_style()
-            .primary_text_color(theme);
+        let sense = if self.enabled { Sense::click() } else { Sense::hover() };
+        let sel_fg = theme.selected_control_background_style().primary_text_color(theme);
         let pill_border = Stroke::new(tfm.border_width.points(), theme.separator());
         let span = tfm.remove_cross_span.points();
         let rm_size_vec = Vec2::splat(remove_sz);
@@ -287,8 +255,7 @@ impl<'a> Widget for MacTokenField<'a> {
             let pill_pos = Pos2::new(rect.left() + pad_h + rel_x, rect.top() + pad_v + rel_y);
             let pill_rect = Rect::from_min_size(pill_pos, Vec2::new(w, pill_h));
             let rm_x = pill_rect.right() - pill_pad_h * 0.5 - remove_sz * 0.5;
-            let rm_rect =
-                Rect::from_center_size(Pos2::new(rm_x, pill_rect.center().y), rm_size_vec);
+            let rm_rect = Rect::from_center_size(Pos2::new(rm_x, pill_rect.center().y), rm_size_vec);
             let rm_resp = ui.interact(rm_rect, self.id.with(("rm_tok", idx)), sense);
             if rm_resp.clicked() && self.enabled {
                 remove_idx = Some(idx);
@@ -339,23 +306,13 @@ impl<'a> Widget for MacTokenField<'a> {
 
         if self.tokens.is_empty() && self.input_buffer.is_empty() && !is_focused {
             let ph_pos = Pos2::new(input_rect.left(), input_rect.center().y);
-            painter.text(
-                ph_pos,
-                align_lc,
-                self.placeholder,
-                font_id,
-                theme.placeholder_text(),
-            );
+            painter.text(ph_pos, align_lc, self.placeholder, font_id, theme.placeholder_text());
         }
 
         if let Some(max_c) = self.max_chars {
             let tok_c: usize = self.tokens.iter().map(|t| t.chars().count()).sum();
             let total_c = tok_c + self.input_buffer.chars().count();
-            let col = if total_c > max_c {
-                theme.system_red()
-            } else {
-                theme.secondary_label()
-            };
+            let col = if total_c > max_c { theme.system_red() } else { theme.secondary_label() };
             let cnt_pos = Pos2::new(rect.right() - pad_h, rect.bottom() - pad_v * 0.5);
             let cnt_f = FontId::proportional(tfm.counter_font_size.points());
             let cnt_txt = format!("{total_c} / {max_c}");

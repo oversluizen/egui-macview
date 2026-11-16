@@ -5,10 +5,7 @@
 
 use crate::layout::subpixel_snap_rect;
 use crate::theme::MacTheme;
-use egui::{
-    Align2, CornerRadius, FontId, Key, Modifiers, Pos2, Rect, Response, Sense, Stroke, StrokeKind,
-    TextEdit, Ui, Vec2, Widget,
-};
+use egui::{Align2, CornerRadius, FontId, Key, Modifiers, Pos2, Rect, Response, Sense, Stroke, StrokeKind, TextEdit, Ui, Vec2, Widget};
 
 /// Authentic macOS AppKit Search Field (`NSSearchField` equivalent).
 ///
@@ -46,16 +43,7 @@ pub struct MacSearchField<'a> {
 impl<'a> MacSearchField<'a> {
     /// Creates a new search field bound to a mutable string buffer.
     pub fn new(text: &'a mut String) -> Self {
-        Self {
-            id: None,
-            text,
-            placeholder: "Search",
-            theme: None,
-            width: None,
-            height: None,
-            corner_radius: None,
-            enabled: true,
-        }
+        Self { id: None, text, placeholder: "Search", theme: None, width: None, height: None, corner_radius: None, enabled: true }
     }
 
     /// Sets explicit widget identifier for focus management.
@@ -113,17 +101,14 @@ impl<'a> Widget for MacSearchField<'a> {
 
         let metrics = theme.search_field();
         let height = self.height.unwrap_or_else(|| metrics.height.points());
-        let corner_radius = self
-            .corner_radius
-            .unwrap_or_else(|| metrics.corner_radius.points());
+        let corner_radius = self.corner_radius.unwrap_or_else(|| metrics.corner_radius.points());
         let icon_size = metrics.icon_size.points();
         let icon_stroke = metrics.icon_stroke_width.points();
         let padding_h = metrics.padding_horizontal.points();
         let clear_size = metrics.clear_button_size.points();
 
         let desired_width = self.width.unwrap_or_else(|| metrics.default_width.points());
-        let (raw_rect, response) =
-            ui.allocate_exact_size(Vec2::new(desired_width, height), Sense::click());
+        let (raw_rect, response) = ui.allocate_exact_size(Vec2::new(desired_width, height), Sense::click());
         let rect = subpixel_snap_rect(raw_rect, ui.ctx().pixels_per_point());
 
         let has_text_initial = !self.text.is_empty();
@@ -135,9 +120,7 @@ impl<'a> Widget for MacSearchField<'a> {
             Rect::NOTHING
         };
 
-        let text_id = self
-            .id
-            .unwrap_or_else(|| response.id.with("mac_search_input"));
+        let text_id = self.id.unwrap_or_else(|| response.id.with("mac_search_input"));
         let clear_id = response.id.with("mac_search_clear");
         let clear_response = if has_text_initial && self.enabled {
             ui.interact(clear_rect, clear_id, Sense::click())
@@ -173,16 +156,11 @@ impl<'a> Widget for MacSearchField<'a> {
         }
 
         let has_text = !self.text.is_empty();
-        let is_focused_pre = !surrendered_by_escape
-            && (ui.ctx().memory(|m| m.has_focus(text_id)) || response.has_focus());
+        let is_focused_pre = !surrendered_by_escape && (ui.ctx().memory(|m| m.has_focus(text_id)) || response.has_focus());
 
         let content_gap = metrics.content_spacing.points();
         let text_min_x = rect.left() + padding_h + icon_size + content_gap;
-        let text_max_x = if has_text {
-            rect.right() - padding_h - clear_size - content_gap
-        } else {
-            rect.right() - padding_h
-        };
+        let text_max_x = if has_text { rect.right() - padding_h - clear_size - content_gap } else { rect.right() - padding_h };
         let v_padding = metrics.padding_vertical.points();
         let text_rect = Rect::from_min_max(
             Pos2::new(text_min_x, rect.top() + v_padding),
@@ -203,13 +181,7 @@ impl<'a> Widget for MacSearchField<'a> {
             theme.paint_focus_ring(&painter, rect, corner_radius);
         }
 
-        painter.rect(
-            rect,
-            CornerRadius::same(corner_radius as u8),
-            bg_color,
-            border_stroke,
-            StrokeKind::Inside,
-        );
+        painter.rect(rect, CornerRadius::same(corner_radius as u8), bg_color, border_stroke, StrokeKind::Inside);
 
         let icon_cx = rect.left() + padding_h + icon_size * 0.5;
         let icon_cy = rect.center().y;
@@ -234,21 +206,13 @@ impl<'a> Widget for MacSearchField<'a> {
         }
 
         // 2. Render TextEdit AFTER background bezel so text and cursor sit on top
-        let mut child_ui = ui.new_child(
-            egui::UiBuilder::new()
-                .id_salt((text_id, "search_field_inner"))
-                .max_rect(text_rect),
-        );
+        let mut child_ui = ui.new_child(egui::UiBuilder::new().id_salt((text_id, "search_field_inner")).max_rect(text_rect));
         let edit_response = child_ui.add_sized(
             text_rect.size(),
             TextEdit::singleline(self.text)
                 .id(text_id)
                 .font(font_id)
-                .text_color(if self.enabled {
-                    theme.label()
-                } else {
-                    theme.placeholder_text()
-                })
+                .text_color(if self.enabled { theme.label() } else { theme.placeholder_text() })
                 .frame(egui::Frame::NONE)
                 .interactive(self.enabled),
         );
@@ -257,8 +221,7 @@ impl<'a> Widget for MacSearchField<'a> {
             text_changed = true;
         }
 
-        let is_text_focused = !surrendered_by_escape
-            && (edit_response.has_focus() || ui.ctx().memory(|m| m.has_focus(text_id)));
+        let is_text_focused = !surrendered_by_escape && (edit_response.has_focus() || ui.ctx().memory(|m| m.has_focus(text_id)));
         let is_focused = is_text_focused || (!surrendered_by_escape && response.has_focus());
         if was_focused != is_focused {
             ui.data_mut(|d| d.insert_temp(was_focused_id, is_focused));
@@ -281,20 +244,8 @@ impl<'a> Widget for MacSearchField<'a> {
             let cc = clear_rect.center();
             let x_color = theme.background_style(btn_bg).primary_text_color(theme);
             let x_stroke = Stroke::new(icon_stroke, x_color);
-            clear_painter.line_segment(
-                [
-                    Pos2::new(cc.x - x_span, cc.y - x_span),
-                    Pos2::new(cc.x + x_span, cc.y + x_span),
-                ],
-                x_stroke,
-            );
-            clear_painter.line_segment(
-                [
-                    Pos2::new(cc.x - x_span, cc.y + x_span),
-                    Pos2::new(cc.x + x_span, cc.y - x_span),
-                ],
-                x_stroke,
-            );
+            clear_painter.line_segment([Pos2::new(cc.x - x_span, cc.y - x_span), Pos2::new(cc.x + x_span, cc.y + x_span)], x_stroke);
+            clear_painter.line_segment([Pos2::new(cc.x - x_span, cc.y + x_span), Pos2::new(cc.x + x_span, cc.y - x_span)], x_stroke);
         }
 
         let mut final_response = edit_response.union(response);

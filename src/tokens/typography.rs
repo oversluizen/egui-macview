@@ -1,7 +1,7 @@
 //! SF Pro dynamic typography and optical tracking tokens.
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 /// Single entry in the SF Pro tracking table.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -81,14 +81,14 @@ pub struct PolynomialSpec001 {
     /// Canonical Apple HIG cubic regression curve fit.
     pub cubic_apple_hig_fit: CubicFit,
     /// Discrete verification data points.
-    pub points: HashMap<String, TrackingPoint>,
+    pub points: BTreeMap<String, TrackingPoint>,
 }
 
 /// Typography and tracking tokens.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MacTypographyTokens {
     /// Discrete SF Pro tracking lookup table.
-    pub tracking_table: HashMap<String, TrackingTableEntry>,
+    pub tracking_table: BTreeMap<String, TrackingTableEntry>,
     /// Continuous polynomial regression models.
     pub polynomial_spec001: PolynomialSpec001,
 }
@@ -111,7 +111,5 @@ impl MacTypographyTokens {
 /// $\text{Tracking}(p) = a \cdot p^3 + b \cdot p^2 + c \cdot p + d$
 #[inline]
 pub fn sf_pro_tracking(size_pt: f32) -> f32 {
-    crate::tokens::MacDesignTokens::default_shared()
-        .typography()
-        .tracking_for_size(size_pt as f64) as f32
+    crate::tokens::MacDesignTokens::default_shared().typography().tracking_for_size(size_pt as f64) as f32
 }

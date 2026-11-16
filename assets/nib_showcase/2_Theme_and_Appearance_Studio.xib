@@ -1,0 +1,393 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="23504" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="NO" customObjectInstantitationMethod="direct">
+    <dependencies>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="23504"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <objects>
+        <customObject id="-2" userLabel="File's Owner" customClass="NSWindowController"/>
+        <customObject id="-1" userLabel="First Responder" customClass="FirstResponder"/>
+        <customObject id="-3" userLabel="Application" customClass="NSObject"/>
+        <window title="Theme &amp; Appearance Studio" allowsToolTipsWhenApplicationIsInactive="NO" autorecalculatesKeyViewLoop="NO" releasedWhenClosed="NO" animationBehavior="default" id="win-root-studio">
+            <windowStyleMask key="styleMask" titled="YES" closable="YES" miniaturizable="YES" resizable="YES"/>
+            <rect key="contentRect" x="196" y="240" width="720" height="820"/>
+            <rect key="screenRect" x="0.0" y="0.0" width="1680" height="1027"/>
+            <view key="contentView" identifier="root-studio" id="root-studio">
+                <rect key="frame" x="0.0" y="0.0" width="720" height="820"/>
+                <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                <subviews>
+                    <textField identifier="s6-hdr" horizontalHuggingPriority="251" verticalHuggingPriority="750" id="s6-hdr">
+                        <rect key="frame" x="12" y="796" width="520" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" editable="NO" title="6. Pro AppKit Controls &amp; Cohesive NIB Inspector" id="cell-s6-hdr">
+                            <font key="font" metaFont="systemSemibold"/>
+                        </textFieldCell>
+                    </textField>
+                    <textField identifier="s6-sub" horizontalHuggingPriority="251" verticalHuggingPriority="750" controlSize="small" id="s6-sub">
+                        <rect key="frame" x="12" y="780" width="680" height="16"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" controlSize="small" lineBreakMode="clipping" editable="NO" title="100% Declarative .xib Control Hierarchy: NIB Inspector, DatePicker, TabView, RuleEditor, and ActionBar" id="cell-s6-sub">
+                            <font key="font" metaFont="system"/>
+                            <color key="textColor" name="secondaryLabelColor" catalog="System" colorSpace="catalog"/>
+                        </textFieldCell>
+                    </textField>
+                    <box identifier="s6-outer-box" title="NIB Inspector Showcase (2_Theme_and_Appearance_Studio.xib)" id="s6-outer-box">
+                        <rect key="frame" x="12" y="16" width="696" height="760"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <view key="contentView" id="cv-s6-outer-box">
+                            <rect key="frame" x="4" y="5" width="688" height="740"/>
+                            <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        </view>
+                    </box>
+                    <button identifier="s6-chk-enable" verticalHuggingPriority="750" id="s6-chk-enable">
+                        <rect key="frame" x="28" y="736" width="340" height="20"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="check" title="Enable Inspector Controls (ui.add_enabled_ui)" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="cell-s6-chk-enable">
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.nibInspectorEnabled" id="b-s6-chk-enable"/>
+                        </connections>
+                    </button>
+                    <customView identifier="s6-disc-grp" customClass="NSDisclosureGroup" id="s6-disc-grp">
+                        <rect key="frame" x="380" y="734" width="308" height="24"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.advancedGroupExpanded" id="b-s6-disc-grp"/>
+                            <action selector="addTransformLayer:" target="-2" id="a-s6-disc-grp"/>
+                        </connections>
+                        <userDefinedRuntimeAttributes>
+                            <userDefinedRuntimeAttribute type="string" keyPath="ibTitle" value="Transform &amp; Output Geometry"/>
+                            <userDefinedRuntimeAttribute type="string" keyPath="trailingAddButton" value="YES"/>
+                        </userDefinedRuntimeAttributes>
+                    </customView>
+                    <textField identifier="s6-en-lbl-w" horizontalHuggingPriority="251" verticalHuggingPriority="750" id="s6-en-lbl-w">
+                        <rect key="frame" x="28" y="708" width="50" height="17"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" editable="NO" title="Width:" id="cell-s6-en-lbl-w">
+                            <font key="font" metaFont="systemMedium"/>
+                        </textFieldCell>
+                    </textField>
+                    <textField identifier="s6-en-fld-w" verticalHuggingPriority="750" id="s6-en-fld-w">
+                        <rect key="frame" x="82" y="706" width="76" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" borderStyle="bezel" title="1920" drawsBackground="YES" id="cell-s6-en-fld-w">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.nibWidthExpr" id="b-s6-en-fld-w"/>
+                        </connections>
+                    </textField>
+                    <popUpButton identifier="s6-en-pop-unit" verticalHuggingPriority="750" id="s6-en-pop-unit">
+                        <rect key="frame" x="166" y="706" width="72" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <popUpButtonCell key="cell" type="push" title="pt" bezelStyle="rounded" alignment="left" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" imageScaling="proportionallyDown" inset="2" id="cell-s6-en-pop-unit">
+                            <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
+                            <font key="font" metaFont="menu"/>
+                            <menu key="menu" id="menu-s6-en-pop-unit">
+                                <items>
+                                    <menuItem title="pt" state="on" id="mi-s6-en-pop-unit-0"/>
+                                    <menuItem title="px" id="mi-s6-en-pop-unit-1"/>
+                                    <menuItem title="%" id="mi-s6-en-pop-unit-2"/>
+                                    <menuItem title="em" id="mi-s6-en-pop-unit-3"/>
+                                </items>
+                            </menu>
+                        </popUpButtonCell>
+                        <connections>
+                            <binding destination="-2" name="selectedIndex" keyPath="values.nibUnitIdx" id="b-s6-en-pop-unit"/>
+                        </connections>
+                    </popUpButton>
+                    <popUpButton identifier="s6-en-pop-preset" verticalHuggingPriority="750" id="s6-en-pop-preset">
+                        <rect key="frame" x="246" y="706" width="144" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <popUpButtonCell key="cell" type="push" title="Sonoma 14.8" bezelStyle="rounded" alignment="left" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" imageScaling="proportionallyDown" inset="2" id="cell-s6-en-pop-preset">
+                            <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
+                            <font key="font" metaFont="menu"/>
+                            <menu key="menu" id="menu-s6-en-pop-preset">
+                                <items>
+                                    <menuItem title="Sonoma 14.8" state="on" id="mi-s6-en-pop-preset-0"/>
+                                    <menuItem title="Sequoia 15.0" id="mi-s6-en-pop-preset-1"/>
+                                    <menuItem title="Big Sur 11.0" id="mi-s6-en-pop-preset-2"/>
+                                </items>
+                            </menu>
+                        </popUpButtonCell>
+                        <connections>
+                            <binding destination="-2" name="selectedIndex" keyPath="values.nibPresetIdx" id="b-s6-en-pop-preset"/>
+                        </connections>
+                        <userDefinedRuntimeAttributes>
+                            <userDefinedRuntimeAttribute type="string" keyPath="ibIcon" value="NSAccentBadge"/>
+                        </userDefinedRuntimeAttributes>
+                    </popUpButton>
+                    <button identifier="s6-en-help" verticalHuggingPriority="750" id="s6-en-help">
+                        <rect key="frame" x="400" y="706" width="22" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="help" title="?" bezelStyle="helpButton" inset="2" id="cell-s6-en-help">
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <action selector="nibHelpClicked:" target="-2" id="a-s6-en-help"/>
+                        </connections>
+                    </button>
+                    <button identifier="s6-en-plus" verticalHuggingPriority="750" customClass="NSInlineActionButton" id="s6-en-plus">
+                        <rect key="frame" x="430" y="706" width="26" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="inline" title="+" bezelStyle="inline" inset="2" id="cell-s6-en-plus">
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <action selector="nibPlusAxis:" target="-2" id="a-s6-en-plus"/>
+                        </connections>
+                    </button>
+                    <segmentedControl identifier="s6-en-seg-theme" verticalHuggingPriority="750" controlSize="small" id="s6-en-seg-theme">
+                        <rect key="frame" x="468" y="706" width="220" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <segmentedCell key="cell" controlSize="small" borderStyle="border" alignment="left" style="rounded" trackingMode="selectOne" id="cell-s6-en-seg-theme">
+                            <font key="font" metaFont="system"/>
+                            <segments>
+                                <segment label="Aqua" selected="YES"/>
+                                <segment label="V-Light"/>
+                                <segment label="Dark"/>
+                                <segment label="V-Dark"/>
+                            </segments>
+                        </segmentedCell>
+                        <connections>
+                            <binding destination="-2" name="selectedIndex" keyPath="values.themeVariant" id="b-s6-en-seg-theme"/>
+                        </connections>
+                    </segmentedControl>
+                    <button identifier="s6-en-chk-reg" verticalHuggingPriority="750" id="s6-en-chk-reg">
+                        <rect key="frame" x="28" y="672" width="118" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="check" title="Regular (14pt)" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="cell-s6-en-chk-reg">
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.nibCheckRegular" id="b-s6-en-chk-reg"/>
+                        </connections>
+                    </button>
+                    <button identifier="s6-en-chk-sml" verticalHuggingPriority="750" controlSize="small" id="s6-en-chk-sml">
+                        <rect key="frame" x="152" y="672" width="104" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" controlSize="small" type="check" title="Small (12pt)" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="cell-s6-en-chk-sml">
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.nibCheckSmall" id="b-s6-en-chk-sml"/>
+                        </connections>
+                    </button>
+                    <button identifier="s6-en-chk-mni" verticalHuggingPriority="750" controlSize="mini" id="s6-en-chk-mni">
+                        <rect key="frame" x="262" y="672" width="126" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" controlSize="mini" type="check" title="Mini Mixed (10pt)" bezelStyle="regularSquare" imagePosition="left" state="on" allowsMixedState="YES" inset="2" id="cell-s6-en-chk-mni">
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.nibCheckMini" id="b-s6-en-chk-mni"/>
+                        </connections>
+                    </button>
+                    <textField identifier="s6-en-fld-sml" verticalHuggingPriority="750" controlSize="small" id="s6-en-fld-sml">
+                        <rect key="frame" x="394" y="672" width="84" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" controlSize="small" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" borderStyle="bezel" title="Small 19pt" drawsBackground="YES" id="cell-s6-en-fld-sml">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.nibSmallExpr" id="b-s6-en-fld-sml"/>
+                        </connections>
+                    </textField>
+                    <comboBox identifier="s6-en-cmb-codec" verticalHuggingPriority="750" id="s6-en-cmb-codec">
+                        <rect key="frame" x="486" y="672" width="166" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <comboBoxCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" borderStyle="bezel" title="Apple ProRes 422 HQ" drawsBackground="YES" completes="NO" numberOfVisibleItems="5" id="cell-s6-en-cmb-codec">
+                            <font key="font" metaFont="system"/>
+                            <objectValues>
+                                <string>Apple ProRes 422 HQ</string>
+                                <string>Apple ProRes 4444 XQ</string>
+                                <string>H.265 / HEVC 10-bit</string>
+                            </objectValues>
+                        </comboBoxCell>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.comboText" id="b-s6-en-cmb-codec"/>
+                        </connections>
+                    </comboBox>
+                    <button identifier="s6-en-disc" verticalHuggingPriority="750" id="s6-en-disc">
+                        <rect key="frame" x="660" y="672" width="24" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" type="disclosureTriangle" title="" bezelStyle="disclosure" inset="2" id="cell-s6-en-disc">
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.advancedButtonOpen" id="b-s6-en-disc"/>
+                        </connections>
+                    </button>
+                    <textField identifier="s6-lbl-vib" horizontalHuggingPriority="251" verticalHuggingPriority="750" id="s6-lbl-vib">
+                        <rect key="frame" x="28" y="642" width="76" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" editable="NO" title="Vibrancy:" id="cell-s6-lbl-vib">
+                            <font key="font" metaFont="systemSemibold"/>
+                        </textFieldCell>
+                    </textField>
+                    <textField identifier="s6-lbl-prim" horizontalHuggingPriority="251" verticalHuggingPriority="750" id="s6-lbl-prim">
+                        <rect key="frame" x="110" y="642" width="110" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" lineBreakMode="clipping" editable="NO" title="Primary Label" id="cell-s6-lbl-prim">
+                            <font key="font" metaFont="system"/>
+                        </textFieldCell>
+                    </textField>
+                    <textField identifier="s6-lbl-sec" horizontalHuggingPriority="251" verticalHuggingPriority="750" controlSize="small" id="s6-lbl-sec">
+                        <rect key="frame" x="230" y="642" width="150" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" controlSize="small" lineBreakMode="clipping" editable="NO" title="Secondary Axes (2)" id="cell-s6-lbl-sec">
+                            <font key="font" metaFont="system"/>
+                            <color key="textColor" name="secondaryLabelColor" catalog="System" colorSpace="catalog"/>
+                        </textFieldCell>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.nibAxesLabel" id="b-s6-lbl-sec"/>
+                        </connections>
+                    </textField>
+                    <textField identifier="s6-lbl-tert" horizontalHuggingPriority="251" verticalHuggingPriority="750" controlSize="mini" id="s6-lbl-tert">
+                        <rect key="frame" x="390" y="642" width="260" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" controlSize="mini" lineBreakMode="clipping" editable="NO" title="Tertiary Caption (WCAG Clamped)" id="cell-s6-lbl-tert">
+                            <font key="font" metaFont="system"/>
+                            <color key="textColor" name="tertiaryLabelColor" catalog="System" colorSpace="catalog"/>
+                        </textFieldCell>
+                    </textField>
+                    <box identifier="s6-sep-1" verticalHuggingPriority="750" boxType="separator" id="s6-sep-1">
+                        <rect key="frame" x="28" y="632" width="660" height="2"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                    </box>
+                    <datePicker identifier="s6-date" verticalHuggingPriority="750" id="s6-date">
+                        <rect key="frame" x="28" y="406" width="320" height="218"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <datePickerCell key="cell" borderStyle="bezel" alignment="left" datePickerStyle="clockAndCalendar" id="cell-s6-date">
+                            <font key="font" metaFont="system"/>
+                            <date key="date" timeIntervalSinceReferenceDate="784987200"/>
+                        </datePickerCell>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.pickerDay" id="b-s6-date"/>
+                        </connections>
+                    </datePicker>
+                    <tabView identifier="s6-tabs" id="s6-tabs">
+                        <rect key="frame" x="364" y="406" width="324" height="218"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <font key="font" metaFont="system"/>
+                        <tabViewItems>
+                            <tabViewItem label="General" identifier="0" id="tvi-s6-tabs-0">
+                                <view key="view" id="tvv-s6-tabs-0">
+                                    <rect key="frame" x="10" y="33" width="304" height="172"/>
+                                    <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                                </view>
+                            </tabViewItem>
+                            <tabViewItem label="Codecs" identifier="1" id="tvi-s6-tabs-1">
+                                <view key="view" id="tvv-s6-tabs-1">
+                                    <rect key="frame" x="10" y="33" width="304" height="172"/>
+                                    <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                                </view>
+                            </tabViewItem>
+                            <tabViewItem label="Metadata" identifier="2" id="tvi-s6-tabs-2">
+                                <view key="view" id="tvv-s6-tabs-2">
+                                    <rect key="frame" x="10" y="33" width="304" height="172"/>
+                                    <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                                </view>
+                            </tabViewItem>
+                        </tabViewItems>
+                        <connections>
+                            <binding destination="-2" name="selectedIndex" keyPath="values.proTabIndex" id="b-s6-tabs"/>
+                        </connections>
+                    </tabView>
+                    <ruleEditor identifier="s6-rules" nestingMode="list" canRemoveAllRows="NO" rowHeight="25" id="s6-rules">
+                        <rect key="frame" x="28" y="274" width="660" height="118"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.ruleCount" id="b-s6-rules"/>
+                        </connections>
+                        <userDefinedRuntimeAttributes>
+                            <userDefinedRuntimeAttribute type="string" keyPath="ibDesignFrame" value="{{28, 274}, {660, 118}}"/>
+                        </userDefinedRuntimeAttributes>
+                    </ruleEditor>
+                    <box identifier="s6-sep-2" verticalHuggingPriority="750" boxType="separator" id="s6-sep-2">
+                        <rect key="frame" x="28" y="262" width="660" height="2"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                    </box>
+                    <textField identifier="s6-lbl-tr-hdr" horizontalHuggingPriority="251" verticalHuggingPriority="750" controlSize="small" id="s6-lbl-tr-hdr">
+                        <rect key="frame" x="28" y="236" width="140" height="16"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" controlSize="small" lineBreakMode="clipping" editable="NO" title="Transform Layer" id="cell-s6-lbl-tr-hdr">
+                            <font key="font" metaFont="systemSemibold"/>
+                            <color key="textColor" name="secondaryLabelColor" catalog="System" colorSpace="catalog"/>
+                        </textFieldCell>
+                    </textField>
+                    <textField identifier="s6-lbl-ct-hdr" horizontalHuggingPriority="251" verticalHuggingPriority="750" controlSize="small" id="s6-lbl-ct-hdr">
+                        <rect key="frame" x="264" y="236" width="120" height="16"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" controlSize="small" lineBreakMode="clipping" editable="NO" title="Color Tag" id="cell-s6-lbl-ct-hdr">
+                            <font key="font" metaFont="systemSemibold"/>
+                            <color key="textColor" name="secondaryLabelColor" catalog="System" colorSpace="catalog"/>
+                        </textFieldCell>
+                    </textField>
+                    <textField identifier="s6-lbl-origin" horizontalHuggingPriority="251" verticalHuggingPriority="750" controlSize="small" id="s6-lbl-origin">
+                        <rect key="frame" x="28" y="198" width="54" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" controlSize="small" lineBreakMode="clipping" editable="NO" title="Origin:" id="cell-s6-lbl-origin">
+                            <font key="font" metaFont="systemMedium"/>
+                        </textFieldCell>
+                    </textField>
+                    <customView identifier="s6-origin" customClass="GSOriginPointControl" controlSize="small" id="s6-origin">
+                        <rect key="frame" x="88" y="184" width="46" height="46"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.originAnchor" id="b-s6-origin"/>
+                        </connections>
+                        <userDefinedRuntimeAttributes>
+                            <userDefinedRuntimeAttribute type="string" keyPath="ibSize" value="small"/>
+                        </userDefinedRuntimeAttributes>
+                    </customView>
+                    <textField identifier="s6-lbl-org-val" horizontalHuggingPriority="251" verticalHuggingPriority="750" controlSize="small" id="s6-lbl-org-val">
+                        <rect key="frame" x="144" y="198" width="100" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" controlSize="small" lineBreakMode="clipping" editable="NO" title="Center" id="cell-s6-lbl-org-val">
+                            <font key="font" metaFont="system"/>
+                            <color key="textColor" name="secondaryLabelColor" catalog="System" colorSpace="catalog"/>
+                        </textFieldCell>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.originAnchorLabel" id="b-s6-lbl-org-val"/>
+                        </connections>
+                    </textField>
+                    <textField identifier="s6-lbl-tag" horizontalHuggingPriority="251" verticalHuggingPriority="750" controlSize="small" id="s6-lbl-tag">
+                        <rect key="frame" x="264" y="198" width="72" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <textFieldCell key="cell" controlSize="small" lineBreakMode="clipping" editable="NO" title="Tag Label:" id="cell-s6-lbl-tag">
+                            <font key="font" metaFont="systemMedium"/>
+                        </textFieldCell>
+                    </textField>
+                    <customView identifier="s6-tag-picker" customClass="ColorLabelView" id="s6-tag-picker">
+                        <rect key="frame" x="342" y="198" width="196" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.finderTagColor" id="b-s6-tag-picker"/>
+                        </connections>
+                    </customView>
+                    <button identifier="s6-btn-rst" verticalHuggingPriority="750" controlSize="small" id="s6-btn-rst">
+                        <rect key="frame" x="556" y="198" width="132" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <buttonCell key="cell" controlSize="small" type="push" title="Reset Defaults" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="cell-s6-btn-rst">
+                            <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                        <connections>
+                            <action selector="resetThemeStudio:" target="-2" id="a-s6-btn-rst"/>
+                        </connections>
+                    </button>
+                    <customView identifier="s6-act-bar" customClass="NSTableActionBar" id="s6-act-bar">
+                        <rect key="frame" x="28" y="46" width="660" height="120"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <connections>
+                            <binding destination="-2" name="value" keyPath="values.actionBarSel" id="b-s6-act-bar"/>
+                            <action selector="tableActionBar:" target="-2" id="a-s6-act-bar"/>
+                        </connections>
+                    </customView>
+                </subviews>
+            </view>
+        </window>
+    </objects>
+</document>

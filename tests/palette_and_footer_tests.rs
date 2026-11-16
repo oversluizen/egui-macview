@@ -7,26 +7,18 @@
 use egui::{Context, Event, Key, Modifiers, PointerButton, Pos2, RawInput};
 use egui_macview::{
     theme::{MacAppearance, MacTheme},
-    CommandPaletteItem, MacCanvasFooter, MacCanvasFooterAction, MacCommandPalette,
-    MacKeyboardShortcut, CANVAS_FOOTER_HEIGHT, COMMAND_PALETTE_HEIGHT, COMMAND_PALETTE_WIDTH,
+    CommandPaletteItem, MacCanvasFooter, MacCanvasFooterAction, MacCommandPalette, MacKeyboardShortcut, CANVAS_FOOTER_HEIGHT,
+    COMMAND_PALETTE_HEIGHT, COMMAND_PALETTE_WIDTH,
 };
 
 #[allow(dead_code)]
 #[path = "../examples/macview_gallery.rs"]
 mod gallery_app;
-pub(crate) use gallery_app::{
-    format_tracked_small_caps, CardModel, ExpandedProTab, GalleryApp, GalleryScreen, InspectorMode,
-};
+pub(crate) use gallery_app::{format_tracked_small_caps, CardModel, ExpandedProTab, GalleryApp, GalleryScreen, InspectorMode};
 
 fn key_raw_input(key: Key) -> RawInput {
     RawInput {
-        events: vec![Event::Key {
-            key,
-            physical_key: None,
-            pressed: true,
-            repeat: false,
-            modifiers: Modifiers::default(),
-        }],
+        events: vec![Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers: Modifiers::default() }],
         ..Default::default()
     }
 }
@@ -45,8 +37,7 @@ fn test_canvas_footer_24pt_layout_budget_and_interactive_breadcrumbs() {
 
     // Frame 1: Render footer
     let mut out1 = ctx.run_ui(RawInput::default(), |ui| {
-        let footer =
-            MacCanvasFooter::new(&breadcrumbs, Some(cursor_pos), zoom_factor).theme(&theme);
+        let footer = MacCanvasFooter::new(&breadcrumbs, Some(cursor_pos), zoom_factor).theme(&theme);
         assert_eq!(footer.get_height(), 24.0);
         assert_eq!(footer.show(ui, container_width), None);
     });
@@ -58,27 +49,18 @@ fn test_canvas_footer_24pt_layout_budget_and_interactive_breadcrumbs() {
         let inp = RawInput {
             events: vec![
                 Event::PointerMoved(click_pos),
-                Event::PointerButton {
-                    pos: click_pos,
-                    button: PointerButton::Primary,
-                    pressed,
-                    modifiers: Modifiers::NONE,
-                },
+                Event::PointerButton { pos: click_pos, button: PointerButton::Primary, pressed, modifiers: Modifiers::NONE },
             ],
             ..Default::default()
         };
         let mut clicked_action = None;
         let mut out = ctx.run_ui(inp, |ui| {
-            let footer =
-                MacCanvasFooter::new(&breadcrumbs, Some(cursor_pos), zoom_factor).theme(&theme);
+            let footer = MacCanvasFooter::new(&breadcrumbs, Some(cursor_pos), zoom_factor).theme(&theme);
             clicked_action = footer.show(ui, container_width);
         });
         out.textures_delta.clear();
         if expect_click {
-            assert_eq!(
-                clicked_action,
-                Some(MacCanvasFooterAction::BreadcrumbClicked(0))
-            );
+            assert_eq!(clicked_action, Some(MacCanvasFooterAction::BreadcrumbClicked(0)));
         }
     }
 }
@@ -87,29 +69,17 @@ fn test_canvas_footer_24pt_layout_budget_and_interactive_breadcrumbs() {
 fn test_command_palette_query_filter_and_navigation() {
     let ctx = Context::default();
     let theme = MacTheme::new(MacAppearance::DarkAqua);
-    assert_eq!(
-        (COMMAND_PALETTE_WIDTH, COMMAND_PALETTE_HEIGHT),
-        (480.0, 280.0)
-    );
+    assert_eq!((COMMAND_PALETTE_WIDTH, COMMAND_PALETTE_HEIGHT), (480.0, 280.0));
 
     let items = vec![
-        CommandPaletteItem::new("cmd.save", "Save Document")
-            .shortcut(MacKeyboardShortcut::cmd(Key::S).format_text())
-            .category("File"),
+        CommandPaletteItem::new("cmd.save", "Save Document").shortcut(MacKeyboardShortcut::cmd(Key::S).format_text()).category("File"),
         CommandPaletteItem::new("cmd.export", "Export as PDF").category("File"),
-        CommandPaletteItem::new("cmd.zoom_in", "Zoom In")
-            .shortcut(MacKeyboardShortcut::cmd(Key::Plus).format_text())
-            .category("View"),
-        CommandPaletteItem::new("cmd.zoom_out", "Zoom Out")
-            .shortcut(MacKeyboardShortcut::cmd(Key::Minus).format_text())
-            .category("View"),
+        CommandPaletteItem::new("cmd.zoom_in", "Zoom In").shortcut(MacKeyboardShortcut::cmd(Key::Plus).format_text()).category("View"),
+        CommandPaletteItem::new("cmd.zoom_out", "Zoom Out").shortcut(MacKeyboardShortcut::cmd(Key::Minus).format_text()).category("View"),
     ];
 
     let mut palette = MacCommandPalette::new(items).open(true);
-    assert_eq!(
-        (palette.filtered_items().len(), palette.selected_index),
-        (4, 0)
-    );
+    assert_eq!((palette.filtered_items().len(), palette.selected_index), (4, 0));
 
     palette.set_query("export");
     let filtered = palette.filtered_items();
@@ -146,10 +116,7 @@ fn test_command_palette_fuzzy_subsequence_scoring_and_escape() {
 
     let ctx = Context::default();
     let theme = MacTheme::new(MacAppearance::DarkAqua);
-    let items = vec![
-        CommandPaletteItem::new("cmd.save", "Save Document"),
-        CommandPaletteItem::new("cmd.export", "Export Document"),
-    ];
+    let items = vec![CommandPaletteItem::new("cmd.save", "Save Document"), CommandPaletteItem::new("cmd.export", "Export Document")];
 
     let mut palette = MacCommandPalette::new(items).open(true);
     palette.set_query("export");
@@ -171,8 +138,13 @@ fn test_command_palette_fuzzy_subsequence_scoring_and_escape() {
 
 #[test]
 fn test_gallery_v05_five_state_studio_and_frameless_decorations() {
-    let mut combined_src = std::fs::read_to_string("examples/macview_gallery.rs")
-        .expect("Must read examples/macview_gallery.rs");
+    let mut combined_src = std::fs::read_to_string("examples/macview_gallery.rs").expect("Must read examples/macview_gallery.rs");
+    for extra in ["src/scene/runtime.rs", "src/scene/runtime_widgets.rs"] {
+        if let Ok(sub) = std::fs::read_to_string(extra) {
+            combined_src.push('\n');
+            combined_src.push_str(&sub);
+        }
+    }
     if let Ok(entries) = std::fs::read_dir("examples/gallery") {
         for entry in entries.flatten() {
             if entry.path().extension().and_then(|s| s.to_str()) == Some("rs") {
@@ -192,10 +164,7 @@ fn test_gallery_v05_five_state_studio_and_frameless_decorations() {
         combined_src.contains("ViewportCommand::BeginResize("),
         "Frameless gallery must support edge/corner resizing via ViewportCommand::BeginResize"
     );
-    assert!(
-        combined_src.contains(".numeric("),
-        "Gallery numeric inspector fields must wire .numeric(range, step) for arrow-key stepping"
-    );
+    assert!(combined_src.contains(".numeric("), "Gallery numeric inspector fields must wire .numeric(range, step) for arrow-key stepping");
     let reqs = [
         "MacPathControl::new",
         "MacTableView::new",
@@ -222,17 +191,9 @@ fn test_split_view_sibling_panes_have_distinct_auto_ids() {
     let mut second_id = egui::Id::NULL;
 
     let mut out = ctx.run_ui(RawInput::default(), |ui| {
-        egui_macview::MacSplitView::with_pos(
-            "split_id_test",
-            egui_macview::MacSplitOrientation::Vertical,
-            &mut split_pos,
-        )
-        .theme(&theme)
-        .show(
-            ui,
-            |first_ui| first_id = first_ui.next_auto_id(),
-            |second_ui| second_id = second_ui.next_auto_id(),
-        );
+        egui_macview::MacSplitView::with_pos("split_id_test", egui_macview::MacSplitOrientation::Vertical, &mut split_pos)
+            .theme(&theme)
+            .show(ui, |first_ui| first_id = first_ui.next_auto_id(), |second_ui| second_id = second_ui.next_auto_id());
     });
     out.textures_delta.clear();
 
@@ -250,49 +211,31 @@ fn test_caspring_controls_do_not_request_repaint_at_rest() {
     let mut slider_val = 50.0;
     let mut expanded = true;
 
-    let run_frame =
-        |time: f64, toggle_val: &mut bool, slider_val: &mut f32, expanded: &mut bool| {
-            let raw = RawInput {
-                time: Some(time),
-                ..Default::default()
-            };
-            let mut out = ctx.run_ui(raw, |ui| {
-                ui.add(egui_macview::MacToggle::new(toggle_val).theme(&theme));
-                egui_macview::MacSegmentedControl::new(&["Points", "Pixels", "Percent"], 0)
-                    .theme(&theme)
-                    .show(ui, |_| {});
-                egui_macview::MacSlider::new(slider_val, 0.0..=100.0)
-                    .theme(&theme)
-                    .show(ui);
-                egui_macview::MacOutlineView::new("idle_outline")
-                    .theme(&theme)
-                    .show(ui, |tree| {
-                        tree.row("row_a", 0, true, expanded, false, |row| {
-                            row.label("Idle Row")
-                        });
-                    });
+    let run_frame = |time: f64, toggle_val: &mut bool, slider_val: &mut f32, expanded: &mut bool| {
+        let raw = RawInput { time: Some(time), ..Default::default() };
+        let mut out = ctx.run_ui(raw, |ui| {
+            ui.add(egui_macview::MacToggle::new(toggle_val).theme(&theme));
+            egui_macview::MacSegmentedControl::new(&["Points", "Pixels", "Percent"], 0).theme(&theme).show(ui, |_| {});
+            egui_macview::MacSlider::new(slider_val, 0.0..=100.0).theme(&theme).show(ui);
+            egui_macview::MacOutlineView::new("idle_outline").theme(&theme).show(ui, |tree| {
+                tree.row("row_a", 0, true, expanded, false, |row| row.label("Idle Row"));
             });
-            out.textures_delta.clear();
-            out.viewport_output[&egui::ViewportId::ROOT].repaint_delay
-        };
+        });
+        out.textures_delta.clear();
+        out.viewport_output[&egui::ViewportId::ROOT].repaint_delay
+    };
 
     // Frame 1 & 2: initial layout/font warmup
     let _ = run_frame(1.0, &mut toggle_val, &mut slider_val, &mut expanded);
     let _ = run_frame(1.016, &mut toggle_val, &mut slider_val, &mut expanded);
     // Frame 3: steady state with zero state transitions must NOT request immediate repaint
     let delay = run_frame(1.032, &mut toggle_val, &mut slider_val, &mut expanded);
-    assert!(
-        !delay.is_zero(),
-        "Steady-state CASpring controls must not request continuous repaints (got {delay:?})"
-    );
+    assert!(!delay.is_zero(), "Steady-state CASpring controls must not request continuous repaints (got {delay:?})");
 
     // Frame 4: state transition (toggle_val: true -> false) MUST request immediate repaint and interpolate
     toggle_val = false;
     let delay_on_change = run_frame(2.0, &mut toggle_val, &mut slider_val, &mut expanded);
-    assert!(
-        delay_on_change.is_zero(),
-        "Changing MacToggle state must trigger an immediate CASpring animation repaint"
-    );
+    assert!(delay_on_change.is_zero(), "Changing MacToggle state must trigger an immediate CASpring animation repaint");
 
     // Direct CASpring::animate_f32 mid-flight interpolation, reversal, and settling verification
     let spring_ctx = Context::default();
@@ -300,18 +243,10 @@ fn test_caspring_controls_do_not_request_repaint_at_rest() {
     let anim_id = egui::Id::NULL.with("direct_spring_test");
     let eval_at = |time: f64, target: f32| {
         let mut val = 0.0;
-        let raw = RawInput {
-            time: Some(time),
-            ..Default::default()
-        };
-        let mut out = spring_ctx.run_ui(raw, |ui| {
-            val = spring.animate_f32(ui.ctx(), anim_id, target)
-        });
+        let raw = RawInput { time: Some(time), ..Default::default() };
+        let mut out = spring_ctx.run_ui(raw, |ui| val = spring.animate_f32(ui.ctx(), anim_id, target));
         out.textures_delta.clear();
-        (
-            val,
-            out.viewport_output[&egui::ViewportId::ROOT].repaint_delay,
-        )
+        (val, out.viewport_output[&egui::ViewportId::ROOT].repaint_delay)
     };
     let _ = eval_at(1.0, 0.0);
     let _ = eval_at(1.016, 0.0);
@@ -321,16 +256,10 @@ fn test_caspring_controls_do_not_request_repaint_at_rest() {
     let (v_start, d_start) = eval_at(2.0, 1.0);
     assert!((v_start - 0.0).abs() < 1e-4 && d_start.is_zero());
     let (v_mid, d_mid) = eval_at(2.1, 1.0);
-    assert!(
-        v_mid > 0.1 && v_mid < 0.99 && d_mid.is_zero(),
-        "Mid-flight spring must interpolate (got {v_mid})"
-    );
+    assert!(v_mid > 0.1 && v_mid < 0.99 && d_mid.is_zero(), "Mid-flight spring must interpolate (got {v_mid})");
     // Mid-flight reversal back to 0.0 must start smoothly from v_mid
     let (v_rev, d_rev) = eval_at(2.15, 0.0);
-    assert!(
-        v_rev > 0.1 && v_rev < 1.0 && d_rev.is_zero(),
-        "Mid-flight reversal must preserve displacement (got {v_rev})"
-    );
+    assert!(v_rev > 0.1 && v_rev < 1.0 && d_rev.is_zero(), "Mid-flight reversal must preserve displacement (got {v_rev})");
     // After settling_duration(), spring must settle at 0.0 and stop requesting repaints
     let _ = eval_at(2.15 + spring.settling_duration() as f64 + 0.1, 0.0);
     let (v_settled, d_settled) = eval_at(2.15 + spring.settling_duration() as f64 + 0.2, 0.0);
@@ -362,18 +291,9 @@ fn test_gallery_native_to_custom_chrome_resize_and_hitbox_resync() {
     use egui::ViewportCommand as VC;
     use egui_macview::theme::WindowControlsStyle as WCS;
     let (ctx, mut app) = (Context::default(), gallery_app::GalleryApp::new());
-    let run_frame = |app: &mut gallery_app::GalleryApp,
-                     in_sz: egui::Vec2,
-                     out_sz: egui::Vec2,
-                     max: Option<bool>| {
-        let (rin, rout) = (
-            egui::Rect::from_min_size(Pos2::ZERO, in_sz),
-            egui::Rect::from_min_size(Pos2::ZERO, out_sz),
-        );
-        let mut raw = RawInput {
-            screen_rect: Some(rin),
-            ..Default::default()
-        };
+    let run_frame = |app: &mut gallery_app::GalleryApp, in_sz: egui::Vec2, out_sz: egui::Vec2, max: Option<bool>| {
+        let (rin, rout) = (egui::Rect::from_min_size(Pos2::ZERO, in_sz), egui::Rect::from_min_size(Pos2::ZERO, out_sz));
+        let mut raw = RawInput { screen_rect: Some(rin), ..Default::default() };
         let vp = raw.viewports.entry(egui::ViewportId::ROOT).or_default();
         (vp.inner_rect, vp.outer_rect, vp.maximized) = (Some(rin), Some(rout), max);
         let mut out = ctx.run_ui(raw, |ui| app.render_ui(ui));
@@ -381,16 +301,12 @@ fn test_gallery_native_to_custom_chrome_resize_and_hitbox_resync() {
         let vp_out = out.viewport_output.remove(&egui::ViewportId::ROOT).unwrap();
         (vp_out.commands, vp_out.repaint_delay)
     };
-    let rf = |app: &mut gallery_app::GalleryApp, sz: egui::Vec2, max: Option<bool>| {
-        run_frame(app, sz, sz, max)
-    };
+    let rf = |app: &mut gallery_app::GalleryApp, sz: egui::Vec2, max: Option<bool>| run_frame(app, sz, sz, max);
 
     let init_sz = egui::vec2(1160.0, 740.0);
     let _ = rf(&mut app, init_sz, Some(false));
     let (cmds_idle, _) = rf(&mut app, init_sz, Some(false));
-    assert!(!cmds_idle
-        .iter()
-        .any(|c| matches!(c, VC::Decorations(_) | VC::InnerSize(_))));
+    assert!(!cmds_idle.iter().any(|c| matches!(c, VC::Decorations(_) | VC::InnerSize(_))));
 
     // 1. AppleTrafficLights -> NativeHost: Decorations(true) + 1-frame InnerSize nudge/restore + repaint
     app.window_controls_style = WCS::NativeHost;

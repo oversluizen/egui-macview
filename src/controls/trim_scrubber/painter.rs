@@ -19,12 +19,7 @@ pub struct MacTimelineZone<'a> {
 impl<'a> MacTimelineZone<'a> {
     /// Creates a new timeline zone spanning `start..=end` in seconds.
     pub fn new(start: f64, end: f64, label: &'a str) -> Self {
-        Self {
-            start,
-            end,
-            label,
-            tint: None,
-        }
+        Self { start, end, label, tint: None }
     }
 
     /// Sets an optional custom tint color for this timeline zone.
@@ -34,22 +29,22 @@ impl<'a> MacTimelineZone<'a> {
     }
 }
 
+pub(crate) struct TrimScrubberPaintArgs<'a> {
+    pub full_rect: Rect,
+    pub track_rect: Rect,
+    pub duration: f64,
+    pub in_point: f64,
+    pub out_point: f64,
+    pub playhead: f64,
+    pub waveform: &'a [f32],
+    pub zones: &'a [MacTimelineZone<'a>],
+    pub timecode_text: &'a str,
+}
+
 /// Paints the track background, named zones, normalized waveform, outside dim scrims,
 /// yellow In/Out trim frame with grip slots, and playhead needle with `MM:SS.d` badge.
-#[allow(clippy::too_many_arguments)]
-pub(crate) fn paint_trim_scrubber(
-    painter: &Painter,
-    theme: &MacTheme,
-    full_rect: Rect,
-    track_rect: Rect,
-    duration: f64,
-    in_point: f64,
-    out_point: f64,
-    playhead: f64,
-    waveform: &[f32],
-    zones: &[MacTimelineZone<'_>],
-    timecode_text: &str,
-) {
+pub(crate) fn paint_trim_scrubber(painter: &Painter, theme: &MacTheme, args: TrimScrubberPaintArgs<'_>) {
+    let TrimScrubberPaintArgs { full_rect, track_rect, duration, in_point, out_point, playhead, waveform, zones, timecode_text } = args;
     let sm = theme.trim_scrubber();
     let corner_r = CornerRadius::same(sm.corner_radius.points() as u8);
     let handle_w = sm.handle_width.points();
@@ -62,13 +57,7 @@ pub(crate) fn paint_trim_scrubber(
     };
 
     // 1. Track base background
-    painter.rect(
-        track_rect,
-        corner_r,
-        theme.control_background(),
-        Stroke::new(border_w * 0.5, theme.separator()),
-        StrokeKind::Inside,
-    );
+    painter.rect(track_rect, corner_r, theme.control_background(), Stroke::new(border_w * 0.5, theme.separator()), StrokeKind::Inside);
 
     // 2. Named background timeline zones
     let zone_pad = sm.zone_label_padding.points();
@@ -77,17 +66,11 @@ pub(crate) fn paint_trim_scrubber(
         let zx0 = time_to_x(zone.start);
         let zx1 = time_to_x(zone.end);
         if zx1 > zx0 {
-            let z_rect = Rect::from_min_max(
-                Pos2::new(zx0, track_rect.top()),
-                Pos2::new(zx1, track_rect.bottom()),
-            );
+            let z_rect = Rect::from_min_max(Pos2::new(zx0, track_rect.top()), Pos2::new(zx1, track_rect.bottom()));
             let tint = zone.tint.unwrap_or_else(|| theme.control());
             painter.rect_filled(z_rect, 0, tint);
             painter.line_segment(
-                [
-                    Pos2::new(zx1, track_rect.top()),
-                    Pos2::new(zx1, track_rect.bottom()),
-                ],
+                [Pos2::new(zx1, track_rect.top()), Pos2::new(zx1, track_rect.bottom())],
                 Stroke::new(border_w * 0.5, theme.separator()),
             );
             if !zone.label.is_empty() {
@@ -116,10 +99,7 @@ pub(crate) fn paint_trim_scrubber(
             let x = track_rect.left() + frac * track_rect.width();
             let amp = sample.abs().clamp(min_amp, 1.0);
             let half_h = max_half_h * amp;
-            painter.line_segment(
-                [Pos2::new(x, cy - half_h), Pos2::new(x, cy + half_h)],
-                wave_stroke,
-            );
+            painter.line_segment([Pos2::new(x, cy - half_h), Pos2::new(x, cy + half_h)], wave_stroke);
         }
     }
 
@@ -139,16 +119,8 @@ pub(crate) fn paint_trim_scrubber(
 
     // 5. Yellow/accent QuickTime selection frame & In/Out grab handles
     let trim_color = theme.scrubber_selection_border();
-    let sel_rect = Rect::from_min_max(
-        Pos2::new(in_x, track_rect.top()),
-        Pos2::new(out_x.max(in_x), track_rect.bottom()),
-    );
-    painter.rect_stroke(
-        sel_rect,
-        corner_r,
-        Stroke::new(border_w, trim_color),
-        StrokeKind::Inside,
-    );
+    let sel_rect = Rect::from_min_max(Pos2::new(in_x, track_rect.top()), Pos2::new(out_x.max(in_x), track_rect.bottom()));
+    painter.rect_stroke(sel_rect, corner_r, Stroke::new(border_w, trim_color), StrokeKind::Inside);
 
     let (left_handle, right_handle) = compute_handle_rects(track_rect, in_x, out_x, handle_w);
     painter.rect_filled(left_handle, corner_r, trim_color);
@@ -159,13 +131,7 @@ pub(crate) fn paint_trim_scrubber(
     let slot_stroke = Stroke::new(slot_w, theme.control_background());
     for hc in [left_handle.center(), right_handle.center()] {
         for sx in [hc.x - slot_w, hc.x + slot_w] {
-            painter.line_segment(
-                [
-                    Pos2::new(sx, hc.y - slot_half),
-                    Pos2::new(sx, hc.y + slot_half),
-                ],
-                slot_stroke,
-            );
+            painter.line_segment([Pos2::new(sx, hc.y - slot_half), Pos2::new(sx, hc.y + slot_half)], slot_stroke);
         }
     }
 
@@ -177,41 +143,19 @@ pub(crate) fn paint_trim_scrubber(
     let badge_font = FontId::monospace(sm.badge_font_size.points());
 
     painter.line_segment(
-        [
-            Pos2::new(play_x, track_rect.top() - border_w),
-            Pos2::new(play_x, track_rect.bottom() + border_w),
-        ],
+        [Pos2::new(play_x, track_rect.top() - border_w), Pos2::new(play_x, track_rect.bottom() + border_w)],
         Stroke::new(sm.playhead_width.points(), theme.scrubber_playhead()),
     );
 
-    let badge_w = (timecode_text.len() as f32) * (sm.badge_font_size.points() * 0.5)
-        + badge_pad_h * 2.0
-        + handle_w;
-    let clamped_bx = play_x.clamp(
-        full_rect.left() + badge_w * 0.5,
-        full_rect.right() - badge_w * 0.5,
-    );
-    let badge_rect = Rect::from_center_size(
-        Pos2::new(clamped_bx, full_rect.top() + badge_h * 0.5),
-        Vec2::new(badge_w, badge_h),
-    );
+    let badge_w = (timecode_text.len() as f32) * (sm.badge_font_size.points() * 0.5) + badge_pad_h * 2.0 + handle_w;
+    let clamped_bx = play_x.clamp(full_rect.left() + badge_w * 0.5, full_rect.right() - badge_w * 0.5);
+    let badge_rect = Rect::from_center_size(Pos2::new(clamped_bx, full_rect.top() + badge_h * 0.5), Vec2::new(badge_w, badge_h));
     painter.rect_filled(badge_rect, badge_r, theme.scrubber_outside_dim());
-    painter.text(
-        badge_rect.center(),
-        Align2::CENTER_CENTER,
-        timecode_text,
-        badge_font,
-        theme.scrubber_playhead(),
-    );
+    painter.text(badge_rect.center(), Align2::CENTER_CENTER, timecode_text, badge_font, theme.scrubber_playhead());
 }
 
 /// Computes non-overlapping left (`In`) and right (`Out`) handle rectangles along `track_rect`.
-pub(super) fn compute_handle_rects(
-    track_rect: Rect,
-    in_x: f32,
-    out_x: f32,
-    handle_w: f32,
-) -> (Rect, Rect) {
+pub(super) fn compute_handle_rects(track_rect: Rect, in_x: f32, out_x: f32, handle_w: f32) -> (Rect, Rect) {
     let h = track_rect.height();
     let y = track_rect.top();
     if out_x - in_x >= handle_w * 2.0 {
@@ -224,9 +168,7 @@ pub(super) fn compute_handle_rects(
         let left_min = (mid - handle_w).max(track_rect.left());
         let left_max = mid.max(left_min + 1.0);
         let right_min = left_max;
-        let right_max = (right_min + handle_w)
-            .min(track_rect.right())
-            .max(right_min + 1.0);
+        let right_max = (right_min + handle_w).min(track_rect.right()).max(right_min + 1.0);
         (
             Rect::from_min_max(Pos2::new(left_min, y), Pos2::new(left_max, y + h)),
             Rect::from_min_max(Pos2::new(right_min, y), Pos2::new(right_max, y + h)),

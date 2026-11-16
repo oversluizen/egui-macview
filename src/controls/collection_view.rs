@@ -7,10 +7,7 @@
 use crate::controls::MacInsets;
 use crate::layout::subpixel_snap_rect;
 use crate::theme::MacTheme;
-use egui::{
-    CornerRadius, Id, Key, Modifiers, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui,
-    UiBuilder, Vec2,
-};
+use egui::{CornerRadius, Id, Key, Modifiers, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, UiBuilder, Vec2};
 use std::collections::BTreeSet;
 
 /// Flow layout engine matching AppKit `NSCollectionViewFlowLayout`.
@@ -65,12 +62,8 @@ impl MacCollectionViewFlowLayout {
         let col = index % cols;
         let row = index / cols;
 
-        let x = origin.x
-            + self.section_inset.left
-            + (col as f32) * (self.item_size.x + self.minimum_interitem_spacing);
-        let y = origin.y
-            + self.section_inset.top
-            + (row as f32) * (self.item_size.y + self.minimum_line_spacing);
+        let x = origin.x + self.section_inset.left + (col as f32) * (self.item_size.x + self.minimum_interitem_spacing);
+        let y = origin.y + self.section_inset.top + (row as f32) * (self.item_size.y + self.minimum_line_spacing);
 
         Rect::from_min_size(Pos2::new(x, y), self.item_size)
     }
@@ -109,12 +102,7 @@ pub struct MacCollectionView<'a, T> {
 impl<'a, T> MacCollectionView<'a, T> {
     /// Creates a new collection view bound to an item slice and a mutable selection set.
     pub fn new(items: &'a [T], selected_indices: &'a mut BTreeSet<usize>) -> Self {
-        Self {
-            items,
-            selected_indices,
-            layout: MacCollectionViewFlowLayout::default(),
-            theme: None,
-        }
+        Self { items, selected_indices, layout: MacCollectionViewFlowLayout::default(), theme: None }
     }
 
     /// Overrides flow layout parameters.
@@ -141,11 +129,7 @@ impl<'a, T> MacCollectionView<'a, T> {
         let available_w = ui.available_width();
         let columns = self.layout.compute_column_count(available_w);
         let item_count = self.items.len();
-        let rows = if item_count == 0 {
-            0
-        } else {
-            item_count.div_ceil(columns)
-        };
+        let rows = if item_count == 0 { 0 } else { item_count.div_ceil(columns) };
 
         let total_h = self.layout.section_inset.top
             + (rows as f32) * self.layout.item_size.y
@@ -153,8 +137,7 @@ impl<'a, T> MacCollectionView<'a, T> {
             + self.layout.section_inset.bottom;
 
         let desired_size = Vec2::new(available_w, total_h.max(self.layout.item_size.y));
-        let (rect, mut response) =
-            ui.allocate_exact_size(desired_size, Sense::click_and_drag() | Sense::focusable_noninteractive());
+        let (rect, mut response) = ui.allocate_exact_size(desired_size, Sense::click_and_drag() | Sense::focusable_noninteractive());
         let rect = subpixel_snap_rect(rect, ui.ctx().pixels_per_point());
 
         // Keyboard 2D spatial navigation when focused
@@ -201,17 +184,10 @@ impl<'a, T> MacCollectionView<'a, T> {
             let first_row = ((rel_top / row_pitch).floor() as usize).saturating_sub(1);
             let rel_bottom = (clip.max.y - origin_y).max(0.0);
             let last_row = (((rel_bottom / row_pitch).ceil() as usize) + 1).min(rows);
-            (
-                (first_row * columns).min(item_count),
-                (last_row * columns).min(item_count),
-            )
+            ((first_row * columns).min(item_count), (last_row * columns).min(item_count))
         };
 
-        for (idx, item) in self.items[first_idx..last_idx]
-            .iter()
-            .enumerate()
-            .map(|(i, it)| (first_idx + i, it))
-        {
+        for (idx, item) in self.items[first_idx..last_idx].iter().enumerate().map(|(i, it)| (first_idx + i, it)) {
             let item_rect = self.layout.compute_item_rect(rect.min, idx, columns);
 
             // 2D Viewport culling oracle: strictly bypass if item does not intersect clip rect
@@ -222,9 +198,7 @@ impl<'a, T> MacCollectionView<'a, T> {
             rendered_count += 1;
 
             let is_selected = self.selected_indices.contains(&idx);
-            let item_hovered = ui
-                .input(|inp| inp.pointer.hover_pos())
-                .is_some_and(|p| item_rect.contains(p));
+            let item_hovered = ui.input(|inp| inp.pointer.hover_pos()).is_some_and(|p| item_rect.contains(p));
 
             if item_hovered && ui.input(|inp| inp.pointer.primary_clicked()) {
                 response.request_focus();
@@ -262,38 +236,18 @@ impl<'a, T> MacCollectionView<'a, T> {
             }
 
             // Render inner item
-            let mut child_ui = ui.new_child(
-                UiBuilder::new()
-                    .id_salt(Id::NULL.with("coll_item").with(idx))
-                    .max_rect(item_rect),
-            );
+            let mut child_ui = ui.new_child(UiBuilder::new().id_salt(Id::NULL.with("coll_item").with(idx)).max_rect(item_rect));
             render_item(&mut child_ui, item);
         }
 
         // Rubber-band marquee selection during drag
         if response.dragged() {
-            if let (Some(press_pos), Some(current_pos)) = (
-                ui.input(|i| i.pointer.press_origin()),
-                ui.input(|i| i.pointer.interact_pos()),
-            ) {
+            if let (Some(press_pos), Some(current_pos)) = (ui.input(|i| i.pointer.press_origin()), ui.input(|i| i.pointer.interact_pos())) {
                 let marquee_rect = Rect::from_two_pos(press_pos, current_pos);
-                let fill = theme
-                    .selected_control()
-                    .gamma_multiply(metrics.marquee_alpha_fill.points());
-                let stroke = Stroke::new(
-                    1.0,
-                    theme
-                        .control_accent()
-                        .gamma_multiply(metrics.marquee_alpha_stroke.points()),
-                );
+                let fill = theme.selected_control().gamma_multiply(metrics.marquee_alpha_fill.points());
+                let stroke = Stroke::new(1.0, theme.control_accent().gamma_multiply(metrics.marquee_alpha_stroke.points()));
 
-                painter.rect(
-                    marquee_rect,
-                    CornerRadius::same(0),
-                    fill,
-                    stroke,
-                    StrokeKind::Inside,
-                );
+                painter.rect(marquee_rect, CornerRadius::same(0), fill, stroke, StrokeKind::Inside);
 
                 // Compute 2D AABB intersection with candidate row items
                 let (m_first_idx, m_last_idx) = if row_pitch <= 0.0 || rows == 0 {
@@ -304,10 +258,7 @@ impl<'a, T> MacCollectionView<'a, T> {
                     let first_row = ((rel_top / row_pitch).floor() as usize).saturating_sub(1);
                     let rel_bottom = (marquee_rect.max.y - origin_y).max(0.0);
                     let last_row = (((rel_bottom / row_pitch).ceil() as usize) + 1).min(rows);
-                    (
-                        (first_row * columns).min(item_count),
-                        (last_row * columns).min(item_count),
-                    )
+                    ((first_row * columns).min(item_count), (last_row * columns).min(item_count))
                 };
 
                 for idx in m_first_idx..m_last_idx {

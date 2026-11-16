@@ -13,6 +13,7 @@ pub mod combo_box;
 pub mod date_picker;
 pub mod disclosure_group;
 pub mod help_button;
+pub mod image_view;
 pub mod input_cell;
 pub mod label;
 pub mod level_indicator;
@@ -32,6 +33,7 @@ pub mod tab_view;
 pub mod table_action_bar;
 pub mod table_view;
 pub mod tag_color_picker;
+pub mod text_view;
 pub mod thumbnail_cell;
 pub mod toggle;
 pub mod token_field;
@@ -44,22 +46,19 @@ pub use circular_slider::MacCircularSlider;
 pub use collection_view::{MacCollectionView, MacCollectionViewFlowLayout};
 pub use color_well::MacColorWell;
 pub use combo_box::MacComboBox;
-pub use date_picker::{
-    MacDate, MacDatePicker, MacDatePickerElementFlags, MacDatePickerStyle,
-};
+pub use date_picker::{MacDate, MacDatePicker, MacDatePickerElementFlags, MacDatePickerStyle};
 pub use disclosure_group::{MacDisclosureButton, MacDisclosureGroup, MacDisclosureResponse};
 pub use help_button::{MacHelpButton, MacInlineActionButton};
+pub use image_view::{MacImageFrameStyle, MacImageScaling, MacImageView};
 pub use input_cell::{MacControlSize, MacInputCell};
 pub use label::{MacFontWeight, MacLabel, MacLabelColor};
-pub use level_indicator::{
-    calculate_pan_weights, MacLevelIndicator, MacLevelIndicatorStyle, MacLevelOrientation,
-};
+pub use level_indicator::{calculate_pan_weights, MacLevelIndicator, MacLevelIndicatorStyle, MacLevelOrientation};
 pub use origin_matrix::{MacOriginAnchor, MacOriginMatrix};
 pub use outline_view::{MacOutlineRow, MacOutlineRowResponse, MacOutlineTree, MacOutlineView};
 pub use path_control::{MacPathComponent, MacPathControl, MacPathControlResponse};
 pub use player_view::{
-    format_remaining_timecode, format_timecode, MacPlayerControlsStyle, MacPlayerView,
-    MacPlayerViewResponse, PlayerViewGeometry, PlayerViewState,
+    format_remaining_timecode, format_timecode, MacPlayerControlsStyle, MacPlayerView, MacPlayerViewResponse, PlayerViewGeometry,
+    PlayerViewState,
 };
 pub use popup_button::MacPopUpButton;
 pub use progress_indicator::{MacProgressControlSize, MacProgressIndicator, MacProgressStyle};
@@ -67,18 +66,17 @@ pub use rating_indicator::{MacRatingIndicator, UNIT_STAR};
 pub use rule_editor::{MacRuleEditor, MacRuleRow};
 pub use search_field::MacSearchField;
 pub use segmented::{
-    MacSegmentEvent, MacSegmentItem, MacSegmentedControl, SegmentContent, SegmentEvent,
-    SegmentIconFn, SegmentIconPainter, SegmentItem, SegmentMenuTrigger,
+    MacSegmentEvent, MacSegmentItem, MacSegmentedControl, SegmentContent, SegmentEvent, SegmentIconFn, SegmentIconPainter, SegmentItem,
+    SegmentMenuTrigger,
 };
 pub use slider::MacSlider;
 pub use stepper::MacStepper;
 pub use tab_view::{MacInsets, MacTabItem, MacTabStyle, MacTabView};
 pub use table_action_bar::{MacTableActionBar, MacTableActionResponse};
-pub use table_view::{
-    MacSortDirection, MacTableColumn, MacTableView, MacTableViewOutput, MacTableViewResponse,
-};
+pub use table_view::{MacSortDirection, MacTableColumn, MacTableView, MacTableViewOutput, MacTableViewResponse};
 pub use tag_color_picker::MacTagColorPicker;
+pub use text_view::MacTextView;
 pub use thumbnail_cell::MacThumbnailCell;
-pub use toggle::MacToggle;
+pub use toggle::{MacSwitch, MacToggle};
 pub use token_field::MacTokenField;
 pub use trim_scrubber::{MacTimelineZone, MacTrimScrubber, MacTrimScrubberResponse};

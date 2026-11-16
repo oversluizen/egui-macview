@@ -50,14 +50,7 @@ pub struct MacPopover<'a> {
 
 impl<'a> Default for MacPopover<'a> {
     fn default() -> Self {
-        Self {
-            id: None,
-            theme: None,
-            arrow_edge: MacPopoverArrowEdge::Top,
-            arrow_offset: None,
-            scale: 1.0,
-            alpha: 1.0,
-        }
+        Self { id: None, theme: None, arrow_edge: MacPopoverArrowEdge::Top, arrow_offset: None, scale: 1.0, alpha: 1.0 }
     }
 }
 
@@ -104,12 +97,7 @@ impl<'a> MacPopover<'a> {
     }
 
     /// Renders the popover balloon and invokes `add_contents` for inner child widgets.
-    pub fn show<R>(
-        self,
-        ui: &mut Ui,
-        rect: Rect,
-        add_contents: impl FnOnce(&mut Ui) -> R,
-    ) -> (Response, R) {
+    pub fn show<R>(self, ui: &mut Ui, rect: Rect, add_contents: impl FnOnce(&mut Ui) -> R) -> (Response, R) {
         let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
         let theme: &MacTheme = &theme_cow;
 
@@ -124,14 +112,9 @@ impl<'a> MacPopover<'a> {
         let scaled_size = rect.size() * self.scale.max(f32::EPSILON);
         let active_rect = Rect::from_center_size(center, scaled_size);
 
-        let popover_id = self.id.unwrap_or_else(|| {
-            ui.scope_id().with((
-                "mac_popover",
-                rect.min.x.to_bits(),
-                rect.min.y.to_bits(),
-                self.arrow_edge as u8,
-            ))
-        });
+        let popover_id = self
+            .id
+            .unwrap_or_else(|| ui.scope_id().with(("mac_popover", rect.min.x.to_bits(), rect.min.y.to_bits(), self.arrow_edge as u8)));
         let resp = ui.interact(active_rect, popover_id, egui::Sense::click_and_drag());
         if ui.rect_contains_pointer(active_rect) {
             ui.input_mut(|i| {
@@ -146,31 +129,41 @@ impl<'a> MacPopover<'a> {
         let painter = ui.painter_at(active_rect);
 
         // Body bubble
-        painter.rect(
-            active_rect,
-            CornerRadius::same(corner_radius as u8),
-            bg_color,
-            stroke,
-            StrokeKind::Inside,
-        );
+        painter.rect(active_rect, CornerRadius::same(corner_radius as u8), bg_color, stroke, StrokeKind::Inside);
 
         if self.arrow_edge != MacPopoverArrowEdge::None {
             let arrow_points = match self.arrow_edge {
                 MacPopoverArrowEdge::Top => {
                     let ax = self.arrow_offset.unwrap_or(active_rect.center().x);
-                    [Pos2::new(ax - arrow_w * 0.5, active_rect.min.y), Pos2::new(ax, active_rect.min.y - arrow_h), Pos2::new(ax + arrow_w * 0.5, active_rect.min.y)]
+                    [
+                        Pos2::new(ax - arrow_w * 0.5, active_rect.min.y),
+                        Pos2::new(ax, active_rect.min.y - arrow_h),
+                        Pos2::new(ax + arrow_w * 0.5, active_rect.min.y),
+                    ]
                 }
                 MacPopoverArrowEdge::Bottom => {
                     let ax = self.arrow_offset.unwrap_or(active_rect.center().x);
-                    [Pos2::new(ax - arrow_w * 0.5, active_rect.max.y), Pos2::new(ax, active_rect.max.y + arrow_h), Pos2::new(ax + arrow_w * 0.5, active_rect.max.y)]
+                    [
+                        Pos2::new(ax - arrow_w * 0.5, active_rect.max.y),
+                        Pos2::new(ax, active_rect.max.y + arrow_h),
+                        Pos2::new(ax + arrow_w * 0.5, active_rect.max.y),
+                    ]
                 }
                 MacPopoverArrowEdge::Left => {
                     let ay = self.arrow_offset.unwrap_or(active_rect.center().y);
-                    [Pos2::new(active_rect.min.x, ay - arrow_w * 0.5), Pos2::new(active_rect.min.x - arrow_h, ay), Pos2::new(active_rect.min.x, ay + arrow_w * 0.5)]
+                    [
+                        Pos2::new(active_rect.min.x, ay - arrow_w * 0.5),
+                        Pos2::new(active_rect.min.x - arrow_h, ay),
+                        Pos2::new(active_rect.min.x, ay + arrow_w * 0.5),
+                    ]
                 }
                 MacPopoverArrowEdge::Right | MacPopoverArrowEdge::None => {
                     let ay = self.arrow_offset.unwrap_or(active_rect.center().y);
-                    [Pos2::new(active_rect.max.x, ay - arrow_w * 0.5), Pos2::new(active_rect.max.x + arrow_h, ay), Pos2::new(active_rect.max.x, ay + arrow_w * 0.5)]
+                    [
+                        Pos2::new(active_rect.max.x, ay - arrow_w * 0.5),
+                        Pos2::new(active_rect.max.x + arrow_h, ay),
+                        Pos2::new(active_rect.max.x, ay + arrow_w * 0.5),
+                    ]
                 }
             };
             painter.add(egui::Shape::convex_polygon(arrow_points.to_vec(), bg_color, Stroke::NONE));
@@ -239,11 +232,7 @@ impl<'a> MacPopoverSurface<'a> {
     }
 
     /// Renders the popover surface and invokes `add_contents` inside the padded child `Ui`.
-    pub fn show<R>(
-        self,
-        ui: &mut Ui,
-        add_contents: impl FnOnce(&mut Ui) -> R,
-    ) -> egui::InnerResponse<R> {
+    pub fn show<R>(self, ui: &mut Ui, add_contents: impl FnOnce(&mut Ui) -> R) -> egui::InnerResponse<R> {
         let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
         let theme: &MacTheme = &theme_cow;
         let metrics = theme.popover_metrics();
@@ -251,21 +240,13 @@ impl<'a> MacPopoverSurface<'a> {
             let size = Vec2::new(metrics.full_popover_width.points(), metrics.full_popover_height.points());
             ui.allocate_exact_size(size, egui::Sense::hover()).0
         });
-        let surface_id = self.id.unwrap_or_else(|| {
-            ui.scope_id().with(("mac_popover_surface", rect.min.x.to_bits(), rect.min.y.to_bits()))
-        });
+        let surface_id = self.id.unwrap_or_else(|| ui.scope_id().with(("mac_popover_surface", rect.min.x.to_bits(), rect.min.y.to_bits())));
         let response = ui.interact(rect, surface_id, egui::Sense::click_and_drag());
         let rounding = self.corner_radius.unwrap_or_else(|| metrics.surface_corner_radius.points());
         let border_w = metrics.surface_border_width.points();
         let bg_fill = theme.popover_background();
         let border_stroke = Stroke::new(border_w, theme.popover_border());
-        ui.painter_at(rect).rect(
-            rect,
-            CornerRadius::same(rounding as u8),
-            bg_fill,
-            border_stroke,
-            StrokeKind::Inside,
-        );
+        ui.painter_at(rect).rect(rect, CornerRadius::same(rounding as u8), bg_fill, border_stroke, StrokeKind::Inside);
         let pad = metrics.inner_padding.points();
         let content_rect = rect.shrink2(Vec2::new(pad.min(rect.width() * 0.5), pad.min(rect.height() * 0.5)));
         let mut child_ui = ui.new_child(

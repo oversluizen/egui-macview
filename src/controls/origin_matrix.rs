@@ -33,13 +33,21 @@ pub enum MacOriginAnchor {
 impl MacOriginAnchor {
     /// All nine anchor positions in row-major order (`0..9`).
     pub const ALL: [Self; 9] = [
-        Self::TopLeft, Self::TopCenter, Self::TopRight,
-        Self::MiddleLeft, Self::Center, Self::MiddleRight,
-        Self::BottomLeft, Self::BottomCenter, Self::BottomRight,
+        Self::TopLeft,
+        Self::TopCenter,
+        Self::TopRight,
+        Self::MiddleLeft,
+        Self::Center,
+        Self::MiddleRight,
+        Self::BottomLeft,
+        Self::BottomCenter,
+        Self::BottomRight,
     ];
 
     /// Returns the row-major index in `0..9`.
-    pub const fn index(self) -> usize { self as usize }
+    pub const fn index(self) -> usize {
+        self as usize
+    }
 
     /// Converts a row-major index `0..9` into a [`MacOriginAnchor`], falling back to [`Self::Center`].
     pub const fn from_index(index: usize) -> Self {
@@ -58,10 +66,14 @@ impl MacOriginAnchor {
     }
 
     /// Returns the grid row index in `0..=2`.
-    pub const fn row(self) -> usize { (self as usize) / 3 }
+    pub const fn row(self) -> usize {
+        (self as usize) / 3
+    }
 
     /// Returns the grid column index in `0..=2`.
-    pub const fn col(self) -> usize { (self as usize) % 3 }
+    pub const fn col(self) -> usize {
+        (self as usize) % 3
+    }
 
     /// Constructs a [`MacOriginAnchor`] from `(row, col)`, clamping each axis to `0..=2`.
     pub const fn from_row_col(row: usize, col: usize) -> Self {
@@ -225,10 +237,18 @@ impl Widget for MacOriginMatrix<'_> {
         if enabled && response.has_focus() {
             let (mut r, mut c) = (active.row(), active.col());
             ui.input(|i| {
-                if i.key_pressed(Key::ArrowLeft) { c = c.saturating_sub(1); }
-                if i.key_pressed(Key::ArrowRight) { c = (c + 1).min(2); }
-                if i.key_pressed(Key::ArrowUp) { r = r.saturating_sub(1); }
-                if i.key_pressed(Key::ArrowDown) { r = (r + 1).min(2); }
+                if i.key_pressed(Key::ArrowLeft) {
+                    c = c.saturating_sub(1);
+                }
+                if i.key_pressed(Key::ArrowRight) {
+                    c = (c + 1).min(2);
+                }
+                if i.key_pressed(Key::ArrowUp) {
+                    r = r.saturating_sub(1);
+                }
+                if i.key_pressed(Key::ArrowDown) {
+                    r = (r + 1).min(2);
+                }
             });
             let next = MacOriginAnchor::from_row_col(r, c);
             if next != active {
@@ -262,11 +282,7 @@ impl Widget for MacOriginMatrix<'_> {
         for anchor in MacOriginAnchor::ALL {
             let pos = Self::node_center(rect, anchor, cell_step);
             if anchor == active {
-                painter.circle_filled(
-                    pos,
-                    om.active_node_radius.points(),
-                    theme.control_accent().gamma_multiply(alpha),
-                );
+                painter.circle_filled(pos, om.active_node_radius.points(), theme.control_accent().gamma_multiply(alpha));
             } else {
                 let hovered = widget_hovered && hover_pos.is_some_and(|hp| hp.distance(pos) <= cell_step * 0.5);
                 let rad = if hovered { om.hover_node_radius.points() } else { om.node_radius.points() };

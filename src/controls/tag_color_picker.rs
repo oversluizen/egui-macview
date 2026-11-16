@@ -114,28 +114,12 @@ impl<'a> MacTagColorPicker<'a> {
     }
 
     /// Computes the exact center position of swatch `index` inside `rect`.
-    pub fn swatch_center(
-        rect: Rect,
-        index: usize,
-        columns: usize,
-        dot_diameter: f32,
-        dot_spacing: f32,
-    ) -> Pos2 {
-        Self::swatch_center_grid(rect, index, columns, columns, 1, dot_diameter, dot_spacing, dot_spacing)
+    pub fn swatch_center(rect: Rect, index: usize, columns: usize, dot_diameter: f32, dot_spacing: f32) -> Pos2 {
+        Self::swatch_center_grid(rect, index, columns, dot_diameter, dot_spacing, dot_spacing)
     }
 
     /// Computes the exact center position of swatch `index` inside a multi-row grid within `rect`.
-    #[allow(clippy::too_many_arguments)]
-    pub fn swatch_center_grid(
-        rect: Rect,
-        index: usize,
-        _total_count: usize,
-        columns: usize,
-        _rows: usize,
-        dot_diameter: f32,
-        col_gap: f32,
-        row_gap: f32,
-    ) -> Pos2 {
+    pub fn swatch_center_grid(rect: Rect, index: usize, columns: usize, dot_diameter: f32, col_gap: f32, row_gap: f32) -> Pos2 {
         let cols = columns.max(1);
         let (col, row) = (index % cols, index / cols);
         let (ring_pad_x, ring_pad_y) = (col_gap * 0.5, row_gap * 0.5);
@@ -169,11 +153,8 @@ impl Widget for MacTagColorPicker<'_> {
         let colors: &[Color32] = self.palette.unwrap_or(&default_palette);
         let color_count = colors.len();
         let total_count = color_count + usize::from(self.include_clear_swatch);
-        let cols = if let Some(r) = self.rows {
-            total_count.div_ceil(r.max(1)).max(1)
-        } else {
-            self.columns.max(1).min(total_count.max(1))
-        };
+        let cols =
+            if let Some(r) = self.rows { total_count.div_ceil(r.max(1)).max(1) } else { self.columns.max(1).min(total_count.max(1)) };
         let rows = total_count.div_ceil(cols);
         let (pitch_x, pitch_y) = (diam + col_gap, diam + row_gap);
         let max_pitch = pitch_x.max(pitch_y);
@@ -196,7 +177,7 @@ impl Widget for MacTagColorPicker<'_> {
             let click_pos = response.interact_pointer_pos().unwrap_or(rect.center());
             let (mut best_idx, mut best_dist) = (0usize, f32::INFINITY);
             for idx in 0..total_count {
-                let d = Self::swatch_center_grid(rect, idx, total_count, cols, rows, diam, col_gap, row_gap).distance(click_pos);
+                let d = Self::swatch_center_grid(rect, idx, cols, diam, col_gap, row_gap).distance(click_pos);
                 if d < best_dist {
                     best_dist = d;
                     best_idx = idx;
@@ -224,22 +205,24 @@ impl Widget for MacTagColorPicker<'_> {
         let swatch_border = theme.tag_swatch_border().gamma_multiply(alpha);
 
         for idx in 0..total_count {
-            let center = Self::swatch_center_grid(rect, idx, total_count, cols, rows, diam, col_gap, row_gap);
+            let center = Self::swatch_center_grid(rect, idx, cols, diam, col_gap, row_gap);
             let hovered = widget_hovered && hover_pos.is_some_and(|hp| hp.distance(center) <= max_pitch * 0.5);
             let is_selected_color = *self.selected == Some(idx);
             let sw_r = if hovered && !is_selected_color { radius + tm.hover_radius_delta.points() } else { radius };
             if self.include_clear_swatch && idx == color_count {
-                let clear_fg = if hovered || self.selected.is_none() {
-                    theme.label_on(surface)
-                } else {
-                    theme.secondary_label_on(surface)
-                };
+                let clear_fg = if hovered || self.selected.is_none() { theme.label_on(surface) } else { theme.secondary_label_on(surface) };
                 let clear_stroke_c = clear_fg.gamma_multiply(alpha);
                 painter.circle(center, sw_r, theme.tag_labels().clear.to_color32(), Stroke::new(border_w, clear_stroke_c));
                 let cross_inset = sw_r * (1.0 - tm.clear_cross_inset_ratio.points());
                 let cross_stroke = Stroke::new(tm.clear_cross_stroke_width.points(), clear_stroke_c);
-                painter.line_segment([Pos2::new(center.x - cross_inset, center.y - cross_inset), Pos2::new(center.x + cross_inset, center.y + cross_inset)], cross_stroke);
-                painter.line_segment([Pos2::new(center.x - cross_inset, center.y + cross_inset), Pos2::new(center.x + cross_inset, center.y - cross_inset)], cross_stroke);
+                painter.line_segment(
+                    [Pos2::new(center.x - cross_inset, center.y - cross_inset), Pos2::new(center.x + cross_inset, center.y + cross_inset)],
+                    cross_stroke,
+                );
+                painter.line_segment(
+                    [Pos2::new(center.x - cross_inset, center.y + cross_inset), Pos2::new(center.x + cross_inset, center.y - cross_inset)],
+                    cross_stroke,
+                );
             } else if let Some(&swatch_c) = colors.get(idx) {
                 let fill = swatch_c.gamma_multiply(alpha);
                 painter.circle(center, sw_r, fill, Stroke::new(border_w, swatch_border));

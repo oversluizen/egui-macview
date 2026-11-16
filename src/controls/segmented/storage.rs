@@ -6,19 +6,13 @@ pub(crate) const INLINE_CAP: usize = 8;
 /// Safe inline-first collection storing up to [`INLINE_CAP`] elements on the stack with zero `unsafe`.
 #[derive(Clone)]
 pub(crate) enum InlineBuf<T> {
-    Inline {
-        slots: [Option<T>; INLINE_CAP],
-        len: usize,
-    },
+    Inline { slots: [Option<T>; INLINE_CAP], len: usize },
     Heap(Vec<T>),
 }
 
 impl<T> InlineBuf<T> {
     pub(crate) const fn new() -> Self {
-        Self::Inline {
-            slots: [const { None }; INLINE_CAP],
-            len: 0,
-        }
+        Self::Inline { slots: [const { None }; INLINE_CAP], len: 0 }
     }
 
     #[inline]
@@ -99,11 +93,7 @@ impl<T> FromIterator<T> for InlineBuf<T> {
 }
 
 pub(crate) enum InlineBufIter<T> {
-    Inline {
-        slots: [Option<T>; INLINE_CAP],
-        idx: usize,
-        len: usize,
-    },
+    Inline { slots: [Option<T>; INLINE_CAP], idx: usize, len: usize },
     Heap(std::vec::IntoIter<T>),
 }
 

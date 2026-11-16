@@ -59,6 +59,7 @@ The `egui-macview` specification suite provides the formal normative requirement
 | [**SPEC-010**](SPEC-010-INTERACTIVE-GALLERY-CONTROLS-AND-ICONOGRAPHY.md) | Interactive Gallery Controls, Bidirectional State Binding & Iconography Parity | `0.3.1` | Accepted / Normative | `tests/micro_animations_and_hud_tests.rs`, `tests/symbol_tests.rs` |
 | [**SPEC-011**](SPEC-011-STUDIO-AND-AVKIT-CONTROLS.md) | Studio & AVKit Media, Timeline and Publishing Controls | `0.5.0` | Accepted / Normative | `tests/studio_controls_v05_tests.rs`, `tests/zero_hardcoding_and_primitive_tests.rs` |
 | [**SPEC-012**](SPEC-012-ADVANCED-MEDIA-SCHEDULING-AND-GRID-CONTROLS.md) | Advanced Media, Scheduling, and Grid Controls | `0.6.10` | Accepted / Normative | `tests/spec012_advanced_controls_tests.rs`, `tests/spec012_appkit_and_battery_parity_tests.rs`, `tests/appkit_v065_nib_parity_tests.rs`, `tests/appkit_v069_pro_controls_tests.rs`, `tests/appkit_v0610_nib_controls_tests.rs` |
+| [**SPEC-013**](SPEC-013-DECLARATIVE-SCENE-IR-AND-NIB-XIB-COMPILER.md) | Three-Layer UI Compiler Architecture (`MacSceneIR`, `.nib`/`.xib` Importers & Dual-Mode Layout Solver) | `0.7.0` | Accepted / Normative | `tests/spec013_scene_ir_and_nib_compiler_tests.rs` |
 
 ---
 
@@ -76,6 +77,7 @@ The roadmap coordinates modular capability additions across designated release m
 | **Milestone 0.4.0** | `v0.4.0` (2026-11-07) | State Integrity (`NSUndoManager`), Context Menus & Micro-Feedback | Released | SPEC-008 (`0.4.0`) |
 | **Milestone 0.5.0** | `v0.5.0` (2026-11-08) | Studio & AVKit Media, Timeline and Publishing Controls | Released | SPEC-011 (`0.5.0`) |
 | **Milestone 0.6.0** | `v0.6.0` (2026-11-10) | Advanced Media, Scheduling, and Grid Controls | Released | SPEC-012 (`0.6.0`) |
+| **Milestone 0.7.0** | `v0.7.0` (Planned) | Three-Layer UI Compiler (`MacSceneIR`, `.nib`/`.xib`/`.strings` Frontends, Spatial Normalizer & Dual-Mode Solver) | Planned | SPEC-013 (`0.7.0-draft`) |
 
 ### 2.2 Functional Capability Matrix
 

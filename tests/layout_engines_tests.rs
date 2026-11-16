@@ -8,9 +8,8 @@
 use egui::{Color32, Context, Event, Key, PointerButton, Pos2, RawInput, Rect, Sense, Vec2};
 use egui_macview::{
     theme::{MacAppearance, MacTheme},
-    MacColorWell, MacFixedView, MacForm, MacInputCell, MacOutlineView, MacScrollView, MacSlider,
-    MacSplitOrientation, MacSplitView, MacStackAlignment, MacStackOrientation, MacStackView,
-    MacStepper, MacToggle,
+    MacColorWell, MacFixedView, MacForm, MacInputCell, MacOutlineView, MacScrollView, MacSlider, MacSplitOrientation, MacSplitView,
+    MacStackAlignment, MacStackOrientation, MacStackView, MacStepper, MacToggle,
 };
 use proptest::prelude::*;
 
@@ -21,17 +20,12 @@ fn test_split_view_horizontal_and_vertical_constraints() {
 
     let mut pos_x = 100.0f32;
     let mut out1 = ctx.run_ui(RawInput::default(), |ui| {
-        let (r1_width, r2_width) =
-            MacSplitView::with_pos("h_split", MacSplitOrientation::Horizontal, &mut pos_x)
-                .theme(&theme)
-                .min_first(60.0)
-                .max_first(200.0)
-                .min_second(80.0)
-                .show(
-                    ui,
-                    |pane1| pane1.available_rect_before_wrap().width(),
-                    |pane2| pane2.available_rect_before_wrap().width(),
-                );
+        let (r1_width, r2_width) = MacSplitView::with_pos("h_split", MacSplitOrientation::Horizontal, &mut pos_x)
+            .theme(&theme)
+            .min_first(60.0)
+            .max_first(200.0)
+            .min_second(80.0)
+            .show(ui, |pane1| pane1.available_rect_before_wrap().width(), |pane2| pane2.available_rect_before_wrap().width());
         assert_eq!(r1_width, 100.0);
         assert!(r2_width > 0.0);
     });
@@ -39,18 +33,10 @@ fn test_split_view_horizontal_and_vertical_constraints() {
 
     let mut pos_collapse = 120.0f32;
     let mut out2 = ctx.run_ui(RawInput::default(), |ui| {
-        let (collapsed_w, active_w) = MacSplitView::with_pos(
-            "collapsed_split",
-            MacSplitOrientation::Horizontal,
-            &mut pos_collapse,
-        )
-        .theme(&theme)
-        .collapsed_first(true)
-        .show(
-            ui,
-            |pane1| pane1.available_rect_before_wrap().width(),
-            |pane2| pane2.available_rect_before_wrap().width(),
-        );
+        let (collapsed_w, active_w) = MacSplitView::with_pos("collapsed_split", MacSplitOrientation::Horizontal, &mut pos_collapse)
+            .theme(&theme)
+            .collapsed_first(true)
+            .show(ui, |pane1| pane1.available_rect_before_wrap().width(), |pane2| pane2.available_rect_before_wrap().width());
         assert_eq!(collapsed_w, 0.0);
         assert!(active_w > 0.0);
     });
@@ -65,18 +51,16 @@ fn test_outline_view_hierarchy_and_accessory_toggles() {
     let mut is_visible = true;
 
     let mut output = ctx.run_ui(RawInput::default(), |ui| {
-        MacOutlineView::new("test_outline")
-            .theme(&theme)
-            .show(ui, |tree| {
-                let resp = tree.row("item_1", 1, true, &mut is_expanded, true, |row| {
-                    row.thumbnail(|_p, _r| {});
-                    row.label("Test Node");
-                    row.accessory_custom("vis_toggle", &mut is_visible, |_p, rect, active| {
-                        assert!(rect.width() > 0.0 && active);
-                    });
+        MacOutlineView::new("test_outline").theme(&theme).show(ui, |tree| {
+            let resp = tree.row("item_1", 1, true, &mut is_expanded, true, |row| {
+                row.thumbnail(|_p, _r| {});
+                row.label("Test Node");
+                row.accessory_custom("vis_toggle", &mut is_visible, |_p, rect, active| {
+                    assert!(rect.width() > 0.0 && active);
                 });
-                assert!(resp.is_selected && !resp.is_expanded);
             });
+            assert!(resp.is_selected && !resp.is_expanded);
+        });
     });
     output.textures_delta.clear();
 }
@@ -88,26 +72,21 @@ fn test_scroll_view_offset_and_simulated_drag() {
     let mut offset = Vec2::new(0.0, 50.0);
 
     let mut out = ctx.run_ui(RawInput::default(), |ui| {
-        let output = MacScrollView::new("test_scroll_offset")
-            .theme(&theme)
-            .with_offset(&mut offset)
-            .max_height(80.0)
-            .max_width(150.0)
-            .show(ui, |c| {
-                c.allocate_exact_size(Vec2::new(150.0, 400.0), Sense::hover());
-            });
+        let output =
+            MacScrollView::new("test_scroll_offset").theme(&theme).with_offset(&mut offset).max_height(80.0).max_width(150.0).show(
+                ui,
+                |c| {
+                    c.allocate_exact_size(Vec2::new(150.0, 400.0), Sense::hover());
+                },
+            );
         assert_eq!(output.offset.y, 50.0);
     });
     out.textures_delta.clear();
 
     let mut out1 = ctx.run_ui(RawInput::default(), |ui| {
-        MacScrollView::new("test_scroll_drag")
-            .theme(&theme)
-            .max_height(80.0)
-            .max_width(120.0)
-            .show(ui, |c| {
-                c.allocate_exact_size(Vec2::new(120.0, 400.0), Sense::hover());
-            });
+        MacScrollView::new("test_scroll_drag").theme(&theme).max_height(80.0).max_width(120.0).show(ui, |c| {
+            c.allocate_exact_size(Vec2::new(120.0, 400.0), Sense::hover());
+        });
     });
     out1.textures_delta.clear();
 
@@ -121,29 +100,19 @@ fn test_scroll_view_offset_and_simulated_drag() {
         modifiers: egui::Modifiers::default(),
     });
     let mut out2 = ctx.run_ui(input_press, |ui| {
-        MacScrollView::new("test_scroll_drag")
-            .theme(&theme)
-            .max_height(80.0)
-            .max_width(120.0)
-            .show(ui, |c| {
-                c.allocate_exact_size(Vec2::new(120.0, 400.0), Sense::hover());
-            });
+        MacScrollView::new("test_scroll_drag").theme(&theme).max_height(80.0).max_width(120.0).show(ui, |c| {
+            c.allocate_exact_size(Vec2::new(120.0, 400.0), Sense::hover());
+        });
     });
     out2.textures_delta.clear();
 
     let mut input_move = RawInput::default();
-    input_move
-        .events
-        .push(Event::PointerMoved(Pos2::new(113.5, 33.0)));
+    input_move.events.push(Event::PointerMoved(Pos2::new(113.5, 33.0)));
     let mut dragged_offset = Vec2::ZERO;
     let mut out3 = ctx.run_ui(input_move, |ui| {
-        let output = MacScrollView::new("test_scroll_drag")
-            .theme(&theme)
-            .max_height(80.0)
-            .max_width(120.0)
-            .show(ui, |c| {
-                c.allocate_exact_size(Vec2::new(120.0, 400.0), Sense::hover());
-            });
+        let output = MacScrollView::new("test_scroll_drag").theme(&theme).max_height(80.0).max_width(120.0).show(ui, |c| {
+            c.allocate_exact_size(Vec2::new(120.0, 400.0), Sense::hover());
+        });
         dragged_offset = output.offset;
     });
     out3.textures_delta.clear();
@@ -176,8 +145,7 @@ fn test_stack_view_and_fixed_view_clip_rect() {
 
         let sub_rect = Rect::from_min_size(Pos2::new(10.0, 10.0), Vec2::new(50.0, 30.0));
         let mut child_clip = Rect::NOTHING;
-        let mut fixed =
-            MacFixedView::new(ui, Rect::from_min_size(Pos2::ZERO, Vec2::new(200.0, 200.0)));
+        let mut fixed = MacFixedView::new(ui, Rect::from_min_size(Pos2::ZERO, Vec2::new(200.0, 200.0)));
         fixed.subview(Pos2::new(10.0, 10.0), Vec2::new(50.0, 30.0), |child| {
             child_clip = child.clip_rect();
         });
@@ -206,36 +174,20 @@ fn test_mac_form_inspector_alignment_and_trailing_labels() {
 
     for frame in 0..2 {
         let mut out = ctx.run_ui(RawInput::default(), |ui| {
-            MacForm::new("test_inspector_alignment_form")
-                .theme(&theme)
-                .show(ui, |form| {
-                    let (l1, c1) = form.row_label("Rotation:", |ui| {
-                        MacSlider::new(&mut rotation, 0.0..=360.0)
-                            .theme(&theme)
-                            .width(120.0)
-                            .show(ui)
-                    });
-                    let (l2, c2) = form.row_label("Fine Step:", |ui| {
-                        ui.add(MacStepper::new(&mut fine_step, 0.0..=360.0, 5.0).theme(&theme))
-                    });
-                    let (l3, c3) = form.row_label("Drop Shadow:", |ui| {
-                        ui.add(MacToggle::new(&mut toggle).theme(&theme))
-                    });
-                    let (l4, c4) = form.row_label("Name:", |ui| {
-                        MacInputCell::new("test_input_name", &mut text)
-                            .theme(&theme)
-                            .width(180.0)
-                            .show(ui)
-                    });
-                    let (l5, c5) = form.row_label("Fill Color:", |ui| {
-                        MacColorWell::new(&mut color).theme(&theme).show(ui)
-                    });
+            MacForm::new("test_inspector_alignment_form").theme(&theme).show(ui, |form| {
+                let (l1, c1) =
+                    form.row_label("Rotation:", |ui| MacSlider::new(&mut rotation, 0.0..=360.0).theme(&theme).width(120.0).show(ui));
+                let (l2, c2) = form.row_label("Fine Step:", |ui| ui.add(MacStepper::new(&mut fine_step, 0.0..=360.0, 5.0).theme(&theme)));
+                let (l3, c3) = form.row_label("Drop Shadow:", |ui| ui.add(MacToggle::new(&mut toggle).theme(&theme)));
+                let (l4, c4) =
+                    form.row_label("Name:", |ui| MacInputCell::new("test_input_name", &mut text).theme(&theme).width(180.0).show(ui));
+                let (l5, c5) = form.row_label("Fill Color:", |ui| MacColorWell::new(&mut color).theme(&theme).show(ui));
 
-                    if frame == 1 {
-                        label_rects = vec![l1.rect, l2.rect, l3.rect, l4.rect, l5.rect];
-                        control_rects = vec![c1.rect, c2.rect, c3.rect, c4.rect, c5.rect];
-                    }
-                });
+                if frame == 1 {
+                    label_rects = vec![l1.rect, l2.rect, l3.rect, l4.rect, l5.rect];
+                    control_rects = vec![c1.rect, c2.rect, c3.rect, c4.rect, c5.rect];
+                }
+            });
         });
         out.textures_delta.clear();
     }

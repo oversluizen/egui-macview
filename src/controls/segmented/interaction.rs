@@ -32,11 +32,7 @@ struct PointerSnapshot {
     hit_pos: Option<Pos2>,
 }
 
-fn find_enabled_segment(
-    segments: &InlineBuf<SegmentItem<'_>>,
-    slots: &InlineBuf<SegLayoutSlot>,
-    pos: Pos2,
-) -> Option<usize> {
+fn find_enabled_segment(segments: &InlineBuf<SegmentItem<'_>>, slots: &InlineBuf<SegLayoutSlot>, pos: Pos2) -> Option<usize> {
     let idx = slots.iter().position(|s| s.rect.contains(pos))?;
     segments.get(idx).is_some_and(|s| s.enabled).then_some(idx)
 }
@@ -61,28 +57,17 @@ fn handle_keyboard_navigation(
         *active_idx
     };
 
-    if ui.input_mut(|i| {
-        i.consume_key(Modifiers::NONE, Key::ArrowDown)
-            || i.consume_key(Modifiers::SHIFT, Key::F10)
-    }) {
+    if ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::ArrowDown) || i.consume_key(Modifiers::SHIFT, Key::F10)) {
         if let (Some(seg), Some(slot)) = (segments.get(current), slots.get(current)) {
             if seg.enabled && seg.has_menu {
-                on_event(SegmentEvent {
-                    index: current,
-                    menu_trigger: Some(SegmentMenuTrigger::Keyboard),
-                    rect: slot.rect,
-                });
+                on_event(SegmentEvent { index: current, menu_trigger: Some(SegmentMenuTrigger::Keyboard), rect: slot.rect });
                 response.mark_changed();
             }
         }
         return;
     }
 
-    if momentary
-        && ui.input_mut(|i| {
-            i.consume_key(Modifiers::NONE, Key::Space) || i.consume_key(Modifiers::NONE, Key::Enter)
-        })
-    {
+    if momentary && ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Space) || i.consume_key(Modifiers::NONE, Key::Enter)) {
         if let (Some(seg), Some(slot)) = (segments.get(current), slots.get(current)) {
             if seg.enabled {
                 on_event(SegmentEvent { index: current, menu_trigger: None, rect: slot.rect });
@@ -132,15 +117,7 @@ pub(super) fn handle_segmented_input(
         return None;
     }
 
-    handle_keyboard_navigation(
-        ui,
-        response,
-        segments,
-        slots,
-        active_idx,
-        cfg.momentary,
-        on_event,
-    );
+    handle_keyboard_navigation(ui, response, segments, slots, active_idx, cfg.momentary, on_event);
 
     let snap = ui.input(|i| {
         let latest_pos = i.pointer.latest_pos();
@@ -161,11 +138,7 @@ pub(super) fn handle_segmented_input(
             if let (Some(seg), Some(slot)) = (segments.get(idx), slots.get(idx)) {
                 if seg.has_menu {
                     response.request_focus();
-                    on_event(SegmentEvent {
-                        index: idx,
-                        menu_trigger: Some(SegmentMenuTrigger::SecondaryClick),
-                        rect: slot.rect,
-                    });
+                    on_event(SegmentEvent { index: idx, menu_trigger: Some(SegmentMenuTrigger::SecondaryClick), rect: slot.rect });
                     response.mark_changed();
                 }
             }
@@ -174,8 +147,7 @@ pub(super) fn handle_segmented_input(
 
     if snap.primary_pressed && !snap.ctrl_down {
         if let Some(pos) = snap.hit_pos {
-            let unoccluded = response.is_pointer_button_down_on()
-                || ui.ctx().layer_id_at(pos).is_none_or(|l| l == ui.layer_id());
+            let unoccluded = response.is_pointer_button_down_on() || ui.ctx().layer_id_at(pos).is_none_or(|l| l == ui.layer_id());
             if unoccluded {
                 if let Some(idx) = find_enabled_segment(segments, slots, pos) {
                     response.request_focus();
@@ -196,11 +168,7 @@ pub(super) fn handle_segmented_input(
             let pulled = snap.latest_pos.is_some_and(|p| (p.y - st.origin.y) >= cfg.drag_threshold);
             let elapsed = (snap.now - st.press_time).max(0.0);
             if pulled || elapsed >= cfg.hold_delay {
-                let trigger = if pulled {
-                    SegmentMenuTrigger::PullDown
-                } else {
-                    SegmentMenuTrigger::PressAndHold
-                };
+                let trigger = if pulled { SegmentMenuTrigger::PullDown } else { SegmentMenuTrigger::PressAndHold };
                 let updated = SegPressState { menu_fired: true, ..st };
                 ui.ctx().data_mut(|d| d.insert_temp(state_id, updated));
                 on_event(SegmentEvent { index: st.seg_idx, menu_trigger: Some(trigger), rect: slot.rect });
@@ -214,15 +182,8 @@ pub(super) fn handle_segmented_input(
     }
 
     if let Some(st) = clear_press_state_if_present(ui.ctx(), state_id) {
-        let inside = slots
-            .get(st.seg_idx)
-            .is_some_and(|sl| snap.latest_pos.or(snap.hit_pos).is_some_and(|p| sl.rect.contains(p)));
-        if snap.primary_released
-            && !snap.ctrl_down
-            && !st.menu_fired
-            && segments.get(st.seg_idx).is_some_and(|s| s.enabled)
-            && inside
-        {
+        let inside = slots.get(st.seg_idx).is_some_and(|sl| snap.latest_pos.or(snap.hit_pos).is_some_and(|p| sl.rect.contains(p)));
+        if snap.primary_released && !snap.ctrl_down && !st.menu_fired && segments.get(st.seg_idx).is_some_and(|s| s.enabled) && inside {
             if let Some(slot) = slots.get(st.seg_idx) {
                 response.request_focus();
                 if cfg.momentary {

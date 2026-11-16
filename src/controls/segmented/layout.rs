@@ -38,20 +38,12 @@ pub(super) fn compute_segmented_layout(
 
     for item in control.segments.iter() {
         let galley = match &item.content {
-            SegmentContent::Text(s) if !s.is_empty() => Some(theme.layout_tracked_galley(
-                ui,
-                s,
-                font_id.clone(),
-                Color32::PLACEHOLDER,
-                f32::INFINITY,
-            )),
-            SegmentContent::Symbol(sym) => Some(theme.layout_tracked_galley(
-                ui,
-                sym.as_str(),
-                font_id.clone(),
-                Color32::PLACEHOLDER,
-                f32::INFINITY,
-            )),
+            SegmentContent::Text(s) if !s.is_empty() => {
+                Some(theme.layout_tracked_galley(ui, s, font_id.clone(), Color32::PLACEHOLDER, f32::INFINITY))
+            }
+            SegmentContent::Symbol(sym) => {
+                Some(theme.layout_tracked_galley(ui, sym.as_str(), font_id.clone(), Color32::PLACEHOLDER, f32::INFINITY))
+            }
             SegmentContent::Text(_) | SegmentContent::IconFn(_) | SegmentContent::Custom(_) => None,
         };
         if let Some(w) = item.width {
@@ -112,10 +104,5 @@ pub(super) fn compute_segmented_layout(
         }
     }
 
-    SegmentedLayout {
-        rect,
-        response,
-        slots,
-        uniform_widths,
-    }
+    SegmentedLayout { rect, response, slots, uniform_widths }
 }

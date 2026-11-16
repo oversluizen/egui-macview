@@ -9,26 +9,20 @@ pub mod pro_inspector;
 pub mod selection_and_value;
 pub mod studio;
 
-pub use advanced::{
-    BoxViewMetrics, ComboBoxMetrics, DisclosureGroupMetrics, RuleEditorMetrics, TabViewMetrics,
-};
+pub use advanced::{BoxViewMetrics, ComboBoxMetrics, DisclosureGroupMetrics, RuleEditorMetrics, TabViewMetrics};
 pub use basic::{
-    ButtonMetrics, ButtonSizeMetrics, FocusRingMetrics, SegmentedMetrics, SegmentedSizeMetrics,
-    TextFieldMetrics, TextFieldSizeMetrics,
+    ButtonMetrics, ButtonSizeMetrics, FocusRingMetrics, SegmentedMetrics, SegmentedSizeMetrics, TextFieldMetrics, TextFieldSizeMetrics,
 };
 pub use extended::{
-    ColorWellMetrics, OutlineViewMetrics, PopUpButtonMetrics, SearchFieldMetrics, SliderMetrics,
-    StepperMetrics, ThumbnailCellMetrics, ToggleMetrics,
+    ColorWellMetrics, OutlineViewMetrics, PopUpButtonMetrics, SearchFieldMetrics, SliderMetrics, StepperMetrics, ThumbnailCellMetrics,
+    ToggleMetrics,
 };
 pub use media_and_date::{CollectionViewMetrics, DatePickerMetrics, PlayerViewMetrics};
-pub use nib_primitives::{
-    CheckboxMetrics, CheckboxSizeMetrics, HelpButtonMetrics, InlineActionButtonMetrics,
-    LabelMetrics,
-};
-pub use pro_inspector::{OriginMatrixMetrics, TableActionBarMetrics, TagColorPickerMetrics};
+pub use nib_primitives::{CheckboxMetrics, CheckboxSizeMetrics, HelpButtonMetrics, InlineActionButtonMetrics, LabelMetrics};
+pub use pro_inspector::{ImageViewMetrics, OriginMatrixMetrics, TableActionBarMetrics, TagColorPickerMetrics, TextViewMetrics};
 pub use studio::{
-    LevelIndicatorMetrics, PathControlMetrics, ProgressIndicatorMetrics, ProgressSizeMetrics,
-    TableViewMetrics, TokenFieldMetrics, TrimScrubberMetrics,
+    LevelIndicatorMetrics, PathControlMetrics, ProgressIndicatorMetrics, ProgressSizeMetrics, TableViewMetrics, TokenFieldMetrics,
+    TrimScrubberMetrics,
 };
 
 use crate::tokens::dtcg::DimensionValue;
@@ -105,4 +99,8 @@ pub struct MacControlMetrics {
     pub tag_color_picker: TagColorPickerMetrics,
     /// `NSBezelStyleSmallSquare` `[ + | - ]` table action bar metrics.
     pub table_action_bar: TableActionBarMetrics,
+    /// `NSImageView` / `NSImageCell` metrics.
+    pub image_view: ImageViewMetrics,
+    /// `NSTextView` multi-line text/code editor metrics.
+    pub text_view: TextViewMetrics,
 }

@@ -10,10 +10,7 @@ use egui_macview::{
     MacInputCell, MacKeyboardShortcut, MacMenuBar, NSMenu, NSMenuItem,
 };
 
-fn collect_text_shapes<'a>(
-    shape: &'a egui::epaint::Shape,
-    out: &mut Vec<&'a egui::epaint::TextShape>,
-) {
+fn collect_text_shapes<'a>(shape: &'a egui::epaint::Shape, out: &mut Vec<&'a egui::epaint::TextShape>) {
     match shape {
         egui::epaint::Shape::Text(t) => out.push(t),
         egui::epaint::Shape::Vec(shapes) => {
@@ -44,18 +41,13 @@ fn test_menu_bar_keyboard_navigation_and_action() {
     });
     let mut down_leaked = false;
     let mut out1 = ctx.run_ui(raw_down, |ui| {
-        MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx)
-            .theme(&theme)
-            .show(ui);
+        MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx).theme(&theme).show(ui);
         down_leaked = ui.input(|i| i.key_pressed(Key::ArrowDown));
     });
     out1.textures_delta.clear();
     assert_eq!(open_menu_idx, Some(0));
     assert_eq!(highlighted_item_idx, Some(1));
-    assert!(
-        !down_leaked,
-        "Open MacMenuBar must consume ArrowDown navigation key"
-    );
+    assert!(!down_leaked, "Open MacMenuBar must consume ArrowDown navigation key");
 
     let mut raw_right = RawInput::default();
     raw_right.events.push(Event::Key {
@@ -66,9 +58,7 @@ fn test_menu_bar_keyboard_navigation_and_action() {
         modifiers: Modifiers::default(),
     });
     let mut out2 = ctx.run_ui(raw_right, |ui| {
-        MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx)
-            .theme(&theme)
-            .show(ui);
+        MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx).theme(&theme).show(ui);
     });
     out2.textures_delta.clear();
     assert_eq!(open_menu_idx, Some(1));
@@ -84,9 +74,7 @@ fn test_menu_bar_keyboard_navigation_and_action() {
     });
     let mut triggered = None;
     let mut out3 = ctx.run_ui(raw_enter, |ui| {
-        triggered = MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx)
-            .theme(&theme)
-            .show(ui);
+        triggered = MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx).theme(&theme).show(ui);
     });
     out3.textures_delta.clear();
     assert_eq!(triggered, Some("edit.undo".to_string()));
@@ -103,9 +91,7 @@ fn test_menu_bar_keyboard_navigation_and_action() {
         modifiers: Modifiers::default(),
     });
     let mut out4 = ctx.run_ui(raw_escape, |ui| {
-        MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx)
-            .theme(&theme)
-            .show(ui);
+        MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx).theme(&theme).show(ui);
     });
     out4.textures_delta.clear();
     assert_eq!(open_menu_idx, None, "Escape must close open menu");
@@ -127,42 +113,30 @@ fn test_menu_global_keyboard_shortcut_and_text_focus_guard() {
         physical_key: None,
         pressed: true,
         repeat: false,
-        modifiers: Modifiers {
-            command: true,
-            ..Modifiers::default()
-        },
+        modifiers: Modifiers { command: true, ..Modifiers::default() },
     });
     let mut triggered = None;
     let mut shortcut_leaked = false;
     let mut out = ctx.run_ui(raw_shortcut, |ui| {
-        triggered = MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx)
-            .theme(&theme)
-            .show(ui);
+        triggered = MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx).theme(&theme).show(ui);
         shortcut_leaked = ui.input(|i| i.key_pressed(Key::S));
     });
     out.textures_delta.clear();
     assert_eq!(triggered, Some("file.save".to_string()));
-    assert!(
-        !shortcut_leaked,
-        "Matched menu shortcut Cmd+S must be consumed by MacMenuBar"
-    );
+    assert!(!shortcut_leaked, "Matched menu shortcut Cmd+S must be consumed by MacMenuBar");
 
     // 2. When a MacInputCell has keyboard focus (`wants_keyboard_input() == true`),
     // MacMenuBar::handle_shortcuts must NOT intercept shortcuts!
     let mut text = "Editing".to_string();
     let mut out_focus = ctx.run_ui(RawInput::default(), |ui| {
-        let resp = MacInputCell::new("focused_editor", &mut text)
-            .theme(&theme)
-            .show(ui);
+        let resp = MacInputCell::new("focused_editor", &mut text).theme(&theme).show(ui);
         resp.request_focus();
     });
     out_focus.textures_delta.clear();
 
     // Steady frame so TextEdit registers keyboard focus
     let mut out_steady = ctx.run_ui(RawInput::default(), |ui| {
-        MacInputCell::new("focused_editor", &mut text)
-            .theme(&theme)
-            .show(ui);
+        MacInputCell::new("focused_editor", &mut text).theme(&theme).show(ui);
     });
     out_steady.textures_delta.clear();
 
@@ -172,27 +146,16 @@ fn test_menu_global_keyboard_shortcut_and_text_focus_guard() {
         physical_key: None,
         pressed: true,
         repeat: false,
-        modifiers: Modifiers {
-            command: true,
-            ..Modifiers::default()
-        },
+        modifiers: Modifiers { command: true, ..Modifiers::default() },
     });
     let mut triggered_while_editing = None;
     let mut out_guard = ctx.run_ui(raw_while_editing, |ui| {
-        MacInputCell::new("focused_editor", &mut text)
-            .theme(&theme)
-            .show(ui);
-        triggered_while_editing =
-            MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx)
-                .theme(&theme)
-                .show(ui);
+        MacInputCell::new("focused_editor", &mut text).theme(&theme).show(ui);
+        triggered_while_editing = MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx).theme(&theme).show(ui);
     });
     out_guard.textures_delta.clear();
 
-    assert_eq!(
-        triggered_while_editing, None,
-        "MacMenuBar::handle_shortcuts must NOT fire when a text field has keyboard focus!"
-    );
+    assert_eq!(triggered_while_editing, None, "MacMenuBar::handle_shortcuts must NOT fire when a text field has keyboard focus!");
 }
 
 #[test]
@@ -200,19 +163,14 @@ fn test_menu_bar_outside_click_dismissal_and_checked_item() {
     let ctx = Context::default();
     let theme = MacTheme::new(MacAppearance::DarkAqua);
 
-    let view_menu = NSMenu::with_items(
-        "View",
-        vec![NSMenuItem::action("Show Grid", "view.grid").checked(true)],
-    );
+    let view_menu = NSMenu::with_items("View", vec![NSMenuItem::action("Show Grid", "view.grid").checked(true)]);
     let menus = vec![view_menu];
     let mut open_menu_idx = Some(0);
     let mut highlighted_item_idx = Some(0);
 
     // Frame 1: Render open menu with checked item
     let mut out1 = ctx.run_ui(RawInput::default(), |ui| {
-        MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx)
-            .theme(&theme)
-            .show(ui);
+        MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx).theme(&theme).show(ui);
     });
     out1.textures_delta.clear();
     assert_eq!(open_menu_idx, Some(0));
@@ -228,16 +186,12 @@ fn test_menu_bar_outside_click_dismissal_and_checked_item() {
         modifiers: Modifiers::NONE,
     });
     let mut out2 = ctx.run_ui(click_outside, |ui| {
-        MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx)
-            .theme(&theme)
-            .show(ui);
+        MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx).theme(&theme).show(ui);
     });
     out2.textures_delta.clear();
 
     let mut release_outside = RawInput::default();
-    release_outside
-        .events
-        .push(Event::PointerMoved(outside_pos));
+    release_outside.events.push(Event::PointerMoved(outside_pos));
     release_outside.events.push(Event::PointerButton {
         pos: outside_pos,
         button: PointerButton::Primary,
@@ -245,16 +199,11 @@ fn test_menu_bar_outside_click_dismissal_and_checked_item() {
         modifiers: Modifiers::NONE,
     });
     let mut out3 = ctx.run_ui(release_outside, |ui| {
-        MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx)
-            .theme(&theme)
-            .show(ui);
+        MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx).theme(&theme).show(ui);
     });
     out3.textures_delta.clear();
 
-    assert_eq!(
-        open_menu_idx, None,
-        "Clicking outside an open MacMenuBar dropdown must dismiss the menu!"
-    );
+    assert_eq!(open_menu_idx, None, "Clicking outside an open MacMenuBar dropdown must dismiss the menu!");
 }
 
 #[test]
@@ -265,11 +214,7 @@ fn test_menu_bar_submenu_keyboard_navigation_and_shortcuts() {
     let export_menu = NSMenu::with_items(
         "Export",
         vec![
-            NSMenuItem::action_with_shortcut(
-                "Export as PDF",
-                "export.pdf",
-                MacKeyboardShortcut::cmd_shift(Key::P),
-            ),
+            NSMenuItem::action_with_shortcut("Export as PDF", "export.pdf", MacKeyboardShortcut::cmd_shift(Key::P)),
             NSMenuItem::action("Export as PNG", "export.png"),
         ],
     );
@@ -295,9 +240,7 @@ fn test_menu_bar_submenu_keyboard_navigation_and_shortcuts() {
         modifiers: Modifiers::default(),
     });
     let mut out1 = ctx.run_ui(raw_right, |ui| {
-        let _ = MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx)
-            .theme(&theme)
-            .show(ui);
+        let _ = MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx).theme(&theme).show(ui);
     });
     out1.textures_delta.clear();
     assert_eq!(MacMenuBar::submenu_highlight(&ctx), Some(0));
@@ -311,9 +254,7 @@ fn test_menu_bar_submenu_keyboard_navigation_and_shortcuts() {
         modifiers: Modifiers::default(),
     });
     let mut out2 = ctx.run_ui(raw_down, |ui| {
-        let _ = MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx)
-            .theme(&theme)
-            .show(ui);
+        let _ = MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx).theme(&theme).show(ui);
     });
     out2.textures_delta.clear();
     assert_eq!(MacMenuBar::submenu_highlight(&ctx), Some(1));
@@ -327,9 +268,7 @@ fn test_menu_bar_submenu_keyboard_navigation_and_shortcuts() {
         modifiers: Modifiers::default(),
     });
     let mut out3 = ctx.run_ui(raw_left, |ui| {
-        let _ = MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx)
-            .theme(&theme)
-            .show(ui);
+        let _ = MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx).theme(&theme).show(ui);
     });
     out3.textures_delta.clear();
     assert_eq!(MacMenuBar::submenu_highlight(&ctx), None);
@@ -356,25 +295,15 @@ fn test_standard_menu_bar_presets_and_accelerator_clearance() {
     let mut open_menu_idx = Some(0);
     let mut highlighted_item_idx = Some(0);
 
-    let raw_input = RawInput {
-        screen_rect: Some(egui::Rect::from_min_size(
-            Pos2::ZERO,
-            egui::vec2(1024.0, 768.0),
-        )),
-        ..Default::default()
-    };
+    let raw_input = RawInput { screen_rect: Some(egui::Rect::from_min_size(Pos2::ZERO, egui::vec2(1024.0, 768.0))), ..Default::default() };
 
     let mut out1 = ctx.run_ui(raw_input.clone(), |ui| {
-        MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx)
-            .theme(&theme)
-            .show(ui);
+        MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx).theme(&theme).show(ui);
     });
     out1.textures_delta.clear();
 
     let mut out = ctx.run_ui(raw_input, |ui| {
-        MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx)
-            .theme(&theme)
-            .show(ui);
+        MacMenuBar::new(&menus, &mut open_menu_idx, &mut highlighted_item_idx).theme(&theme).show(ui);
     });
     out.textures_delta.clear();
 
@@ -387,10 +316,8 @@ fn test_standard_menu_bar_presets_and_accelerator_clearance() {
         .iter()
         .find(|t| t.galley.text() == "Export Compressed Keyframe Archive...")
         .expect("Menu item title text shape must be rendered");
-    let shortcut_shape = text_shapes
-        .iter()
-        .find(|t| t.galley.text() == "Ctrl+Shift+E")
-        .expect("Menu item accelerator text shape must be rendered");
+    let shortcut_shape =
+        text_shapes.iter().find(|t| t.galley.text() == "Ctrl+Shift+E").expect("Menu item accelerator text shape must be rendered");
 
     let title_right = title_shape.pos.x + title_shape.galley.size().x;
     let shortcut_left = shortcut_shape.pos.x - shortcut_shape.galley.size().x;

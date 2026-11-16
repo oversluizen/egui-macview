@@ -5,17 +5,12 @@
 
 use egui::{Context, Id, Key, Modifiers, Pos2, RawInput, Rect, Vec2};
 use egui_macview::controls::{
-    MacBox, MacCollectionView, MacCollectionViewFlowLayout, MacComboBox, MacControlSize,
-    MacDate, MacDatePicker, MacDatePickerElementFlags, MacDatePickerStyle, MacDisclosureButton,
-    MacDisclosureGroup, MacPlayerControlsStyle, MacPlayerView, MacTabStyle, MacTabView,
+    MacBox, MacCollectionView, MacCollectionViewFlowLayout, MacComboBox, MacControlSize, MacDate, MacDatePicker, MacDatePickerElementFlags,
+    MacDatePickerStyle, MacDisclosureButton, MacDisclosureGroup, MacPlayerControlsStyle, MacPlayerView, MacTabStyle, MacTabView,
 };
 use egui_macview::theme::{MacAppearance, MacTheme};
 
-fn run_pass(
-    ctx: &Context,
-    input: RawInput,
-    f: impl FnMut(&mut egui::Ui),
-) -> Vec<egui::epaint::ClippedShape> {
+fn run_pass(ctx: &Context, input: RawInput, f: impl FnMut(&mut egui::Ui)) -> Vec<egui::epaint::ClippedShape> {
     let mut out = ctx.run_ui(input, f);
     out.textures_delta.clear();
     out.shapes
@@ -32,8 +27,7 @@ fn test_spec012_disclosure_group_geometry_and_caspring_rotation() {
     let mut content_executed = false;
 
     run_pass(&ctx, RawInput::default(), |ui| {
-        let group = MacDisclosureGroup::new("disc_group", "Section Header", &mut expanded)
-            .theme(&theme);
+        let group = MacDisclosureGroup::new("disc_group", "Section Header", &mut expanded).theme(&theme);
         chevron_sz = group.chevron_size();
         label_gap = group.label_gap();
         group.show(ui, |_ui| {
@@ -48,11 +42,9 @@ fn test_spec012_disclosure_group_geometry_and_caspring_rotation() {
     // Expand and verify content execution
     expanded = true;
     run_pass(&ctx, RawInput::default(), |ui| {
-        MacDisclosureGroup::new("disc_group", "Section Header", &mut expanded)
-            .theme(&theme)
-            .show(ui, |_ui| {
-                content_executed = true;
-            });
+        MacDisclosureGroup::new("disc_group", "Section Header", &mut expanded).theme(&theme).show(ui, |_ui| {
+            content_executed = true;
+        });
     });
     assert!(content_executed, "Content must be rendered when expanded");
 
@@ -67,9 +59,7 @@ fn test_spec012_disclosure_group_geometry_and_caspring_rotation() {
         (MacControlSize::Mini, Vec2::new(19.0, 16.0), Vec2::new(13.0, 13.0)),
     ] {
         let mut btn_expanded = false;
-        let btn = MacDisclosureButton::new(&mut btn_expanded)
-            .control_size(size)
-            .theme(&theme);
+        let btn = MacDisclosureButton::new(&mut btn_expanded).control_size(size).theme(&theme);
         assert_eq!(btn.frame_size(), expected_outer);
         assert_eq!(btn.intrinsic_size(), expected_intrinsic);
     }
@@ -88,9 +78,7 @@ fn test_spec012_combo_box_geometry_and_popover_filtering() {
         (MacControlSize::Small, 19.0f32, 20.0f32, 7.0f32),
         (MacControlSize::Mini, 15.0f32, 18.0f32, 6.0f32),
     ] {
-        let combo = MacComboBox::new("cb_test", &mut text, &items)
-            .control_size(size)
-            .theme(&theme);
+        let combo = MacComboBox::new("cb_test", &mut text, &items).control_size(size).theme(&theme);
         assert_eq!(combo.frame_height(), expected_height);
         assert_eq!(combo.button_width(), expected_btn_width);
         assert_eq!(combo.text_inset(), expected_inset);
@@ -113,9 +101,7 @@ fn test_spec012_combo_box_geometry_and_popover_filtering() {
     });
 
     run_pass(&ctx, input, |ui| {
-        MacComboBox::new("cb_live", &mut text, &items)
-            .theme(&theme)
-            .show(ui);
+        MacComboBox::new("cb_live", &mut text, &items).theme(&theme).show(ui);
     });
 
     let open_id = Id::NULL.with("cb_live").with("popover_open");
@@ -139,9 +125,7 @@ fn test_spec012_combo_box_geometry_and_popover_filtering() {
         d.insert_temp(test_sel_id, 8usize);
     });
     run_pass(&ctx, enter_input, |ui| {
-        MacComboBox::new("cb_filter_test", &mut cb_text, &items)
-            .theme(&theme)
-            .show(ui);
+        MacComboBox::new("cb_filter_test", &mut cb_text, &items).theme(&theme).show(ui);
     });
     assert_eq!(cb_text, "Apple", "Enter with clamped sel_idx must select the valid filtered item");
 }
@@ -158,10 +142,7 @@ fn test_spec012_tab_view_insets_and_flipped_layout() {
         (MacControlSize::Small, 20.0f32, 25.0f32, 13.0f32, 10.0f32, 10.0f32),
         (MacControlSize::Mini, 15.0f32, 19.0f32, 13.0f32, 10.0f32, 10.0f32),
     ] {
-        let tab_view = MacTabView::new(&mut selected_tab)
-            .style(MacTabStyle::TopTabsBezelBorder)
-            .control_size(size)
-            .theme(&theme);
+        let tab_view = MacTabView::new(&mut selected_tab).style(MacTabStyle::TopTabsBezelBorder).control_size(size).theme(&theme);
         assert_eq!(tab_view.tab_bar_height(), expected_bar_h);
         let insets = tab_view.content_insets();
         assert_eq!(insets.top, top);
@@ -172,9 +153,7 @@ fn test_spec012_tab_view_insets_and_flipped_layout() {
 
     // 2. NSNoTabsNoBorder: 0.0 insets
     let mut borderless_tab = 0usize;
-    let borderless = MacTabView::new(&mut borderless_tab)
-        .style(MacTabStyle::NoTabsNoBorder)
-        .theme(&theme);
+    let borderless = MacTabView::new(&mut borderless_tab).style(MacTabStyle::NoTabsNoBorder).theme(&theme);
     let zero_insets = borderless.content_insets();
     assert_eq!(zero_insets.top, 0.0);
     assert_eq!(zero_insets.bottom, 0.0);
@@ -197,10 +176,7 @@ fn test_spec012_tab_view_insets_and_flipped_layout() {
     });
 
     // Content (150) + insets.top (33) + insets.bottom (13) = 196
-    assert!(
-        tab_resp_height >= 195.0,
-        "Tab view container must dynamically size to enclose content: {tab_resp_height}"
-    );
+    assert!(tab_resp_height >= 195.0, "Tab view container must dynamically size to enclose content: {tab_resp_height}");
     assert_eq!(selected_tab, 0);
 
     // 4. Z-Order invariant: Tab body background must be painted BEHIND active tab child content
@@ -230,10 +206,7 @@ fn test_spec012_tab_view_insets_and_flipped_layout() {
         }
     }
 
-    assert!(
-        tab_bg_idx.is_some() && tab_label_idx.is_some(),
-        "Both tab body background and tab child content label must be present"
-    );
+    assert!(tab_bg_idx.is_some() && tab_label_idx.is_some(), "Both tab body background and tab child content label must be present");
     assert!(
         tab_bg_idx.unwrap() < tab_label_idx.unwrap(),
         "Tab body background (idx {:?}) must be painted BEHIND tab child content (idx {:?})",
@@ -248,9 +221,7 @@ fn test_spec012_date_picker_stepper_and_calendar_matrix() {
     let (ctx, theme) = (Context::default(), MacTheme::new(MacAppearance::Aqua));
 
     // 1. Invariant stepper width (19.0 pt) and chevron pitch (9.0 pt)
-    let picker = MacDatePicker::new()
-        .style(MacDatePickerStyle::TextFieldAndStepper)
-        .theme(&theme);
+    let picker = MacDatePicker::new().style(MacDatePickerStyle::TextFieldAndStepper).theme(&theme);
     assert_eq!(picker.stepper_width(), 19.0);
     assert_eq!(picker.stepper_chevron_pitch(), 9.0);
 
@@ -282,28 +253,17 @@ fn test_spec012_date_picker_stepper_and_calendar_matrix() {
     let mut leap_date = MacDate { year: 2024, month: 2, day: 29, hour: 12, minute: 0, second: 0 };
     leap_date.step_segment(0, MacDatePickerElementFlags::DateOnly, 1);
     assert_eq!(leap_date.year, 2025);
-    assert_eq!(
-        leap_date.day, 28,
-        "Stepping year from leap year to non-leap year must clamp Feb 29 to Feb 28"
-    );
+    assert_eq!(leap_date.day, 28, "Stepping year from leap year to non-leap year must clamp Feb 29 to Feb 28");
 
     // Century leap-year boundary: year 2000 is leap, year 1900 is non-leap
     let mut century_date = MacDate { year: 2000, month: 2, day: 29, hour: 12, minute: 0, second: 0 };
     century_date.step_segment(0, MacDatePickerElementFlags::DateOnly, -100);
     assert_eq!(century_date.year, 1900);
-    assert_eq!(
-        century_date.day, 28,
-        "Year 1900 is not a leap year, day must clamp to 28"
-    );
+    assert_eq!(century_date.day, 28, "Year 1900 is not a leap year, day must clamp to 28");
 
     // Render picker in UI
     run_pass(&ctx, RawInput::default(), |ui| {
-        ui.add(
-            MacDatePicker::new()
-                .date(&mut test_date)
-                .style(MacDatePickerStyle::TextFieldAndStepper)
-                .theme(&theme),
-        );
+        ui.add(MacDatePicker::new().date(&mut test_date).style(MacDatePickerStyle::TextFieldAndStepper).theme(&theme));
     });
 }
 
@@ -325,9 +285,7 @@ fn test_spec012_collection_view_flow_layout_and_2d_viewport_culling() {
     let mut rendered_count = 0usize;
     run_pass(&ctx, RawInput::default(), |ui| {
         ui.set_clip_rect(Rect::from_min_size(Pos2::new(0.0, 0.0), Vec2::new(200.0, 200.0)));
-        let coll = MacCollectionView::new(&items, &mut selected_indices)
-            .layout(layout.clone())
-            .theme(&theme);
+        let coll = MacCollectionView::new(&items, &mut selected_indices).layout(layout.clone()).theme(&theme);
         rendered_count = coll.show_with_item_tracker(ui, |_ui, _item| {});
     });
 
@@ -340,9 +298,7 @@ fn test_spec012_collection_view_flow_layout_and_2d_viewport_culling() {
 
     // 4. Clean single allocation in show()
     run_pass(&ctx, RawInput::default(), |ui| {
-        let resp = MacCollectionView::new(&items[..4], &mut selected_indices)
-            .theme(&theme)
-            .show(ui);
+        let resp = MacCollectionView::new(&items[..4], &mut selected_indices).theme(&theme).show(ui);
         assert!(resp.rect.height() >= 50.0);
     });
 }
@@ -353,9 +309,7 @@ fn test_spec012_player_view_hud_pod_and_inline_transport() {
     let (ctx, theme) = (Context::default(), MacTheme::new(MacAppearance::Aqua));
 
     // 1. Floating HUD pod geometry & auto-hide timing
-    let floating = MacPlayerView::new()
-        .controls_style(MacPlayerControlsStyle::Floating)
-        .theme(&theme);
+    let floating = MacPlayerView::new().controls_style(MacPlayerControlsStyle::Floating).theme(&theme);
     assert_eq!(floating.hud_pod_size(), Vec2::new(481.0, 64.0));
     assert_eq!(floating.hud_corner_radius(), 16.0);
     assert_eq!(floating.auto_hide_seconds(), 3.0);
@@ -366,9 +320,7 @@ fn test_spec012_player_view_hud_pod_and_inline_transport() {
     assert_eq!(floating.scrubber_knob_size(), Vec2::new(8.0, 8.0));
 
     // 3. Inline bottom bar: 24.0 pt height, 0.0 corner radius
-    let inline = MacPlayerView::new()
-        .controls_style(MacPlayerControlsStyle::Inline)
-        .theme(&theme);
+    let inline = MacPlayerView::new().controls_style(MacPlayerControlsStyle::Inline).theme(&theme);
     assert_eq!(inline.inline_bar_height(), 24.0);
     assert_eq!(inline.inline_corner_radius(), 0.0);
 
@@ -381,7 +333,13 @@ fn test_spec012_player_view_hud_pod_and_inline_transport() {
     let mut live_playing = false;
     let mut live_progress = 0.15f32;
     run_pass(&ctx, RawInput::default(), |ui| {
-        ui.add(MacPlayerView::new().controls_style(MacPlayerControlsStyle::Floating).is_playing_mut(&mut live_playing).progress_mut(&mut live_progress).theme(&theme));
+        ui.add(
+            MacPlayerView::new()
+                .controls_style(MacPlayerControlsStyle::Floating)
+                .is_playing_mut(&mut live_playing)
+                .progress_mut(&mut live_progress)
+                .theme(&theme),
+        );
     });
     assert!(!live_playing);
     assert!((live_progress - 0.15).abs() < 1e-4);
@@ -394,10 +352,7 @@ fn test_spec012_player_view_hud_pod_and_inline_transport() {
     assert_eq!(format_remaining_timecode(3528, 7200.0), "-00:58:48");
     assert_eq!(format_timecode(36000, 36000.0), "10:00:00");
 
-    let long_pv = MacPlayerView::new()
-        .controls_style(MacPlayerControlsStyle::Floating)
-        .duration_secs(36000.0)
-        .theme(&theme);
+    let long_pv = MacPlayerView::new().controls_style(MacPlayerControlsStyle::Floating).duration_secs(36000.0).theme(&theme);
     let geom = long_pv.compute_geometry(Rect::from_min_size(Pos2::ZERO, Vec2::new(600.0, 400.0)));
     assert!(geom.scrubber_track_rect.width() > 100.0, "Scrubber track must retain adequate width under multi-hour duration");
     assert!(geom.elapsed_pos.x + 48.0 <= geom.scrubber_track_rect.min.x, "Elapsed time label must not overlap scrubber track");
@@ -420,12 +375,10 @@ fn test_spec012_box_view_insets_and_primitives() {
 
     // Render Box and Separator
     let shapes = run_pass(&ctx, RawInput::default(), |ui| {
-        MacBox::new("Enclosed Container")
-            .theme(&theme)
-            .show(ui, |b_ui| {
-                b_ui.label("Box Content");
-                MacBox::separator(b_ui);
-            });
+        MacBox::new("Enclosed Container").theme(&theme).show(ui, |b_ui| {
+            b_ui.label("Box Content");
+            MacBox::separator(b_ui);
+        });
     });
 
     let mut bg_rect_idx = None;
@@ -445,10 +398,7 @@ fn test_spec012_box_view_insets_and_primitives() {
         }
     }
 
-    assert!(
-        bg_rect_idx.is_some() && label_text_idx.is_some(),
-        "Both container background and child label must be in painter shapes"
-    );
+    assert!(bg_rect_idx.is_some() && label_text_idx.is_some(), "Both container background and child label must be in painter shapes");
     assert!(
         bg_rect_idx.unwrap() < label_text_idx.unwrap(),
         "Container background (idx {:?}) must be painted BEHIND child content label (idx {:?})",

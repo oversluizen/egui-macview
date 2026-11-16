@@ -9,11 +9,9 @@ pub mod stack_view;
 
 pub use form::{MacForm, MacFormUi};
 pub use scroll_view::{MacScrollView, MacScrollViewOutput};
-pub use scrollbar::render_overlay_thumb;
+pub use scrollbar::{render_overlay_thumb, OverlayThumbSpec};
 pub use split_view::{MacSplitOrientation, MacSplitView};
-pub use stack_view::{
-    MacStackAlignment, MacStackOrientation, MacStackUi, MacStackView, MacStackViewOutput,
-};
+pub use stack_view::{MacStackAlignment, MacStackOrientation, MacStackUi, MacStackView, MacStackViewOutput};
 
 use egui::{Pos2, Rect, Response, Sense, Ui, Vec2};
 
@@ -49,10 +47,7 @@ pub fn subpixel_snap(logical: f32, scale_factor: f32) -> f32 {
 /// ```
 #[inline]
 pub fn subpixel_snap_pos(pos: Pos2, scale_factor: f32) -> Pos2 {
-    Pos2::new(
-        subpixel_snap(pos.x, scale_factor),
-        subpixel_snap(pos.y, scale_factor),
-    )
+    Pos2::new(subpixel_snap(pos.x, scale_factor), subpixel_snap(pos.y, scale_factor))
 }
 
 /// Snaps a logical `Rect` to hardware pixel boundaries.
@@ -87,10 +82,7 @@ pub struct MacFrame {
 impl MacFrame {
     /// Constructs a `MacFrame` with the given origin `(x, y)` and size `(w, h)`.
     pub fn new(x: f32, y: f32, w: f32, h: f32) -> Self {
-        Self {
-            origin: Pos2::new(x, y),
-            size: Vec2::new(w, h),
-        }
+        Self { origin: Pos2::new(x, y), size: Vec2::new(w, h) }
     }
 
     /// Converts frame into an `egui::Rect`.
@@ -111,39 +103,20 @@ pub struct MacFixedView<'a> {
 impl<'a> MacFixedView<'a> {
     /// Creates a new `MacFixedView` wrapping `ui` and bounded by `container_rect`.
     pub fn new(ui: &'a mut Ui, container_rect: Rect) -> Self {
-        Self {
-            ui,
-            container_rect,
-            subview_count: 0,
-        }
+        Self { ui, container_rect, subview_count: 0 }
     }
 
     /// Allocates an exact subview at relative NIB coordinates (dx, dy, w, h).
     pub fn subview_rect(&self, rel_origin: Pos2, size: Vec2) -> Rect {
-        Rect::from_min_size(
-            Pos2::new(
-                self.container_rect.left() + rel_origin.x,
-                self.container_rect.top() + rel_origin.y,
-            ),
-            size,
-        )
+        Rect::from_min_size(Pos2::new(self.container_rect.left() + rel_origin.x, self.container_rect.top() + rel_origin.y), size)
     }
 
     /// Executes a closure inside a subview allocated at relative NIB coordinates.
-    pub fn subview<R>(
-        &mut self,
-        rel_origin: Pos2,
-        size: Vec2,
-        add_contents: impl FnOnce(&mut Ui) -> R,
-    ) -> R {
+    pub fn subview<R>(&mut self, rel_origin: Pos2, size: Vec2, add_contents: impl FnOnce(&mut Ui) -> R) -> R {
         let idx = self.subview_count;
         self.subview_count += 1;
         let rect = self.subview_rect(rel_origin, size);
-        let mut child = self.ui.new_child(
-            egui::UiBuilder::new()
-                .id_salt(("fixed_subview", idx))
-                .max_rect(rect),
-        );
+        let mut child = self.ui.new_child(egui::UiBuilder::new().id_salt(("fixed_subview", idx)).max_rect(rect));
         child.set_clip_rect(rect.intersect(self.ui.clip_rect()));
         add_contents(&mut child)
     }
@@ -172,13 +145,7 @@ pub struct MacRow {
 impl MacRow {
     /// Creates a new `MacRow` container.
     pub fn new(y_offset: f32, height: f32, container_width: f32, item_spacing: f32) -> Self {
-        Self {
-            y_offset,
-            height,
-            cursor_x: 0.0,
-            item_spacing,
-            container_width,
-        }
+        Self { y_offset, height, cursor_x: 0.0, item_spacing, container_width }
     }
 
     /// Allocates next cell of width `width`, advancing cursor with spacing.
@@ -201,9 +168,5 @@ impl MacRow {
 /// and not minimized. Used across timers, animations, and audio synchronization
 /// to eliminate wasteful background repaints and battery drain.
 pub fn is_window_active(ctx: &egui::Context) -> bool {
-    ctx.input(|i| {
-        i.focused
-            && i.viewport().focused.unwrap_or(true)
-            && !i.viewport().minimized.unwrap_or(false)
-    })
+    ctx.input(|i| i.focused && i.viewport().focused.unwrap_or(true) && !i.viewport().minimized.unwrap_or(false))
 }

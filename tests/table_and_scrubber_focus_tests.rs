@@ -17,10 +17,7 @@ fn test_cots_unfocused_table_ignores_arrow_keys_and_scrubber_preserves_valid_pla
     let mut rect_b = Rect::NOTHING;
     let mut id_b = egui::Id::NULL;
 
-    let base_raw = RawInput {
-        screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(400.0, 400.0))),
-        ..Default::default()
-    };
+    let base_raw = RawInput { screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(400.0, 400.0))), ..Default::default() };
     ctx.run_ui(base_raw.clone(), |ui| {
         rect_a = MacTableView::new("tbl_a", &cols, 5, &mut sel_a)
             .theme(&theme)
@@ -45,26 +42,14 @@ fn test_cots_unfocused_table_ignores_arrow_keys_and_scrubber_preserves_valid_pla
 
     let mut arrow_raw = base_raw.clone();
     arrow_raw.events.push(Event::PointerMoved(rect_b.center()));
-    arrow_raw.events.push(Event::Key {
-        key: Key::ArrowDown,
-        physical_key: None,
-        pressed: true,
-        repeat: false,
-        modifiers: Modifiers::NONE,
-    });
+    arrow_raw.events.push(Event::Key { key: Key::ArrowDown, physical_key: None, pressed: true, repeat: false, modifiers: Modifiers::NONE });
     ctx.run_ui(arrow_raw, |ui| {
-        MacTableView::new("tbl_a", &cols, 5, &mut sel_a)
-            .theme(&theme)
-            .row_height(20.0)
-            .show(ui, |u, r, _| {
-                u.label(format!("A{r}"));
-            });
-        MacTableView::new("tbl_b", &cols, 5, &mut sel_b)
-            .theme(&theme)
-            .row_height(20.0)
-            .show(ui, |u, r, _| {
-                u.label(format!("B{r}"));
-            });
+        MacTableView::new("tbl_a", &cols, 5, &mut sel_a).theme(&theme).row_height(20.0).show(ui, |u, r, _| {
+            u.label(format!("A{r}"));
+        });
+        MacTableView::new("tbl_b", &cols, 5, &mut sel_b).theme(&theme).row_height(20.0).show(ui, |u, r, _| {
+            u.label(format!("B{r}"));
+        });
     })
     .textures_delta
     .clear();
@@ -76,35 +61,19 @@ fn test_cots_unfocused_table_ignores_arrow_keys_and_scrubber_preserves_valid_pla
     ctx.memory_mut(|m| m.request_focus(id_b));
     let mut focus_raw = base_raw.clone();
     focus_raw.events.push(Event::PointerMoved(rect_a.center()));
-    focus_raw.events.push(Event::Key {
-        key: Key::ArrowDown,
-        physical_key: None,
-        pressed: true,
-        repeat: false,
-        modifiers: Modifiers::NONE,
-    });
+    focus_raw.events.push(Event::Key { key: Key::ArrowDown, physical_key: None, pressed: true, repeat: false, modifiers: Modifiers::NONE });
     ctx.run_ui(focus_raw, |ui| {
-        MacTableView::new("tbl_a", &cols, 5, &mut sel_a)
-            .theme(&theme)
-            .row_height(20.0)
-            .show(ui, |u, r, _| {
-                u.label(format!("A{r}"));
-            });
-        MacTableView::new("tbl_b", &cols, 5, &mut sel_b)
-            .theme(&theme)
-            .row_height(20.0)
-            .show(ui, |u, r, _| {
-                u.label(format!("B{r}"));
-            });
+        MacTableView::new("tbl_a", &cols, 5, &mut sel_a).theme(&theme).row_height(20.0).show(ui, |u, r, _| {
+            u.label(format!("A{r}"));
+        });
+        MacTableView::new("tbl_b", &cols, 5, &mut sel_b).theme(&theme).row_height(20.0).show(ui, |u, r, _| {
+            u.label(format!("B{r}"));
+        });
     })
     .textures_delta
     .clear();
 
-    assert_eq!(
-        sel_a,
-        BTreeSet::from([0]),
-        "Hovered unfocused tbl_a must not steal ArrowDown when tbl_b has keyboard focus"
-    );
+    assert_eq!(sel_a, BTreeSet::from([0]), "Hovered unfocused tbl_a must not steal ArrowDown when tbl_b has keyboard focus");
     assert_eq!(sel_b, BTreeSet::from([3]));
 
     let mut in_pt = 500.0;
@@ -131,9 +100,7 @@ fn test_cots_unfocused_table_ignores_arrow_keys_and_scrubber_preserves_valid_pla
     let drag_to_x = scrub_rect.left() + (600.0 / 1200.0) as f32 * scrub_rect.width();
     let handle_y = scrub_rect.bottom() - 10.0;
     let mut press_in_raw = base_raw.clone();
-    press_in_raw
-        .events
-        .push(Event::PointerMoved(Pos2::new(in_handle_x, handle_y)));
+    press_in_raw.events.push(Event::PointerMoved(Pos2::new(in_handle_x, handle_y)));
     press_in_raw.events.push(Event::PointerButton {
         pos: Pos2::new(in_handle_x, handle_y),
         button: egui::PointerButton::Primary,
@@ -150,9 +117,7 @@ fn test_cots_unfocused_table_ignores_arrow_keys_and_scrubber_preserves_valid_pla
     .clear();
 
     let mut drag_in_raw = base_raw;
-    drag_in_raw
-        .events
-        .push(Event::PointerMoved(Pos2::new(drag_to_x, handle_y)));
+    drag_in_raw.events.push(Event::PointerMoved(Pos2::new(drag_to_x, handle_y)));
     drag_in_raw.events.push(Event::PointerButton {
         pos: Pos2::new(drag_to_x, handle_y),
         button: egui::PointerButton::Primary,

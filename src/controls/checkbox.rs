@@ -10,10 +10,7 @@
 use crate::controls::MacControlSize;
 use crate::layout::subpixel_snap_rect;
 use crate::theme::MacTheme;
-use egui::{
-    CornerRadius, FontId, Key, Modifiers, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui,
-    Vec2, Widget, WidgetText,
-};
+use egui::{CornerRadius, FontId, Key, Modifiers, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2, Widget, WidgetText};
 
 /// Authentic macOS AppKit Square Checkbox (`NSButtonTypeSwitch`).
 ///
@@ -53,21 +50,43 @@ impl<'a> MacRadioButton<'a> {
         Self::new(checked, label)
     }
     /// Enables or disables circular radio button presentation.
-    pub fn radio(mut self, radio: bool) -> Self { self.0 = self.0.radio(radio); self }
+    pub fn radio(mut self, radio: bool) -> Self {
+        self.0 = self.0.radio(radio);
+        self
+    }
     /// Enables unaccented NIB / Graphite indicator presentation.
-    pub fn unaccented(mut self, unaccented: bool) -> Self { self.0 = self.0.unaccented(unaccented); self }
+    pub fn unaccented(mut self, unaccented: bool) -> Self {
+        self.0 = self.0.unaccented(unaccented);
+        self
+    }
     /// Sets the AppKit control size (`Regular` `14x14pt`, `Small` `12x12pt`, `Mini` `10x10pt`).
-    pub fn control_size(mut self, size: MacControlSize) -> Self { self.0 = self.0.control_size(size); self }
+    pub fn control_size(mut self, size: MacControlSize) -> Self {
+        self.0 = self.0.control_size(size);
+        self
+    }
     /// Pins the radio button to an exact NIB rectangle.
-    pub fn fixed_rect(mut self, rect: Rect) -> Self { self.0 = self.0.fixed_rect(rect); self }
+    pub fn fixed_rect(mut self, rect: Rect) -> Self {
+        self.0 = self.0.fixed_rect(rect);
+        self
+    }
     /// Enables or disables interaction.
-    pub fn enabled(mut self, enabled: bool) -> Self { self.0 = self.0.enabled(enabled); self }
+    pub fn enabled(mut self, enabled: bool) -> Self {
+        self.0 = self.0.enabled(enabled);
+        self
+    }
     /// Injects dynamic [`MacTheme`].
-    pub fn theme(mut self, theme: &'a MacTheme) -> Self { self.0 = self.0.theme(theme); self }
+    pub fn theme(mut self, theme: &'a MacTheme) -> Self {
+        self.0 = self.0.theme(theme);
+        self
+    }
     /// Resolves the indicator diameter (`14.0pt`, `12.0pt`, or `10.0pt`).
-    pub fn box_size(&self) -> f32 { self.0.box_size() }
+    pub fn box_size(&self) -> f32 {
+        self.0.box_size()
+    }
     /// Renders the radio button into `ui`.
-    pub fn show(self, ui: &mut Ui) -> Response { self.0.show(ui) }
+    pub fn show(self, ui: &mut Ui) -> Response {
+        self.0.show(ui)
+    }
 }
 
 impl<'a> Widget for MacRadioButton<'a> {
@@ -179,16 +198,14 @@ impl<'a> Widget for MacCheckbox<'a> {
 
         let enabled = self.enabled && ui.is_enabled();
         let alpha = if enabled { 1.0 } else { theme.disabled_opacity() };
-        let probe_pos = self.fixed_rect.map_or_else(
-            || ui.next_widget_position(),
-            |r| Pos2::new(r.left() + (box_sz * 0.5).min(r.width() * 0.5), r.center().y),
-        );
+        let probe_pos = self
+            .fixed_rect
+            .map_or_else(|| ui.next_widget_position(), |r| Pos2::new(r.left() + (box_sz * 0.5).min(r.width() * 0.5), r.center().y));
         let surface_bg = theme.active_surface_at(ui, probe_pos);
         let text_color = if enabled { theme.label_on(surface_bg) } else { theme.tertiary_label_on(surface_bg) };
         let label_str = self.label.text();
-        let galley = (!label_str.is_empty()).then(|| {
-            theme.layout_tracked_galley(ui, label_str, FontId::proportional(font_sz), text_color, f32::INFINITY)
-        });
+        let galley = (!label_str.is_empty())
+            .then(|| theme.layout_tracked_galley(ui, label_str, FontId::proportional(font_sz), text_color, f32::INFINITY));
 
         let desired_w = match (&self.fixed_rect, &galley) {
             (Some(r), _) => r.width(),
@@ -218,10 +235,8 @@ impl<'a> Widget for MacCheckbox<'a> {
         }
 
         let painter = ui.painter_at(rect);
-        let box_rect = subpixel_snap_rect(
-            Rect::from_min_size(Pos2::new(rect.left(), rect.center().y - box_sz * 0.5), Vec2::splat(box_sz)),
-            ppp,
-        );
+        let box_rect =
+            subpixel_snap_rect(Rect::from_min_size(Pos2::new(rect.left(), rect.center().y - box_sz * 0.5), Vec2::splat(box_sz)), ppp);
 
         if enabled && response.has_focus() {
             theme.paint_focus_ring(&painter, box_rect, corner_r);
@@ -236,16 +251,9 @@ impl<'a> Widget for MacCheckbox<'a> {
             theme.control_background().gamma_multiply(alpha)
         };
 
-        let stroke = if is_active && !self.unaccented {
-            Stroke::NONE
-        } else {
-            Stroke::new(border_w, theme.separator().gamma_multiply(alpha))
-        };
-        let glyph_fg = if self.unaccented {
-            theme.label().gamma_multiply(alpha)
-        } else {
-            theme.on_accent_text().gamma_multiply(alpha)
-        };
+        let stroke =
+            if is_active && !self.unaccented { Stroke::NONE } else { Stroke::new(border_w, theme.separator().gamma_multiply(alpha)) };
+        let glyph_fg = if self.unaccented { theme.label().gamma_multiply(alpha) } else { theme.on_accent_text().gamma_multiply(alpha) };
 
         if self.radio {
             painter.circle(box_rect.center(), box_sz * 0.5, fill_color, stroke);

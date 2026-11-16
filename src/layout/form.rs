@@ -37,12 +37,7 @@ pub struct MacForm<'a> {
 impl<'a> MacForm<'a> {
     /// Creates a new `MacForm` with the specified id salt.
     pub fn new(id_salt: impl egui::AsIdSalt) -> Self {
-        Self {
-            id_salt: IdSalt::new(id_salt),
-            theme: None,
-            spacing: None,
-            min_col_width: None,
-        }
+        Self { id_salt: IdSalt::new(id_salt), theme: None, spacing: None, min_col_width: None }
     }
 
     /// Sets the dynamic theme to derive AppKit token spacing.
@@ -69,27 +64,19 @@ impl<'a> MacForm<'a> {
             let s = self
                 .theme
                 .map(|t| t.stack_view().default_spacing.points())
-                .unwrap_or_else(|| {
-                    MacTheme::from_ctx(ui.ctx())
-                        .stack_view()
-                        .default_spacing
-                        .points()
-                });
+                .unwrap_or_else(|| MacTheme::from_ctx(ui.ctx()).stack_view().default_spacing.points());
             vec2(s, s)
         });
 
-        let mut result = None;
-        let mut grid = egui::Grid::new(self.id_salt)
-            .num_columns(2)
-            .spacing(spacing);
+        let mut grid = egui::Grid::new(self.id_salt).num_columns(2).spacing(spacing);
         if let Some(min_w) = self.min_col_width {
             grid = grid.min_col_width(min_w);
         }
         grid.show(ui, |grid_ui| {
             let mut form_ui = MacFormUi { ui: grid_ui };
-            result = Some(add_contents(&mut form_ui));
-        });
-        result.expect("MacForm grid rendered")
+            add_contents(&mut form_ui)
+        })
+        .inner
     }
 }
 
@@ -101,29 +88,15 @@ pub struct MacFormUi<'a> {
 
 impl<'a> MacFormUi<'a> {
     /// Adds a row with a trailing-aligned label (col 0) and leading-aligned control (col 1).
-    pub fn row<R1, R2>(
-        &mut self,
-        label: impl FnOnce(&mut Ui) -> R1,
-        control: impl FnOnce(&mut Ui) -> R2,
-    ) -> (R1, R2) {
-        let r1 = self
-            .ui
-            .with_layout(Layout::right_to_left(Align::Center), label)
-            .inner;
-        let r2 = self
-            .ui
-            .with_layout(Layout::left_to_right(Align::Center), control)
-            .inner;
+    pub fn row<R1, R2>(&mut self, label: impl FnOnce(&mut Ui) -> R1, control: impl FnOnce(&mut Ui) -> R2) -> (R1, R2) {
+        let r1 = self.ui.with_layout(Layout::right_to_left(Align::Center), label).inner;
+        let r2 = self.ui.with_layout(Layout::left_to_right(Align::Center), control).inner;
         self.ui.end_row();
         (r1, r2)
     }
 
     /// Convenience helper adding a text label and control row.
-    pub fn row_label<R>(
-        &mut self,
-        label_text: impl Into<WidgetText>,
-        control: impl FnOnce(&mut Ui) -> R,
-    ) -> (Response, R) {
+    pub fn row_label<R>(&mut self, label_text: impl Into<WidgetText>, control: impl FnOnce(&mut Ui) -> R) -> (Response, R) {
         let text = label_text.into();
         self.row(|ui| ui.label(text), control)
     }

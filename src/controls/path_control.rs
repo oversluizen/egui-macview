@@ -2,10 +2,7 @@
 
 use crate::symbols::MacSymbol;
 use crate::theme::MacTheme;
-use egui::{
-    Align2, Color32, CornerRadius, FontId, Id, Painter, Pos2, Rect, Response, Sense, Stroke,
-    StrokeKind, Ui, Vec2,
-};
+use egui::{Align2, Color32, CornerRadius, FontId, Id, Painter, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2};
 use std::fmt::Debug;
 use std::hash::Hash;
 
@@ -23,20 +20,12 @@ pub struct MacPathComponent<'a> {
 impl<'a> MacPathComponent<'a> {
     /// Creates a folder path component.
     pub fn folder(title: &'a str) -> Self {
-        Self {
-            title,
-            is_folder: true,
-            symbol: None,
-        }
+        Self { title, is_folder: true, symbol: None }
     }
 
     /// Creates a leaf file/document path component.
     pub fn file(title: &'a str) -> Self {
-        Self {
-            title,
-            is_folder: false,
-            symbol: None,
-        }
+        Self { title, is_folder: false, symbol: None }
     }
 
     /// Overrides the leading symbol with a [`MacSymbol`].
@@ -98,15 +87,8 @@ impl<'a> MacPathControl<'a> {
         #[allow(deprecated)]
         let id = Id::new(id_source);
         let n = segments.len();
-        let comps: Vec<_> = segments
-            .iter()
-            .enumerate()
-            .map(|(i, &title)| MacPathComponent {
-                title,
-                is_folder: i + 1 < n,
-                symbol: None,
-            })
-            .collect();
+        let comps: Vec<_> =
+            segments.iter().enumerate().map(|(i, &title)| MacPathComponent { title, is_folder: i + 1 < n, symbol: None }).collect();
         Self {
             id,
             components: std::borrow::Cow::Owned(comps),
@@ -171,24 +153,14 @@ impl<'a> MacPathControl<'a> {
 
         let width = self.width.unwrap_or_else(|| ui.available_width());
         let height = pcm.height.points();
-        let sense = if self.enabled {
-            Sense::click()
-        } else {
-            Sense::hover()
-        };
+        let sense = if self.enabled { Sense::click() } else { Sense::hover() };
         let (rect, response) = ui.allocate_exact_size(Vec2::new(width, height), sense);
 
         let painter = ui.painter_at(rect);
         let corner_r = pcm.corner_radius.points();
         let border_w = pcm.border_width.points();
         let border_stroke = Stroke::new(border_w, theme.separator());
-        painter.rect(
-            rect,
-            CornerRadius::same(corner_r as u8),
-            theme.control_background(),
-            border_stroke,
-            StrokeKind::Inside,
-        );
+        painter.rect(rect, CornerRadius::same(corner_r as u8), theme.control_background(), border_stroke, StrokeKind::Inside);
 
         let font_id = FontId::proportional(pcm.font_size.points());
         let pad_h = pcm.padding_horizontal.points();
@@ -201,18 +173,11 @@ impl<'a> MacPathControl<'a> {
 
         let mut choose_clicked = false;
         let right_limit = if self.show_choose_button {
-            let choose_galley = painter.layout_no_wrap(
-                self.choose_label.to_owned(),
-                font_id.clone(),
-                Color32::PLACEHOLDER,
-            );
+            let choose_galley = painter.layout_no_wrap(self.choose_label.to_owned(), font_id.clone(), Color32::PLACEHOLDER);
             let choose_text_w = choose_galley.size().x;
             let btn_w = choose_text_w + pcm.choose_button_padding.points() * 2.0;
             let btn_h = pcm.choose_button_height.points();
-            let btn_pos = Pos2::new(
-                rect.right() - pad_h - btn_w,
-                rect.top() + (height - btn_h) * 0.5,
-            );
+            let btn_pos = Pos2::new(rect.right() - pad_h - btn_w, rect.top() + (height - btn_h) * 0.5);
             let btn_rect = Rect::from_min_size(btn_pos, Vec2::new(btn_w, btn_h));
             let btn_resp = ui.interact(btn_rect, self.id.with("choose_btn"), sense);
             if btn_resp.clicked() && self.enabled {
@@ -227,18 +192,14 @@ impl<'a> MacPathControl<'a> {
                 theme.window_background()
             };
             let btn_fg = if down {
-                theme
-                    .selected_control_background_style()
-                    .primary_text_color(theme)
+                theme.selected_control_background_style().primary_text_color(theme)
             } else if self.enabled {
                 theme.label()
             } else {
                 theme.placeholder_text()
             };
             painter.rect(btn_rect, seg_r, btn_bg, border_stroke, StrokeKind::Inside);
-            let choose_pos = Align2::CENTER_CENTER
-                .anchor_size(btn_rect.center(), choose_galley.size())
-                .min;
+            let choose_pos = Align2::CENTER_CENTER.anchor_size(btn_rect.center(), choose_galley.size()).min;
             painter.galley(choose_pos, choose_galley, btn_fg);
             btn_rect.left() - pad_h
         } else {
@@ -248,28 +209,16 @@ impl<'a> MacPathControl<'a> {
         let mut cursor_x = rect.left() + pad_h;
         let mut clicked_segment = None;
         let count = self.components.len();
-        let text_color = if self.enabled {
-            theme.label()
-        } else {
-            theme.placeholder_text()
-        };
+        let text_color = if self.enabled { theme.label() } else { theme.placeholder_text() };
 
         for (idx, comp) in self.components.iter().enumerate() {
             if cursor_x >= right_limit {
                 break;
             }
-            let title_galley = painter.layout_no_wrap(
-                comp.title.to_owned(),
-                font_id.clone(),
-                Color32::PLACEHOLDER,
-            );
+            let title_galley = painter.layout_no_wrap(comp.title.to_owned(), font_id.clone(), Color32::PLACEHOLDER);
             let title_w = title_galley.size().x;
-            let seg_w = (seg_pad_h * 2.0 + icon_sz + icon_gap + title_w)
-                .min((right_limit - cursor_x).max(0.0));
-            let seg_rect = Rect::from_min_size(
-                Pos2::new(cursor_x, rect.top() + border_w),
-                Vec2::new(seg_w, height - border_w * 2.0),
-            );
+            let seg_w = (seg_pad_h * 2.0 + icon_sz + icon_gap + title_w).min((right_limit - cursor_x).max(0.0));
+            let seg_rect = Rect::from_min_size(Pos2::new(cursor_x, rect.top() + border_w), Vec2::new(seg_w, height - border_w * 2.0));
             let seg_resp = ui.interact(seg_rect, self.id.with(("seg", idx)), sense);
             if seg_resp.clicked() && self.enabled {
                 clicked_segment = Some(idx);
@@ -278,85 +227,45 @@ impl<'a> MacPathControl<'a> {
                 painter.rect_filled(seg_rect, seg_r, theme.control());
             }
 
-            let seg_clip = seg_rect.intersect(Rect::from_min_max(
-                rect.min,
-                Pos2::new(right_limit, rect.max.y),
-            ));
+            let seg_clip = seg_rect.intersect(Rect::from_min_max(rect.min, Pos2::new(right_limit, rect.max.y)));
             let seg_painter = painter.with_clip_rect(seg_clip);
-            let icon_center =
-                Pos2::new(seg_rect.left() + seg_pad_h + icon_sz * 0.5, rect.center().y);
+            let icon_center = Pos2::new(seg_rect.left() + seg_pad_h + icon_sz * 0.5, rect.center().y);
             let icon_rect = Rect::from_center_size(icon_center, Vec2::splat(icon_sz));
             paint_component_icon(&seg_painter, theme, comp, icon_rect);
 
             let text_anchor = Pos2::new(icon_rect.right() + icon_gap, rect.center().y);
-            let text_pos = Align2::LEFT_CENTER
-                .anchor_size(text_anchor, title_galley.size())
-                .min;
+            let text_pos = Align2::LEFT_CENTER.anchor_size(text_anchor, title_galley.size()).min;
             seg_painter.galley(text_pos, title_galley, text_color);
 
             cursor_x = seg_rect.right() + seg_spacing;
             if idx + 1 < count && cursor_x + chev_sz < right_limit {
                 let chev_pos = Pos2::new(cursor_x + chev_sz * 0.5, rect.center().y);
                 let chev_font = FontId::proportional(chev_sz);
-                painter.text(
-                    chev_pos,
-                    Align2::CENTER_CENTER,
-                    MacSymbol::ChevronRight.as_str(),
-                    chev_font,
-                    theme.secondary_label(),
-                );
+                painter.text(chev_pos, Align2::CENTER_CENTER, MacSymbol::ChevronRight.as_str(), chev_font, theme.secondary_label());
                 cursor_x += chev_sz + seg_spacing;
             }
         }
 
-        MacPathControlResponse {
-            response,
-            clicked_segment,
-            choose_clicked,
-        }
+        MacPathControlResponse { response, clicked_segment, choose_clicked }
     }
 }
 
 /// Paints the leading folder, file, or override symbol for a path segment.
-fn paint_component_icon(
-    painter: &Painter,
-    theme: &MacTheme,
-    comp: &MacPathComponent<'_>,
-    icon_rect: Rect,
-) {
+fn paint_component_icon(painter: &Painter, theme: &MacTheme, comp: &MacPathComponent<'_>, icon_rect: Rect) {
     let pcm = theme.path_control();
     let border_w = pcm.border_width.points();
     let r = CornerRadius::same((border_w * 2.0) as u8);
     if let Some(sym) = comp.symbol {
         let font = FontId::proportional(pcm.font_size.points());
-        painter.text(
-            icon_rect.center(),
-            Align2::CENTER_CENTER,
-            sym.as_str(),
-            font,
-            theme.control_accent(),
-        );
+        painter.text(icon_rect.center(), Align2::CENTER_CENTER, sym.as_str(), font, theme.control_accent());
     } else if comp.is_folder {
         let tab_w = pcm.folder_tab_width.points();
         let tab_h = pcm.folder_tab_height.points();
-        let body_min = Pos2::new(
-            icon_rect.left() + border_w,
-            icon_rect.top() + tab_h + border_w,
-        );
-        let body_max = Pos2::new(
-            icon_rect.right() - border_w,
-            icon_rect.bottom() - border_w * 2.0,
-        );
+        let body_min = Pos2::new(icon_rect.left() + border_w, icon_rect.top() + tab_h + border_w);
+        let body_max = Pos2::new(icon_rect.right() - border_w, icon_rect.bottom() - border_w * 2.0);
         let body_rect = Rect::from_min_max(body_min, body_max);
-        let tab_rect = Rect::from_min_size(
-            Pos2::new(body_rect.left(), body_rect.top() - tab_h),
-            Vec2::new(tab_w, tab_h + border_w),
-        );
-        painter.rect_filled(
-            tab_rect,
-            CornerRadius::same(border_w as u8),
-            theme.control_accent(),
-        );
+        let tab_rect = Rect::from_min_size(Pos2::new(body_rect.left(), body_rect.top() - tab_h), Vec2::new(tab_w, tab_h + border_w));
+        painter.rect_filled(tab_rect, CornerRadius::same(border_w as u8), theme.control_accent());
         painter.rect_filled(body_rect, r, theme.control_accent());
     } else {
         let inset_x = border_w * 2.0 + border_w;
@@ -364,12 +273,6 @@ fn paint_component_icon(
         let doc_min = Pos2::new(icon_rect.left() + inset_x, icon_rect.top() + inset_y);
         let doc_max = Pos2::new(icon_rect.right() - inset_x, icon_rect.bottom() - inset_y);
         let doc_rect = Rect::from_min_max(doc_min, doc_max);
-        painter.rect(
-            doc_rect,
-            r,
-            Color32::TRANSPARENT,
-            Stroke::new(border_w, theme.secondary_label()),
-            StrokeKind::Inside,
-        );
+        painter.rect(doc_rect, r, Color32::TRANSPARENT, Stroke::new(border_w, theme.secondary_label()), StrokeKind::Inside);
     }
 }

@@ -15,10 +15,8 @@ pub(crate) fn compute_inline_geometry(view: &MacPlayerView<'_>, available_rect: 
     let m = theme_cow.player_view();
 
     let bar_h = m.inline_height.points();
-    let bar_rect = Rect::from_min_size(
-        Pos2::new(available_rect.min.x, available_rect.max.y - bar_h),
-        Vec2::new(available_rect.width(), bar_h),
-    );
+    let bar_rect =
+        Rect::from_min_size(Pos2::new(available_rect.min.x, available_rect.max.y - bar_h), Vec2::new(available_rect.width(), bar_h));
     let play_inset = m.inline_play_button_inset.points();
     let play_w = m.inline_play_button_width.points();
     let play_rect = Rect::from_min_size(
@@ -32,11 +30,8 @@ pub(crate) fn compute_inline_geometry(view: &MacPlayerView<'_>, available_rect: 
     );
     let btn_spacing = m.button_spacing.points();
     let dur = view.duration_secs.max(1.0);
-    let time_label_w = if dur as u32 >= 3600 {
-        m.speed_button_width.points() + m.button_spacing.points() * 2.0
-    } else {
-        m.speed_button_width.points()
-    };
+    let time_label_w =
+        if dur as u32 >= 3600 { m.speed_button_width.points() + m.button_spacing.points() * 2.0 } else { m.speed_button_width.points() };
     let el_pos = Pos2::new(play_rect.max.x + btn_spacing, bar_rect.center().y - m.scrubber_knob_size.points() * 0.5);
     let rem_pos = Pos2::new(mute_rect.min.x - btn_spacing - time_label_w, bar_rect.center().y - m.scrubber_knob_size.points() * 0.5);
 
@@ -47,10 +42,7 @@ pub(crate) fn compute_inline_geometry(view: &MacPlayerView<'_>, available_rect: 
         Pos2::new(track_start_x, bar_rect.center().y - track_h * 0.5),
         Pos2::new(track_end_x, bar_rect.center().y + track_h * 0.5),
     );
-    let scrub_hit = Rect::from_min_max(
-        Pos2::new(track_start_x, bar_rect.min.y),
-        Pos2::new(track_end_x, bar_rect.max.y),
-    );
+    let scrub_hit = Rect::from_min_max(Pos2::new(track_start_x, bar_rect.min.y), Pos2::new(track_end_x, bar_rect.max.y));
     let knob_x = track_rect.min.x + track_rect.width() * view.progress.clamp(0.0, 1.0);
 
     PlayerViewGeometry {
@@ -116,11 +108,19 @@ pub(crate) fn paint_inline(
         painter.rect_filled(tr, CornerRadius::same(m.scrubber_track_corner_radius.points() as u8), theme.separator());
         if view.buffered_progress > 0.0 {
             let bw = tr.width() * view.buffered_progress.clamp(0.0, 1.0);
-            painter.rect_filled(Rect::from_min_size(tr.min, Vec2::new(bw, tr.height())), CornerRadius::same(m.scrubber_track_corner_radius.points() as u8), theme.label().gamma_multiply(m.buffered_fill_alpha.points()));
+            painter.rect_filled(
+                Rect::from_min_size(tr.min, Vec2::new(bw, tr.height())),
+                CornerRadius::same(m.scrubber_track_corner_radius.points() as u8),
+                theme.label().gamma_multiply(m.buffered_fill_alpha.points()),
+            );
         }
         if view.progress > 0.0 {
             let ew = tr.width() * view.progress.clamp(0.0, 1.0);
-            painter.rect_filled(Rect::from_min_size(tr.min, Vec2::new(ew, tr.height())), CornerRadius::same(m.scrubber_track_corner_radius.points() as u8), theme.control_accent());
+            painter.rect_filled(
+                Rect::from_min_size(tr.min, Vec2::new(ew, tr.height())),
+                CornerRadius::same(m.scrubber_track_corner_radius.points() as u8),
+                theme.control_accent(),
+            );
         }
         painter.circle_filled(geom.knob_pos, m.scrubber_knob_size.points() * 0.5, theme.scrubber_playhead());
     }
@@ -139,12 +139,7 @@ pub(crate) fn paint_inline(
 }
 
 /// Paints transport skip/step glyphs, speed pill background, and AirPlay auxiliary icon for floating HUD.
-pub(crate) fn paint_hud_aux_and_step_glyphs(
-    painter: &Painter,
-    geom: &PlayerViewGeometry,
-    theme: &MacTheme,
-    alpha: f32,
-) {
+pub(crate) fn paint_hud_aux_and_step_glyphs(painter: &Painter, geom: &PlayerViewGeometry, theme: &MacTheme, alpha: f32) {
     let color = theme.label().gamma_multiply(alpha);
 
     // 1. Skip Backward (15s): circular arc + left chevron
@@ -197,16 +192,8 @@ pub(crate) fn paint_hud_aux_and_step_glyphs(
     let aux = geom.aux_rect;
     let screen_w = aux.width() * 0.5 + (aux.width() * 0.5) * 0.5;
     let screen_h = aux.height() * 0.5;
-    let screen_rect = Rect::from_center_size(
-        Pos2::new(aux.center().x, aux.min.y + screen_h * 0.5),
-        Vec2::new(screen_w, screen_h),
-    );
-    painter.rect_stroke(
-        screen_rect,
-        CornerRadius::same(1),
-        Stroke::new(1.0, color),
-        StrokeKind::Inside,
-    );
+    let screen_rect = Rect::from_center_size(Pos2::new(aux.center().x, aux.min.y + screen_h * 0.5), Vec2::new(screen_w, screen_h));
+    painter.rect_stroke(screen_rect, CornerRadius::same(1), Stroke::new(1.0, color), StrokeKind::Inside);
     let tri_w = (aux.width() * 0.5) * 0.5;
     let tri_top = Pos2::new(aux.center().x, screen_rect.max.y - 1.0);
     let tri_left = Pos2::new(aux.center().x - tri_w, aux.max.y);

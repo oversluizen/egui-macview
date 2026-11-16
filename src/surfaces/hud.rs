@@ -7,8 +7,8 @@
 use crate::controls::{MacControlSize, MacInputCell};
 use crate::theme::MacTheme;
 use egui::{
-    Align, Align2, Context, CornerRadius, FontId, Id, Layout, Order, Pos2, Rect, Response,
-    RichText, Sense, Stroke, StrokeKind, Ui, UiBuilder, Vec2,
+    Align, Align2, Context, CornerRadius, FontId, Id, Layout, Order, Pos2, Rect, Response, RichText, Sense, Stroke, StrokeKind, Ui,
+    UiBuilder, Vec2,
 };
 use std::hash::Hash;
 
@@ -45,13 +45,7 @@ pub struct MacFloatingInfoBox<'a> {
 impl<'a> MacFloatingInfoBox<'a> {
     /// Creates a new `MacFloatingInfoBox` with `id_source` anchored at mutable `pos`.
     pub fn new(id_source: impl Hash + std::fmt::Debug, pos: &'a mut Pos2) -> Self {
-        Self {
-            id: Id::NULL.with(id_source),
-            title: "Compact HUD".to_string(),
-            pos,
-            bounds: None,
-            theme: None,
-        }
+        Self { id: Id::NULL.with(id_source), title: "Compact HUD".to_string(), pos, bounds: None, theme: None }
     }
 
     /// Sets an explicit widget `Id` for the HUD palette.
@@ -79,12 +73,7 @@ impl<'a> MacFloatingInfoBox<'a> {
     }
 
     /// Renders the two-row compact HUD palette inside an `Order::Foreground` area.
-    pub fn show(
-        self,
-        ctx: &Context,
-        row1: impl FnOnce(&mut Ui),
-        row2: impl FnOnce(&mut Ui),
-    ) -> Response {
+    pub fn show(self, ctx: &Context, row1: impl FnOnce(&mut Ui), row2: impl FnOnce(&mut Ui)) -> Response {
         let theme_cow = MacTheme::resolve(self.theme, ctx);
         let theme: &MacTheme = &theme_cow;
 
@@ -97,22 +86,17 @@ impl<'a> MacFloatingInfoBox<'a> {
         let border_w = pop_metrics.border_width.points();
         let header_font_pt = pop_metrics.header_font_size.points();
         let row_h = compact_tf.height.points();
-        let row_gap = compact_tf
-            .padding_vertical
-            .as_ref()
-            .map(|d| d.points())
-            .unwrap_or(border_w * 2.0);
+        let row_gap = compact_tf.padding_vertical.as_ref().map(|d| d.points()).unwrap_or(border_w * 2.0);
 
         egui::Area::new(self.id)
             .order(Order::Foreground)
-            .sense(Sense::click_and_drag())
+            .sense(Sense::hover())
             .fixed_pos(*self.pos)
             .show(ctx, |ui| {
-                let (hud_rect, hud_resp) =
-                    ui.allocate_exact_size(Vec2::new(hud_w, hud_h), Sense::click_and_drag());
+                let (hud_rect, hud_resp) = ui.allocate_exact_size(Vec2::new(hud_w, hud_h), Sense::hover());
 
-                let pointer_inside = ui.rect_contains_pointer(hud_rect)
-                    || ui.input(|i| i.pointer.hover_pos().is_some_and(|p| hud_rect.contains(p)));
+                let pointer_inside =
+                    ui.rect_contains_pointer(hud_rect) || ui.input(|i| i.pointer.hover_pos().is_some_and(|p| hud_rect.contains(p)));
                 if pointer_inside {
                     ui.input_mut(|i| {
                         i.smooth_scroll_delta = Vec2::ZERO;
@@ -120,18 +104,8 @@ impl<'a> MacFloatingInfoBox<'a> {
                 }
 
                 let header_rect = Rect::from_min_size(hud_rect.min, Vec2::new(hud_w, header_h));
-                let header_resp = ui.interact(
-                    header_rect,
-                    self.id.with("hud_header_drag"),
-                    Sense::click_and_drag(),
-                );
-                let drag_delta = if header_resp.dragged() {
-                    header_resp.drag_delta()
-                } else if hud_resp.dragged() {
-                    hud_resp.drag_delta()
-                } else {
-                    Vec2::ZERO
-                };
+                let header_resp = ui.interact(header_rect, self.id.with("hud_header_drag"), Sense::click_and_drag());
+                let drag_delta = if header_resp.dragged() { header_resp.drag_delta() } else { Vec2::ZERO };
 
                 if drag_delta != Vec2::ZERO {
                     let mut next_pos = *self.pos + drag_delta;
@@ -146,20 +120,11 @@ impl<'a> MacFloatingInfoBox<'a> {
 
                 let painter = ui.painter_at(hud_rect);
                 let border_stroke = Stroke::new(border_w, theme.hud_border());
-                painter.rect(
-                    hud_rect,
-                    CornerRadius::same(corner_r),
-                    theme.hud_background(),
-                    border_stroke,
-                    StrokeKind::Inside,
-                );
+                painter.rect(hud_rect, CornerRadius::same(corner_r), theme.hud_background(), border_stroke, StrokeKind::Inside);
 
                 // Header bar separator & centered title
                 let sep_y = hud_rect.min.y + header_h;
-                painter.line_segment(
-                    [Pos2::new(hud_rect.min.x, sep_y), Pos2::new(hud_rect.max.x, sep_y)],
-                    border_stroke,
-                );
+                painter.line_segment([Pos2::new(hud_rect.min.x, sep_y), Pos2::new(hud_rect.max.x, sep_y)], border_stroke);
                 painter.text(
                     header_rect.center(),
                     Align2::CENTER_CENTER,
@@ -171,25 +136,17 @@ impl<'a> MacFloatingInfoBox<'a> {
                 // Row 1 and Row 2 layout inside body
                 let side_inset = row_gap * 2.0;
                 let row1_top = sep_y + row_gap;
-                let row1_rect = Rect::from_min_size(
-                    Pos2::new(hud_rect.min.x + side_inset, row1_top),
-                    Vec2::new(hud_w - side_inset * 2.0, row_h),
-                );
+                let row1_rect =
+                    Rect::from_min_size(Pos2::new(hud_rect.min.x + side_inset, row1_top), Vec2::new(hud_w - side_inset * 2.0, row_h));
                 let row2_rect = Rect::from_min_size(
                     Pos2::new(hud_rect.min.x + side_inset, row1_top + row_h + row_gap),
                     Vec2::new(hud_w - side_inset * 2.0, row_h),
                 );
                 row1(&mut ui.new_child(
-                    UiBuilder::new()
-                        .id_salt((self.id, "hud_row1"))
-                        .max_rect(row1_rect)
-                        .layout(Layout::left_to_right(Align::Center)),
+                    UiBuilder::new().id_salt((self.id, "hud_row1")).max_rect(row1_rect).layout(Layout::left_to_right(Align::Center)),
                 ));
                 row2(&mut ui.new_child(
-                    UiBuilder::new()
-                        .id_salt((self.id, "hud_row2"))
-                        .max_rect(row2_rect)
-                        .layout(Layout::left_to_right(Align::Center)),
+                    UiBuilder::new().id_salt((self.id, "hud_row2")).max_rect(row2_rect).layout(Layout::left_to_right(Align::Center)),
                 ));
                 hud_resp
             })
@@ -197,26 +154,14 @@ impl<'a> MacFloatingInfoBox<'a> {
     }
 
     /// Renders the standard X/Y and W/H 2x2 coordinate HUD palette (`SPEC-006 §2.2`).
-    pub fn show_xywh(
-        self,
-        ctx: &Context,
-        x_val: &mut String,
-        y_val: &mut String,
-        w_val: &mut String,
-        h_val: &mut String,
-    ) -> Response {
+    pub fn show_xywh(self, ctx: &Context, x_val: &mut String, y_val: &mut String, w_val: &mut String, h_val: &mut String) -> Response {
         let theme_cow = MacTheme::resolve(self.theme, ctx);
         let theme_ref: &MacTheme = &theme_cow;
         let hud_id = self.id;
         let cell_w = theme_ref.text_field().compact_infobox.default_width.points();
         let font_pt = theme_ref.text_field().compact_infobox.font_size.points();
         let label_col = theme_ref.hud_secondary_text();
-        let (id_x, id_y, id_w, id_h) = (
-            hud_id.with("hud_x"),
-            hud_id.with("hud_y"),
-            hud_id.with("hud_w"),
-            hud_id.with("hud_h"),
-        );
+        let (id_x, id_y, id_w, id_h) = (hud_id.with("hud_x"), hud_id.with("hud_y"), hud_id.with("hud_w"), hud_id.with("hud_h"));
         let draw_cell = |ui: &mut Ui, lbl: &str, id: Id, val: &mut String, prev: Id, next: Id| {
             ui.label(RichText::new(lbl).font(FontId::proportional(font_pt)).color(label_col));
             MacInputCell::new(id, val)
@@ -250,10 +195,7 @@ impl<'a> MacFloatingInfoBox<'a> {
         painter.rect_filled(rect, CornerRadius::same(corner_r), theme.box_background());
         if with_header_divider && rect.height() > header_y - rect.min.y {
             painter.line_segment(
-                [
-                    Pos2::new(rect.min.x + border_w, header_y),
-                    Pos2::new(rect.max.x - border_w, header_y),
-                ],
+                [Pos2::new(rect.min.x + border_w, header_y), Pos2::new(rect.max.x - border_w, header_y)],
                 Stroke::new(border_w, theme.control_background()),
             );
         }

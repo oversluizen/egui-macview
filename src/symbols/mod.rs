@@ -7,22 +7,19 @@
 use std::fmt;
 
 /// Embedded raw bytes of the `CupertinoIcons.ttf` TrueType font asset (MIT License).
-pub const CUPERTINO_ICONS_FONT_BYTES: &[u8] =
-    include_bytes!("../../assets/fonts/CupertinoIcons.ttf");
+pub const CUPERTINO_ICONS_FONT_BYTES: &[u8] = include_bytes!("../../assets/fonts/CupertinoIcons.ttf");
 
 /// Name key used to register CupertinoIcons in `egui::FontDefinitions`.
 pub const CUPERTINO_ICONS_FONT_NAME: &str = "cupertino_icons";
 
 /// Embedded raw bytes of the open-source `Inter-Regular.ttf` TrueType font asset (SIL OFL 1.1).
-pub const INTER_REGULAR_FONT_BYTES: &[u8] =
-    include_bytes!("../../assets/fonts/Inter-Regular.ttf");
+pub const INTER_REGULAR_FONT_BYTES: &[u8] = include_bytes!("../../assets/fonts/Inter-Regular.ttf");
 
 /// Name key used to register `Inter-Regular` in `egui::FontDefinitions`.
 pub const INTER_REGULAR_FONT_NAME: &str = "inter_regular";
 
 /// Embedded raw bytes of the open-source `Inter-SemiBold.ttf` TrueType font asset (SIL OFL 1.1).
-pub const INTER_SEMIBOLD_FONT_BYTES: &[u8] =
-    include_bytes!("../../assets/fonts/Inter-SemiBold.ttf");
+pub const INTER_SEMIBOLD_FONT_BYTES: &[u8] = include_bytes!("../../assets/fonts/Inter-SemiBold.ttf");
 
 /// Name key used to register `Inter-SemiBold` in `egui::FontDefinitions` and `FontFamily::Name`.
 pub const INTER_SEMIBOLD_FONT_NAME: &str = "Inter-SemiBold";
@@ -163,23 +160,15 @@ impl AsRef<str> for MacSymbol {
 ///
 /// This function is idempotent: calling it multiple times will not insert duplicate entries.
 pub fn setup_symbols_font(fonts: &mut egui::FontDefinitions) {
-    fonts.font_data.insert(
-        INTER_REGULAR_FONT_NAME.to_owned(),
-        std::sync::Arc::new(egui::FontData::from_static(INTER_REGULAR_FONT_BYTES)),
-    );
-    fonts.font_data.insert(
-        INTER_SEMIBOLD_FONT_NAME.to_owned(),
-        std::sync::Arc::new(egui::FontData::from_static(INTER_SEMIBOLD_FONT_BYTES)),
-    );
-    fonts.font_data.insert(
-        CUPERTINO_ICONS_FONT_NAME.to_owned(),
-        std::sync::Arc::new(egui::FontData::from_static(CUPERTINO_ICONS_FONT_BYTES)),
-    );
+    fonts.font_data.insert(INTER_REGULAR_FONT_NAME.to_owned(), std::sync::Arc::new(egui::FontData::from_static(INTER_REGULAR_FONT_BYTES)));
+    fonts
+        .font_data
+        .insert(INTER_SEMIBOLD_FONT_NAME.to_owned(), std::sync::Arc::new(egui::FontData::from_static(INTER_SEMIBOLD_FONT_BYTES)));
+    fonts
+        .font_data
+        .insert(CUPERTINO_ICONS_FONT_NAME.to_owned(), std::sync::Arc::new(egui::FontData::from_static(CUPERTINO_ICONS_FONT_BYTES)));
 
-    let prop_family = fonts
-        .families
-        .entry(egui::FontFamily::Proportional)
-        .or_default();
+    let prop_family = fonts.families.entry(egui::FontFamily::Proportional).or_default();
     if !prop_family.iter().any(|f| f == INTER_REGULAR_FONT_NAME) {
         prop_family.insert(0, INTER_REGULAR_FONT_NAME.to_owned());
     }
@@ -187,18 +176,12 @@ pub fn setup_symbols_font(fonts: &mut egui::FontDefinitions) {
         prop_family.push(CUPERTINO_ICONS_FONT_NAME.to_owned());
     }
 
-    let mono_family = fonts
-        .families
-        .entry(egui::FontFamily::Monospace)
-        .or_default();
+    let mono_family = fonts.families.entry(egui::FontFamily::Monospace).or_default();
     if !mono_family.iter().any(|f| f == CUPERTINO_ICONS_FONT_NAME) {
         mono_family.push(CUPERTINO_ICONS_FONT_NAME.to_owned());
     }
 
-    let semibold_family = fonts
-        .families
-        .entry(egui::FontFamily::Name(INTER_SEMIBOLD_FONT_NAME.into()))
-        .or_default();
+    let semibold_family = fonts.families.entry(egui::FontFamily::Name(INTER_SEMIBOLD_FONT_NAME.into())).or_default();
     if !semibold_family.iter().any(|f| f == INTER_SEMIBOLD_FONT_NAME) {
         semibold_family.insert(0, INTER_SEMIBOLD_FONT_NAME.to_owned());
     }
@@ -206,10 +189,15 @@ pub fn setup_symbols_font(fonts: &mut egui::FontDefinitions) {
         semibold_family.push(CUPERTINO_ICONS_FONT_NAME.to_owned());
     }
 
-    let icon_family = fonts
-        .families
-        .entry(egui::FontFamily::Name(CUPERTINO_ICONS_FONT_NAME.into()))
-        .or_default();
+    let ubuntu_family = fonts.families.entry(egui::FontFamily::Name("Ubuntu-Light".into())).or_default();
+    if !ubuntu_family.iter().any(|f| f == "Ubuntu-Light") {
+        ubuntu_family.insert(0, "Ubuntu-Light".to_owned());
+    }
+    if !ubuntu_family.iter().any(|f| f == CUPERTINO_ICONS_FONT_NAME) {
+        ubuntu_family.push(CUPERTINO_ICONS_FONT_NAME.to_owned());
+    }
+
+    let icon_family = fonts.families.entry(egui::FontFamily::Name(CUPERTINO_ICONS_FONT_NAME.into())).or_default();
     if !icon_family.iter().any(|f| f == CUPERTINO_ICONS_FONT_NAME) {
         icon_family.insert(0, CUPERTINO_ICONS_FONT_NAME.to_owned());
     }

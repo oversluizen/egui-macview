@@ -5,15 +5,11 @@ use egui::{pos2, vec2, Align2, Color32, CornerRadius, FontId, Rect, Stroke, Stro
 use egui_macview::theme::MacTheme;
 
 /// Renders the 60fps procedural studio video viewport with color grading, radar, and oscilloscope.
-pub fn render_procedural_video_viewport(
-    content_ui: &mut Ui,
-    theme: &MacTheme,
-    state: &CenterState,
-) -> Rect {
+pub fn render_procedural_video_viewport(content_ui: &mut Ui, theme: &MacTheme, state: &CenterState) -> Rect {
     let avail_w = (content_ui.available_width() - 24.0).clamp(320.0, 640.0);
-    let video_h = avail_w * (9.0 / 16.0);
-    let (video_rect, _) =
-        content_ui.allocate_exact_size(vec2(avail_w, video_h), egui::Sense::hover());
+    let max_video_h = (content_ui.available_height() - 62.0).clamp(110.0, 206.0);
+    let video_h = (avail_w * (9.0 / 16.0)).min(max_video_h);
+    let (video_rect, _) = content_ui.allocate_exact_size(vec2(avail_w, video_h), egui::Sense::hover());
     let vp = content_ui.painter_at(video_rect);
 
     // 1. Color-graded background
@@ -23,23 +19,14 @@ pub fn render_procedural_video_viewport(
     let video_bg = Color32::from_rgb(bg_val, bg_val + 2, bg_val + 6);
 
     vp.rect_filled(video_rect, CornerRadius::same(6), video_bg);
-    vp.rect_stroke(
-        video_rect,
-        CornerRadius::same(6),
-        Stroke::new(1.0, theme.separator()),
-        StrokeKind::Inside,
-    );
+    vp.rect_stroke(video_rect, CornerRadius::same(6), Stroke::new(1.0, theme.separator()), StrokeKind::Inside);
 
     // 2. Rotating radar / test pattern
     let v_center = video_rect.center();
     let zoom = state.media_zoom.clamp(0.5, 2.0);
     let pattern_r = 44.0 * zoom;
     let rot_angle = (state.media_playhead * 1.5) as f32;
-    vp.circle_stroke(
-        v_center,
-        pattern_r,
-        Stroke::new(1.5, theme.control_accent().gamma_multiply(0.65)),
-    );
+    vp.circle_stroke(v_center, pattern_r, Stroke::new(1.5, theme.control_accent().gamma_multiply(0.65)));
     vp.line_segment(
         [
             v_center + vec2(rot_angle.cos() * pattern_r, rot_angle.sin() * pattern_r),
@@ -62,10 +49,7 @@ pub fn render_procedural_video_viewport(
             })
             .collect();
         if pts.len() >= 2 {
-            vp.add(egui::Shape::line(
-                pts,
-                Stroke::new(1.0, theme.system_green().gamma_multiply(0.75)),
-            ));
+            vp.add(egui::Shape::line(pts, Stroke::new(1.0, theme.system_green().gamma_multiply(0.75))));
         }
     }
 
@@ -84,10 +68,19 @@ pub fn render_procedural_video_viewport(
     );
 
     // 5. Header title and rating
+    let stream_title = match state.codec_preset {
+        0 => "Big Buck Bunny — 1080p MP4 (Video)",
+        1 => "Sintel — 4K Proxy MP4 (Video)",
+        2 => "Tears of Steel — VFX Reel MP4 (Video)",
+        3 => "For Bigger Blazes — 60fps MP4 (Video)",
+        4 => "J.S. Bach — Brandenburg Concerto (.ogg Audio)",
+        5 => "Claude Debussy — Clair de Lune (.ogg Audio)",
+        _ => &state.audio_track.name,
+    };
     vp.text(
         pos2(video_rect.right() - 14.0, video_rect.top() + 14.0),
         Align2::RIGHT_TOP,
-        format!("{} | {} ★", state.audio_track.name, state.media_rating),
+        format!("{stream_title} | {} ★", state.media_rating),
         FontId::proportional(11.0),
         theme.secondary_label(),
     );

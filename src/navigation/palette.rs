@@ -5,8 +5,8 @@
 
 use crate::theme::MacTheme;
 use egui::{
-    Align, Align2, Area, CornerRadius, FontId, Frame, Id, Key, Layout, Modifiers, Order, Pos2,
-    Rect, ScrollArea, Sense, Stroke, StrokeKind, TextEdit, UiBuilder, Vec2,
+    Align, Align2, Area, CornerRadius, FontId, Frame, Id, Key, Layout, Modifiers, Order, Pos2, Rect, ScrollArea, Sense, Stroke, StrokeKind,
+    TextEdit, UiBuilder, Vec2,
 };
 
 pub use super::fuzzy::{CommandPaletteItem, IntoShortcutString};
@@ -57,14 +57,7 @@ impl Default for MacCommandPalette {
 impl MacCommandPalette {
     /// Creates a command palette with a collection of available commands.
     pub fn new(items: Vec<CommandPaletteItem>) -> Self {
-        Self {
-            open: false,
-            query: String::new(),
-            selected_index: 0,
-            items,
-            width: COMMAND_PALETTE_WIDTH,
-            height: COMMAND_PALETTE_HEIGHT,
-        }
+        Self { open: false, query: String::new(), selected_index: 0, items, width: COMMAND_PALETTE_WIDTH, height: COMMAND_PALETTE_HEIGHT }
     }
 
     /// Returns whether the command palette is currently visible.
@@ -122,10 +115,7 @@ impl MacCommandPalette {
     }
 
     /// Filters items matching a search query via fuzzy ranking.
-    pub fn filter_items<'a>(
-        items: &'a [CommandPaletteItem],
-        query: &str,
-    ) -> Vec<&'a CommandPaletteItem> {
+    pub fn filter_items<'a>(items: &'a [CommandPaletteItem], query: &str) -> Vec<&'a CommandPaletteItem> {
         let q = query.trim();
         if q.is_empty() {
             return items.iter().collect();
@@ -135,11 +125,7 @@ impl MacCommandPalette {
             .enumerate()
             .filter_map(|(idx, it)| {
                 let mut best_score = None;
-                for target in std::iter::once(&it.title)
-                    .chain(it.subtitle.as_ref())
-                    .chain(it.category.as_ref())
-                    .chain(it.keywords.iter())
-                {
+                for target in std::iter::once(&it.title).chain(it.subtitle.as_ref()).chain(it.category.as_ref()).chain(it.keywords.iter()) {
                     if let Some(s) = Self::fuzzy_match_score(q, target) {
                         best_score = Some(best_score.map_or(s, |curr: i32| curr.max(s)));
                     }
@@ -284,28 +270,21 @@ impl MacCommandPalette {
         let on_accent = theme.on_accent_text();
 
         let fallback_screen = Vec2::new(self.width * 2.0, self.height * 2.0);
-        let screen_rect = ctx
-            .input(|i| i.raw.screen_rect)
-            .unwrap_or(Rect::from_min_size(Pos2::ZERO, fallback_screen));
-        let palette_rect =
-            Rect::from_center_size(screen_rect.center(), Vec2::new(self.width, self.height));
+        let screen_rect = ctx.input(|i| i.raw.screen_rect).unwrap_or(Rect::from_min_size(Pos2::ZERO, fallback_screen));
+        let palette_rect = Rect::from_center_size(screen_rect.center(), Vec2::new(self.width, self.height));
 
         let mut should_close = false;
         let mut backdrop_clicked = false;
         let mut triggered_action = None;
 
         let backdrop_id = Id::NULL.with("command_palette_backdrop");
-        Area::new(backdrop_id)
-            .order(Order::Middle)
-            .fixed_pos(screen_rect.min)
-            .show(ctx, |ui| {
-                let resp = ui.allocate_response(screen_rect.size(), Sense::click());
-                ui.painter()
-                    .rect_filled(screen_rect, CornerRadius::ZERO, theme.backdrop_dim());
-                if resp.clicked() {
-                    backdrop_clicked = true;
-                }
-            });
+        Area::new(backdrop_id).order(Order::Middle).fixed_pos(screen_rect.min).show(ctx, |ui| {
+            let resp = ui.allocate_response(screen_rect.size(), Sense::click());
+            ui.painter().rect_filled(screen_rect, CornerRadius::ZERO, theme.backdrop_dim());
+            if resp.clicked() {
+                backdrop_clicked = true;
+            }
+        });
 
         if backdrop_clicked {
             self.close();
@@ -313,148 +292,112 @@ impl MacCommandPalette {
         }
 
         let modal_id = Id::NULL.with("command_palette_modal");
-        Area::new(modal_id)
-            .order(Order::Foreground)
-            .fixed_pos(palette_rect.min)
-            .show(ctx, |ui| {
-                let _ = ui.allocate_rect(palette_rect, Sense::click());
-                let painter = ui.painter();
+        Area::new(modal_id).order(Order::Foreground).fixed_pos(palette_rect.min).show(ctx, |ui| {
+            let _ = ui.allocate_rect(palette_rect, Sense::click());
+            let painter = ui.painter();
 
-                painter.rect(
-                    palette_rect,
-                    CornerRadius::same(corner_r),
-                    theme.window_background(),
-                    Stroke::new(border_w, theme.separator()),
-                    StrokeKind::Inside,
-                );
+            painter.rect(
+                palette_rect,
+                CornerRadius::same(corner_r),
+                theme.window_background(),
+                Stroke::new(border_w, theme.separator()),
+                StrokeKind::Inside,
+            );
 
-                let header_rect = Rect::from_min_size(
-                    palette_rect.min,
-                    Vec2::new(palette_rect.width(), header_h),
-                );
-                painter.line_segment(
-                    [
-                        Pos2::new(header_rect.left(), header_rect.bottom()),
-                        Pos2::new(header_rect.right(), header_rect.bottom()),
-                    ],
-                    Stroke::new(border_w, theme.separator()),
-                );
+            let header_rect = Rect::from_min_size(palette_rect.min, Vec2::new(palette_rect.width(), header_h));
+            painter.line_segment(
+                [Pos2::new(header_rect.left(), header_rect.bottom()), Pos2::new(header_rect.right(), header_rect.bottom())],
+                Stroke::new(border_w, theme.separator()),
+            );
 
-                let search_box_rect = header_rect.shrink(search_margin);
-                let mut search_ui = ui.new_child(
-                    UiBuilder::new()
-                        .id_salt("palette_search_ui")
-                        .max_rect(search_box_rect)
-                        .layout(Layout::left_to_right(Align::Center)),
-                );
+            let search_box_rect = header_rect.shrink(search_margin);
+            let mut search_ui = ui.new_child(
+                UiBuilder::new().id_salt("palette_search_ui").max_rect(search_box_rect).layout(Layout::left_to_right(Align::Center)),
+            );
 
-                let text_edit = TextEdit::singleline(&mut self.query)
-                    .hint_text("Type a command or search...")
-                    .font(FontId::proportional(search_font_pt))
-                    .frame(Frame::NONE)
-                    .desired_width(search_box_rect.width());
+            let text_edit = TextEdit::singleline(&mut self.query)
+                .hint_text("Type a command or search...")
+                .font(FontId::proportional(search_font_pt))
+                .frame(Frame::NONE)
+                .desired_width(search_box_rect.width());
 
-                let edit_resp = search_ui.add(text_edit);
-                edit_resp.request_focus();
+            let edit_resp = search_ui.add(text_edit);
+            edit_resp.request_focus();
 
-                let results_rect = Rect::from_min_max(
-                    Pos2::new(palette_rect.min.x, header_rect.bottom() + border_w),
-                    palette_rect.max,
-                );
+            let results_rect = Rect::from_min_max(Pos2::new(palette_rect.min.x, header_rect.bottom() + border_w), palette_rect.max);
 
-                let filtered = Self::filter_items(&self.items, &self.query);
-                let filtered_count = filtered.len();
-                if self.selected_index >= filtered_count && filtered_count > 0 {
-                    self.selected_index = filtered_count - 1;
+            let filtered = Self::filter_items(&self.items, &self.query);
+            let filtered_count = filtered.len();
+            if self.selected_index >= filtered_count && filtered_count > 0 {
+                self.selected_index = filtered_count - 1;
+            }
+            let active_selected_idx = self.selected_index;
+
+            let mut list_ui =
+                ui.new_child(UiBuilder::new().id_salt("palette_list_ui").max_rect(results_rect).layout(Layout::top_down(Align::Min)));
+
+            ScrollArea::vertical().max_height(results_rect.height()).show(&mut list_ui, |scroll_ui| {
+                for (idx, item) in filtered.iter().enumerate() {
+                    let (row_rect, resp) = scroll_ui.allocate_exact_size(Vec2::new(results_rect.width(), row_height), Sense::click());
+
+                    let is_selected = active_selected_idx == idx;
+                    let highlight_rect = row_rect.shrink2(Vec2::new(row_inset_x, row_inset_y));
+                    if is_selected {
+                        scroll_ui.painter().rect(
+                            highlight_rect,
+                            CornerRadius::same(row_corner_r),
+                            theme.control_accent(),
+                            Stroke::NONE,
+                            StrokeKind::Inside,
+                        );
+                    } else if resp.hovered() {
+                        scroll_ui.painter().rect(
+                            highlight_rect,
+                            CornerRadius::same(row_corner_r),
+                            theme.control(),
+                            Stroke::NONE,
+                            StrokeKind::Inside,
+                        );
+                    }
+
+                    let text_color = if is_selected { on_accent } else { theme.label() };
+                    let sec_color = if is_selected { on_accent } else { theme.secondary_label() };
+
+                    scroll_ui.painter().text(
+                        Pos2::new(row_rect.left() + padding_h, row_rect.center().y),
+                        Align2::LEFT_CENTER,
+                        &item.title,
+                        FontId::proportional(title_font_pt),
+                        text_color,
+                    );
+
+                    if let Some(cat) = &item.category {
+                        scroll_ui.painter().text(
+                            Pos2::new(row_rect.center().x + cat_offset_x, row_rect.center().y),
+                            Align2::LEFT_CENTER,
+                            cat,
+                            FontId::proportional(badge_font_pt),
+                            sec_color,
+                        );
+                    }
+
+                    if let Some(sc) = &item.shortcut {
+                        scroll_ui.painter().text(
+                            Pos2::new(row_rect.right() - padding_h, row_rect.center().y),
+                            Align2::RIGHT_CENTER,
+                            sc,
+                            FontId::monospace(badge_font_pt),
+                            sec_color,
+                        );
+                    }
+
+                    if resp.clicked() {
+                        triggered_action = Some(item.id.clone());
+                        should_close = true;
+                    }
                 }
-                let active_selected_idx = self.selected_index;
-
-                let mut list_ui = ui.new_child(
-                    UiBuilder::new()
-                        .id_salt("palette_list_ui")
-                        .max_rect(results_rect)
-                        .layout(Layout::top_down(Align::Min)),
-                );
-
-                ScrollArea::vertical()
-                    .max_height(results_rect.height())
-                    .show(&mut list_ui, |scroll_ui| {
-                        for (idx, item) in filtered.iter().enumerate() {
-                            let (row_rect, resp) = scroll_ui.allocate_exact_size(
-                                Vec2::new(results_rect.width(), row_height),
-                                Sense::click(),
-                            );
-
-                            let is_selected = active_selected_idx == idx;
-                            let highlight_rect =
-                                row_rect.shrink2(Vec2::new(row_inset_x, row_inset_y));
-                            if is_selected {
-                                scroll_ui.painter().rect(
-                                    highlight_rect,
-                                    CornerRadius::same(row_corner_r),
-                                    theme.control_accent(),
-                                    Stroke::NONE,
-                                    StrokeKind::Inside,
-                                );
-                            } else if resp.hovered() {
-                                scroll_ui.painter().rect(
-                                    highlight_rect,
-                                    CornerRadius::same(row_corner_r),
-                                    theme.control(),
-                                    Stroke::NONE,
-                                    StrokeKind::Inside,
-                                );
-                            }
-
-                            let text_color = if is_selected {
-                                on_accent
-                            } else {
-                                theme.label()
-                            };
-                            let sec_color = if is_selected {
-                                on_accent
-                            } else {
-                                theme.secondary_label()
-                            };
-
-                            scroll_ui.painter().text(
-                                Pos2::new(row_rect.left() + padding_h, row_rect.center().y),
-                                Align2::LEFT_CENTER,
-                                &item.title,
-                                FontId::proportional(title_font_pt),
-                                text_color,
-                            );
-
-                            if let Some(cat) = &item.category {
-                                scroll_ui.painter().text(
-                                    Pos2::new(
-                                        row_rect.center().x + cat_offset_x,
-                                        row_rect.center().y,
-                                    ),
-                                    Align2::LEFT_CENTER,
-                                    cat,
-                                    FontId::proportional(badge_font_pt),
-                                    sec_color,
-                                );
-                            }
-
-                            if let Some(sc) = &item.shortcut {
-                                scroll_ui.painter().text(
-                                    Pos2::new(row_rect.right() - padding_h, row_rect.center().y),
-                                    Align2::RIGHT_CENTER,
-                                    sc,
-                                    FontId::monospace(badge_font_pt),
-                                    sec_color,
-                                );
-                            }
-
-                            if resp.clicked() {
-                                triggered_action = Some(item.id.clone());
-                                should_close = true;
-                            }
-                        }
-                    });
             });
+        });
 
         if should_close {
             self.close();

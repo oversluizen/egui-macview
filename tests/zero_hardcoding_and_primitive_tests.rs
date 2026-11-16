@@ -14,10 +14,7 @@ use egui::Color32;
 use egui_macview::layout::MacRow;
 use egui_macview::theme::{MacAppearance, MacTheme};
 use egui_macview::tokens::dtcg::parse_color32;
-use guard_helpers::{
-    check_hardcoded_colors_in_source, check_magic_numbers_in_source, collect_rs_files,
-    strip_comments_and_strings,
-};
+use guard_helpers::{check_hardcoded_colors_in_source, check_magic_numbers_in_source, collect_rs_files, strip_comments_and_strings};
 use std::fs;
 use std::path::Path;
 
@@ -46,23 +43,117 @@ fn test_theme_dynamic_geometry_metrics() {
     assert_eq!((tf_compact.height.points(), tf_compact.font_size.points(), tf_compact.corner_radius.points()), (18.0, 11.0, 2.0));
     assert_eq!((theme.button().regular.height.points(), theme.button().regular.corner_radius.points()), (22.0, 6.0));
     assert_eq!((theme.button().small.height.points(), theme.button().small.corner_radius.points()), (18.0, 4.0));
-    assert_eq!((theme.focus_ring().stroke_width.points(), theme.focus_ring().offset.points(), theme.focus_ring().corner_radius_delta.points()), (3.0, 1.0, 2.0));
-    assert_eq!((theme.popover_metrics().compact_panel_width.points(), theme.popover_metrics().compact_panel_height.points(), theme.popover_metrics().arrow_base_width.points(), theme.popover_metrics().arrow_height.points()), (178.0, 63.0, 24.0, 12.0));
-    assert_eq!((theme.slider().track_height.points(), theme.slider().thumb_size.points(), theme.slider().thumb_stroke_width.points(), theme.slider().default_width.points(), theme.slider().key_step_fraction.points()), (3.0, 16.0, 1.0, 120.0, 0.05));
-    assert_eq!((theme.thumbnail().size.points(), theme.thumbnail().corner_radius.points(), theme.thumbnail().border_width.points()), (24.0, 4.0, 1.0));
-    assert_eq!((theme.outline_view().row_height.points(), theme.outline_view().indent_step.points(), theme.outline_view().disclosure_size.points(), theme.outline_view().disclosure_margin.points(), theme.outline_view().content_spacing.points(), theme.outline_view().accessory_size.points(), theme.outline_view().accessory_spacing.points(), theme.outline_view().font_size.points(), theme.outline_view().chevron_stroke_width.points(), theme.outline_view().chevron_size.points(), theme.outline_view().chevron_depth.points()), (24.0, 16.0, 10.0, 4.0, 6.0, 16.0, 4.0, 12.0, 1.2, 7.0, 1.75));
-    assert_eq!((theme.split_view().divider_thickness.points(), theme.split_view().hit_thickness.points(), theme.split_view().min_pane_size.points(), theme.split_view().handle_length.points(), theme.split_view().handle_thickness.points(), theme.split_view().default_ratio.points()), (1.0, 6.0, 50.0, 24.0, 3.0, 0.5));
-    assert_eq!((theme.popup_button().height.points(), theme.popup_button().corner_radius.points(), theme.popup_button().chevron_size.points(), theme.popup_button().chevron_stroke_width.points()), (22.0, 5.0, 8.0, 1.25));
+    assert_eq!(
+        (theme.focus_ring().stroke_width.points(), theme.focus_ring().offset.points(), theme.focus_ring().corner_radius_delta.points()),
+        (3.0, 1.0, 2.0)
+    );
+    assert_eq!(
+        (
+            theme.popover_metrics().compact_panel_width.points(),
+            theme.popover_metrics().compact_panel_height.points(),
+            theme.popover_metrics().arrow_base_width.points(),
+            theme.popover_metrics().arrow_height.points()
+        ),
+        (178.0, 63.0, 24.0, 12.0)
+    );
+    assert_eq!(
+        (
+            theme.slider().track_height.points(),
+            theme.slider().thumb_size.points(),
+            theme.slider().thumb_stroke_width.points(),
+            theme.slider().default_width.points(),
+            theme.slider().key_step_fraction.points()
+        ),
+        (3.0, 16.0, 1.0, 120.0, 0.05)
+    );
+    assert_eq!(
+        (theme.thumbnail().size.points(), theme.thumbnail().corner_radius.points(), theme.thumbnail().border_width.points()),
+        (24.0, 4.0, 1.0)
+    );
+    assert_eq!(
+        (
+            theme.outline_view().row_height.points(),
+            theme.outline_view().indent_step.points(),
+            theme.outline_view().disclosure_size.points(),
+            theme.outline_view().disclosure_margin.points(),
+            theme.outline_view().content_spacing.points(),
+            theme.outline_view().accessory_size.points(),
+            theme.outline_view().accessory_spacing.points(),
+            theme.outline_view().font_size.points(),
+            theme.outline_view().chevron_stroke_width.points(),
+            theme.outline_view().chevron_size.points(),
+            theme.outline_view().chevron_depth.points()
+        ),
+        (24.0, 16.0, 10.0, 4.0, 6.0, 16.0, 4.0, 12.0, 1.2, 7.0, 1.75)
+    );
+    assert_eq!(
+        (
+            theme.split_view().divider_thickness.points(),
+            theme.split_view().hit_thickness.points(),
+            theme.split_view().min_pane_size.points(),
+            theme.split_view().handle_length.points(),
+            theme.split_view().handle_thickness.points(),
+            theme.split_view().default_ratio.points()
+        ),
+        (1.0, 6.0, 50.0, 24.0, 3.0, 0.5)
+    );
+    assert_eq!(
+        (
+            theme.popup_button().height.points(),
+            theme.popup_button().corner_radius.points(),
+            theme.popup_button().chevron_size.points(),
+            theme.popup_button().chevron_stroke_width.points()
+        ),
+        (22.0, 5.0, 8.0, 1.25)
+    );
     assert_eq!(theme.segmented().item_width.points(), 36.0);
-    assert_eq!((theme.search_field().height.points(), theme.search_field().corner_radius.points(), theme.search_field().icon_size.points(), theme.search_field().clear_button_size.points(), theme.search_field().clear_button_icon_padding.points()), (22.0, 6.0, 12.0, 14.0, 3.5));
-    assert_eq!((theme.stepper().width.points(), theme.stepper().height.points(), theme.stepper().corner_radius.points(), theme.stepper().arrow_size.points()), (14.0, 22.0, 4.0, 6.0));
-    assert_eq!((theme.color_well().width.points(), theme.color_well().height.points(), theme.color_well().corner_radius.points(), theme.color_well().border_width.points(), theme.color_well().swatch_inset.points(), theme.color_well().popup_corner_radius.points()), (44.0, 23.0, 5.0, 1.0, 3.0, 8.0));
+    assert_eq!(
+        (
+            theme.search_field().height.points(),
+            theme.search_field().corner_radius.points(),
+            theme.search_field().icon_size.points(),
+            theme.search_field().clear_button_size.points(),
+            theme.search_field().clear_button_icon_padding.points()
+        ),
+        (22.0, 6.0, 12.0, 14.0, 3.5)
+    );
+    assert_eq!(
+        (
+            theme.stepper().width.points(),
+            theme.stepper().height.points(),
+            theme.stepper().corner_radius.points(),
+            theme.stepper().arrow_size.points()
+        ),
+        (14.0, 22.0, 4.0, 6.0)
+    );
+    assert_eq!(
+        (
+            theme.color_well().width.points(),
+            theme.color_well().height.points(),
+            theme.color_well().corner_radius.points(),
+            theme.color_well().border_width.points(),
+            theme.color_well().swatch_inset.points(),
+            theme.color_well().popup_corner_radius.points()
+        ),
+        (44.0, 23.0, 5.0, 1.0, 3.0, 8.0)
+    );
     assert_eq!((theme.scroll_view().hit_zone_padding.points(), theme.scroll_view().min_visible_thumb_length.points()), (8.0, 2.0));
-    assert_eq!((theme.progress_indicator().regular.bar_height.points(), theme.progress_indicator().small.bar_height.points(), theme.progress_indicator().mini.bar_height.points(), theme.progress_indicator().spoke_count.points()), (6.0, 4.0, 4.0, 12.0));
+    assert_eq!(
+        (
+            theme.progress_indicator().regular.bar_height.points(),
+            theme.progress_indicator().small.bar_height.points(),
+            theme.progress_indicator().mini.bar_height.points(),
+            theme.progress_indicator().spoke_count.points()
+        ),
+        (6.0, 4.0, 4.0, 12.0)
+    );
     assert_eq!((theme.table_view().header_height.points(), theme.table_view().row_height.points()), (28.0, 24.0));
     assert_eq!((theme.token_field().min_height.points(), theme.token_field().pill_height.points()), (22.0, 16.0));
     assert_eq!((theme.level_indicator().thickness.points(), theme.level_indicator().default_segment_count.points()), (16.0, 12.0));
-    assert_eq!((theme.trim_scrubber().height.points(), theme.trim_scrubber().handle_width.points(), theme.path_control().height.points()), (44.0, 12.0, 22.0));
+    assert_eq!(
+        (theme.trim_scrubber().height.points(), theme.trim_scrubber().handle_width.points(), theme.path_control().height.points()),
+        (44.0, 12.0, 22.0)
+    );
 }
 
 /// Test 3: Verifies MacRow layout allocation and zero drift.

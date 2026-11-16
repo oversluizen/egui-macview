@@ -6,10 +6,7 @@ use super::storage::InlineBuf;
 use super::MacSegmentedControl;
 use crate::controls::MacControlSize;
 use crate::theme::{alpha_composite, MacTheme};
-use egui::{
-    Align2, CornerRadius, Key, Modifiers, Pos2, Response, Role, Sense, Stroke, StrokeKind, Ui,
-    WidgetInfo,
-};
+use egui::{Align2, CornerRadius, Key, Modifiers, Pos2, Response, Role, Sense, Stroke, StrokeKind, Ui, WidgetInfo};
 
 fn handle_multi_keyboard(
     ui: &mut Ui,
@@ -22,11 +19,7 @@ fn handle_multi_keyboard(
     }
     let count = segments.len();
     let cursor_id = response.id.with("seg_multi_cursor");
-    let mut cursor = ui
-        .ctx()
-        .data(|d| d.get_temp::<usize>(cursor_id))
-        .unwrap_or(0)
-        .min(count.saturating_sub(1));
+    let mut cursor = ui.ctx().data(|d| d.get_temp::<usize>(cursor_id)).unwrap_or(0).min(count.saturating_sub(1));
 
     if ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::ArrowRight)) {
         if let Some(next) = ((cursor + 1)..count).find(|&j| segments.get(j).is_some_and(|s| s.enabled)) {
@@ -40,9 +33,7 @@ fn handle_multi_keyboard(
         }
         return None;
     }
-    if ui.input_mut(|i| {
-        i.consume_key(Modifiers::NONE, Key::Space) || i.consume_key(Modifiers::NONE, Key::Enter)
-    }) {
+    if ui.input_mut(|i| i.consume_key(Modifiers::NONE, Key::Space) || i.consume_key(Modifiers::NONE, Key::Enter)) {
         if !segments.get(cursor).is_some_and(|s| s.enabled) {
             cursor = (0..count).find(|&j| segments.get(j).is_some_and(|s| s.enabled))?;
         }
@@ -55,31 +46,17 @@ fn handle_multi_keyboard(
     None
 }
 
-pub(super) fn render_multi(
-    control: MacSegmentedControl<'_>,
-    ui: &mut Ui,
-    active: &mut [bool],
-) -> Option<usize> {
+pub(super) fn render_multi(control: MacSegmentedControl<'_>, ui: &mut Ui, active: &mut [bool]) -> Option<usize> {
     let theme_cow = MacTheme::resolve(control.theme, ui.ctx());
     let theme: &MacTheme = &theme_cow;
     let seg = theme.segmented();
     let (tier, font_sz) = match control.control_size {
         MacControlSize::Regular | MacControlSize::Large => (&seg.regular, seg.font_size.points()),
-        MacControlSize::Small | MacControlSize::CompactInfobox => {
-            (&seg.small, seg.small_font_size.points())
-        }
+        MacControlSize::Small | MacControlSize::CompactInfobox => (&seg.small, seg.small_font_size.points()),
         MacControlSize::Mini => (&seg.mini, seg.mini_font_size.points()),
     };
-    let height = control
-        .fixed_rect
-        .map(|r| r.height())
-        .or(control.height)
-        .unwrap_or_else(|| tier.height.points());
-    let corner_radius = if control.small_square {
-        seg.small_square_corner_radius.points()
-    } else {
-        tier.corner_radius.points()
-    };
+    let height = control.fixed_rect.map(|r| r.height()).or(control.height).unwrap_or_else(|| tier.height.points());
+    let corner_radius = if control.small_square { seg.small_square_corner_radius.points() } else { tier.corner_radius.points() };
     let border_w = seg.border_width.points();
     let icon_pad = seg.icon_padding.points();
     let font_id = egui::FontId::proportional(font_sz);
@@ -91,11 +68,7 @@ pub(super) fn render_multi(
     let count = control.segments.len().max(1);
     let a11y_group = control.a11y_label.clone();
 
-    let mut toggled = if enabled {
-        handle_multi_keyboard(ui, &mut response, &control.segments, active)
-    } else {
-        None
-    };
+    let mut toggled = if enabled { handle_multi_keyboard(ui, &mut response, &control.segments, active) } else { None };
 
     let alpha = if enabled { 1.0 } else { theme.disabled_opacity() };
     let surface_bg = theme.active_surface_at(ui, rect.center());
@@ -112,13 +85,7 @@ pub(super) fn render_multi(
         theme.paint_focus_ring(&painter, rect, corner_radius);
     }
     let border_stroke = Stroke::new(border_w, theme.box_border().gamma_multiply(alpha));
-    painter.rect(
-        rect,
-        CornerRadius::same(corner_radius as u8),
-        inactive_bg.gamma_multiply(alpha),
-        border_stroke,
-        StrokeKind::Inside,
-    );
+    painter.rect(rect, CornerRadius::same(corner_radius as u8), inactive_bg.gamma_multiply(alpha), border_stroke, StrokeKind::Inside);
 
     let hover_pos = response.hover_pos();
     let cursor_id = response.id.with("seg_multi_cursor");
@@ -129,11 +96,7 @@ pub(super) fn render_multi(
                 response = response.on_hover_text(tip.as_ref());
             }
         }
-        if enabled
-            && seg_item.enabled
-            && response.clicked()
-            && response.interact_pointer_pos().is_some_and(|p| seg_rect.contains(p))
-        {
+        if enabled && seg_item.enabled && response.clicked() && response.interact_pointer_pos().is_some_and(|p| seg_rect.contains(p)) {
             response.request_focus();
             ui.ctx().data_mut(|d| d.insert_temp(cursor_id, i));
             if let Some(flag) = active.get_mut(i) {
@@ -144,11 +107,7 @@ pub(super) fn render_multi(
         }
         let is_on = active.get(i).copied().unwrap_or(false);
         if is_on {
-            painter.rect_filled(
-                seg_rect.shrink(border_w),
-                CornerRadius::ZERO,
-                active_bg.gamma_multiply(alpha),
-            );
+            painter.rect_filled(seg_rect.shrink(border_w), CornerRadius::ZERO, active_bg.gamma_multiply(alpha));
         }
         let tint = if !seg_item.enabled {
             disabled_fg
@@ -170,10 +129,7 @@ pub(super) fn render_multi(
     }
     for i in 1..count {
         if let Some(slot) = slots.get(i) {
-            painter.line_segment(
-                [Pos2::new(slot.rect.min.x, rect.min.y), Pos2::new(slot.rect.min.x, rect.max.y)],
-                border_stroke,
-            );
+            painter.line_segment([Pos2::new(slot.rect.min.x, rect.min.y), Pos2::new(slot.rect.min.x, rect.max.y)], border_stroke);
         }
     }
 

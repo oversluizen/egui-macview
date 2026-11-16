@@ -30,30 +30,15 @@ impl<'a> MacOutlineRow<'a> {
         accessory_cursor_right: f32,
         selected: bool,
     ) -> Self {
-        Self {
-            ui,
-            theme,
-            row_id,
-            row_rect,
-            cursor_x,
-            accessory_cursor_right,
-            selected,
-            accessory_clicked: false,
-        }
+        Self { ui, theme, row_id, row_rect, cursor_x, accessory_cursor_right, selected, accessory_clicked: false }
     }
 
     /// Renders a thumbnail preview cell in the row.
     pub fn thumbnail(&mut self, drawer: impl FnOnce(&Painter, Rect)) {
         let size = self.theme.thumbnail().size.points();
-        let rect = Rect::from_center_size(
-            Pos2::new(self.cursor_x + size * 0.5, self.row_rect.center().y),
-            Vec2::splat(size),
-        );
+        let rect = Rect::from_center_size(Pos2::new(self.cursor_x + size * 0.5, self.row_rect.center().y), Vec2::splat(size));
         let painter = self.ui.painter_at(rect);
-        MacThumbnailCell::new()
-            .theme(self.theme)
-            .custom_draw(drawer)
-            .paint_in_rect(&painter, rect, false);
+        MacThumbnailCell::new().theme(self.theme).custom_draw(drawer).paint_in_rect(&painter, rect, false);
         self.cursor_x += size + self.theme.outline_view().content_spacing.points();
     }
 
@@ -61,10 +46,7 @@ impl<'a> MacOutlineRow<'a> {
     pub fn label(&mut self, text: &str) {
         let spacing = self.theme.outline_view().content_spacing.points();
         let avail_w = (self.accessory_cursor_right - self.cursor_x - spacing).max(0.0);
-        let label_rect = Rect::from_min_size(
-            Pos2::new(self.cursor_x, self.row_rect.top()),
-            Vec2::new(avail_w, self.row_rect.height()),
-        );
+        let label_rect = Rect::from_min_size(Pos2::new(self.cursor_x, self.row_rect.top()), Vec2::new(avail_w, self.row_rect.height()));
         let painter = self.ui.painter_at(label_rect);
         let font_size = self.theme.outline_view().font_size.points();
         let font_id = FontId::proportional(font_size);
@@ -82,10 +64,7 @@ impl<'a> MacOutlineRow<'a> {
         job.wrap.break_anywhere = false;
         job.wrap.overflow_character = Some('…');
         let galley = painter.layout_job(job);
-        let pos = Pos2::new(
-            label_rect.left(),
-            label_rect.center().y - galley.size().y * 0.5,
-        );
+        let pos = Pos2::new(label_rect.left(), label_rect.center().y - galley.size().y * 0.5);
         painter.galley(pos, galley, text_color);
     }
 
@@ -93,22 +72,20 @@ impl<'a> MacOutlineRow<'a> {
     pub fn header(&mut self, text: &str) {
         let spacing = self.theme.outline_view().content_spacing.points();
         let avail_w = (self.accessory_cursor_right - self.cursor_x - spacing).max(0.0);
-        let label_rect = Rect::from_min_size(
-            Pos2::new(self.cursor_x, self.row_rect.top()),
-            Vec2::new(avail_w, self.row_rect.height()),
-        );
+        let label_rect = Rect::from_min_size(Pos2::new(self.cursor_x, self.row_rect.top()), Vec2::new(avail_w, self.row_rect.height()));
         let font_size = self.theme.outline_view().header_font_size.points();
         let font_id = FontId::proportional(font_size);
         let text_color = self.theme.secondary_label();
         let upper = text.to_uppercase();
-        let galley = self
-            .theme
-            .layout_tracked_galley(self.ui, &upper, font_id, text_color, avail_w);
+        let format = self.theme.tracked_text_format(font_id, text_color);
+        let mut job = egui::text::LayoutJob::single_section(upper, format);
+        job.wrap.max_width = avail_w;
+        job.wrap.max_rows = 1;
+        job.wrap.break_anywhere = false;
+        job.wrap.overflow_character = Some('…');
         let painter = self.ui.painter_at(label_rect);
-        let pos = Pos2::new(
-            label_rect.left(),
-            label_rect.center().y - galley.size().y * 0.5,
-        );
+        let galley = painter.layout_job(job);
+        let pos = Pos2::new(label_rect.left(), label_rect.center().y - galley.size().y * 0.5);
         painter.galley(pos, galley, text_color);
     }
 
@@ -125,18 +102,10 @@ impl<'a> MacOutlineRow<'a> {
         let spacing = metrics.accessory_spacing.points();
 
         self.accessory_cursor_right -= size;
-        let rect = Rect::from_center_size(
-            Pos2::new(
-                self.accessory_cursor_right + size * 0.5,
-                self.row_rect.center().y,
-            ),
-            Vec2::splat(size),
-        );
+        let rect = Rect::from_center_size(Pos2::new(self.accessory_cursor_right + size * 0.5, self.row_rect.center().y), Vec2::splat(size));
         self.accessory_cursor_right -= spacing;
 
-        let resp = self
-            .ui
-            .interact(rect, self.row_id.with(id_source), Sense::click());
+        let resp = self.ui.interact(rect, self.row_id.with(id_source), Sense::click());
         if resp.clicked() {
             *active = !*active;
             self.accessory_clicked = true;

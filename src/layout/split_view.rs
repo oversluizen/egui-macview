@@ -4,10 +4,7 @@
 //! Fully data-driven: zero hardcoded colors or dimensions.
 
 use crate::theme::MacTheme;
-use egui::{
-    Align, CornerRadius, CursorIcon, Id, Layout, Pos2, Rect, Stroke, StrokeKind, Ui, UiBuilder,
-    Vec2,
-};
+use egui::{Align, CornerRadius, CursorIcon, Id, Layout, Pos2, Rect, Stroke, StrokeKind, Ui, UiBuilder, Vec2};
 
 /// Orientation of the split view divider.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -59,10 +56,7 @@ pub struct MacSplitView<'a> {
 
 impl<'a> MacSplitView<'a> {
     /// Creates a split view with state tracked automatically via `egui::Id`.
-    pub fn new(
-        id_source: impl std::hash::Hash + std::fmt::Debug,
-        orientation: MacSplitOrientation,
-    ) -> Self {
+    pub fn new(id_source: impl std::hash::Hash + std::fmt::Debug, orientation: MacSplitOrientation) -> Self {
         let id = Id::NULL.with(id_source);
         Self {
             id,
@@ -80,11 +74,7 @@ impl<'a> MacSplitView<'a> {
     }
 
     /// Creates a split view binding directly to an external `&mut f32` position variable.
-    pub fn with_pos(
-        id_source: impl std::hash::Hash + std::fmt::Debug,
-        orientation: MacSplitOrientation,
-        pos: &'a mut f32,
-    ) -> Self {
+    pub fn with_pos(id_source: impl std::hash::Hash + std::fmt::Debug, orientation: MacSplitOrientation, pos: &'a mut f32) -> Self {
         let mut view = Self::new(id_source, orientation);
         view.pos_override = Some(pos);
         view
@@ -157,9 +147,7 @@ impl<'a> MacSplitView<'a> {
             MacSplitOrientation::Vertical => container_rect.height(),
         };
 
-        let default_ratio = self
-            .default_ratio
-            .unwrap_or_else(|| metrics.default_ratio.points());
+        let default_ratio = self.default_ratio.unwrap_or_else(|| metrics.default_ratio.points());
         // Determine split position
         let mut pos = if let Some(ref p) = self.pos_override {
             **p
@@ -169,10 +157,7 @@ impl<'a> MacSplitView<'a> {
 
         let min_1 = self.min_first.unwrap_or(min_pane_size);
         let min_2 = self.min_second.unwrap_or(min_pane_size);
-        let max_1 = self
-            .max_first
-            .unwrap_or(total_span - min_2)
-            .min(total_span - min_2);
+        let max_1 = self.max_first.unwrap_or(total_span - min_2).min(total_span - min_2);
         pos = pos.clamp(min_1, max_1.max(min_1));
 
         let (first_rect, second_rect, divider_line, handle_rect) = if self.collapsed_first {
@@ -187,20 +172,10 @@ impl<'a> MacSplitView<'a> {
             match self.orientation {
                 MacSplitOrientation::Horizontal => {
                     let hit_rect = Rect::from_min_max(
-                        Pos2::new(
-                            container_rect.left() + pos - hit_thickness * 0.5,
-                            container_rect.top(),
-                        ),
-                        Pos2::new(
-                            container_rect.left() + pos + hit_thickness * 0.5,
-                            container_rect.bottom(),
-                        ),
+                        Pos2::new(container_rect.left() + pos - hit_thickness * 0.5, container_rect.top()),
+                        Pos2::new(container_rect.left() + pos + hit_thickness * 0.5, container_rect.bottom()),
                     );
-                    let hit_resp = ui.interact(
-                        hit_rect,
-                        self.id.with("split_drag"),
-                        egui::Sense::click_and_drag(),
-                    );
+                    let hit_resp = ui.interact(hit_rect, self.id.with("split_drag"), egui::Sense::click_and_drag());
                     if hit_resp.hovered() || hit_resp.dragged() {
                         ui.output_mut(|o| o.cursor_icon = CursorIcon::ResizeHorizontal);
                     }
@@ -211,26 +186,15 @@ impl<'a> MacSplitView<'a> {
 
                     let split_x = container_rect.left() + pos;
                     let divider_center_x = split_x + divider_thickness * 0.5;
-                    let r1 = Rect::from_min_max(
-                        container_rect.min,
-                        Pos2::new(split_x.min(container_rect.right()), container_rect.bottom()),
-                    );
+                    let r1 =
+                        Rect::from_min_max(container_rect.min, Pos2::new(split_x.min(container_rect.right()), container_rect.bottom()));
                     let r2_left = (split_x + divider_thickness).min(container_rect.right());
-                    let r2 = Rect::from_min_max(
-                        Pos2::new(r2_left, container_rect.top()),
-                        container_rect.max,
-                    );
+                    let r2 = Rect::from_min_max(Pos2::new(r2_left, container_rect.top()), container_rect.max);
 
-                    let line = (
-                        Pos2::new(divider_center_x, container_rect.top()),
-                        Pos2::new(divider_center_x, container_rect.bottom()),
-                    );
+                    let line = (Pos2::new(divider_center_x, container_rect.top()), Pos2::new(divider_center_x, container_rect.bottom()));
                     let h_rect = if self.show_handle {
                         let center_y = container_rect.center().y;
-                        Some(Rect::from_center_size(
-                            Pos2::new(divider_center_x, center_y),
-                            Vec2::new(handle_th, handle_len),
-                        ))
+                        Some(Rect::from_center_size(Pos2::new(divider_center_x, center_y), Vec2::new(handle_th, handle_len)))
                     } else {
                         None
                     };
@@ -239,20 +203,10 @@ impl<'a> MacSplitView<'a> {
                 }
                 MacSplitOrientation::Vertical => {
                     let hit_rect = Rect::from_min_max(
-                        Pos2::new(
-                            container_rect.left(),
-                            container_rect.top() + pos - hit_thickness * 0.5,
-                        ),
-                        Pos2::new(
-                            container_rect.right(),
-                            container_rect.top() + pos + hit_thickness * 0.5,
-                        ),
+                        Pos2::new(container_rect.left(), container_rect.top() + pos - hit_thickness * 0.5),
+                        Pos2::new(container_rect.right(), container_rect.top() + pos + hit_thickness * 0.5),
                     );
-                    let hit_resp = ui.interact(
-                        hit_rect,
-                        self.id.with("split_drag"),
-                        egui::Sense::click_and_drag(),
-                    );
+                    let hit_resp = ui.interact(hit_rect, self.id.with("split_drag"), egui::Sense::click_and_drag());
                     if hit_resp.hovered() || hit_resp.dragged() {
                         ui.output_mut(|o| o.cursor_icon = CursorIcon::ResizeVertical);
                     }
@@ -263,26 +217,15 @@ impl<'a> MacSplitView<'a> {
 
                     let split_y = container_rect.top() + pos;
                     let divider_center_y = split_y + divider_thickness * 0.5;
-                    let r1 = Rect::from_min_max(
-                        container_rect.min,
-                        Pos2::new(container_rect.right(), split_y.min(container_rect.bottom())),
-                    );
+                    let r1 =
+                        Rect::from_min_max(container_rect.min, Pos2::new(container_rect.right(), split_y.min(container_rect.bottom())));
                     let r2_top = (split_y + divider_thickness).min(container_rect.bottom());
-                    let r2 = Rect::from_min_max(
-                        Pos2::new(container_rect.left(), r2_top),
-                        container_rect.max,
-                    );
+                    let r2 = Rect::from_min_max(Pos2::new(container_rect.left(), r2_top), container_rect.max);
 
-                    let line = (
-                        Pos2::new(container_rect.left(), divider_center_y),
-                        Pos2::new(container_rect.right(), divider_center_y),
-                    );
+                    let line = (Pos2::new(container_rect.left(), divider_center_y), Pos2::new(container_rect.right(), divider_center_y));
                     let h_rect = if self.show_handle {
                         let center_x = container_rect.center().x;
-                        Some(Rect::from_center_size(
-                            Pos2::new(center_x, divider_center_y),
-                            Vec2::new(handle_len, handle_th),
-                        ))
+                        Some(Rect::from_center_size(Pos2::new(center_x, divider_center_y), Vec2::new(handle_len, handle_th)))
                     } else {
                         None
                     };
@@ -305,44 +248,108 @@ impl<'a> MacSplitView<'a> {
             painter.line_segment([p1, p2], Stroke::new(divider_thickness, theme.separator()));
         }
         if let Some(hr) = handle_rect {
-            painter.rect(
-                hr,
-                CornerRadius::same((handle_th * 0.5) as u8),
-                theme.control(),
-                Stroke::NONE,
-                StrokeKind::Inside,
-            );
+            painter.rect(hr, CornerRadius::same((handle_th * 0.5) as u8), theme.control(), Stroke::NONE, StrokeKind::Inside);
         }
 
         (first_rect, second_rect)
     }
 
     /// Renders the split container and both pane closures, returning their outputs.
-    pub fn show<R1, R2>(
-        mut self,
-        ui: &mut Ui,
-        first: impl FnOnce(&mut Ui) -> R1,
-        second: impl FnOnce(&mut Ui) -> R2,
-    ) -> (R1, R2) {
+    pub fn show<R1, R2>(mut self, ui: &mut Ui, first: impl FnOnce(&mut Ui) -> R1, second: impl FnOnce(&mut Ui) -> R2) -> (R1, R2) {
+        let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
+        let theme: &MacTheme = &theme_cow;
+        let metrics = theme.split_view();
+        let divider_thickness = metrics.divider_thickness.points();
+        let hit_thickness = metrics.hit_thickness.points();
+        let handle_len = metrics.handle_length.points();
+        let handle_th = metrics.handle_thickness.points();
+        let min_pane_size = metrics.min_pane_size.points();
+
         let container_rect = ui.available_rect_before_wrap();
         let (first_rect, second_rect) = self.split_panes(ui);
 
-        // Render panes as top-down vertical columns
-        let mut ui1 = ui.new_child(
-            UiBuilder::new()
-                .id_salt((self.id, "split_first"))
-                .max_rect(first_rect)
-                .layout(Layout::top_down(Align::Min)),
-        );
+        let mut ui1 =
+            ui.new_child(UiBuilder::new().id_salt((self.id, "split_first")).max_rect(first_rect).layout(Layout::top_down(Align::Min)));
+        ui1.set_clip_rect(first_rect.intersect(ui.clip_rect()));
         let r1 = first(&mut ui1);
 
-        let mut ui2 = ui.new_child(
-            UiBuilder::new()
-                .id_salt((self.id, "split_second"))
-                .max_rect(second_rect)
-                .layout(Layout::top_down(Align::Min)),
-        );
+        let mut ui2 =
+            ui.new_child(UiBuilder::new().id_salt((self.id, "split_second")).max_rect(second_rect).layout(Layout::top_down(Align::Min)));
+        ui2.set_clip_rect(second_rect.intersect(ui.clip_rect()));
         let r2 = second(&mut ui2);
+
+        if !self.collapsed_first && !self.collapsed_second {
+            let total_span = match self.orientation {
+                MacSplitOrientation::Horizontal => container_rect.width(),
+                MacSplitOrientation::Vertical => container_rect.height(),
+            };
+            let min_1 = self.min_first.unwrap_or(min_pane_size);
+            let min_2 = self.min_second.unwrap_or(min_pane_size);
+            let max_1 = self.max_first.unwrap_or(total_span - min_2).min(total_span - min_2);
+            let mut pos = if let Some(ref p) = self.pos_override {
+                **p
+            } else {
+                ui.data(|d| d.get_temp::<f32>(self.id)).unwrap_or(first_rect.width())
+            };
+            let painter = ui.painter_at(container_rect);
+            match self.orientation {
+                MacSplitOrientation::Horizontal => {
+                    let drag_active_id = self.id.with("split_drag_active");
+                    let mut drag_active = ui.data(|d| d.get_temp::<bool>(drag_active_id)).unwrap_or(false);
+                    let hit_rect = Rect::from_min_max(
+                        Pos2::new(container_rect.left() + pos - hit_thickness, container_rect.top()),
+                        Pos2::new(container_rect.left() + pos + hit_thickness, container_rect.bottom()),
+                    );
+                    let resp = ui.interact(hit_rect, self.id.with("split_drag"), egui::Sense::click_and_drag());
+                    let ptr = ui.input(|i| i.pointer.interact_pos().or_else(|| i.pointer.latest_pos()));
+                    let ptr_in_hit = ptr.is_some_and(|p| hit_rect.contains(p));
+                    if ui.input(|i| i.pointer.button_pressed(egui::PointerButton::Primary)) && ptr_in_hit {
+                        drag_active = true;
+                    }
+                    if resp.hovered() || resp.dragged() || ptr_in_hit || drag_active {
+                        ui.output_mut(|o| o.cursor_icon = CursorIcon::ResizeHorizontal);
+                    }
+                    if drag_active || resp.dragged() {
+                        if let Some(p) = ptr {
+                            pos = (p.x - container_rect.left()).clamp(min_1, max_1.max(min_1));
+                        } else {
+                            pos = (pos + resp.drag_delta().x).clamp(min_1, max_1.max(min_1));
+                        }
+                    }
+                    if !ui.input(|i| i.pointer.primary_down()) {
+                        drag_active = false;
+                    }
+                    ui.data_mut(|d| d.insert_temp(drag_active_id, drag_active));
+                    let cx = container_rect.left() + pos + divider_thickness * 0.5;
+                    painter.line_segment(
+                        [Pos2::new(cx, container_rect.top()), Pos2::new(cx, container_rect.bottom())],
+                        Stroke::new(divider_thickness, theme.separator()),
+                    );
+                    if self.show_handle {
+                        let hr = Rect::from_center_size(Pos2::new(cx, container_rect.center().y), Vec2::new(handle_th, handle_len));
+                        painter.rect(
+                            hr,
+                            CornerRadius::same((handle_th * 0.5) as u8),
+                            theme.control_accent(),
+                            Stroke::NONE,
+                            StrokeKind::Inside,
+                        );
+                    }
+                }
+                MacSplitOrientation::Vertical => {
+                    let cy = container_rect.top() + pos + divider_thickness * 0.5;
+                    painter.line_segment(
+                        [Pos2::new(container_rect.left(), cy), Pos2::new(container_rect.right(), cy)],
+                        Stroke::new(divider_thickness, theme.separator()),
+                    );
+                }
+            }
+            if let Some(p) = self.pos_override {
+                *p = pos;
+            } else {
+                ui.data_mut(|d| d.insert_temp(self.id, pos));
+            }
+        }
 
         ui.advance_cursor_after_rect(container_rect);
 

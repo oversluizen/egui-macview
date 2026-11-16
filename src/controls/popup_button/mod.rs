@@ -5,10 +5,7 @@ mod dropdown;
 use crate::controls::MacControlSize;
 use crate::layout::subpixel_snap_rect;
 use crate::theme::MacTheme;
-use egui::{
-    Color32, CornerRadius, FontId, Key, Modifiers, Pos2, Rect, Response, Sense, Stroke, StrokeKind,
-    Ui, Vec2, Widget,
-};
+use egui::{Color32, CornerRadius, FontId, Key, Modifiers, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2, Widget};
 
 /// Authentic macOS AppKit Pop-Up Button (`NSPopUpButton` equivalent).
 ///
@@ -179,8 +176,8 @@ impl<'a> Widget for MacPopUpButton<'a> {
             *cache = Some((w, galleys.clone()));
             (w, galleys)
         };
-        let desired_width = self.fixed_rect.map(|r| r.width()).or(self.width)
-            .unwrap_or_else(|| layout_items(ui, &current_galley, &mut cached_items).0);
+        let desired_width =
+            self.fixed_rect.map(|r| r.width()).or(self.width).unwrap_or_else(|| layout_items(ui, &current_galley, &mut cached_items).0);
 
         let enabled = self.enabled && ui.is_enabled();
         let sense = if enabled { Sense::click() } else { Sense::hover() };
@@ -228,11 +225,8 @@ impl<'a> Widget for MacPopUpButton<'a> {
             theme.control_background()
         };
         let border_w = metrics.border_width.points();
-        let border_col = if enabled && response.has_focus() {
-            theme.control_accent()
-        } else {
-            theme.apply_enabled(theme.separator(), enabled)
-        };
+        let border_col =
+            if enabled && response.has_focus() { theme.control_accent() } else { theme.apply_enabled(theme.separator(), enabled) };
         if enabled && response.has_focus() {
             theme.paint_focus_ring(&painter, visual_rect, corner_radius);
         }
@@ -288,9 +282,21 @@ impl<'a> Widget for MacPopUpButton<'a> {
         painter.line_segment([Pos2::new(cx, cy + gap + chev_h), Pos2::new(cx + half_w, cy + gap)], stroke);
 
         dropdown::handle_popup_dropdown(
-            ui, &theme, visual_rect, &mut response, self.selected_index, self.items,
-            enabled, desired_width, visual_rect.height(), corner_radius,
-            &current_galley, &mut cached_items, layout_items,
+            ui,
+            &theme,
+            dropdown::PopupDropdownCtx {
+                rect: visual_rect,
+                items: self.items,
+                enabled,
+                desired_width,
+                height: visual_rect.height(),
+                corner_radius,
+                current_galley: &current_galley,
+            },
+            &mut response,
+            self.selected_index,
+            &mut cached_items,
+            layout_items,
         );
         response
     }

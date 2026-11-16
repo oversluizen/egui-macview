@@ -42,10 +42,7 @@ pub struct CASpring {
 
 impl Default for CASpring {
     fn default() -> Self {
-        Self {
-            response: 0.35,
-            damping_ratio: 0.85,
-        }
+        Self { response: 0.35, damping_ratio: 0.85 }
     }
 }
 
@@ -53,10 +50,7 @@ impl CASpring {
     /// Creates a new `CASpring` from cycle period `response` (in seconds)
     /// and dimensionless `damping_ratio` ($\zeta$).
     pub fn new(response: f32, damping_ratio: f32) -> Self {
-        Self {
-            response: response.max(0.0001),
-            damping_ratio: damping_ratio.max(0.0),
-        }
+        Self { response: response.max(0.0001), damping_ratio: damping_ratio.max(0.0) }
     }
 
     /// Creates a `CASpring` using Apple SwiftUI / AppKit perceptual parameters
@@ -125,14 +119,7 @@ impl CASpring {
 
     /// Evaluates a stateful `CASpring` transition toward `target` at explicit timestamp `now`,
     /// performing zero spring math or `IdTypeMap` write locks when settled at rest.
-    pub fn animate_f32_at(
-        &self,
-        ctx: &egui::Context,
-        id: egui::Id,
-        target: f32,
-        now: f64,
-        frame_paced: bool,
-    ) -> f32 {
+    pub fn animate_f32_at(&self, ctx: &egui::Context, id: egui::Id, target: f32, now: f64, frame_paced: bool) -> f32 {
         let stored = ctx.data(|d| d.get_temp::<(f32, f32, f64)>(id));
         let Some((prev_target, start_val, start_time)) = stored else {
             ctx.data_mut(|d| d.insert_temp(id, (target, target, now)));
@@ -149,9 +136,7 @@ impl CASpring {
 
         if (prev_target - target).abs() > f32::EPSILON {
             let elapsed = (now - start_time).max(0.0) as f32;
-            let cur = if (prev_target - start_val).abs() > f32::EPSILON
-                && elapsed < self.settling_duration()
-            {
+            let cur = if (prev_target - start_val).abs() > f32::EPSILON && elapsed < self.settling_duration() {
                 start_val + (prev_target - start_val) * self.position_at(elapsed)
             } else {
                 prev_target
@@ -205,8 +190,7 @@ impl CASpring {
             if decay == 0.0 {
                 1.0
             } else {
-                let envelope =
-                    decay * ((omega_d * t).cos() + (zeta * omega0 / omega_d) * (omega_d * t).sin());
+                let envelope = decay * ((omega_d * t).cos() + (zeta * omega0 / omega_d) * (omega_d * t).sin());
                 1.0 - envelope
             }
         } else if (zeta - 1.0).abs() < 1e-5 {

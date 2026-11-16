@@ -7,10 +7,7 @@
 use crate::controls::MacInsets;
 use crate::layout::subpixel_snap_rect;
 use crate::theme::MacTheme;
-use egui::{
-    CornerRadius, FontId, InnerResponse, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui,
-    UiBuilder, Vec2, WidgetText,
-};
+use egui::{CornerRadius, FontId, InnerResponse, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, UiBuilder, Vec2, WidgetText};
 
 /// Authentic macOS AppKit Grouping Box container (`NSBox` equivalent).
 ///
@@ -41,20 +38,12 @@ pub struct MacBox<'a> {
 impl<'a> MacBox<'a> {
     /// Creates a new grouping box with an optional title.
     pub fn new(title: impl Into<WidgetText>) -> Self {
-        Self {
-            title: Some(title.into()),
-            theme: None,
-            fixed_rect: None,
-        }
+        Self { title: Some(title.into()), theme: None, fixed_rect: None }
     }
 
     /// Creates an untitled primary grouping box.
     pub fn untitled() -> Self {
-        Self {
-            title: None,
-            theme: None,
-            fixed_rect: None,
-        }
+        Self { title: None, theme: None, fixed_rect: None }
     }
 
     /// Injects dynamic theme.
@@ -73,12 +62,7 @@ impl<'a> MacBox<'a> {
     pub fn content_insets(&self) -> MacInsets {
         let theme_cow = MacTheme::resolve_or_default(self.theme);
         let m = theme_cow.box_view();
-        MacInsets {
-            top: m.inset_top.points(),
-            bottom: m.inset_bottom.points(),
-            left: m.inset_left.points(),
-            right: m.inset_right.points(),
-        }
+        MacInsets { top: m.inset_top.points(), bottom: m.inset_bottom.points(), left: m.inset_left.points(), right: m.inset_right.points() }
     }
 
     /// Grouping box corner radius in points ($5.0\,\text{pt}$).
@@ -116,27 +100,14 @@ impl<'a> MacBox<'a> {
         if let Some(ref title) = self.title {
             let font_id = FontId::proportional(m.title_font_size.points());
             let title_fg = theme.label_on(theme.box_background());
-            let galley = theme.layout_tracked_galley(
-                ui,
-                title.text(),
-                font_id,
-                title_fg,
-                snapped.width(),
-            );
-            let title_pos = Pos2::new(
-                snapped.min.x + insets.left,
-                snapped.min.y + insets.top * 0.5 - galley.size().y * 0.5,
-            );
+            let galley = theme.layout_tracked_galley(ui, title.text(), font_id, title_fg, snapped.width());
+            let title_pos = Pos2::new(snapped.min.x + insets.left, snapped.min.y + insets.top * 0.5 - galley.size().y * 0.5);
             ui.painter().galley(title_pos, galley, title_fg);
         }
     }
 
     /// Shows the grouping box container enclosing inner content.
-    pub fn show<R>(
-        self,
-        ui: &mut Ui,
-        add_contents: impl FnOnce(&mut Ui) -> R,
-    ) -> InnerResponse<R> {
+    pub fn show<R>(self, ui: &mut Ui, add_contents: impl FnOnce(&mut Ui) -> R) -> InnerResponse<R> {
         let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
         let theme: &MacTheme = &theme_cow;
         let insets = self.content_insets();
@@ -159,11 +130,7 @@ impl<'a> MacBox<'a> {
         let bg_shape_idx = ui.painter().add(egui::Shape::Noop);
         let box_scope_id = ui.next_auto_id().with("mac_box_content");
 
-        let mut child_ui = ui.new_child(
-            UiBuilder::new()
-                .id_salt(box_scope_id)
-                .max_rect(content_rect),
-        );
+        let mut child_ui = ui.new_child(UiBuilder::new().id_salt(box_scope_id).max_rect(content_rect));
         let box_bg = theme.box_background();
         child_ui.visuals_mut().panel_fill = box_bg;
         let surface_slot = theme.register_surface_rect_slot(ui.ctx(), Rect::NOTHING, box_bg);
@@ -176,15 +143,11 @@ impl<'a> MacBox<'a> {
             (r, resp)
         } else {
             let box_h = insets.top + content_min_rect.height() + insets.bottom;
-            let box_rect = Rect::from_min_size(start_pos, Vec2::new(available_w, box_h));
-            let box_rect = subpixel_snap_rect(box_rect, ui.ctx().pixels_per_point());
-            ui.allocate_exact_size(box_rect.size(), Sense::hover())
+            let (raw_rect, resp) = ui.allocate_exact_size(Vec2::new(available_w, box_h), Sense::hover());
+            let snapped = subpixel_snap_rect(raw_rect, ui.ctx().pixels_per_point());
+            (snapped, resp)
         };
-        theme.update_surface_rect_slot(
-            ui.ctx(),
-            surface_slot,
-            fixed_box_rect.map_or(rect, |f| f.union(rect)),
-        );
+        theme.update_surface_rect_slot(ui.ctx(), surface_slot, fixed_box_rect.map_or(rect, |f| f.union(rect)));
 
         ui.painter().set(
             bg_shape_idx,
@@ -199,17 +162,8 @@ impl<'a> MacBox<'a> {
 
         if let Some(title) = self.title {
             let title_fg = theme.label_on(box_bg);
-            let galley = theme.layout_tracked_galley(
-                ui,
-                title.text(),
-                FontId::proportional(title_font_sz),
-                title_fg,
-                available_w,
-            );
-            let title_pos = Pos2::new(
-                rect.min.x + insets.left,
-                rect.min.y + insets.top * 0.5 - galley.size().y * 0.5,
-            );
+            let galley = theme.layout_tracked_galley(ui, title.text(), FontId::proportional(title_font_sz), title_fg, available_w);
+            let title_pos = Pos2::new(rect.min.x + insets.left, rect.min.y + insets.top * 0.5 - galley.size().y * 0.5);
             ui.painter().galley(title_pos, galley, title_fg);
         }
 
@@ -222,15 +176,11 @@ impl<'a> MacBox<'a> {
         let frame_h = theme.box_view().separator_frame_height.points();
         let border_w = theme.box_view().border_width.points();
 
-        let (rect, response) =
-            ui.allocate_exact_size(Vec2::new(ui.available_width(), frame_h), Sense::hover());
+        let (rect, response) = ui.allocate_exact_size(Vec2::new(ui.available_width(), frame_h), Sense::hover());
         let painter = ui.painter_at(rect);
         let cy = rect.center().y;
 
-        painter.line_segment(
-            [Pos2::new(rect.min.x, cy), Pos2::new(rect.max.x, cy)],
-            Stroke::new(border_w, theme.separator()),
-        );
+        painter.line_segment([Pos2::new(rect.min.x, cy), Pos2::new(rect.max.x, cy)], Stroke::new(border_w, theme.separator()));
 
         response
     }

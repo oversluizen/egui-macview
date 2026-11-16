@@ -49,14 +49,7 @@ pub struct CommandPaletteItem {
 impl CommandPaletteItem {
     /// Constructs a basic command palette item.
     pub fn new(id: impl Into<String>, title: impl Into<String>) -> Self {
-        Self {
-            id: id.into(),
-            title: title.into(),
-            subtitle: None,
-            category: None,
-            shortcut: None,
-            keywords: Vec::new(),
-        }
+        Self { id: id.into(), title: title.into(), subtitle: None, category: None, shortcut: None, keywords: Vec::new() }
     }
 
     /// Sets the subtitle.

@@ -41,14 +41,7 @@ pub struct MacDate {
 
 impl Default for MacDate {
     fn default() -> Self {
-        Self {
-            year: 2026,
-            month: 11,
-            day: 10,
-            hour: 10,
-            minute: 14,
-            second: 30,
-        }
+        Self { year: 2026, month: 11, day: 10, hour: 10, minute: 14, second: 30 }
     }
 }
 
@@ -72,11 +65,7 @@ impl MacDate {
 
     /// Computes weekday index (0 = Sunday, 1 = Monday, ... 6 = Saturday) for the 1st of the month.
     pub fn first_weekday_of_month(&self) -> usize {
-        let (y, m) = if self.month < 3 {
-            (self.year - 1, self.month + 12)
-        } else {
-            (self.year, self.month)
-        };
+        let (y, m) = if self.month < 3 { (self.year - 1, self.month + 12) } else { (self.year, self.month) };
         let k = (y % 100) as usize;
         let j = (y / 100) as usize;
         let day = 1usize;

@@ -14,8 +14,8 @@
 use egui_macview::layout::subpixel_snap;
 use egui_macview::motion::CASpring;
 use egui_macview::{
-    MacAppearance, MacLevelIndicator, MacLevelIndicatorStyle, MacLevelOrientation,
-    MacProgressIndicator, MacTheme, MacTimelineZone, MacTrimScrubber,
+    MacAppearance, MacLevelIndicator, MacLevelIndicatorStyle, MacLevelOrientation, MacProgressIndicator, MacTheme, MacTimelineZone,
+    MacTrimScrubber,
 };
 use proptest::prelude::*;
 
@@ -286,11 +286,7 @@ proptest! {
 #[test]
 fn test_level_indicator_thresholds_and_orientations() {
     let (ctx, theme) = (egui::Context::default(), MacTheme::new(MacAppearance::Aqua));
-    let meter = MacLevelIndicator::new(-14.0, -60.0..=0.0)
-        .theme(&theme)
-        .warning_value(-18.0)
-        .critical_value(-6.0)
-        .peak_hold(-3.0);
+    let meter = MacLevelIndicator::new(-14.0, -60.0..=0.0).theme(&theme).warning_value(-18.0).critical_value(-6.0).peak_hold(-3.0);
     assert_eq!(meter.color_for_value(&theme, -30.0), theme.system_green());
     assert_eq!(meter.color_for_value(&theme, -12.0), theme.system_yellow());
     assert_eq!(meter.color_for_value(&theme, -2.0), theme.system_red());
@@ -328,15 +324,8 @@ fn test_level_indicator_thresholds_and_orientations() {
             _ => false,
         })
         .count();
-    let ticks = out
-        .shapes
-        .iter()
-        .filter(|cs| matches!(&cs.shape, egui::Shape::LineSegment { .. }))
-        .count();
+    let ticks = out.shapes.iter().filter(|cs| matches!(&cs.shape, egui::Shape::LineSegment { .. })).count();
     assert!(
-        non_red == 0
-            && ticks >= 5
-            && horiz_rect.size() == egui::Vec2::new(160.0, 16.0)
-            && vert_rect.size() == egui::Vec2::new(16.0, 120.0)
+        non_red == 0 && ticks >= 5 && horiz_rect.size() == egui::Vec2::new(160.0, 16.0) && vert_rect.size() == egui::Vec2::new(16.0, 120.0)
     );
 }

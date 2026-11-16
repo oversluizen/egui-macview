@@ -102,12 +102,8 @@ impl<'a> MacThumbnailCell<'a> {
         let theme: &MacTheme = &theme_cow;
 
         let metrics = theme.thumbnail();
-        let corner_radius = self
-            .corner_radius
-            .unwrap_or_else(|| metrics.corner_radius.points());
-        let border_width = self
-            .border_width
-            .unwrap_or_else(|| metrics.border_width.points());
+        let corner_radius = self.corner_radius.unwrap_or_else(|| metrics.corner_radius.points());
+        let border_width = self.border_width.unwrap_or_else(|| metrics.border_width.points());
 
         let bg_color = if self.selected {
             theme.selected_control()
@@ -117,21 +113,11 @@ impl<'a> MacThumbnailCell<'a> {
             theme.control_background()
         };
 
-        let stroke_color = if self.selected {
-            theme.control_accent()
-        } else {
-            theme.separator()
-        };
+        let stroke_color = if self.selected { theme.control_accent() } else { theme.separator() };
 
         let border_stroke = Stroke::new(border_width, stroke_color);
 
-        painter.rect(
-            rect,
-            CornerRadius::same(corner_radius as u8),
-            bg_color,
-            border_stroke,
-            StrokeKind::Inside,
-        );
+        painter.rect(rect, CornerRadius::same(corner_radius as u8), bg_color, border_stroke, StrokeKind::Inside);
 
         if let Some(drawer) = self.drawer {
             let inner_rect = rect.shrink(border_width);

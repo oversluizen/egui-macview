@@ -17,10 +17,7 @@ pub(crate) fn compute_hud_geometry(view: &MacPlayerView<'_>, available_rect: Rec
     let pod_size = Vec2::new(pod_w, m.hud_height.points());
     let corner_r = m.hud_corner_radius.points();
     let pod_rect = Rect::from_center_size(
-        Pos2::new(
-            available_rect.center().x,
-            available_rect.max.y - m.hud_bottom_margin.points() - pod_size.y * 0.5,
-        ),
+        Pos2::new(available_rect.center().x, available_rect.max.y - m.hud_bottom_margin.points() - pod_size.y * 0.5),
         pod_size,
     );
 
@@ -35,10 +32,8 @@ pub(crate) fn compute_hud_geometry(view: &MacPlayerView<'_>, available_rect: Rec
         Pos2::new(mute_rect.max.x + btn_spacing, top_center_y - m.volume_slider_height.points() * 0.5),
         Vec2::new(m.volume_slider_width.points(), m.volume_slider_height.points()),
     );
-    let vol_track_rect = Rect::from_center_size(
-        vol_rect.center(),
-        Vec2::new(m.volume_slider_width.points(), m.scrubber_track_height.points()),
-    );
+    let vol_track_rect =
+        Rect::from_center_size(vol_rect.center(), Vec2::new(m.volume_slider_width.points(), m.scrubber_track_height.points()));
 
     let play_rect = Rect::from_center_size(
         Pos2::new(pod_rect.center().x, top_center_y),
@@ -61,10 +56,7 @@ pub(crate) fn compute_hud_geometry(view: &MacPlayerView<'_>, available_rect: Rec
         Vec2::new(m.step_button_width.points(), m.step_button_height.points()),
     );
     let aux_sz = m.aux_button_size.points();
-    let aux_rect = Rect::from_center_size(
-        Pos2::new(pod_rect.max.x - corner_r - aux_sz * 0.5, top_center_y),
-        Vec2::splat(aux_sz),
-    );
+    let aux_rect = Rect::from_center_size(Pos2::new(pod_rect.max.x - corner_r - aux_sz * 0.5, top_center_y), Vec2::splat(aux_sz));
     let speed_rect = Rect::from_center_size(
         Pos2::new(pod_rect.max.x - corner_r - aux_sz - m.speed_button_width.points() * 0.5 - btn_spacing, top_center_y),
         Vec2::new(m.speed_button_width.points(), m.speed_button_height.points()),
@@ -75,11 +67,8 @@ pub(crate) fn compute_hud_geometry(view: &MacPlayerView<'_>, available_rect: Rec
     let scrub_center_y = pod_rect.max.y - scrub_h * 0.5;
 
     let dur = view.duration_secs.max(1.0);
-    let time_label_w = if dur as u32 >= 3600 {
-        m.speed_button_width.points() + m.button_spacing.points() * 2.0
-    } else {
-        m.speed_button_width.points()
-    };
+    let time_label_w =
+        if dur as u32 >= 3600 { m.speed_button_width.points() + m.button_spacing.points() * 2.0 } else { m.speed_button_width.points() };
     let el_pos = Pos2::new(pod_rect.min.x + corner_r, scrub_center_y - m.scrubber_knob_size.points() * 0.5);
     let rem_pos = Pos2::new(pod_rect.max.x - corner_r - time_label_w, scrub_center_y - m.scrubber_knob_size.points() * 0.5);
 
@@ -89,10 +78,7 @@ pub(crate) fn compute_hud_geometry(view: &MacPlayerView<'_>, available_rect: Rec
         Pos2::new(track_start_x, scrub_center_y - track_h * 0.5),
         Pos2::new(track_end_x, scrub_center_y + track_h * 0.5),
     );
-    let scrub_hit = Rect::from_min_max(
-        Pos2::new(track_start_x, pod_rect.max.y - scrub_h),
-        Pos2::new(track_end_x, pod_rect.max.y),
-    );
+    let scrub_hit = Rect::from_min_max(Pos2::new(track_start_x, pod_rect.max.y - scrub_h), Pos2::new(track_end_x, pod_rect.max.y));
     let knob_x = track_rect.min.x + track_rect.width() * view.progress.clamp(0.0, 1.0);
 
     PlayerViewGeometry {
@@ -118,31 +104,22 @@ pub(crate) fn compute_hud_geometry(view: &MacPlayerView<'_>, available_rect: Rec
 }
 
 /// Paints the floating HUD pod controls.
-pub(crate) fn paint_hud(
-    view: &MacPlayerView<'_>,
-    painter: &Painter,
-    geom: &PlayerViewGeometry,
-    state: &PlayerViewState,
-    theme: &MacTheme,
-) {
+pub(crate) fn paint_hud(view: &MacPlayerView<'_>, painter: &Painter, geom: &PlayerViewGeometry, state: &PlayerViewState, theme: &MacTheme) {
     let alpha = state.alpha;
     let m = theme.player_view();
 
     let pod_rect = geom.controls_rect;
     let hud_bg = theme.control_background().gamma_multiply(alpha);
     let hud_stroke = Stroke::new(1.0, theme.separator().gamma_multiply(alpha));
-    painter.rect(
-        pod_rect,
-        CornerRadius::same(geom.corner_radius as u8),
-        hud_bg,
-        hud_stroke,
-        StrokeKind::Inside,
-    );
+    painter.rect(pod_rect, CornerRadius::same(geom.corner_radius as u8), hud_bg, hud_stroke, StrokeKind::Inside);
 
     // Audio Mute button
     painter.circle_filled(geom.mute_rect.center(), (geom.mute_rect.height() * 0.5) * 0.5, theme.label().gamma_multiply(alpha));
     if view.muted {
-        painter.line_segment([geom.mute_rect.left_top(), geom.mute_rect.right_bottom()], Stroke::new(1.0, theme.label().gamma_multiply(alpha)));
+        painter.line_segment(
+            [geom.mute_rect.left_top(), geom.mute_rect.right_bottom()],
+            Stroke::new(1.0, theme.label().gamma_multiply(alpha)),
+        );
     }
 
     // Audio Volume slider
@@ -179,8 +156,13 @@ pub(crate) fn paint_hud(
     } else {
         format!("{:.2}x", view.playback_rate)
     };
-    let sp_galley = painter.layout_no_wrap(speed_text, egui::TextStyle::Small.resolve(&egui::Style::default()), theme.label().gamma_multiply(alpha));
-    painter.galley(Pos2::new(geom.speed_rect.center().x - sp_galley.size().x * 0.5, geom.speed_rect.center().y - sp_galley.size().y * 0.5), sp_galley, theme.label().gamma_multiply(alpha));
+    let sp_galley =
+        painter.layout_no_wrap(speed_text, egui::TextStyle::Small.resolve(&egui::Style::default()), theme.label().gamma_multiply(alpha));
+    painter.galley(
+        Pos2::new(geom.speed_rect.center().x - sp_galley.size().x * 0.5, geom.speed_rect.center().y - sp_galley.size().y * 0.5),
+        sp_galley,
+        theme.label().gamma_multiply(alpha),
+    );
 
     // Scrubber base track
     let tr = geom.scrubber_track_rect;
@@ -189,13 +171,21 @@ pub(crate) fn paint_hud(
     // Buffered fill
     if view.buffered_progress > 0.0 {
         let bw = tr.width() * view.buffered_progress.clamp(0.0, 1.0);
-        painter.rect_filled(Rect::from_min_size(tr.min, Vec2::new(bw, tr.height())), CornerRadius::same(m.scrubber_track_corner_radius.points() as u8), theme.label().gamma_multiply(alpha * m.buffered_fill_alpha.points()));
+        painter.rect_filled(
+            Rect::from_min_size(tr.min, Vec2::new(bw, tr.height())),
+            CornerRadius::same(m.scrubber_track_corner_radius.points() as u8),
+            theme.label().gamma_multiply(alpha * m.buffered_fill_alpha.points()),
+        );
     }
 
     // Elapsed fill
     if view.progress > 0.0 {
         let ew = tr.width() * view.progress.clamp(0.0, 1.0);
-        painter.rect_filled(Rect::from_min_size(tr.min, Vec2::new(ew, tr.height())), CornerRadius::same(m.scrubber_track_corner_radius.points() as u8), theme.control_accent().gamma_multiply(alpha));
+        painter.rect_filled(
+            Rect::from_min_size(tr.min, Vec2::new(ew, tr.height())),
+            CornerRadius::same(m.scrubber_track_corner_radius.points() as u8),
+            theme.control_accent().gamma_multiply(alpha),
+        );
     }
 
     // Playhead knob

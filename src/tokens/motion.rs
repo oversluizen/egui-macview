@@ -37,11 +37,7 @@ impl MotionPresetToken {
     /// Constructs a [`CASpring`](crate::motion::CASpring) from physical parameters if mass, stiffness, and damping are positive.
     pub fn to_spring_physical(&self) -> Option<crate::motion::CASpring> {
         if self.mass > 0.0 && self.stiffness > 0.0 && self.damping > 0.0 {
-            Some(crate::motion::CASpring::from_physical(
-                self.mass,
-                self.stiffness,
-                self.damping,
-            ))
+            Some(crate::motion::CASpring::from_physical(self.mass, self.stiffness, self.damping))
         } else {
             None
         }

@@ -106,11 +106,15 @@ fn test_guard_documentation_and_file_size_ceilings() {
             let content = fs::read_to_string(&file).expect("read source");
             let (physical, esloc) = count_lines_and_esloc(&content);
             if physical >= MAX_PHYSICAL_LINES || esloc >= MAX_ESLOC {
-                violations.push(format!("{rel} exceeds ceiling: physical={physical} (<{MAX_PHYSICAL_LINES}), eSLOC={esloc} (<{MAX_ESLOC})"));
+                violations
+                    .push(format!("{rel} exceeds ceiling: physical={physical} (<{MAX_PHYSICAL_LINES}), eSLOC={esloc} (<{MAX_ESLOC})"));
             }
             for (line_idx, line) in content.lines().enumerate() {
                 let code_part = line.split("//").next().unwrap_or("").trim();
-                if !code_part.contains('"') && !code_part.ends_with('\\') && code_part.replace("; 2]", "]").replace("; 3]", "]").replace("; 4]", "]").matches(';').count() >= 3 {
+                if !code_part.contains('"')
+                    && !code_part.ends_with('\\')
+                    && code_part.replace("; 2]", "]").replace("; 3]", "]").replace("; 4]", "]").matches(';').count() >= 3
+                {
                     violations.push(format!("{rel}:{} -> single-line statement cramming (>=3 semicolons)", line_idx + 1));
                 }
             }
@@ -123,12 +127,41 @@ fn test_guard_documentation_and_file_size_ceilings() {
 fn test_guard_zero_cross_component_token_borrowing_and_self_check() {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     let methods = [
-        "box_view", "button", "checkbox", "collection_view", "color_well", "combo_box",
-        "date_picker", "disclosure_group", "help_button", "inline_action_button",
-        "level_indicator", "origin_matrix", "outline_view", "path_control", "player_view",
-        "popover_metrics", "popup_button", "progress_indicator", "rule_editor", "scroll_view",
-        "search_field", "segmented", "slider", "split_view", "stack_view", "stepper", "tab_view",
-        "table_action_bar", "table_view", "tag_color_picker", "thumbnail", "toggle", "token_field",
+        "box_view",
+        "button",
+        "checkbox",
+        "collection_view",
+        "color_well",
+        "combo_box",
+        "date_picker",
+        "disclosure_group",
+        "help_button",
+        "image_view",
+        "inline_action_button",
+        "level_indicator",
+        "origin_matrix",
+        "outline_view",
+        "path_control",
+        "player_view",
+        "popover_metrics",
+        "popup_button",
+        "progress_indicator",
+        "rule_editor",
+        "scroll_view",
+        "search_field",
+        "segmented",
+        "slider",
+        "split_view",
+        "stack_view",
+        "stepper",
+        "tab_view",
+        "table_action_bar",
+        "table_view",
+        "tag_color_picker",
+        "text_view",
+        "thumbnail",
+        "toggle",
+        "token_field",
         "trim_scrubber",
     ];
     for file_path in collect_rs_files(&manifest_dir.join("src/controls")) {
@@ -138,21 +171,38 @@ fn test_guard_zero_cross_component_token_borrowing_and_self_check() {
             continue;
         }
         let allowed: &[&str] = match (pname, fname) {
-            (_, "box_view.rs") => &["box_view"], (_, "button_cell.rs") => &["button"],
-            (_, "checkbox.rs") => &["checkbox"], (_, "circular_slider.rs") | (_, "slider.rs") => &["slider"],
-            (_, "collection_view.rs") => &["collection_view"], (_, "color_well.rs") => &["color_well"],
-            (_, "combo_box.rs") | ("combo_box", _) => &["combo_box"], (_, "date_picker.rs") | ("date_picker", _) => &["date_picker"],
-            (_, "disclosure_group.rs") | ("disclosure_group", _) => &["disclosure_group"], (_, "help_button.rs") => &["help_button", "inline_action_button"],
-            (_, "level_indicator.rs") | (_, "rating_indicator.rs") => &["level_indicator"], (_, "origin_matrix.rs") => &["origin_matrix"],
-            (_, "outline_view.rs") | ("outline_view", _) => &["outline_view", "thumbnail"], (_, "path_control.rs") => &["path_control"],
-            (_, "player_view.rs") | ("player_view", _) => &["player_view"], (_, "popup_button.rs") | ("popup_button", _) => &["popup_button"],
-            (_, "progress_indicator.rs") => &["progress_indicator"], (_, "rule_editor.rs") => &["rule_editor"],
-            (_, "search_field.rs") => &["search_field"], (_, "segmented.rs") | ("segmented", _) => &["segmented"],
-            (_, "stepper.rs") => &["stepper"], (_, "tab_view.rs") => &["tab_view"],
-            (_, "table_action_bar.rs") => &["table_action_bar"], ("table_view", _) => &["table_view"],
-            (_, "tag_color_picker.rs") => &["tag_color_picker"], (_, "thumbnail_cell.rs") => &["thumbnail"],
-            (_, "toggle.rs") => &["toggle"], (_, "token_field.rs") => &["token_field"],
-            ("trim_scrubber", _) => &["trim_scrubber"], _ => &[],
+            (_, "box_view.rs") => &["box_view"],
+            (_, "button_cell.rs") => &["button"],
+            (_, "checkbox.rs") => &["checkbox"],
+            (_, "circular_slider.rs") | (_, "slider.rs") => &["slider"],
+            (_, "collection_view.rs") => &["collection_view"],
+            (_, "color_well.rs") => &["color_well"],
+            (_, "combo_box.rs") | ("combo_box", _) => &["combo_box"],
+            (_, "date_picker.rs") | ("date_picker", _) => &["date_picker"],
+            (_, "disclosure_group.rs") | ("disclosure_group", _) => &["disclosure_group"],
+            (_, "help_button.rs") => &["help_button", "inline_action_button"],
+            (_, "image_view.rs") => &["image_view"],
+            (_, "level_indicator.rs") | (_, "rating_indicator.rs") => &["level_indicator"],
+            (_, "origin_matrix.rs") => &["origin_matrix"],
+            (_, "outline_view.rs") | ("outline_view", _) => &["outline_view", "thumbnail"],
+            (_, "path_control.rs") => &["path_control"],
+            (_, "player_view.rs") | ("player_view", _) => &["player_view"],
+            (_, "popup_button.rs") | ("popup_button", _) => &["popup_button"],
+            (_, "progress_indicator.rs") => &["progress_indicator"],
+            (_, "rule_editor.rs") => &["rule_editor"],
+            (_, "search_field.rs") => &["search_field"],
+            (_, "segmented.rs") | ("segmented", _) => &["segmented"],
+            (_, "stepper.rs") => &["stepper"],
+            (_, "tab_view.rs") => &["tab_view"],
+            (_, "table_action_bar.rs") => &["table_action_bar"],
+            ("table_view", _) => &["table_view"],
+            (_, "tag_color_picker.rs") => &["tag_color_picker"],
+            (_, "text_view.rs") => &["text_view", "scroll_view"],
+            (_, "thumbnail_cell.rs") => &["thumbnail"],
+            (_, "toggle.rs") => &["toggle"],
+            (_, "token_field.rs") => &["token_field"],
+            ("trim_scrubber", _) => &["trim_scrubber"],
+            _ => &[],
         };
         let stripped = strip_comments_and_strings(&fs::read_to_string(&file_path).unwrap());
         for &m in &methods {
@@ -166,7 +216,11 @@ fn test_guard_zero_cross_component_token_borrowing_and_self_check() {
     assert!(!check_hardcoded_colors_in_source("bad.rs", "let c = Color32::WHITE;").is_empty());
     assert!(!check_token_arithmetic_cheating("bad.rs", "let w = theme.width.points() + 4.0;").is_empty());
     assert!(!check_token_arithmetic_cheating("src/controls/segmented/render.rs", "let ind = indicator_inset * 2.0;").is_empty());
-    assert!(!check_token_arithmetic_cheating("src/controls/segmented/render.rs", "painter.add(Shape::convex_polygon(pts, col, Stroke::NONE));").is_empty());
+    assert!(!check_token_arithmetic_cheating(
+        "src/controls/segmented/render.rs",
+        "painter.add(Shape::convex_polygon(pts, col, Stroke::NONE));"
+    )
+    .is_empty());
     assert!(!check_domain_leakage_in_source("bad.rs", "struct PedigreeNode;").is_empty());
     assert!(!check_domain_leakage_in_source("bad.rs", "const ICON: &str = \"GSHOITemplate\";").is_empty());
     assert!(!check_uibuilder_id_salt_in_source("bad.rs", "ui.new_child(UiBuilder::new().max_rect(r));").is_empty());
@@ -179,16 +233,22 @@ fn test_guard_windows_gui_subsystem_and_safe_eframe_startup() {
     let (mut violations, mut checked_entrypoints) = (Vec::new(), 0usize);
     for dir_rel in &["examples", "src/bin"] {
         let dir_path = manifest_dir.join(dir_rel);
-        if !dir_path.exists() { continue; }
+        if !dir_path.exists() {
+            continue;
+        }
         for file in collect_rs_files(&dir_path) {
             let rel = file.strip_prefix(manifest_dir).unwrap_or(&file).to_string_lossy();
             let content = fs::read_to_string(&file).expect("read entrypoint candidate");
-            if strip_comments_and_strings(&content).contains("fn main") { checked_entrypoints += 1; }
+            if strip_comments_and_strings(&content).contains("fn main") {
+                checked_entrypoints += 1;
+            }
             violations.extend(check_gui_entrypoint_safety(&rel, &content));
         }
     }
     assert!(checked_entrypoints >= 3, "Expected at least 3 GUI entrypoints in examples/");
     assert!(violations.is_empty(), "Windows GUI Subsystem & Safe eframe Startup Guard:\n{violations:#?}");
+    let cargo_cfg = fs::read_to_string(manifest_dir.join(".cargo/config.toml")).expect("read .cargo/config.toml");
+    assert!(cargo_cfg.contains("/STACK:8388608"), ".cargo/config.toml must configure 8 MB Windows stack (/STACK:8388608)");
     let bad_gui = "fn main() { let _ = eframe::run_native(\"app\", eframe::NativeOptions::default(), Box::new(|_| unreachable!())); }";
     assert!(check_gui_entrypoint_safety("bad_example.rs", bad_gui).len() >= 5);
 }
@@ -215,14 +275,123 @@ fn test_guard_zero_dead_code_and_zero_unused_dependencies() {
         let used = combined_src.contains(&format!("{dep}::"))
             || combined_src.contains(&format!("use {dep}"))
             || (dep == "serde" && (combined_src.contains("Serialize") || combined_src.contains("Deserialize")));
-        if !used { unused_deps.push(dep.clone()); }
+        if !used {
+            unused_deps.push(dep.clone());
+        }
     }
     assert!(unused_deps.is_empty(), "Zero Unused Dependencies Guard:\n{unused_deps:#?}");
 
     let undo_src = fs::read_to_string(manifest_dir.join("src/state/undo.rs")).expect("read undo.rs");
     assert!(undo_src.contains("pub fn validate_invariants("));
     let hygiene_test = fs::read_to_string(manifest_dir.join("tests/runtime_hygiene_and_invariants_tests.rs")).expect("read hygiene test");
-    assert!(hygiene_test.contains("validate_invariants()") && hygiene_test.contains(".undo(") && hygiene_test.contains(".redo(") && hygiene_test.contains("cold_start") && hygiene_test.contains("repaint_delay"));
+    assert!(
+        hygiene_test.contains("validate_invariants()")
+            && hygiene_test.contains(".undo(")
+            && hygiene_test.contains(".redo(")
+            && hygiene_test.contains("cold_start")
+            && hygiene_test.contains("repaint_delay")
+    );
+
+    let lib_rs = fs::read_to_string(manifest_dir.join("src/lib.rs")).expect("read src/lib.rs");
+    assert!(
+        lib_rs.contains("#![forbid(unsafe_code, dead_code)]") && lib_rs.contains("clippy::expect_used") && lib_rs.contains("clippy::panic"),
+        "src/lib.rs must forbid unsafe/dead_code and deny expect_used/panic"
+    );
+    for req_lint in ["unsafe_code = \"deny\"", "dead_code = \"deny\"", "unwrap_used = \"deny\"", "iter_over_hash_type = \"deny\""] {
+        assert!(cargo_toml.contains(req_lint), "Cargo.toml missing NASA/IBM AST lint `{req_lint}`");
+    }
+    assert!(manifest_dir.join("clippy.toml").exists(), "clippy.toml must exist");
+
+    let mut ast_violations = Vec::new();
+    for dir_rel in ["src", "examples"] {
+        for file in collect_rs_files(&manifest_dir.join(dir_rel)) {
+            let rel = file.strip_prefix(manifest_dir).unwrap_or(&file).to_string_lossy().replace('\\', "/");
+            let fname = file.file_name().and_then(|n| n.to_str()).unwrap_or("");
+            if fname.ends_with("_ts.rs") || fname.contains("part_") || fname.contains("slice_") {
+                ast_violations.push(format!("Forbidden slice/shadow filename: {rel}"));
+            }
+            let raw = fs::read_to_string(&file).expect("read source file");
+            let stripped = strip_comments_and_strings(&raw);
+            for bad in [".unwrap(", ".expect(", "allow(clippy::", "HashMap", "HashSet", "v065_", "v068_", "v069_"] {
+                if stripped.contains(bad) {
+                    ast_violations.push(format!("{rel} contains forbidden construct `{bad}`"));
+                }
+            }
+            for bad_label in ["\"v0.2\"", "\"v0.3\"", "\"v0.4\"", "\"v0.6\""] {
+                if raw.contains(bad_label) {
+                    ast_violations.push(format!("{rel} contains milestone archaeology label {bad_label}"));
+                }
+            }
+        }
+    }
+    assert!(ast_violations.is_empty(), "AST & Archaeology Guard:\n{ast_violations:#?}");
+    let scene_runtime =
+        strip_comments_and_strings(&fs::read_to_string(manifest_dir.join("src/scene/runtime.rs")).expect("read scene/runtime.rs"));
+    for bad_io in ["std::fs", "serde_json", "plist::", "roxmltree::", "request_repaint("] {
+        assert!(!scene_runtime.contains(bad_io), "src/scene/runtime.rs paint/layout pass contains forbidden `{bad_io}`");
+    }
+    for no_json_rel in [
+        "src/scene/nib_frontend.rs",
+        "src/scene/nib_ibtool.rs",
+        "src/scene/nib_ibtool_widgets.rs",
+        "src/scene/nib_varint.rs",
+        "src/scene/xib_exporter.rs",
+        "src/scene/xib_strings.rs",
+    ] {
+        let src = fs::read_to_string(manifest_dir.join(no_json_rel)).expect("read scene file");
+        assert!(
+            !src.contains("serde_json") && !src.contains("macviewMeta"),
+            "{no_json_rel} must not use serde_json or macviewMeta JSON shortcuts (REQ-013-05.5)"
+        );
+    }
+    let scene_norm = fs::read_to_string(manifest_dir.join("src/scene/normalizer.rs")).expect("read scene/normalizer.rs");
+    assert!(
+        scene_norm.contains("pub fn validate_invariants(&self) -> Result<(), String>"),
+        "MacSceneIR must implement validate_invariants()"
+    );
+    let nib_builders = strip_comments_and_strings(
+        &fs::read_to_string(manifest_dir.join("examples/gallery/nib_showcase_builders.rs")).expect("read nib_showcase_builders.rs"),
+    );
+    assert!(
+        !nib_builders.contains("SceneNode {"),
+        "REQ-013-02L: nib_showcase_builders.rs must compile from .xib XML files, not hardcoded Rust SceneNode structs"
+    );
+    assert!(
+        nib_builders.contains("XibXmlFrontend::from_xml_str"),
+        "REQ-013-02L: nib_showcase_builders.rs must use XibXmlFrontend::from_xml_str"
+    );
+    for xib_name in [
+        "1_Typography_and_Grid_Inspector.xib",
+        "2_Appearance_and_Theme_Settings.xib",
+        "3_Audio_Mastering_Channel_Strip.xib",
+        "4_Publishing_and_Asset_Queue.xib",
+        "Right_Inspector_Default.xib",
+    ] {
+        assert!(manifest_dir.join("assets/nib_showcase").join(xib_name).exists(), "Missing authoritative .xib file: {xib_name}");
+    }
+    let center_src = fs::read_to_string(manifest_dir.join("examples/gallery/center_state.rs")).expect("read center_state.rs");
+    assert!(
+        center_src.contains("render_active_screen_nib"),
+        "REQ-013-02L: CenterState must render active screen .xib/.nib scene via MacSceneIR::show"
+    );
+    for dup_call in [
+        "self.render_state1_canvas(",
+        "self.render_state2_symbols_layout(",
+        "self.render_state3_command_state(",
+        "self.render_state4_finder_browser(",
+        "self.render_state5_avkit_media(",
+        "self.render_state6_advanced_controls(",
+    ] {
+        assert!(
+            !center_src.contains(dup_call),
+            "REQ-013-02L: CenterState::render must render 100% from .xib/.nib without calling `{dup_call}`"
+        );
+    }
+    let insp_src = fs::read_to_string(manifest_dir.join("examples/gallery/inspector.rs")).expect("read inspector.rs");
+    assert!(
+        insp_src.contains("nib_scene.show("),
+        "REQ-013-02L: InspectorState::render must render Right_Inspector_Default.xib/.nib via nib_scene.show("
+    );
 }
 
 #[test]
@@ -256,7 +425,8 @@ fn test_guard_zero_vault_leakage_and_de_ai_ification() {
 fn test_guard_open_source_fonts_only_zero_proprietary_apple_fonts() {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     let fonts_dir = manifest_dir.join("assets").join("fonts");
-    let allowed_font_files = ["CupertinoIcons.ttf", "CupertinoIcons-LICENSE.txt", "Inter-Regular.ttf", "Inter-SemiBold.ttf", "Inter-OFL.txt"];
+    let allowed_font_files =
+        ["CupertinoIcons.ttf", "CupertinoIcons-LICENSE.txt", "Inter-Regular.ttf", "Inter-SemiBold.ttf", "Inter-OFL.txt"];
     let mut found_files = Vec::new();
     if let Ok(entries) = fs::read_dir(&fonts_dir) {
         for entry in entries.flatten() {
@@ -266,11 +436,18 @@ fn test_guard_open_source_fonts_only_zero_proprietary_apple_fonts() {
             }
         }
     }
-    for required in &allowed_font_files { assert!(found_files.iter().any(|f| f == required)); }
+    for required in &allowed_font_files {
+        assert!(found_files.iter().any(|f| f == required));
+    }
     assert!(!fs::read_to_string(fonts_dir.join("Inter-OFL.txt")).unwrap().trim().is_empty());
     assert!(!fs::read_to_string(fonts_dir.join("CupertinoIcons-LICENSE.txt")).unwrap().trim().is_empty());
     let root_license = fs::read_to_string(manifest_dir.join("LICENSE")).unwrap();
-    for clause in ["WITHOUT WARRANTY OF ANY KIND", "IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE", "SIL OPEN FONT LICENSE", "The Flutter Authors"] {
+    for clause in [
+        "WITHOUT WARRANTY OF ANY KIND",
+        "IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE",
+        "SIL OPEN FONT LICENSE",
+        "The Flutter Authors",
+    ] {
         assert!(root_license.contains(clause));
     }
     let readme = fs::read_to_string(manifest_dir.join("README.md")).unwrap();
@@ -278,7 +455,9 @@ fn test_guard_open_source_fonts_only_zero_proprietary_apple_fonts() {
     let forbidden = ["SFNS.ttf", "SFNS.otf", "SFPro.ttf", "SFCompact.ttf", "Menlo.ttc", "LucidaGrande.ttc", "Apple Symbols.ttf"];
     for file in collect_rs_files(&manifest_dir.join("src")) {
         let content = fs::read_to_string(&file).unwrap();
-        for bad in forbidden { assert!(!content.contains(bad)); }
+        for bad in forbidden {
+            assert!(!content.contains(bad));
+        }
     }
 }
 
@@ -286,7 +465,17 @@ fn test_guard_open_source_fonts_only_zero_proprietary_apple_fonts() {
 fn test_guard_surface_aware_vibrancy_anchoring() {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     let contrast_src = strip_comments_and_strings(&fs::read_to_string(manifest_dir.join("src/theme/contrast.rs")).unwrap());
-    for req in ["pub fn plus_darker(", "pub fn plus_lighter(", "pub fn ensure_wcag_contrast(", "pub fn register_surface_rect(", "pub fn active_surface_at(", "pub fn active_surface(", "pub fn label_on(", "pub fn secondary_label_on(", "pub fn tertiary_label_on("] {
+    for req in [
+        "pub fn plus_darker(",
+        "pub fn plus_lighter(",
+        "pub fn ensure_wcag_contrast(",
+        "pub fn register_surface_rect(",
+        "pub fn active_surface_at(",
+        "pub fn active_surface(",
+        "pub fn label_on(",
+        "pub fn secondary_label_on(",
+        "pub fn tertiary_label_on(",
+    ] {
         assert!(contrast_src.contains(req), "src/theme/contrast.rs must expose '{req}'");
     }
     for bad in ["ACTIVE_SURFACE_OVERRIDE", "SurfaceScope", "with_surface_scope", "entry_panel_fill", "entry_seq", "next_seq"] {
@@ -294,17 +483,44 @@ fn test_guard_surface_aware_vibrancy_anchoring() {
     }
     for container_rel in ["src/controls/box_view.rs", "src/surfaces/card.rs", "src/surfaces/popover.rs"] {
         let src = strip_comments_and_strings(&fs::read_to_string(manifest_dir.join(container_rel)).unwrap());
-        assert!(src.contains("visuals_mut().panel_fill") && src.contains("register_surface_rect_slot(") && !src.contains("with_surface_scope("), "{container_rel}");
+        assert!(
+            src.contains("visuals_mut().panel_fill") && src.contains("register_surface_rect_slot(") && !src.contains("with_surface_scope("),
+            "{container_rel}"
+        );
     }
-    for control_rel in ["src/controls/label.rs", "src/controls/checkbox.rs", "src/controls/disclosure_group/mod.rs", "src/controls/help_button.rs", "src/layout/stack_view.rs"] {
+    for control_rel in [
+        "src/controls/label.rs",
+        "src/controls/checkbox.rs",
+        "src/controls/disclosure_group/mod.rs",
+        "src/controls/help_button.rs",
+        "src/layout/stack_view.rs",
+    ] {
         let src = strip_comments_and_strings(&fs::read_to_string(manifest_dir.join(control_rel)).unwrap());
-        assert!((src.contains("active_surface_at(") || src.contains("active_surface(")) && (src.contains("label_on(") || src.contains("secondary_label_on(") || src.contains("tertiary_label_on(") || src.contains("resolved_color_on(")), "{control_rel}");
+        assert!(
+            (src.contains("active_surface_at(") || src.contains("active_surface("))
+                && (src.contains("label_on(")
+                    || src.contains("secondary_label_on(")
+                    || src.contains("tertiary_label_on(")
+                    || src.contains("resolved_color_on(")),
+            "{control_rel}"
+        );
     }
     let accessors_src = strip_comments_and_strings(&fs::read_to_string(manifest_dir.join("src/theme/accessors.rs")).unwrap());
     assert!(accessors_src.contains("pub fn baseline_text_y(") && accessors_src.contains("pub fn clamp_nib_visual_rect("));
-    for bc in ["src/controls/label.rs", "src/controls/input_cell/editing.rs", "src/controls/popup_button/mod.rs", "src/controls/combo_box/mod.rs", "src/controls/checkbox.rs"] {
+    for bc in [
+        "src/controls/label.rs",
+        "src/controls/input_cell/editing.rs",
+        "src/controls/popup_button/mod.rs",
+        "src/controls/combo_box/mod.rs",
+        "src/controls/checkbox.rs",
+    ] {
         let src = strip_comments_and_strings(&fs::read_to_string(manifest_dir.join(bc)).unwrap());
-        assert!(src.contains("baseline_text_y(") && !src.contains("baseline_from_top - ascender") && !src.contains("first_baseline_offset_from_top.points() - ascender"), "{bc}");
+        assert!(
+            src.contains("baseline_text_y(")
+                && !src.contains("baseline_from_top - ascender")
+                && !src.contains("first_baseline_offset_from_top.points() - ascender"),
+            "{bc}"
+        );
     }
     for cc in ["src/controls/popup_button/mod.rs", "src/controls/combo_box/mod.rs", "src/controls/help_button.rs"] {
         let src = strip_comments_and_strings(&fs::read_to_string(manifest_dir.join(cc)).unwrap());

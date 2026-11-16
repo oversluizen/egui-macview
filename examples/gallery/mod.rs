@@ -6,17 +6,18 @@ pub mod chrome;
 pub mod finder_data;
 pub mod inspector;
 pub mod inspector_nib;
+pub mod mobile_web_server;
+pub mod nib_actions;
+pub mod nib_showcase_builders;
+pub mod nib_store_sync;
+pub mod nib_window_studio;
 pub mod sidebar;
 pub mod snippet;
 pub mod state1_canvas;
 pub mod state2_symbols_layout;
 pub mod state3_command_state;
 pub mod state4_finder_browser;
-pub mod state4_publish;
 pub mod state5_avkit_media;
-pub mod state5_meters;
-pub mod state6_advanced_controls;
-pub mod state6_pro_controls;
 pub mod types;
 pub mod video_scene;
 
@@ -25,10 +26,7 @@ pub use chrome::detect_frameless_resize_dir;
 pub use finder_data::FinderCustomEntry;
 pub use inspector::{convert_card_units, unit_scale_and_suffix};
 pub use sidebar::SidebarState;
-pub use types::{
-    format_tracked_small_caps, setup_system_or_custom_fonts, ExpandedProTab, GalleryScreen,
-    InspectorMode, SYMBOLS_META,
-};
+pub use types::{format_tracked_small_caps, setup_system_or_custom_fonts, ExpandedProTab, GalleryScreen, InspectorMode, SYMBOLS_META};
 
 use egui::Color32;
 use egui_macview::theme::MacTheme;
@@ -48,6 +46,8 @@ pub struct CardModel {
     pub shadow_blur: f64,
     pub fill_color: Color32,
     pub alpha_color: Color32,
+    pub stroke_width: f32,
+    pub stroke_color: Color32,
     pub blend_mode_idx: usize,
     pub constrain_proportions: bool,
     pub alignment_idx: usize,
@@ -58,12 +58,7 @@ impl CardModel {
     pub fn affine_matrix(&self, rot_deg: f32, scale_factor: f32) -> (f32, f32, f32, f32) {
         let theta = rot_deg.to_radians();
         let skew_val = self.skew_deg.to_radians().tan();
-        (
-            scale_factor * theta.cos(),
-            -scale_factor * theta.sin() + skew_val,
-            scale_factor * theta.sin(),
-            scale_factor * theta.cos(),
-        )
+        (scale_factor * theta.cos(), -scale_factor * theta.sin() + skew_val, scale_factor * theta.sin(), scale_factor * theta.cos())
     }
 }
 
@@ -83,6 +78,8 @@ impl Default for CardModel {
             shadow_blur: 8.0,
             fill_color: default_theme.control_accent(),
             alpha_color: default_theme.control_accent().gamma_multiply(0.7),
+            stroke_width: 2.0,
+            stroke_color: default_theme.control_accent().gamma_multiply(0.9),
             blend_mode_idx: 0,
             constrain_proportions: true,
             alignment_idx: 1,

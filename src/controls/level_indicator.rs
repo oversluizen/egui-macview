@@ -7,9 +7,7 @@
 
 use crate::layout::subpixel_snap_rect;
 use crate::theme::MacTheme;
-use egui::{
-    Color32, CornerRadius, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2, Widget,
-};
+use egui::{Color32, CornerRadius, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2, Widget};
 use std::ops::RangeInclusive;
 
 /// Visual meter style for [`MacLevelIndicator`].
@@ -231,25 +229,17 @@ impl<'a> Widget for MacLevelIndicator<'a> {
                 let fill_color = self.color_for_value(theme, self.value);
                 if frac > 0.0 {
                     let fill_rect = match self.orientation {
-                        MacLevelOrientation::Horizontal => Rect::from_min_size(
-                            inner.min,
-                            Vec2::new(inner.width() * frac, inner.height()),
-                        ),
+                        MacLevelOrientation::Horizontal => Rect::from_min_size(inner.min, Vec2::new(inner.width() * frac, inner.height())),
                         MacLevelOrientation::Vertical => {
                             let h = inner.height() * frac;
-                            Rect::from_min_max(
-                                Pos2::new(inner.left(), inner.bottom() - h),
-                                inner.max,
-                            )
+                            Rect::from_min_max(Pos2::new(inner.left(), inner.bottom() - h), inner.max)
                         }
                     };
                     painter.rect_filled(fill_rect, seg_r, fill_color);
                 }
             }
             MacLevelIndicatorStyle::Discrete => {
-                let seg_count = self
-                    .segment_count
-                    .unwrap_or_else(|| (lm.default_segment_count.points().round() as usize).max(1));
+                let seg_count = self.segment_count.unwrap_or_else(|| (lm.default_segment_count.points().round() as usize).max(1));
                 let gap = lm.segment_spacing.points();
                 let seg_r = CornerRadius::same(lm.segment_corner_radius.points() as u8);
                 let total_axis = match self.orientation {
@@ -265,23 +255,16 @@ impl<'a> Widget for MacLevelIndicator<'a> {
                     let seg_val = min_v + seg_mid_frac * span;
                     let is_lit = frac >= (idx as f32 / (seg_count as f32))
                         && frac > 0.0
-                        && (frac >= seg_frac_end
-                            || idx == ((frac * seg_count as f32).floor() as usize));
+                        && (frac >= seg_frac_end || idx == ((frac * seg_count as f32).floor() as usize));
 
                     let seg_rect = match self.orientation {
                         MacLevelOrientation::Horizontal => {
                             let x = inner.left() + (idx as f32) * (seg_len + gap);
-                            Rect::from_min_size(
-                                Pos2::new(x, inner.top()),
-                                Vec2::new(seg_len, inner.height()),
-                            )
+                            Rect::from_min_size(Pos2::new(x, inner.top()), Vec2::new(seg_len, inner.height()))
                         }
                         MacLevelOrientation::Vertical => {
                             let y_bottom = inner.bottom() - (idx as f32) * (seg_len + gap);
-                            Rect::from_min_max(
-                                Pos2::new(inner.left(), y_bottom - seg_len),
-                                Pos2::new(inner.right(), y_bottom),
-                            )
+                            Rect::from_min_max(Pos2::new(inner.left(), y_bottom - seg_len), Pos2::new(inner.right(), y_bottom))
                         }
                     };
 
@@ -304,31 +287,15 @@ impl<'a> Widget for MacLevelIndicator<'a> {
             let tick_len = lm.track_inset.points() + lm.border_width.points();
             let denom = (self.tick_marks.saturating_sub(1)).max(1) as f32;
             for idx in 0..self.tick_marks {
-                let t_frac = if self.tick_marks == 1 {
-                    0.5
-                } else {
-                    (idx as f32) / denom
-                };
+                let t_frac = if self.tick_marks == 1 { 0.5 } else { (idx as f32) / denom };
                 match self.orientation {
                     MacLevelOrientation::Horizontal => {
                         let tx = inner.left() + inner.width() * t_frac;
-                        painter.line_segment(
-                            [
-                                Pos2::new(tx, rect.bottom() - tick_len),
-                                Pos2::new(tx, rect.bottom()),
-                            ],
-                            tick_stroke,
-                        );
+                        painter.line_segment([Pos2::new(tx, rect.bottom() - tick_len), Pos2::new(tx, rect.bottom())], tick_stroke);
                     }
                     MacLevelOrientation::Vertical => {
                         let ty = inner.bottom() - inner.height() * t_frac;
-                        painter.line_segment(
-                            [
-                                Pos2::new(rect.right() - tick_len, ty),
-                                Pos2::new(rect.right(), ty),
-                            ],
-                            tick_stroke,
-                        );
+                        painter.line_segment([Pos2::new(rect.right() - tick_len, ty), Pos2::new(rect.right(), ty)], tick_stroke);
                     }
                 }
             }
@@ -341,17 +308,11 @@ impl<'a> Widget for MacLevelIndicator<'a> {
             match self.orientation {
                 MacLevelOrientation::Horizontal => {
                     let px = inner.left() + inner.width() * peak_frac;
-                    painter.line_segment(
-                        [Pos2::new(px, inner.top()), Pos2::new(px, inner.bottom())],
-                        peak_stroke,
-                    );
+                    painter.line_segment([Pos2::new(px, inner.top()), Pos2::new(px, inner.bottom())], peak_stroke);
                 }
                 MacLevelOrientation::Vertical => {
                     let py = inner.bottom() - inner.height() * peak_frac;
-                    painter.line_segment(
-                        [Pos2::new(inner.left(), py), Pos2::new(inner.right(), py)],
-                        peak_stroke,
-                    );
+                    painter.line_segment([Pos2::new(inner.left(), py), Pos2::new(inner.right(), py)], peak_stroke);
                 }
             }
         }

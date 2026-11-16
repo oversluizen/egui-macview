@@ -123,11 +123,7 @@ impl<'a> Widget for MacButtonCell<'a> {
             MacControlSize::Small | MacControlSize::CompactInfobox => &theme.button().small,
             MacControlSize::Mini => &theme.button().mini,
         };
-        let height = self
-            .fixed_rect
-            .map(|r| r.height())
-            .or(self.height)
-            .unwrap_or_else(|| metrics.height.points());
+        let height = self.fixed_rect.map(|r| r.height()).or(self.height).unwrap_or_else(|| metrics.height.points());
         let font_sz = if height <= theme.button().mini.height.points() {
             theme.button().mini.font_size.points()
         } else if height <= theme.button().small.height.points() {
@@ -135,33 +131,15 @@ impl<'a> Widget for MacButtonCell<'a> {
         } else {
             metrics.font_size.points()
         };
-        let corner_radius = self
-            .corner_radius
-            .unwrap_or_else(|| metrics.corner_radius.points());
-        let padding_h = metrics
-            .padding_horizontal
-            .as_ref()
-            .map(|d| d.points())
-            .unwrap_or(font_sz);
+        let corner_radius = self.corner_radius.unwrap_or_else(|| metrics.corner_radius.points());
+        let padding_h = metrics.padding_horizontal.as_ref().map(|d| d.points()).unwrap_or(font_sz);
 
         let font_id = egui::FontId::proportional(font_sz);
-        let text_layout = theme.layout_tracked_galley(
-            ui,
-            self.text,
-            font_id,
-            Color32::PLACEHOLDER,
-            f32::INFINITY,
-        );
-        let desired_width = self
-            .width
-            .unwrap_or_else(|| text_layout.size().x + padding_h * 2.0);
+        let text_layout = theme.layout_tracked_galley(ui, self.text, font_id, Color32::PLACEHOLDER, f32::INFINITY);
+        let desired_width = self.width.unwrap_or_else(|| text_layout.size().x + padding_h * 2.0);
 
         let enabled = self.enabled && ui.is_enabled();
-        let sense = if enabled {
-            egui::Sense::click()
-        } else {
-            egui::Sense::hover()
-        };
+        let sense = if enabled { egui::Sense::click() } else { egui::Sense::hover() };
         let ppp = ui.ctx().pixels_per_point();
         let (rect, response) = if let Some(fixed) = self.fixed_rect {
             let snapped = subpixel_snap_rect(fixed, ppp);
@@ -175,11 +153,7 @@ impl<'a> Widget for MacButtonCell<'a> {
         };
         let painter = ui.painter_at(rect);
 
-        let alpha_factor = if enabled {
-            1.0
-        } else {
-            theme.disabled_opacity()
-        };
+        let alpha_factor = if enabled { 1.0 } else { theme.disabled_opacity() };
 
         // Dynamic AppKit styling (pressed feedback works even when selected == true)
         let base_bg = if !enabled {
@@ -199,27 +173,14 @@ impl<'a> Widget for MacButtonCell<'a> {
         };
         let bg_color = base_bg.gamma_multiply(alpha_factor);
 
-        let border_stroke = Stroke::new(
-            metrics.border_width.points(),
-            theme.separator().gamma_multiply(alpha_factor),
-        );
+        let border_stroke = Stroke::new(metrics.border_width.points(), theme.separator().gamma_multiply(alpha_factor));
 
-        painter.rect(
-            rect,
-            CornerRadius::same(corner_radius as u8),
-            bg_color,
-            border_stroke,
-            StrokeKind::Inside,
-        );
+        painter.rect(rect, CornerRadius::same(corner_radius as u8), bg_color, border_stroke, StrokeKind::Inside);
 
         let bg_style = theme.background_style(base_bg);
-        let text_color = bg_style
-            .primary_text_color(theme)
-            .gamma_multiply(alpha_factor);
+        let text_color = bg_style.primary_text_color(theme).gamma_multiply(alpha_factor);
 
-        let text_pos = egui::Align2::CENTER_CENTER
-            .anchor_size(rect.center(), text_layout.size())
-            .min;
+        let text_pos = egui::Align2::CENTER_CENTER.anchor_size(rect.center(), text_layout.size()).min;
         painter.galley(text_pos, text_layout, text_color);
 
         response
