@@ -564,6 +564,9 @@ fn tc_013_13_xcode16_xib_exporter_real_ibtool_nib_and_storyboard_segues() {
         let roundtrip_xib_scene = XibXmlFrontend::from_xml_str(&exported_xib).expect("re-parse exported .xib");
         assert_eq!(xib_scene.nodes().len(), roundtrip_xib_scene.nodes().len(), "{stem} XIB export round-trip node count");
         assert_eq!(xib_scene.nodes().len(), nib_scene.nodes().len(), "{stem} real ibtool .nib node count must match .xib");
+        for (xn, nn) in xib_scene.nodes().iter().zip(nib_scene.nodes().iter()) {
+            assert_eq!(xn.icon_name, nn.icon_name, "{stem} node {} icon_name mismatch (.xib vs ibtool .nib)", xn.ib_object_id);
+        }
     }
 
     let sb_xml = std::fs::read_to_string(showcase_dir.join("Showcase_Flow.storyboard")).expect("read Showcase_Flow.storyboard");

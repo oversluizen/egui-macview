@@ -3,14 +3,13 @@
 
 use crate::controls::{
     MacBox, MacButtonCell, MacControlSize, MacInputCell, MacPopUpButton, MacRadioButton, MacSegmentedControl, MacSwitch, MacTextView,
+    MacTokenField,
 };
-use crate::scene::ir::{ActionId, BindingId, LayoutPolicy, MacSceneIR, NodeId, SceneNodeKind};
+use crate::scene::ir::{ActionId, BindingId, LayoutPolicy, MacSceneIR, NodeId, SceneNode, SceneNodeKind};
 pub use crate::scene::normalizer::apply_autoresizing_mask;
-use crate::scene::runtime_widgets::{
-    render_checkbox_node, render_extended_node, render_label_node, render_slider_node, render_token_field_node,
-};
+use crate::scene::runtime_widgets::{render_checkbox_node, render_extended_node, render_label_node, render_slider_node};
 use crate::theme::MacTheme;
-use egui::{pos2, vec2, Pos2, Rect, Ui, Vec2};
+use egui::{pos2, vec2, Pos2, Rect, Ui, UiBuilder, Vec2};
 use std::collections::BTreeMap;
 
 /// Zero-allocation host state and action bridge for [`MacSceneIR`] (`REQ-013-03` §4.3).
@@ -359,5 +358,27 @@ impl MacSceneIR {
             }
         }
         ui.advance_cursor_after_rect(Rect::from_min_size(origin.to_pos2(), vec2(viewport.x * scale_x, viewport.y)));
+    }
+}
+
+fn render_token_field_node(ui: &mut Ui, theme: &MacTheme, data_source: &mut dyn MacSceneDataSource, node: &SceneNode, rect: Rect, enabled: bool) {
+    let raw = node.value_binding.map(|b| data_source.get_str(b).to_string()).unwrap_or_else(|| node.title.clone());
+    let mut tokens: Vec<String> = raw.split(',').map(str::trim).filter(|s| !s.is_empty()).map(str::to_string).collect();
+    let prev = tokens.clone();
+    let draft_id = ui.scope_id().with(("nib_tok_draft", node.id.0));
+    let mut draft = ui.data(|d| d.get_temp::<String>(draft_id)).unwrap_or_default();
+    let mut c_ui = ui.new_child(UiBuilder::new().id_salt(("nib_tok_ui", node.id.0)).max_rect(rect));
+    c_ui.add_enabled_ui(enabled, |en_ui| {
+        MacTokenField::new((en_ui.scope_id(), "nib_tok", node.id.0), &mut tokens, &mut draft)
+            .max_chars(18)
+            .width(rect.width())
+            .theme(theme)
+            .show(en_ui);
+    });
+    ui.data_mut(|d| d.insert_temp(draft_id, draft));
+    if tokens != prev && enabled {
+        if let Some(b) = node.value_binding {
+            data_source.set_str(b, &tokens.join(","));
+        }
     }
 }

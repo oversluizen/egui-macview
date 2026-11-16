@@ -5,7 +5,7 @@ use crate::controls::{
     MacDatePicker, MacDatePickerElementFlags, MacDatePickerStyle, MacDisclosureButton, MacDisclosureGroup, MacFontWeight, MacHelpButton,
     MacImageView, MacInlineActionButton, MacLabel, MacLabelColor, MacLevelIndicator, MacLevelIndicatorStyle, MacOriginAnchor,
     MacOriginMatrix, MacPlayerControlsStyle, MacPlayerView, MacProgressIndicator, MacRatingIndicator, MacRuleEditor, MacRuleRow, MacSlider,
-    MacStepper, MacTabStyle, MacTabView, MacTableActionBar, MacTagColorPicker, MacTokenField,
+    MacStepper, MacTabStyle, MacTabView, MacTableActionBar, MacTagColorPicker,
 };
 use crate::scene::ir::{SceneNode, SceneNodeKind};
 use crate::scene::runtime::MacSceneDataSource;
@@ -414,35 +414,6 @@ pub(crate) fn render_extended_node(
     }
 }
 
-pub(crate) fn render_token_field_node(
-    ui: &mut Ui,
-    theme: &MacTheme,
-    data_source: &mut dyn MacSceneDataSource,
-    node: &SceneNode,
-    rect: Rect,
-    enabled: bool,
-) {
-    let raw = node.value_binding.map(|b| data_source.get_str(b).to_string()).unwrap_or_else(|| node.title.clone());
-    let mut tokens: Vec<String> = raw.split(',').map(str::trim).filter(|s| !s.is_empty()).map(str::to_string).collect();
-    let prev = tokens.clone();
-    let draft_id = ui.scope_id().with(("nib_tok_draft", node.id.0));
-    let mut draft = ui.data(|d| d.get_temp::<String>(draft_id)).unwrap_or_default();
-    let mut c_ui = ui.new_child(UiBuilder::new().id_salt(("nib_tok_ui", node.id.0)).max_rect(rect));
-    c_ui.add_enabled_ui(enabled, |en_ui| {
-        MacTokenField::new((en_ui.scope_id(), "nib_tok", node.id.0), &mut tokens, &mut draft)
-            .max_chars(18)
-            .width(rect.width())
-            .theme(theme)
-            .show(en_ui);
-    });
-    ui.data_mut(|d| d.insert_temp(draft_id, draft));
-    if tokens != prev && enabled {
-        if let Some(b) = node.value_binding {
-            data_source.set_str(b, &tokens.join(","));
-        }
-    }
-}
-
 fn render_tab_view_node(
     ui: &mut Ui,
     theme: &MacTheme,
@@ -477,12 +448,27 @@ fn render_tab_view_node(
         })
         .tab("Collection Grid", |tab_ui| {
             let items: [usize; 60] = std::array::from_fn(|i| i);
+            let sel_copy = grid_sel.clone();
             MacCollectionView::new(&items, &mut grid_sel)
                 .layout(MacCollectionViewFlowLayout::default())
                 .theme(theme)
                 .show_with_item_tracker(tab_ui, |item_ui, item| {
-                    item_ui.centered_and_justified(|c| {
-                        MacLabel::new(format!("#{item}")).control_size(MacControlSize::Small).theme(theme).show(c);
+                    let frac = ((*item % 12 + 1) as f32) / 12.0;
+                    let (accent, sep) = (theme.control_accent(), theme.separator());
+                    item_ui.vertical_centered(|c| {
+                        crate::controls::MacThumbnailCell::new()
+                            .theme(theme)
+                            .selected(sel_copy.contains(item))
+                            .square(26.0)
+                            .custom_draw(move |p, r| {
+                                let (ctr, rad) = (r.center(), r.width() * 0.38);
+                                p.circle_stroke(ctr, rad, egui::Stroke::new(1.0, sep));
+                                let end_a = -std::f32::consts::FRAC_PI_2 + frac * std::f32::consts::TAU;
+                                p.line_segment([ctr, ctr + egui::vec2(end_a.cos() * rad, end_a.sin() * rad)], egui::Stroke::new(1.8, accent));
+                                p.circle_filled(ctr + egui::vec2(end_a.cos() * rad, end_a.sin() * rad), 2.2, accent);
+                            })
+                            .show(c);
+                        MacLabel::new(format!("#{item}")).control_size(MacControlSize::Mini).theme(theme).show(c);
                     });
                 });
         })

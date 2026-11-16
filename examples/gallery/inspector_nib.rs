@@ -387,7 +387,13 @@ impl CenterState {
                 self.bus_mode = store.get_i64(bid).clamp(0, 2) as usize;
             }
             "codecPreset" => {
-                self.codec_preset = store.get_i64(bid).clamp(0, 3) as usize;
+                let next = store.get_i64(bid).clamp(0, 5) as usize;
+                if next != self.codec_preset {
+                    self.codec_preset = next;
+                    self.media_playing = true;
+                    self.audio_track = super::audio_media::AudioTrack::preset_track(next);
+                    self.media_waveform = self.audio_track.waveform_peaks.clone();
+                }
             }
             "pickerDay" => {
                 self.advanced_date.day = store.get_i64(bid).clamp(1, 28) as u32;

@@ -531,6 +531,7 @@ fn test_req013_02m_all_nib_scenes_controls_and_buttons_bound_two_way() {
         (1, "fontWeight", 3),
         (2, "accentIndex", 3),
         (4, "busMode", 2),
+        (4, "codecPreset", 5),
         (5, "themeVariant", 2),
         (5, "actionBarSel", 1),
     ] {
@@ -545,6 +546,8 @@ fn test_req013_02m_all_nib_scenes_controls_and_buttons_bound_two_way() {
     let mut out = ctx.run_ui(raw, |ui| app.render_ui(ui));
     out.textures_delta.clear();
     assert_eq!((app.card.borrow().width.as_str(), app.card.borrow().radius.as_str()), ("384.0", "28.0"));
+    assert_eq!((app.center.codec_preset, app.center.media_playing), (5, true), "REQ-013-06.2: codecPreset 5 (Debussy) must not clamp to 3");
+    assert!(read_all_gallery_sources().contains("MacThumbnailCell::new"), "REQ-013-06.1: Gallery must demonstrate MacThumbnailCell");
     let has_rounded_rotated_poly =
         out.shapes.iter().any(|cs| matches!(&cs.shape, egui::epaint::Shape::Path(p) if p.closed && p.points.len() >= 16));
     assert!(has_rounded_rotated_poly, "Rotated vector card must render a rounded polygon with >= 16 points when cornerRadius > 0");

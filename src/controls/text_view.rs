@@ -131,12 +131,14 @@ impl<'a> MacTextView<'a> {
         );
 
         let font_id = if self.monospace { FontId::new(font_sz, FontFamily::Monospace) } else { FontId::proportional(font_sz) };
+        let text_fg = theme.label_on(bg);
 
         let mut child_ui = ui.new_child(UiBuilder::new().id_salt(self.id.with("text_view_inner")).max_rect(inner_rect));
-        child_ui.set_clip_rect(inner_rect);
+        child_ui.set_clip_rect(inner_rect.intersect(ui.clip_rect()));
         let edit = TextEdit::multiline(self.text)
             .id(self.id)
             .font(font_id)
+            .text_color(text_fg)
             .frame(egui::Frame::NONE)
             .interactive(self.editable && ui.is_enabled())
             .desired_width(inner_rect.width());

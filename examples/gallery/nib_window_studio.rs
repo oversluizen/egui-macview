@@ -184,11 +184,22 @@ impl NibShowcaseWindowState {
                 .max_rect(left_rect.shrink(6.0))
                 .layout(Layout::top_down(Align::Min)),
         );
+        scene_ui.set_clip_rect(left_rect.shrink(6.0).intersect(ui.clip_rect()));
         let policy = if self.policy_idx == 0 { LayoutPolicy::ExactAppleNib } else { LayoutPolicy::AdaptiveSemanticReflow };
-        self.scene.show(&mut scene_ui, theme, &mut self.store, policy, 0, &self.scene_search_query);
+        MacScrollView::new("nib_studio_left_scene_scroll")
+            .theme(theme)
+            .vertical(true)
+            .horizontal(true)
+            .max_height((pane_h - 12.0).max(180.0))
+            .max_width((left_w - 12.0).max(220.0))
+            .show(&mut scene_ui, |s_ui| {
+                self.scene.show(s_ui, theme, &mut self.store, policy, 0, &self.scene_search_query);
+            });
         let mut code_ui = ui.new_child(
             egui::UiBuilder::new().id_salt("nib_studio_swiftui_code_pane").max_rect(right_rect).layout(Layout::top_down(Align::Min)),
         );
+        code_ui.set_clip_rect(right_rect.intersect(ui.clip_rect()));
+        let code_fg = theme.label_on(theme.box_background());
         MacBox::new("Generated SwiftUI Source (SceneExporter::to_swiftui_source)").theme(theme).fixed_rect(right_rect).show(
             &mut code_ui,
             |box_ui| {
@@ -199,7 +210,8 @@ impl NibShowcaseWindowState {
                     .max_height((pane_h - 34.0).max(180.0))
                     .max_width((right_w - 20.0).max(220.0))
                     .show(box_ui, |scroll_ui| {
-                        scroll_ui.label(egui::RichText::new(&self.swiftui_source).font(FontId::monospace(11.5)));
+                        scroll_ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
+                        scroll_ui.label(egui::RichText::new(&self.swiftui_source).font(FontId::monospace(11.5)).color(code_fg));
                     });
             },
         );

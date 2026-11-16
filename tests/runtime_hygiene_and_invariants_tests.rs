@@ -500,7 +500,13 @@ fn run_req013_02s_suite() {
 
     // 3. REQ-013-02S.3: No #hud or siren oscillator in mobile_web_html.html + 6 real online video/audio streams in State 5
     let html_src = std::fs::read_to_string("examples/gallery/mobile_web_html.html").expect("read mobile_web_html.html");
-    assert!(!html_src.contains("id=\"hud\"") && !html_src.contains("createOscillator"));
+    assert!(
+        !html_src.contains("id=\"hud\"")
+            && !html_src.contains("createOscillator")
+            && !html_src.contains("crossorigin=\"anonymous\"")
+            && html_src.contains("audio/wav"),
+        "REQ-013-06.4: mobile_web_html.html must omit crossorigin=anonymous and include built-in PCM WAV classical music fallback"
+    );
     let s5_codec =
         session.app.center.screen_nib_scenes[4].0.nodes().iter().find(|n| n.ib_object_id == "s5-pop-codec").expect("s5-pop-codec");
     if let egui_macview::scene::SceneNodeKind::PopUpButton { options } = &s5_codec.kind {

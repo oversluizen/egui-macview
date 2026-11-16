@@ -6,7 +6,9 @@ use super::{
     CenterState, FinderCustomEntry,
 };
 use egui::{Align, Layout, Rect, Ui, UiBuilder};
-use egui_macview::{theme::MacTheme, MacPathComponent, MacPathControl, MacRatingIndicator, MacTableColumn, MacTableView, MacToastManager};
+use egui_macview::{
+    theme::MacTheme, MacPathComponent, MacPathControl, MacRatingIndicator, MacTableColumn, MacTableView, MacThumbnailCell, MacToastManager,
+};
 use std::cell::RefCell;
 use std::path::PathBuf;
 
@@ -209,6 +211,7 @@ impl CenterState {
 
         let tbl_h = (slot_rect.height() - 36.0).max(140.0);
         let mut tbl_out = None;
+        let pub_prog = self.publish_progress.clamp(0.0, 1.0);
         egui_macview::MacScrollView::new("studio_finder_table_scroll_v05")
             .theme(theme)
             .vertical(true)
@@ -224,8 +227,30 @@ impl CenterState {
                             let item = &visible_rows[row_idx];
                             match col_idx {
                                 0 => {
-                                    let prefix = if item.is_dir { "📁 " } else { "📄 " };
-                                    row_ui.label(format!("{prefix}{}", item.name));
+                                    let is_dir = item.is_dir;
+                                    let frac = if is_dir { 1.0 } else { (pub_prog + (row_idx as f32 * 0.11)).fract().max(0.18) };
+                                    let accent = theme.control_accent();
+                                    let sep = theme.separator();
+                                    row_ui.horizontal(|h_ui| {
+                                        MacThumbnailCell::new()
+                                            .theme(theme)
+                                            .square(16.0)
+                                            .custom_draw(move |p, r| {
+                                                let c = r.center();
+                                                let rad = (r.width().min(r.height()) * 0.42).max(3.0);
+                                                p.circle_stroke(c, rad, egui::Stroke::new(1.0, sep));
+                                                let mut pts = vec![c];
+                                                let steps = ((frac * 16.0).round() as usize).max(2);
+                                                for s in 0..=steps {
+                                                    let a = -std::f32::consts::FRAC_PI_2 + (s as f32 / 16.0) * std::f32::consts::TAU;
+                                                    pts.push(c + egui::vec2(a.cos() * rad, a.sin() * rad));
+                                                }
+                                                p.add(egui::Shape::convex_polygon(pts, accent, egui::Stroke::NONE));
+                                            })
+                                            .show(h_ui);
+                                        let prefix = if is_dir { "📁 " } else { "📄 " };
+                                        h_ui.label(format!("{prefix}{}", item.name));
+                                    });
                                 }
                                 1 => {
                                     row_ui.label(&item.codec);

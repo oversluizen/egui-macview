@@ -50,6 +50,69 @@ impl AudioTrack {
         Self { name: name.to_string(), duration_secs: synth_duration, sample_rate, samples_mono: samples, waveform_peaks: peaks }
     }
 
+    /// Generates a preset-specific classical or studio soundtrack (`0..=5`) for AVKit Media Studio.
+    pub fn preset_track(preset: usize) -> Self {
+        if preset < 4 {
+            let names = [
+                "BigBuckBunny_1080p.mp4",
+                "Sintel_4K_Proxy.mp4",
+                "TearsOfSteel_VFX.mp4",
+                "ForBiggerBlazes_60fps.mp4",
+            ];
+            return Self::procedural_studio_track(names[preset.min(3)], 30.0);
+        }
+        let sample_rate = 22050u32;
+        let duration_secs = 30.0f64;
+        let total_samples = (duration_secs * sample_rate as f64).round() as usize;
+        let mut samples = Vec::with_capacity(total_samples);
+        let tau = std::f64::consts::TAU;
+        // Notes in Hz: Bach Brandenburg No. 3 in G Major (preset 4) vs Debussy Clair de Lune in Db Major (preset 5)
+        let bach_melody: [f64; 16] = [
+            392.00, 369.99, 392.00, 293.66, 493.88, 440.00, 493.88, 392.00,
+            587.33, 523.25, 493.88, 440.00, 392.00, 369.99, 329.63, 293.66,
+        ];
+        let bach_bass: [f64; 16] = [
+            196.00, 196.00, 146.83, 146.83, 246.94, 220.00, 196.00, 146.83,
+            293.66, 261.63, 246.94, 220.00, 196.00, 146.83, 164.81, 146.83,
+        ];
+        let debussy_melody: [f64; 16] = [
+            698.46, 622.25, 554.37, 466.16, 554.37, 466.16, 415.30, 369.99,
+            466.16, 415.30, 369.99, 311.13, 369.99, 415.30, 554.37, 622.25,
+        ];
+        let debussy_bass: [f64; 16] = [
+            138.59, 207.65, 277.18, 207.65, 184.99, 277.18, 207.65, 138.59,
+            155.56, 233.08, 311.13, 233.08, 138.59, 207.65, 277.18, 349.23,
+        ];
+        for i in 0..total_samples {
+            let t = i as f64 / sample_rate as f64;
+            let sample = if preset == 4 {
+                let step = (t * 4.5).floor() as usize % 16;
+                let phase = (t * 4.5).fract();
+                let env = (-phase * 3.2).exp() * (1.0 - (-phase * 45.0).exp());
+                let f1 = bach_melody[step];
+                let fb = bach_bass[step];
+                let v1 = ((t * f1 * tau).sin() * 0.32 + (t * f1 * 2.0 * tau).sin() * 0.14 + (t * f1 * 3.0 * tau).sin() * 0.06) * env;
+                let vb = ((t * fb * tau).sin() * 0.24 + (t * fb * 2.0 * tau).sin() * 0.10) * (-phase * 2.0).exp();
+                (v1 + vb).clamp(-1.0, 1.0)
+            } else {
+                let step = (t * 1.4).floor() as usize % 16;
+                let phase = (t * 1.4).fract();
+                let env = (-phase * 1.8).exp() * (1.0 - (-phase * 30.0).exp());
+                let arp_step = (t * 4.2).floor() as usize % 16;
+                let arp_phase = (t * 4.2).fract();
+                let f1 = debussy_melody[step];
+                let fb = debussy_bass[arp_step];
+                let v1 = ((t * f1 * tau).sin() * 0.34 + (t * f1 * 2.0 * tau).sin() * 0.08) * env;
+                let vb = ((t * fb * tau).sin() * 0.22 + (t * fb * 1.5 * tau).sin() * 0.07) * (-arp_phase * 2.5).exp();
+                (v1 + vb).clamp(-1.0, 1.0)
+            };
+            samples.push(sample as f32);
+        }
+        let name = if preset == 4 { "JS_Bach_Brandenburg_No3.ogg" } else { "Claude_Debussy_Clair_de_Lune.ogg" };
+        let peaks = compute_waveform_peaks(&samples, 96);
+        Self { name: name.to_string(), duration_secs, sample_rate, samples_mono: samples, waveform_peaks: peaks }
+    }
+
     /// Parses a standard RIFF/WAVE PCM audio file buffer from disk or drag-and-drop.
     pub fn from_wav_bytes(name: &str, bytes: &[u8]) -> Result<Self, String> {
         if bytes.len() < 44 || &bytes[0..4] != b"RIFF" || &bytes[8..12] != b"WAVE" {
