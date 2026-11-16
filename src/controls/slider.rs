@@ -178,7 +178,7 @@ impl<'a> Widget for MacSlider<'a> {
         let current_fraction = ((*self.value - min_val) / span).clamp(0.0, 1.0);
         let thumb_center_x = track_left + current_fraction * track_width;
         let alpha_factor = if self.enabled { 1.0 } else { theme.disabled_opacity() };
-        let painter = ui.painter_at(rect);
+        let painter = ui.painter_at(rect.intersect(ui.clip_rect()));
 
         // 1. Unfilled groove track background
         let track_rect = Rect::from_min_max(

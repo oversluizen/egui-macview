@@ -586,4 +586,10 @@ fn tc_013_13_xcode16_xib_exporter_real_ibtool_nib_and_storyboard_segues() {
     let bundle_scene = NibArchiveFrontend::from_path(&bundle_dir, &mapper).expect("decode .nib bundle directory");
     assert!(bundle_scene.nodes().len() > 20, "Bundle directory keyedobjects-101300.nib must decode losslessly");
     let _ = std::fs::remove_dir_all(&bundle_dir);
+    let (ctx, theme, mut dial_val) = (Context::default(), MacTheme::new(MacAppearance::Aqua), 0.65f32);
+    let mut dial_out = ctx.run_ui(RawInput::default(), |ui| {
+        egui_macview::MacCircularSlider::new(&mut dial_val, 0.0..=1.0).theme(&theme).diameter(42.0).show(ui);
+    });
+    dial_out.textures_delta.clear();
+    assert!(dial_out.shapes.iter().any(|cs| matches!(&cs.shape, egui::epaint::Shape::Path(p) if p.closed && p.points.len() >= 6)));
 }

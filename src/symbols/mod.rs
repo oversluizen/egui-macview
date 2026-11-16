@@ -177,6 +177,9 @@ pub fn setup_symbols_font(fonts: &mut egui::FontDefinitions) {
     }
 
     let mono_family = fonts.families.entry(egui::FontFamily::Monospace).or_default();
+    if !mono_family.iter().any(|f| f == INTER_REGULAR_FONT_NAME) {
+        mono_family.insert(0, INTER_REGULAR_FONT_NAME.to_owned());
+    }
     if !mono_family.iter().any(|f| f == CUPERTINO_ICONS_FONT_NAME) {
         mono_family.push(CUPERTINO_ICONS_FONT_NAME.to_owned());
     }
@@ -190,8 +193,11 @@ pub fn setup_symbols_font(fonts: &mut egui::FontDefinitions) {
     }
 
     let ubuntu_family = fonts.families.entry(egui::FontFamily::Name("Ubuntu-Light".into())).or_default();
+    if !ubuntu_family.iter().any(|f| f == INTER_REGULAR_FONT_NAME) {
+        ubuntu_family.insert(0, INTER_REGULAR_FONT_NAME.to_owned());
+    }
     if !ubuntu_family.iter().any(|f| f == "Ubuntu-Light") {
-        ubuntu_family.insert(0, "Ubuntu-Light".to_owned());
+        ubuntu_family.push("Ubuntu-Light".to_owned());
     }
     if !ubuntu_family.iter().any(|f| f == CUPERTINO_ICONS_FONT_NAME) {
         ubuntu_family.push(CUPERTINO_ICONS_FONT_NAME.to_owned());

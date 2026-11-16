@@ -234,7 +234,7 @@ impl<'a> Widget for MacCheckbox<'a> {
             }
         }
 
-        let painter = ui.painter_at(rect);
+        let painter = ui.painter_at(rect.intersect(ui.clip_rect()));
         let box_rect =
             subpixel_snap_rect(Rect::from_min_size(Pos2::new(rect.left(), rect.center().y - box_sz * 0.5), Vec2::splat(box_sz)), ppp);
 

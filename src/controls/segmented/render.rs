@@ -85,7 +85,7 @@ pub(super) fn render_segmented(control: MacSegmentedControl<'_>, ui: &mut Ui, mu
 
     let alpha_factor = if enabled { 1.0 } else { theme.disabled_opacity() };
     let surface_bg = theme.active_surface_at(ui, rect.center());
-    let painter = ui.painter_at(rect);
+    let painter = ui.painter_at(rect.intersect(ui.clip_rect()));
     if enabled && response.has_focus() {
         theme.paint_focus_ring(&painter, rect, corner_radius);
     }

@@ -156,11 +156,28 @@ impl<'a> Widget for MacCircularSlider<'a> {
         let arc_r = radius - metrics.track_height.points();
         let arc_steps = 28usize;
         let active_steps = (frac * (arc_steps as f32)).round() as usize;
-        let arc_stroke = Stroke::new(
-            metrics.track_height.points(),
-            if self.enabled { theme.control_accent() } else { theme.selected_control_inactive().gamma_multiply(alpha) },
-        );
+        let accent_col = if self.enabled { theme.control_accent() } else { theme.selected_control_inactive().gamma_multiply(alpha) };
+        let arc_stroke = Stroke::new(metrics.track_height.points(), accent_col);
         if active_steps > 0 {
+            let pie_fill = accent_col.gamma_multiply(0.5 * 0.5);
+            let half_steps = arc_steps / 2;
+            let first_end = active_steps.min(half_steps);
+            let mut wedge1 = Vec::with_capacity(first_end + 2);
+            wedge1.push(center);
+            for i in 0..=first_end {
+                let a = start_angle + (i as f32 / arc_steps as f32) * total_sweep;
+                wedge1.push(center + Vec2::new(a.cos() * arc_r, a.sin() * arc_r));
+            }
+            painter.add(egui::Shape::convex_polygon(wedge1, pie_fill, Stroke::NONE));
+            if active_steps > half_steps {
+                let mut wedge2 = Vec::with_capacity(active_steps - half_steps + 2);
+                wedge2.push(center);
+                for i in half_steps..=active_steps {
+                    let a = start_angle + (i as f32 / arc_steps as f32) * total_sweep;
+                    wedge2.push(center + Vec2::new(a.cos() * arc_r, a.sin() * arc_r));
+                }
+                painter.add(egui::Shape::convex_polygon(wedge2, pie_fill, Stroke::NONE));
+            }
             let pts: Vec<Pos2> = (0..=active_steps)
                 .map(|i| {
                     let a = start_angle + (i as f32 / arc_steps as f32) * total_sweep;
@@ -170,7 +187,7 @@ impl<'a> Widget for MacCircularSlider<'a> {
             painter.add(egui::Shape::line(pts, arc_stroke));
         }
 
-        // 4. Pointer needle indicator from dial center to outer rim
+        // 4. Pointer needle indicator and rotary thumb knob at current_angle
         let needle_inner_r = radius * 0.5 * 0.5;
         let needle_outer_r = radius - metrics.thumb_stroke_width.points() * 2.0;
         let needle_dir = Vec2::new(current_angle.cos(), current_angle.sin());
@@ -181,6 +198,14 @@ impl<'a> Widget for MacCircularSlider<'a> {
             if self.enabled { theme.label() } else { theme.secondary_label().gamma_multiply(alpha) },
         );
         painter.line_segment([needle_p0, needle_p1], needle_stroke);
+        let thumb_pos = center + needle_dir * arc_r;
+        let thumb_r = metrics.track_height.points();
+        painter.circle(
+            thumb_pos,
+            thumb_r,
+            theme.control_background().gamma_multiply(alpha),
+            Stroke::new(metrics.thumb_stroke_width.points(), accent_col),
+        );
 
         // 5. Focus ring
         if self.enabled && response.has_focus() {

@@ -151,7 +151,7 @@ impl<'a> Widget for MacButtonCell<'a> {
             let (r, resp) = ui.allocate_exact_size(Vec2::new(desired_width, height), sense);
             (subpixel_snap_rect(r, ppp), resp)
         };
-        let painter = ui.painter_at(rect);
+        let painter = ui.painter_at(rect.intersect(ui.clip_rect()));
 
         let alpha_factor = if enabled { 1.0 } else { theme.disabled_opacity() };
 

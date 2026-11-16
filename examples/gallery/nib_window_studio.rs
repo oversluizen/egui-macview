@@ -199,6 +199,7 @@ impl NibShowcaseWindowState {
             egui::UiBuilder::new().id_salt("nib_studio_swiftui_code_pane").max_rect(right_rect).layout(Layout::top_down(Align::Min)),
         );
         code_ui.set_clip_rect(right_rect.intersect(ui.clip_rect()));
+        code_ui.painter().rect_filled(right_rect, CornerRadius::same(6), theme.window_background());
         let code_fg = theme.label_on(theme.box_background());
         MacBox::new("Generated SwiftUI Source (SceneExporter::to_swiftui_source)").theme(theme).fixed_rect(right_rect).show(
             &mut code_ui,

@@ -149,8 +149,32 @@ impl CenterState {
 
         if !path_items.is_empty() {
             content_ui.horizontal(|ui| {
-                ui.label(egui::RichText::new("Path:").size(11.0).strong());
-                let avail_w = (ui.available_width() - 24.0).max(260.0);
+                let prog_hdr = self.publish_progress.clamp(0.0, 1.0);
+                let accent_hdr = theme.control_accent();
+                let sep_hdr = theme.separator();
+                if MacThumbnailCell::new()
+                    .theme(theme)
+                    .selected(self.is_publishing)
+                    .square(22.0)
+                    .custom_draw(move |p, r| {
+                        let c = r.center();
+                        let rad = (r.width().min(r.height()) * 0.42).max(4.0);
+                        p.circle_stroke(c, rad, egui::Stroke::new(1.0, sep_hdr));
+                        let mut pts = vec![c];
+                        let steps = ((prog_hdr * 18.0).round() as usize).max(2);
+                        for s in 0..=steps {
+                            let a = -std::f32::consts::FRAC_PI_2 + (s as f32 / 18.0) * std::f32::consts::TAU;
+                            pts.push(c + egui::vec2(a.cos() * rad, a.sin() * rad));
+                        }
+                        p.add(egui::Shape::convex_polygon(pts, accent_hdr, egui::Stroke::NONE));
+                    })
+                    .show(ui)
+                    .clicked()
+                {
+                    self.publish_progress = ((self.publish_progress + 0.15) % 1.05).clamp(0.1, 1.0);
+                }
+                ui.label(egui::RichText::new("PieThumb:").size(11.0).strong());
+                let avail_w = (ui.available_width() - 24.0).max(220.0);
                 let out = MacPathControl::new("studio_path_v05", &path_items).theme(theme).show_choose_button(true).width(avail_w).show(ui);
 
                 if let Some(clicked) = out.clicked_segment {
@@ -248,8 +272,7 @@ impl CenterState {
                                                 p.add(egui::Shape::convex_polygon(pts, accent, egui::Stroke::NONE));
                                             })
                                             .show(h_ui);
-                                        let prefix = if is_dir { "📁 " } else { "📄 " };
-                                        h_ui.label(format!("{prefix}{}", item.name));
+                                        h_ui.label(&item.name);
                                     });
                                 }
                                 1 => {

@@ -214,7 +214,7 @@ impl<'a> Widget for MacPopUpButton<'a> {
             }
         }
 
-        let painter = ui.painter_at(frame_rect);
+        let painter = ui.painter_at(frame_rect.intersect(ui.clip_rect()));
         let bg_color = if !enabled {
             theme.apply_enabled(theme.control_background(), false)
         } else if response.is_pointer_button_down_on() {

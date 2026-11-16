@@ -484,7 +484,14 @@ fn run_req013_02s_suite() {
     );
     assert_eq!(session.app.center.wcag_fg, expected_red, "REQ-013-02S.1: Swatch click must mutate wcag_fg");
 
-    // 2. REQ-013-02S.2: 4 genuinely loaded open-source FontFamilies registered in setup_symbols_font & accurate State 2 options
+    // 2. REQ-013-02S.2 & REQ-013-06.1: FontFamilies registered in setup_symbols_font & Monospace renders ASCII without tofu boxes
+    let mut font_defs = egui::FontDefinitions::default();
+    egui_macview::setup_symbols_font(&mut font_defs);
+    let mono_list = font_defs.families.get(&egui::FontFamily::Monospace).expect("Monospace family");
+    assert!(
+        mono_list.contains(&egui_macview::INTER_REGULAR_FONT_NAME.to_string()),
+        "REQ-013-06.1: FontFamily::Monospace must include inter_regular so FontId::monospace never renders tofu boxes"
+    );
     let families = session.ctx.fonts(|f| f.families());
     assert!(
         families.contains(&egui::FontFamily::Name("Inter-SemiBold".into()))
@@ -498,14 +505,16 @@ fn run_req013_02s_suite() {
         panic!("Expected PopUpButton for s2-pop-font");
     }
 
-    // 3. REQ-013-02S.3: No #hud or siren oscillator in mobile_web_html.html + 6 real online video/audio streams in State 5
+    // 3. REQ-013-02S.3 & REQ-013-06.4: Verified HTTP 200 MP4 & real Wikimedia MP3 classical streams (no 403 gtv-videos-bucket or sine buzzer)
     let html_src = std::fs::read_to_string("examples/gallery/mobile_web_html.html").expect("read mobile_web_html.html");
     assert!(
         !html_src.contains("id=\"hud\"")
             && !html_src.contains("createOscillator")
-            && !html_src.contains("crossorigin=\"anonymous\"")
-            && html_src.contains("audio/wav"),
-        "REQ-013-06.4: mobile_web_html.html must omit crossorigin=anonymous and include built-in PCM WAV classical music fallback"
+            && !html_src.contains("buildClassicalWavUrl")
+            && !html_src.contains("gtv-videos-bucket")
+            && html_src.contains("media.w3.org/2010/05/bunny/trailer.mp4")
+            && html_src.contains("Bach_-_Brandenburg_Concerto_No._3_-_1._Allegro.ogg.mp3"),
+        "REQ-013-06.4: mobile_web_html.html must use real HTTP 200 MP4 and Wikimedia MP3 recordings without 403 gtv-videos-bucket or sine WAV"
     );
     let s5_codec =
         session.app.center.screen_nib_scenes[4].0.nodes().iter().find(|n| n.ib_object_id == "s5-pop-codec").expect("s5-pop-codec");
