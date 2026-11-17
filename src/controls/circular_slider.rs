@@ -98,6 +98,27 @@ impl<'a> Widget for MacCircularSlider<'a> {
                 ui.memory_mut(|m| m.request_focus(response.id));
             }
 
+            if response.clicked() {
+                if let Some(pos) = response.interact_pointer_pos() {
+                    let rel = pos - rect.center();
+                    if rel.length() >= radius * 0.5 * 0.5 {
+                        let start_a = std::f32::consts::PI * (f32::from(3u8) / f32::from(4u8));
+                        let sweep_a = std::f32::consts::PI * (f32::from(3u8) / f32::from(2u8));
+                        let mut a = rel.y.atan2(rel.x);
+                        if a < start_a - std::f32::consts::PI * 0.5 {
+                            a += std::f32::consts::TAU;
+                        }
+                        let t = ((a - start_a) / sweep_a).clamp(0.0, 1.0);
+                        let raw_v = min_val + t * span;
+                        let stepped = ((raw_v / step).round() * step).clamp(min_val, max_val);
+                        if (stepped - *self.value).abs() > 1e-5 {
+                            *self.value = stepped;
+                            response.mark_changed();
+                        }
+                    }
+                }
+            }
+
             if response.dragged() {
                 let d = ui.input(|i| i.pointer.delta());
                 let d_axis = if d.x.abs() > d.y.abs() { d.x } else { -d.y };

@@ -198,9 +198,10 @@ impl<'a, T> MacCollectionView<'a, T> {
             rendered_count += 1;
 
             let is_selected = self.selected_indices.contains(&idx);
-            let item_hovered = ui.input(|inp| inp.pointer.hover_pos()).is_some_and(|p| item_rect.contains(p));
+            let ptr_pos = ui.input(|inp| inp.pointer.interact_pos().or_else(|| inp.pointer.hover_pos()));
+            let item_hovered = ptr_pos.is_some_and(|p| item_rect.contains(p));
 
-            if item_hovered && ui.input(|inp| inp.pointer.primary_clicked()) {
+            if item_hovered && (ui.input(|inp| inp.pointer.primary_clicked()) || ui.input(|inp| inp.pointer.primary_pressed())) {
                 response.request_focus();
                 if !ui.input(|inp| inp.modifiers.shift || inp.modifiers.command) {
                     self.selected_indices.clear();
@@ -240,32 +241,38 @@ impl<'a, T> MacCollectionView<'a, T> {
             render_item(&mut child_ui, item);
         }
 
-        // Rubber-band marquee selection during drag
+        // Rubber-band marquee selection during drag (only when dragged beyond single-click jitter threshold)
         if response.dragged() {
             if let (Some(press_pos), Some(current_pos)) = (ui.input(|i| i.pointer.press_origin()), ui.input(|i| i.pointer.interact_pos())) {
-                let marquee_rect = Rect::from_two_pos(press_pos, current_pos);
-                let fill = theme.selected_control().gamma_multiply(metrics.marquee_alpha_fill.points());
-                let stroke = Stroke::new(1.0, theme.control_accent().gamma_multiply(metrics.marquee_alpha_stroke.points()));
+                if (current_pos - press_pos).length() > self.layout.minimum_interitem_spacing.max(2.0) {
+                    let marquee_rect = Rect::from_two_pos(press_pos, current_pos);
+                    let fill = theme.selected_control().gamma_multiply(metrics.marquee_alpha_fill.points());
+                    let stroke = Stroke::new(1.0, theme.control_accent().gamma_multiply(metrics.marquee_alpha_stroke.points()));
 
-                painter.rect(marquee_rect, CornerRadius::same(0), fill, stroke, StrokeKind::Inside);
+                    painter.rect(marquee_rect, CornerRadius::same(0), fill, stroke, StrokeKind::Inside);
 
-                // Compute 2D AABB intersection with candidate row items
-                let (m_first_idx, m_last_idx) = if row_pitch <= 0.0 || rows == 0 {
-                    (0, item_count)
-                } else {
-                    let origin_y = rect.min.y + self.layout.section_inset.top;
-                    let rel_top = (marquee_rect.min.y - origin_y).max(0.0);
-                    let first_row = ((rel_top / row_pitch).floor() as usize).saturating_sub(1);
-                    let rel_bottom = (marquee_rect.max.y - origin_y).max(0.0);
-                    let last_row = (((rel_bottom / row_pitch).ceil() as usize) + 1).min(rows);
-                    ((first_row * columns).min(item_count), (last_row * columns).min(item_count))
-                };
+                    if !ui.input(|inp| inp.modifiers.shift || inp.modifiers.command) {
+                        self.selected_indices.clear();
+                    }
 
-                for idx in m_first_idx..m_last_idx {
-                    let item_rect = self.layout.compute_item_rect(rect.min, idx, columns);
-                    if marquee_rect.intersects(item_rect) {
-                        self.selected_indices.insert(idx);
-                        response.mark_changed();
+                    // Compute 2D AABB intersection with candidate row items
+                    let (m_first_idx, m_last_idx) = if row_pitch <= 0.0 || rows == 0 {
+                        (0, item_count)
+                    } else {
+                        let origin_y = rect.min.y + self.layout.section_inset.top;
+                        let rel_top = (marquee_rect.min.y - origin_y).max(0.0);
+                        let first_row = ((rel_top / row_pitch).floor() as usize).saturating_sub(1);
+                        let rel_bottom = (marquee_rect.max.y - origin_y).max(0.0);
+                        let last_row = (((rel_bottom / row_pitch).ceil() as usize) + 1).min(rows);
+                        ((first_row * columns).min(item_count), (last_row * columns).min(item_count))
+                    };
+
+                    for idx in m_first_idx..m_last_idx {
+                        let item_rect = self.layout.compute_item_rect(rect.min, idx, columns);
+                        if marquee_rect.intersects(item_rect) {
+                            self.selected_indices.insert(idx);
+                            response.mark_changed();
+                        }
                     }
                 }
             }

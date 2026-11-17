@@ -16,6 +16,7 @@ pub(crate) mod nib_ibtool_widgets;
 pub mod nib_varint;
 pub mod normalizer;
 pub mod runtime;
+pub(crate) mod runtime_tabs;
 pub(crate) mod runtime_widgets;
 pub mod storyboard;
 pub mod swiftui;

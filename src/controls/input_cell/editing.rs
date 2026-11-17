@@ -182,6 +182,10 @@ pub(super) fn show_input_cell(cell: MacInputCell<'_>, ui: &mut Ui) -> Response {
         Stroke::new(metrics.border_width.points(), theme.separator().gamma_multiply(alpha_factor))
     };
     painter.rect(rect, CornerRadius::same(corner_radius as u8), bg_color, border_stroke, StrokeKind::Inside);
+    painter.line_segment(
+        [Pos2::new(rect.min.x + 1.0, rect.min.y + 1.0), Pos2::new(rect.max.x - 1.0, rect.min.y + 1.0)],
+        Stroke::new(1.0, theme.input_top_inset_shadow().gamma_multiply(alpha_factor)),
+    );
 
     let shrink_pad = metrics.padding_horizontal.points();
     let inner_rect = rect.shrink2(Vec2::new(shrink_pad, 0.0));

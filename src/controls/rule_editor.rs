@@ -126,22 +126,24 @@ impl<'a> Widget for MacRuleEditor<'a> {
             let plus_id = self.id_salt.with("plus").with(r_idx);
             let plus_resp = ui.interact(plus_rect, plus_id, Sense::click());
             let plus_hovered = plus_resp.hovered();
+            let (plus_fg, plus_bg) =
+                if plus_hovered { theme.semantic_add_hover_colors() } else { (theme.label(), theme.control_background()) };
             painter.rect(
                 plus_rect,
                 CornerRadius::same((btn_sz * 0.5) as u8),
-                if plus_hovered { theme.control() } else { theme.control_background() },
-                Stroke::new(1.0, theme.separator()),
+                plus_bg,
+                Stroke::new(1.0, if plus_hovered { plus_fg.gamma_multiply(0.5) } else { theme.separator() }),
                 StrokeKind::Inside,
             );
             let plus_center = plus_rect.center();
             let arm = (btn_sz * 0.5) * 0.5;
             painter.line_segment(
                 [Pos2::new(plus_center.x - arm, plus_center.y), Pos2::new(plus_center.x + arm, plus_center.y)],
-                Stroke::new(1.0, theme.label()),
+                Stroke::new(1.0, plus_fg),
             );
             painter.line_segment(
                 [Pos2::new(plus_center.x, plus_center.y - arm), Pos2::new(plus_center.x, plus_center.y + arm)],
-                Stroke::new(1.0, theme.label()),
+                Stroke::new(1.0, plus_fg),
             );
 
             let is_plus_clicked = plus_resp.clicked()
@@ -156,17 +158,19 @@ impl<'a> Widget for MacRuleEditor<'a> {
             let minus_id = self.id_salt.with("minus").with(r_idx);
             let minus_resp = ui.interact(minus_rect, minus_id, Sense::click());
             let minus_hovered = minus_resp.hovered();
+            let (minus_fg, minus_bg) =
+                if minus_hovered { theme.semantic_remove_hover_colors() } else { (theme.label(), theme.control_background()) };
             painter.rect(
                 minus_rect,
                 CornerRadius::same((btn_sz * 0.5) as u8),
-                if minus_hovered { theme.control() } else { theme.control_background() },
-                Stroke::new(1.0, theme.separator()),
+                minus_bg,
+                Stroke::new(1.0, if minus_hovered { minus_fg.gamma_multiply(0.5) } else { theme.separator() }),
                 StrokeKind::Inside,
             );
             let minus_center = minus_rect.center();
             painter.line_segment(
                 [Pos2::new(minus_center.x - arm, minus_center.y), Pos2::new(minus_center.x + arm, minus_center.y)],
-                Stroke::new(1.0, theme.label()),
+                Stroke::new(1.0, minus_fg),
             );
 
             let is_minus_clicked = minus_resp.clicked()

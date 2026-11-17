@@ -88,11 +88,27 @@ pub struct MacFormUi<'a> {
 
 impl<'a> MacFormUi<'a> {
     /// Adds a row with a trailing-aligned label (col 0) and leading-aligned control (col 1).
+    /// Automatically paints a subtle full-width horizontal highlight band (`MacTheme::focused_row_fill`)
+    /// when any child control in the row holds keyboard focus (`REQ-015-02`).
     pub fn row<R1, R2>(&mut self, label: impl FnOnce(&mut Ui) -> R1, control: impl FnOnce(&mut Ui) -> R2) -> (R1, R2) {
-        let r1 = self.ui.with_layout(Layout::right_to_left(Align::Center), label).inner;
-        let r2 = self.ui.with_layout(Layout::left_to_right(Align::Center), control).inner;
+        let bg_idx = self.ui.painter().add(egui::Shape::Noop);
+        let l_out = self.ui.with_layout(Layout::right_to_left(Align::Center), label);
+        let c_out = self.ui.with_layout(Layout::left_to_right(Align::Center), control);
+        let row_rect = l_out.response.rect.union(c_out.response.rect);
+        if let Some(focused_id) = self.ui.ctx().memory(|m| m.focused()) {
+            let row_has_focus = self.ui.ctx().read_response(focused_id).is_some_and(|r| r.rect.intersects(row_rect));
+            if row_has_focus {
+                let theme = MacTheme::from_ctx(self.ui.ctx());
+                let full_x = self.ui.max_rect();
+                let band_rect = egui::Rect::from_min_max(
+                    egui::pos2(full_x.min.x.min(row_rect.min.x), row_rect.min.y - 1.0),
+                    egui::pos2(full_x.max.x.max(row_rect.max.x), row_rect.max.y + 1.0),
+                );
+                self.ui.painter().set(bg_idx, egui::Shape::rect_filled(band_rect, egui::CornerRadius::same(2), theme.focused_row_fill()));
+            }
+        }
         self.ui.end_row();
-        (r1, r2)
+        (l_out.inner, c_out.inner)
     }
 
     /// Convenience helper adding a text label and control row.

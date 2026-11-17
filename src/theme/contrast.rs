@@ -358,6 +358,104 @@ impl MacTheme {
         };
         ensure_wcag_contrast(vibrant, surface_bg, min_ratio)
     }
+
+    /// Returns the subtle translucent grey rollover fill for borderless Pro-Inspector action buttons (`REQ-015-02`).
+    pub fn inspector_hover_fill(&self) -> Color32 {
+        match self.appearance {
+            MacAppearance::Aqua => Color32::from_rgba_unmultiplied(110, 110, 118, 38),
+            MacAppearance::Anthracite | MacAppearance::DarkAqua => Color32::from_rgba_unmultiplied(255, 255, 255, 36),
+        }
+    }
+
+    /// Returns the subtle full-width horizontal row background band when an input inside a form/inspector row holds focus (`REQ-015-02`).
+    pub fn focused_row_fill(&self) -> Color32 {
+        match self.appearance {
+            MacAppearance::Aqua => Color32::from_rgba_unmultiplied(0, 0, 0, 16),
+            MacAppearance::Anthracite | MacAppearance::DarkAqua => Color32::from_rgba_unmultiplied(255, 255, 255, 20),
+        }
+    }
+
+    /// Returns the `(foreground_icon, pill_background)` hover colors for a semantic Add (`+`) action button (`REQ-015-02`).
+    pub fn semantic_add_hover_colors(&self) -> (Color32, Color32) {
+        let fg = self.system_green();
+        let bg = Color32::from_rgba_unmultiplied(fg.r(), fg.g(), fg.b(), 38);
+        (fg, bg)
+    }
+
+    /// Returns the `(foreground_icon, pill_background)` hover colors for a semantic Remove (`-`) action button (`REQ-015-02`).
+    pub fn semantic_remove_hover_colors(&self) -> (Color32, Color32) {
+        let fg = self.system_red();
+        let bg = Color32::from_rgba_unmultiplied(fg.r(), fg.g(), fg.b(), 38);
+        (fg, bg)
+    }
+
+    /// Returns the upper-left specular rim highlight color (`REQ-015-03`).
+    pub fn specular_rim_top(&self) -> Color32 {
+        match self.appearance {
+            MacAppearance::Aqua => Color32::from_rgba_unmultiplied(255, 255, 255, 195),
+            MacAppearance::Anthracite | MacAppearance::DarkAqua => Color32::from_rgba_unmultiplied(255, 255, 255, 92),
+        }
+    }
+
+    /// Returns the lower-right bevel color (`REQ-015-03`).
+    pub fn specular_rim_bottom(&self) -> Color32 {
+        match self.appearance {
+            MacAppearance::Aqua => Color32::from_rgba_unmultiplied(0, 0, 0, 38),
+            MacAppearance::Anthracite | MacAppearance::DarkAqua => Color32::from_rgba_unmultiplied(0, 0, 0, 96),
+        }
+    }
+
+    /// Returns the `1.0pt` top inner shadow for recessed `MacInputCell` fields (`REQ-015-02`).
+    pub fn input_top_inset_shadow(&self) -> Color32 {
+        match self.appearance {
+            MacAppearance::Aqua => Color32::from_rgba_unmultiplied(0, 0, 0, 26),
+            MacAppearance::Anthracite | MacAppearance::DarkAqua => Color32::from_rgba_unmultiplied(0, 0, 0, 92),
+        }
+    }
+
+    /// Returns the `1.0pt` bottom micro-dropshadow beneath `MacPopUpButton` and `MacStepper` carets (`REQ-015-02`).
+    pub fn caret_micro_shadow(&self) -> Color32 {
+        match self.appearance {
+            MacAppearance::Aqua => Color32::from_rgba_unmultiplied(0, 0, 0, 24),
+            MacAppearance::Anthracite | MacAppearance::DarkAqua => Color32::from_rgba_unmultiplied(0, 0, 0, 82),
+        }
+    }
+
+    /// Computes the normalized opacity `[0.0, 1.0]` for a transient AppKit HUD tooltip pill (`REQ-015-03`):
+    /// holds at `1.0` for `1.0s`, then fades linearly to `0.0` over `0.35s`.
+    pub fn transient_hud_tooltip_opacity(elapsed_secs: f32) -> f32 {
+        if elapsed_secs < 0.0 {
+            0.0
+        } else if elapsed_secs <= 1.0 {
+            1.0
+        } else if elapsed_secs < 1.35 {
+            (1.0 - (elapsed_secs - 1.0) / 0.35).clamp(0.0, 1.0)
+        } else {
+            0.0
+        }
+    }
+
+    /// Unlocks saturation and brightness on an achromatic (`s < 0.08` or `v < 0.15`) `Hsva` color
+    /// when the user selects a hue in `MacColorWell` (`REQ-015-05`).
+    pub fn unlock_achromatic_hsva(mut hsva: egui::epaint::Hsva) -> egui::epaint::Hsva {
+        if hsva.s < 0.08 {
+            hsva.s = 0.85;
+        }
+        if hsva.v < 0.15 {
+            hsva.v = 0.88;
+        }
+        hsva
+    }
+
+    /// Evaluates an opaque `Color32` for a 2D Saturation (`s`) x Value (`v`) color picker square at hue `h`.
+    pub fn sv_square_color(h: f32, s: f32, v: f32) -> Color32 {
+        Color32::from(egui::epaint::Hsva::new(h, s.clamp(0.0, 1.0), v.clamp(0.0, 1.0), 1.0))
+    }
+
+    /// Evaluates a pure vivid rainbow `Color32` along the 1D Hue bar at normalized `h` in `[0.0, 1.0]`.
+    pub fn hue_bar_color(h: f32) -> Color32 {
+        Color32::from(egui::epaint::Hsva::new(h.clamp(0.0, 1.0), 1.0, 1.0, 1.0))
+    }
 }
 
 /// macOS AppKit background style (`NSBackgroundStyle`).

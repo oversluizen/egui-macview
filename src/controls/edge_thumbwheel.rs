@@ -130,7 +130,11 @@ impl<'a> MacEdgeThumbwheel<'a> {
 
         let (rect, mut response) = if let Some(c_rect) = self.dock_rect {
             let margin = m.dock_margin.points() * s;
-            let pos = Pos2::new(c_rect.max.x - w - margin, c_rect.min.y + margin * 2.0 + m.undo_bar_height.points());
+            let pos = if self.wide_drum_width.is_some() {
+                Pos2::new(c_rect.center().x - w * 0.5, (c_rect.max.y - h).max(c_rect.min.y))
+            } else {
+                Pos2::new(c_rect.max.x - w - margin, c_rect.min.y + margin * 2.0 + m.undo_bar_height.points())
+            };
             let r = Rect::from_min_size(pos, desired);
             let resp = ui.interact(r, self.id_source, Sense::click_and_drag());
             (r, resp)

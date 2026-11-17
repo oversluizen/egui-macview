@@ -255,6 +255,10 @@ impl<'a> Widget for MacStepper<'a> {
         };
 
         painter.rect(rect, CornerRadius::same(corner_radius as u8), bg_color, border_stroke, StrokeKind::Inside);
+        painter.line_segment(
+            [Pos2::new(rect.min.x + 1.0, rect.max.y), Pos2::new(rect.max.x - 1.0, rect.max.y)],
+            Stroke::new(1.0, theme.caret_micro_shadow()),
+        );
 
         // Highlight compartments on hover / click
         if self.enabled {

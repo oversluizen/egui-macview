@@ -83,7 +83,14 @@ impl CenterState {
                     }
                 }
                 "toggleFinderLocal:" => {
-                    self.finder_current_dir = if self.finder_current_dir.is_some() { None } else { std::env::current_dir().ok() };
+                    if self.finder_current_dir.is_some() {
+                        self.finder_current_dir = None;
+                        toasts.borrow_mut().info("Switched Finder to Studio Asset Library");
+                    } else {
+                        let dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/Users/studio/Local_Disk"));
+                        self.finder_current_dir = Some(dir);
+                        toasts.borrow_mut().success("Local Disk Mode active (select local folder in browser)");
+                    }
                 }
                 "toggleMediaPlayback:" | "togglePlay:" => {
                     self.media_playing = !self.media_playing;

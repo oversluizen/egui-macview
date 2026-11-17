@@ -13,47 +13,38 @@ impl CenterState {
         let window_active = egui_macview::is_window_active(content_ui.ctx());
 
         if self.media_playing {
-            if window_active {
-                if !self.media_was_window_active && self.media_sound_output {
-                    let wav =
-                        self.audio_track.to_wav_bytes_mixed(self.media_playhead, self.media_out_point, self.media_gain, self.media_pan);
-                    NativeAudioOutput::play_wav(&wav);
-                }
+            if window_active && !self.media_was_window_active && self.media_sound_output {
+                let wav = self.audio_track.to_wav_bytes_mixed(self.media_playhead, self.media_out_point, self.media_gain, self.media_pan);
+                NativeAudioOutput::play_wav(&wav);
+            }
 
-                content_ui.ctx().request_repaint_after(std::time::Duration::from_millis(16));
-                let dt = self.media_last_time.map(|prev| (now - prev).max(0.0)).unwrap_or(1.0 / 60.0);
-                self.media_playhead += dt * (self.media_speed.clamp(0.25, 2.0) as f64);
-                if self.media_playhead >= self.media_out_point {
-                    if self.media_loop {
-                        let loop_len = (self.media_out_point - self.media_in_point).max(0.1);
-                        while self.media_playhead >= self.media_out_point {
-                            self.media_playhead -= loop_len;
-                        }
-                        self.media_playhead = self.media_playhead.max(self.media_in_point);
-                        self.audio_peak_l = 0.0;
-                        self.audio_peak_r = 0.0;
-                        if self.media_sound_output {
-                            let wav = self.audio_track.to_wav_bytes_mixed(
-                                self.media_playhead,
-                                self.media_out_point,
-                                self.media_gain,
-                                self.media_pan,
-                            );
-                            NativeAudioOutput::play_wav(&wav);
-                        }
-                    } else {
-                        self.media_playhead = self.media_out_point;
-                        self.media_playing = false;
-                        NativeAudioOutput::stop();
+            content_ui.ctx().request_repaint_after(std::time::Duration::from_millis(16));
+            let dt = self.media_last_time.map(|prev| (now - prev).clamp(0.0, 0.25)).unwrap_or(1.0 / 60.0);
+            if self.media_playhead < self.media_in_point {
+                self.media_playhead = self.media_in_point;
+            }
+            self.media_playhead += dt * (self.media_speed.clamp(0.25, 2.0) as f64);
+            if self.media_playhead >= self.media_out_point {
+                if self.media_loop {
+                    let loop_len = (self.media_out_point - self.media_in_point).max(0.1);
+                    while self.media_playhead >= self.media_out_point {
+                        self.media_playhead -= loop_len;
                     }
-                }
-                self.media_last_time = Some(now);
-            } else {
-                if self.media_was_window_active && self.media_sound_output {
+                    self.media_playhead = self.media_playhead.max(self.media_in_point);
+                    self.audio_peak_l = 0.0;
+                    self.audio_peak_r = 0.0;
+                    if window_active && self.media_sound_output {
+                        let wav =
+                            self.audio_track.to_wav_bytes_mixed(self.media_playhead, self.media_out_point, self.media_gain, self.media_pan);
+                        NativeAudioOutput::play_wav(&wav);
+                    }
+                } else {
+                    self.media_playhead = self.media_out_point;
+                    self.media_playing = false;
                     NativeAudioOutput::stop();
                 }
-                self.media_last_time = None;
             }
+            self.media_last_time = Some(now);
         } else {
             self.media_last_time = Some(now);
         }
@@ -90,9 +81,18 @@ impl CenterState {
         }
 
         if self.media_playing {
-            self.audio_level_l = l_out;
-            self.audio_level_r = r_out;
-            let decay = 0.05;
+            // Smooth PPM/VU ballistics: fast attack (70% new + 30% prev) and gradual release (2.5 units/sec)
+            self.audio_level_l = if l_out >= self.audio_level_l {
+                self.audio_level_l * 0.35 + l_out * 0.65
+            } else {
+                (self.audio_level_l - 0.045).max(l_out)
+            };
+            self.audio_level_r = if r_out >= self.audio_level_r {
+                self.audio_level_r * 0.35 + r_out * 0.65
+            } else {
+                (self.audio_level_r - 0.045).max(r_out)
+            };
+            let decay = 0.025;
             self.audio_peak_l = (self.audio_peak_l - decay).max(pk_l_out).min(max_ceil);
             self.audio_peak_r = (self.audio_peak_r - decay).max(pk_r_out).min(max_ceil);
         } else {

@@ -70,7 +70,7 @@ pub(super) fn handle_popup_dropdown(
         let mut item_selected_this_frame = false;
 
         Area::new(area_id).order(Order::Foreground).sense(Sense::click()).fade_in(false).fixed_pos(popup_pos).show(ui.ctx(), |menu_ui| {
-            let (menu_rect, _bg_resp) = menu_ui.allocate_exact_size(Vec2::new(menu_width, total_menu_height), Sense::click());
+            let (menu_rect, _bg_resp) = menu_ui.allocate_exact_size(Vec2::new(menu_width, total_menu_height), Sense::hover());
             if menu_ui.rect_contains_pointer(menu_rect) {
                 menu_ui.input_mut(|i| {
                     i.smooth_scroll_delta = Vec2::ZERO;
@@ -87,13 +87,15 @@ pub(super) fn handle_popup_dropdown(
             );
 
             let item_margin = metrics.menu_item_padding.points();
+            let ptr_clicked = menu_ui.input(|i| i.pointer.primary_clicked());
+            let ptr_pos = menu_ui.input(|i| i.pointer.interact_pos().or_else(|| i.pointer.latest_pos()));
             for (idx, item_galley) in item_galleys.into_iter().enumerate() {
                 let item_rect = Rect::from_min_size(
                     Pos2::new(menu_rect.left() + item_margin, menu_rect.top() + item_margin + (idx as f32) * item_height),
                     Vec2::new(menu_width - item_margin * 2.0, item_height),
                 );
                 let item_resp = menu_ui.interact(item_rect, area_id.with(idx), Sense::click());
-                let is_hovered = item_resp.hovered();
+                let is_hovered = item_resp.hovered() || ptr_pos.is_some_and(|p| item_rect.contains(p));
                 let is_active = idx == *selected_index;
 
                 if is_hovered || is_active {
@@ -108,11 +110,12 @@ pub(super) fn handle_popup_dropdown(
                     .min;
                 menu_painter.galley(item_text_pos, item_galley, item_text_color);
 
-                if item_resp.clicked() {
+                if item_resp.clicked() || (ptr_clicked && ptr_pos.is_some_and(|p| item_rect.contains(p))) {
                     *selected_index = idx;
                     item_selected_this_frame = true;
                     menu_ui.data_mut(|d| d.insert_temp(is_open_id, false));
                     response.mark_changed();
+                    menu_ui.ctx().request_repaint();
                 }
             }
         });

@@ -257,7 +257,7 @@
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                     </box>
                     <datePicker identifier="s6-date" verticalHuggingPriority="750" id="s6-date">
-                        <rect key="frame" x="28" y="406" width="320" height="218"/>
+                        <rect key="frame" x="24" y="406" width="286" height="218"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <datePickerCell key="cell" borderStyle="bezel" alignment="left" datePickerStyle="clockAndCalendar" id="cell-s6-date">
                             <font key="font" metaFont="system"/>
@@ -268,25 +268,25 @@
                         </connections>
                     </datePicker>
                     <tabView identifier="s6-tabs" id="s6-tabs">
-                        <rect key="frame" x="364" y="406" width="324" height="218"/>
+                        <rect key="frame" x="320" y="406" width="368" height="218"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <font key="font" metaFont="system"/>
                         <tabViewItems>
                             <tabViewItem label="General" identifier="0" id="tvi-s6-tabs-0">
                                 <view key="view" id="tvv-s6-tabs-0">
-                                    <rect key="frame" x="10" y="33" width="304" height="172"/>
+                                    <rect key="frame" x="10" y="33" width="348" height="172"/>
                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                 </view>
                             </tabViewItem>
                             <tabViewItem label="Codecs" identifier="1" id="tvi-s6-tabs-1">
                                 <view key="view" id="tvv-s6-tabs-1">
-                                    <rect key="frame" x="10" y="33" width="304" height="172"/>
+                                    <rect key="frame" x="10" y="33" width="348" height="172"/>
                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                 </view>
                             </tabViewItem>
                             <tabViewItem label="Metadata" identifier="2" id="tvi-s6-tabs-2">
                                 <view key="view" id="tvv-s6-tabs-2">
-                                    <rect key="frame" x="10" y="33" width="304" height="172"/>
+                                    <rect key="frame" x="10" y="33" width="348" height="172"/>
                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                 </view>
                             </tabViewItem>

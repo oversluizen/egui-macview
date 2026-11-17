@@ -39,7 +39,7 @@
                         </textFieldCell>
                     </textField>
                     <textField identifier="s4-fld-url" verticalHuggingPriority="750" id="s4-fld-url">
-                        <rect key="frame" x="106" y="592" width="290" height="22"/>
+                        <rect key="frame" x="106" y="592" width="256" height="22"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" borderStyle="bezel" title="assets/nib_showcase" drawsBackground="YES" id="cell-s4-fld-url">
                             <font key="font" metaFont="system"/>
@@ -49,7 +49,7 @@
                         </connections>
                     </textField>
                     <button identifier="s4-btn-open" verticalHuggingPriority="750" id="s4-btn-open">
-                        <rect key="frame" x="404" y="592" width="124" height="22"/>
+                        <rect key="frame" x="370" y="592" width="142" height="22"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <buttonCell key="cell" type="push" title="Open URL / Path" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="cell-s4-btn-open">
                             <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
@@ -60,7 +60,7 @@
                         </connections>
                     </button>
                     <button identifier="s4-btn-local" verticalHuggingPriority="750" id="s4-btn-local">
-                        <rect key="frame" x="536" y="592" width="172" height="22"/>
+                        <rect key="frame" x="520" y="592" width="188" height="22"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <buttonCell key="cell" type="push" title="Toggle Local Disk Mode" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="cell-s4-btn-local">
                             <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>

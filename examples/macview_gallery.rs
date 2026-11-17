@@ -313,6 +313,24 @@ impl GalleryApp {
             });
         } else if self.mobile_compact_active {
             self.render_mobile_compact_work_area(&mut work_ui, &theme);
+        } else if self.inspector_mode == InspectorMode::CompactHud {
+            // Compact Mode: collapse both left and right sidebars so the canvas fills 100% of the workspace width
+            let mut s = self.active_screen;
+            let args = gallery::center_state::CenterRenderArgs {
+                card_cell: &self.card,
+                undo_manager: &self.undo_manager,
+                last_stable_card: &self.last_stable_card,
+                inspector_mode: self.inspector_mode,
+                snapping_enabled: self.inspector.snapping_enabled,
+                unit_segmented_idx: self.inspector.unit_segmented_idx,
+                vis_canvas: self.sidebar.vis_canvas,
+                lock_canvas: self.sidebar.lock_canvas,
+            };
+            self.center.render(&mut work_ui, &theme, args, &mut s, &self.toasts);
+            if self.active_screen != s {
+                (self.active_screen, self.sidebar.active_screen, self.sidebar.selected_node) = (s, s, s.title().to_string());
+                (self.center.media_playing, self.center.is_publishing) = (false, false);
+            }
         } else {
             let (sidebar, center, card, inspector) = (&mut self.sidebar, &mut self.center, &self.card, &mut self.inspector);
             let (inspector_mode_cell, active_screen_cell) = (Cell::new(self.inspector_mode), Cell::new(self.active_screen));

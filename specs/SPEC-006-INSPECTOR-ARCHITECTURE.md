@@ -38,7 +38,7 @@ Professional desktop software requires adaptable property inspection matching wo
   - Section Spacing: $8.0\,\text{pt}$ padding, $1.0\,\text{pt}$ hairline dividers, $11.0\,\text{pt}$ bold/secondary section headers.
 
 ### 2.2 Mode 1: Compact Pro HUD Palette (`NSPanelStyleMaskHUDWindow`)
-- **Role:** Floating semi-translucent dark property palette optimized for pro creative software (Glyphs, Final Cut Pro, Motion, Logic Pro).
+- **Role:** Floating semi-translucent dark property palette optimized for dense desktop creative and CAD software.
 - **Geometry & Alignment Constraints:**
   - Panel Dimensions: Standard compact width $= 178.0\,\text{pt}$, height $= 63.0\,\text{pt}$ (two-row dense layout).
   - Control Height: Compact input cell height $= 18.0\,\text{pt}$.
@@ -49,7 +49,7 @@ Professional desktop software requires adaptable property inspection matching wo
 - **Mathematical Zero-Clipping Guarantee:** Total required height $22.0\,\text{pt}$ (header) $+ 37.0\,\text{pt}$ (2 rows of 18pt $+ 1\text{pt}$ gap) $= 59.0\,\text{pt} \le 63.0\,\text{pt}$ panel budget $\implies$ $4.0\,\text{pt}$ surplus margin. Clipping is provably impossible.
 
 ### 2.3 Mode 2: Expanded Pro Inspector (`NSWindow` Multi-Deck Inspector)
-- **Role:** Comprehensive multi-deck property inspector for deep parameter inspection (Xcode Inspector, Glyphs 4 Multi-Master Palette).
+- **Role:** Comprehensive multi-deck property inspector for deep parameter inspection in multi-axis and vector editing tools.
 - **Geometry & Alignment Constraints:**
   - Panel Width: Expanded width $= 380.0\,\text{pt}$ (providing sufficient horizontal budget for multi-column matrix parameters and vector curves).
   - Tabbed Deck Navigation: Top-level segmented control tabs (`Attributes`, `Metrics`, `Advanced Matrix`) with animated `CASpring` pill transitions.

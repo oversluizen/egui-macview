@@ -6,8 +6,7 @@
 use crate::layout::subpixel_snap_rect;
 use crate::theme::MacTheme;
 use egui::{
-    color_picker::{color_picker_color32, Alpha},
-    Area, Color32, CornerRadius, Key, Modifiers, Order, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2, Widget,
+    epaint::Hsva, Area, Color32, CornerRadius, Key, Modifiers, Order, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2, Widget,
 };
 
 /// Authentic macOS AppKit Color Well (`NSColorWell` equivalent).
@@ -116,6 +115,11 @@ impl<'a> MacColorWell<'a> {
     pub fn enabled(mut self, enabled: bool) -> Self {
         self.enabled = enabled;
         self
+    }
+
+    /// Unlocks saturation and value on an achromatic (`s < 0.08` or `v < 0.15`) [`Hsva`] color (`REQ-015-05`).
+    pub fn unlock_achromatic_hsva(hsva: Hsva) -> Hsva {
+        MacTheme::unlock_achromatic_hsva(hsva)
     }
 
     /// Renders the color well inside the specified UI container.
@@ -271,64 +275,149 @@ impl<'a> Widget for MacColorWell<'a> {
             };
             let popup_pos = Pos2::new(popup_x, popup_y);
             let area_id = response.id.with("mac_color_picker_area");
-            let mut swatch_clicked = false;
-            let area_resp = Area::new(area_id).order(Order::Foreground).sense(Sense::click()).fade_in(false).fixed_pos(popup_pos).show(
-                ui.ctx(),
-                |picker_ui| {
-                    let frame = egui::Frame::window(picker_ui.style())
-                        .fill(theme.window_background())
-                        .stroke(Stroke::new(metrics.border_width.points(), theme.separator()))
-                        .corner_radius(CornerRadius::same(metrics.popup_corner_radius.points() as u8));
+            let hsva_id = response.id.with("mac_color_well_hsva");
+            let mut hsva = ui.data(|d| d.get_temp::<Hsva>(hsva_id)).filter(|_| !just_opened).unwrap_or_else(|| Hsva::from(*self.color));
+            let mut picker_interacted = false;
+            let area_resp =
+                Area::new(area_id).order(Order::Foreground).sense(Sense::click_and_drag()).fade_in(false).fixed_pos(popup_pos).show(
+                    ui.ctx(),
+                    |picker_ui| {
+                        let frame = egui::Frame::window(picker_ui.style())
+                            .fill(theme.window_background())
+                            .stroke(Stroke::new(metrics.border_width.points(), theme.separator()))
+                            .corner_radius(CornerRadius::same(metrics.popup_corner_radius.points() as u8));
 
-                    frame.show(picker_ui, |inner_ui| {
-                        let swatches = [
-                            theme.control_accent(),
-                            theme.system_green(),
-                            theme.system_yellow(),
-                            theme.system_orange(),
-                            theme.system_red(),
-                            theme.traffic_light_close().0,
-                            theme.traffic_light_minimize().0,
-                            theme.traffic_light_zoom().0,
-                            theme.on_accent_text(),
-                            theme.label(),
-                            theme.secondary_label(),
-                            theme.window_background(),
-                        ];
-                        inner_ui.horizontal_wrapped(|sw_ui| {
+                        frame.show(picker_ui, |inner_ui| {
+                            let swatches = [
+                                theme.control_accent(),
+                                theme.system_green(),
+                                theme.system_yellow(),
+                                theme.system_orange(),
+                                theme.system_red(),
+                                theme.traffic_light_close().0,
+                                theme.traffic_light_minimize().0,
+                                theme.traffic_light_zoom().0,
+                                theme.on_accent_text(),
+                                theme.label(),
+                                theme.secondary_label(),
+                                theme.window_background(),
+                            ];
                             let sw_sz = metrics.popup_corner_radius.points() + metrics.popup_gap.points() + metrics.swatch_inset.points();
-                            for sw_col in swatches {
-                                let (sr, sresp) = sw_ui.allocate_exact_size(Vec2::splat(sw_sz), Sense::click());
-                                sw_ui.painter().rect(
-                                    sr,
-                                    CornerRadius::same(metrics.swatch_radius.points() as u8),
-                                    sw_col,
-                                    Stroke::new(metrics.border_width.points(), theme.separator()),
-                                    StrokeKind::Inside,
-                                );
-                                if sresp.clicked()
-                                    || ((primary_clicked || primary_pressed || primary_released)
-                                        && pointer_pos.is_some_and(|p| sr.contains(p)))
-                                {
-                                    *self.color = sw_col;
-                                    response.mark_changed();
-                                    swatch_clicked = true;
+                            inner_ui.horizontal_wrapped(|sw_ui| {
+                                for sw_col in swatches {
+                                    let (sr, sresp) = sw_ui.allocate_exact_size(Vec2::splat(sw_sz), Sense::click());
+                                    sw_ui.painter().rect(
+                                        sr,
+                                        CornerRadius::same(metrics.swatch_radius.points() as u8),
+                                        sw_col,
+                                        Stroke::new(metrics.border_width.points(), theme.separator()),
+                                        StrokeKind::Inside,
+                                    );
+                                    if sresp.clicked()
+                                        || ((primary_clicked || primary_pressed || primary_released)
+                                            && pointer_pos.is_some_and(|p| sr.contains(p)))
+                                    {
+                                        *self.color = sw_col;
+                                        hsva = Hsva::from(sw_col);
+                                        response.mark_changed();
+                                        picker_interacted = true;
+                                    }
+                                }
+                            });
+
+                            // 2D Saturation (X) x Value (Y) Color Square (always vivid at top-right)
+                            let sq_w = picker_dim;
+                            let sq_h = picker_dim * 0.5;
+                            let (sq_rect, sq_resp) = inner_ui.allocate_exact_size(Vec2::new(sq_w, sq_h), Sense::click_and_drag());
+                            let grid_n = 16usize;
+                            let cell_w = sq_rect.width() / (grid_n as f32);
+                            let cell_h = sq_rect.height() / (grid_n as f32);
+                            for gy in 0..grid_n {
+                                let v = 1.0 - (gy as f32 + 0.5) / (grid_n as f32);
+                                for gx in 0..grid_n {
+                                    let s = (gx as f32 + 0.5) / (grid_n as f32);
+                                    let cell_r = Rect::from_min_size(
+                                        Pos2::new(sq_rect.min.x + (gx as f32) * cell_w, sq_rect.min.y + (gy as f32) * cell_h),
+                                        Vec2::new(cell_w + 0.5, cell_h + 0.5),
+                                    );
+                                    inner_ui.painter().rect_filled(cell_r, CornerRadius::ZERO, MacTheme::sv_square_color(hsva.h, s, v));
                                 }
                             }
+                            inner_ui.painter().rect_stroke(
+                                sq_rect,
+                                CornerRadius::same(metrics.swatch_radius.points() as u8),
+                                Stroke::new(metrics.border_width.points(), theme.separator()),
+                                StrokeKind::Inside,
+                            );
+                            if sq_resp.clicked()
+                                || sq_resp.dragged()
+                                || ((primary_pressed || primary_clicked || sq_resp.is_pointer_button_down_on())
+                                    && pointer_pos.is_some_and(|p| sq_rect.contains(p)))
+                            {
+                                if let Some(p) = pointer_pos {
+                                    hsva.s = ((p.x - sq_rect.min.x) / sq_rect.width().max(1.0)).clamp(0.0, 1.0);
+                                    hsva.v = (1.0 - (p.y - sq_rect.min.y) / sq_rect.height().max(1.0)).clamp(0.0, 1.0);
+                                    *self.color = Color32::from(hsva);
+                                    response.mark_changed();
+                                    picker_interacted = true;
+                                }
+                            }
+                            let cur_pt = Pos2::new(
+                                sq_rect.min.x + hsva.s.clamp(0.0, 1.0) * sq_rect.width(),
+                                sq_rect.min.y + (1.0 - hsva.v.clamp(0.0, 1.0)) * sq_rect.height(),
+                            );
+                            inner_ui.painter().circle(
+                                cur_pt,
+                                metrics.swatch_inset.points() + 1.0,
+                                *self.color,
+                                Stroke::new(metrics.border_width.points() * 2.0, theme.on_accent_text()),
+                            );
+
+                            // 1D Rainbow Hue Bar (auto-unlocks saturation on grey/black colors)
+                            let (hue_rect, hue_resp) = inner_ui.allocate_exact_size(Vec2::new(sq_w, sw_sz), Sense::click_and_drag());
+                            let hue_steps = 24usize;
+                            let seg_w = hue_rect.width() / (hue_steps as f32);
+                            for hi in 0..hue_steps {
+                                let h_t = (hi as f32 + 0.5) / (hue_steps as f32);
+                                let seg_r = Rect::from_min_size(
+                                    Pos2::new(hue_rect.min.x + (hi as f32) * seg_w, hue_rect.min.y),
+                                    Vec2::new(seg_w + 0.5, hue_rect.height()),
+                                );
+                                inner_ui.painter().rect_filled(seg_r, CornerRadius::ZERO, MacTheme::hue_bar_color(h_t));
+                            }
+                            inner_ui.painter().rect_stroke(
+                                hue_rect,
+                                CornerRadius::same(metrics.swatch_radius.points() as u8),
+                                Stroke::new(metrics.border_width.points(), theme.separator()),
+                                StrokeKind::Inside,
+                            );
+                            if hue_resp.clicked()
+                                || hue_resp.dragged()
+                                || ((primary_pressed || primary_clicked || hue_resp.is_pointer_button_down_on())
+                                    && pointer_pos.is_some_and(|p| hue_rect.contains(p)))
+                            {
+                                if let Some(p) = pointer_pos {
+                                    hsva.h = ((p.x - hue_rect.min.x) / hue_rect.width().max(1.0)).clamp(0.0, 1.0);
+                                    hsva = Self::unlock_achromatic_hsva(hsva);
+                                    *self.color = Color32::from(hsva);
+                                    response.mark_changed();
+                                    picker_interacted = true;
+                                }
+                            }
+                            let hue_x = hue_rect.min.x + hsva.h.clamp(0.0, 1.0) * hue_rect.width();
+                            inner_ui.painter().line_segment(
+                                [Pos2::new(hue_x, hue_rect.min.y), Pos2::new(hue_x, hue_rect.max.y)],
+                                Stroke::new(metrics.border_width.points() * 2.0, theme.on_accent_text()),
+                            );
                         });
-                        let alpha_mode = if self.show_alpha { Alpha::OnlyBlend } else { Alpha::Opaque };
-                        if color_picker_color32(inner_ui, self.color, alpha_mode) {
-                            response.mark_changed();
-                        }
-                    });
-                },
-            );
+                    },
+                );
+            ui.data_mut(|d| d.insert_temp(hsva_id, hsva));
 
             if escape_pressed {
                 ui.data_mut(|d| d.insert_temp(is_open_id, false));
-            } else if !just_opened && !well_clicked && !swatch_clicked && (primary_clicked || primary_pressed) {
-                let popup_rect =
-                    area_resp.response.rect.union(Rect::from_min_size(popup_pos, picker_size)).expand(metrics.popup_gap.points());
+            } else if !just_opened && !well_clicked && !picker_interacted && (primary_clicked || primary_pressed) {
+                let popup_rect = area_resp.response.rect.expand(metrics.popup_gap.points());
                 let inside_popup = pointer_pos.is_some_and(|p| popup_rect.contains(p));
                 if !inside_popup {
                     ui.data_mut(|d| d.insert_temp(is_open_id, false));

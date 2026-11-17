@@ -50,15 +50,15 @@ pub use collection_view::{MacCollectionView, MacCollectionViewFlowLayout};
 pub use color_well::MacColorWell;
 pub use combo_box::MacComboBox;
 pub use context_thumb_dial::{
-    MacContextThumbDial, MacContextThumbResponse, MacSFSymbol, MacTapticEvent, MacThumbArcPlacement, MacThumbContextPreset,
-    MacThumbDialLayer, MacThumbDockZone, MacThumbIntent, MacThumbIntentMask, MacThumbSector, MacThumbSectorIcon, MacThumbSectorSet,
-    MacThumbSectorSpec,
+    MacContextThumbDial, MacContextThumbDialState, MacContextThumbResponse, MacSFSymbol, MacTapticEvent, MacThumbArcPlacement,
+    MacThumbContextPreset, MacThumbDialLayer, MacThumbDockZone, MacThumbIntent, MacThumbIntentMask, MacThumbSector, MacThumbSectorIcon,
+    MacThumbSectorSet, MacThumbSectorSpec,
 };
 pub use date_picker::{MacDate, MacDatePicker, MacDatePickerElementFlags, MacDatePickerStyle};
 pub use disclosure_group::{MacDisclosureButton, MacDisclosureGroup, MacDisclosureResponse};
 pub use edge_thumbwheel::{MacEdgeThumbwheel, MacEdgeThumbwheelResponse};
 pub use free_joystick_bowl::{MacFreeJoystickBowl, MacFreeJoystickResponse};
-pub use help_button::{MacHelpButton, MacInlineActionButton};
+pub use help_button::{InlineActionKind, MacHelpButton, MacInlineActionButton};
 pub use image_view::{MacImageFrameStyle, MacImageScaling, MacImageView};
 pub use input_cell::{MacControlSize, MacInputCell};
 pub use label::{MacFontWeight, MacLabel, MacLabelColor};

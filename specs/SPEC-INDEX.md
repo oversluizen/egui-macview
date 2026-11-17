@@ -63,6 +63,7 @@ The `egui-macview` specification suite provides the formal normative requirement
 | [**SPEC-012**](SPEC-012-ADVANCED-MEDIA-SCHEDULING-AND-GRID-CONTROLS.md) | Advanced Media, Scheduling, and Grid Controls | `0.6.10` | Accepted / Normative | `tests/spec012_advanced_controls_tests.rs`, `tests/spec012_appkit_and_battery_parity_tests.rs`, `tests/appkit_v065_nib_parity_tests.rs`, `tests/appkit_v069_pro_controls_tests.rs`, `tests/appkit_v0610_nib_controls_tests.rs` |
 | [**SPEC-013**](SPEC-013-DECLARATIVE-SCENE-IR-AND-NIB-XIB-COMPILER.md) | Three-Layer UI Compiler Architecture (`MacSceneIR`, `.nib`/`.xib` Importers & Dual-Mode Layout Solver) | `0.7.0` | Accepted / Normative | `tests/spec013_scene_ir_and_nib_compiler_tests.rs` |
 | [**SPEC-014**](SPEC-014-CONTEXT-THUMB-DIAL-AND-PIE-CLOVER-HUD.md) | Context-Adaptive Bimanual Thumb Dial & Radial Clover / Pie HUD (`MacContextThumbDial`) | `0.8.0` | Accepted / Normative | `tests/spec014_context_thumb_dial_tests.rs` |
+| [**SPEC-015**](SPEC-015-FONT-INJECTION-AND-V081-STABILITY.md) | External Font Injection API, Pro-Inspector Micro-Styling & v0.8.1 Stability Suite | `0.8.1` | Accepted / Normative | `tests/spec015_dual_visual_and_pro_inspector_tests.rs` |
 
 ---
 

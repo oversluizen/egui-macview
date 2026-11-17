@@ -178,7 +178,7 @@ pub fn setup_symbols_font(fonts: &mut egui::FontDefinitions) {
 
     let mono_family = fonts.families.entry(egui::FontFamily::Monospace).or_default();
     if !mono_family.iter().any(|f| f == INTER_REGULAR_FONT_NAME) {
-        mono_family.insert(0, INTER_REGULAR_FONT_NAME.to_owned());
+        mono_family.push(INTER_REGULAR_FONT_NAME.to_owned());
     }
     if !mono_family.iter().any(|f| f == CUPERTINO_ICONS_FONT_NAME) {
         mono_family.push(CUPERTINO_ICONS_FONT_NAME.to_owned());
@@ -193,11 +193,11 @@ pub fn setup_symbols_font(fonts: &mut egui::FontDefinitions) {
     }
 
     let ubuntu_family = fonts.families.entry(egui::FontFamily::Name("Ubuntu-Light".into())).or_default();
-    if !ubuntu_family.iter().any(|f| f == INTER_REGULAR_FONT_NAME) {
-        ubuntu_family.insert(0, INTER_REGULAR_FONT_NAME.to_owned());
-    }
     if !ubuntu_family.iter().any(|f| f == "Ubuntu-Light") {
-        ubuntu_family.push("Ubuntu-Light".to_owned());
+        ubuntu_family.insert(0, "Ubuntu-Light".to_owned());
+    }
+    if !ubuntu_family.iter().any(|f| f == INTER_REGULAR_FONT_NAME) {
+        ubuntu_family.push(INTER_REGULAR_FONT_NAME.to_owned());
     }
     if !ubuntu_family.iter().any(|f| f == CUPERTINO_ICONS_FONT_NAME) {
         ubuntu_family.push(CUPERTINO_ICONS_FONT_NAME.to_owned());
@@ -212,4 +212,17 @@ pub fn setup_symbols_font(fonts: &mut egui::FontDefinitions) {
 /// Convenience alias for [`setup_symbols_font`] registering both open-source `Inter` and `CupertinoIcons`.
 pub fn setup_macview_fonts(fonts: &mut egui::FontDefinitions) {
     setup_symbols_font(fonts);
+}
+
+/// Installs host-supplied Regular and optional Semibold TrueType/OpenType font bytes into `fonts`
+/// in place of the default open-source `Inter` font while preserving `CupertinoIcons` PUA symbols
+/// and `Hack` Monospace integrity (`SPEC-015` `REQ-015-01`).
+///
+/// This enables external applications to inject custom licensed fonts at startup without
+/// `egui-macview` bundling or referencing proprietary third-party font assets.
+pub fn setup_custom_macview_fonts(fonts: &mut egui::FontDefinitions, regular_ttf: Vec<u8>, semibold_ttf: Option<Vec<u8>>) {
+    setup_symbols_font(fonts);
+    fonts.font_data.insert(INTER_REGULAR_FONT_NAME.to_owned(), std::sync::Arc::new(egui::FontData::from_owned(regular_ttf.clone())));
+    let sb_bytes = semibold_ttf.unwrap_or(regular_ttf);
+    fonts.font_data.insert(INTER_SEMIBOLD_FONT_NAME.to_owned(), std::sync::Arc::new(egui::FontData::from_owned(sb_bytes)));
 }

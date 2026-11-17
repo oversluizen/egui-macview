@@ -223,7 +223,7 @@ impl GalleryApp {
                         },
                     );
 
-                    MacSegmentedControl::new(&["Def", "Hud", "Pro"], next_mode as usize).theme(theme).height(24.0).show(
+                    MacSegmentedControl::new(&["Default", "Compact", "Pro"], next_mode as usize).theme(theme).height(24.0).show(
                         &mut right_ui,
                         |idx| {
                             next_mode = [InspectorMode::DefaultNib, InspectorMode::CompactHud, InspectorMode::ExpandedPro][idx.min(2)];

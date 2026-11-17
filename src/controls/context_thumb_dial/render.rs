@@ -1,14 +1,14 @@
 //! AppKit "Liquid Glass" 2-Layer Renderer & State Machine for [`MacContextThumbDial`] (`SPEC-014`).
 
-use super::icons::{paint_annular_wedge, paint_sector_icon, MacTapticEvent, WedgeGeometry};
+use super::icons::MacTapticEvent;
+use super::paint::{paint_dial_layers, DialPaintState};
 use super::{
     MacContextThumbDial, MacContextThumbResponse, MacThumbArcPlacement, MacThumbDialLayer, MacThumbDockZone, MacThumbIntent,
     MacThumbIntentMask, MacThumbSector, ThumbDialPressMemory,
 };
-use crate::controls::free_joystick_bowl::{paint_3d_recessed_bowl, MarblePaintSpec};
-use crate::theme::{MacBackgroundStyle, MacTheme};
+use crate::theme::MacTheme;
 use crate::tokens::ThumbDialMetrics;
-use egui::{Align2, Color32, FontId, Painter, Pos2, Rect, Sense, Stroke, Ui, Vec2};
+use egui::{Pos2, Rect, Sense, Ui, Vec2};
 
 #[inline]
 pub(crate) fn deg_to_rad(deg: f32, m: &ThumbDialMetrics) -> f32 {
@@ -63,13 +63,12 @@ fn hit_test_sector(angle_deg: f32, m: &ThumbDialMetrics) -> MacThumbSector {
     best_sector
 }
 
-
-
 pub(crate) fn resolve_undo_redo_arcs(placement: MacThumbArcPlacement, m: &ThumbDialMetrics) -> ((f32, f32), (f32, f32)) {
     match placement {
-        MacThumbArcPlacement::TopCrown => {
-            ((m.top_undo_arc_start_deg.points(), m.top_undo_arc_end_deg.points()), (m.top_redo_arc_start_deg.points(), m.top_redo_arc_end_deg.points()))
-        }
+        MacThumbArcPlacement::TopCrown => (
+            (m.top_undo_arc_start_deg.points(), m.top_undo_arc_end_deg.points()),
+            (m.top_redo_arc_start_deg.points(), m.top_redo_arc_end_deg.points()),
+        ),
         MacThumbArcPlacement::BottomSkirt => {
             ((m.undo_arc_start_deg.points(), m.undo_arc_end_deg.points()), (m.redo_arc_start_deg.points(), m.redo_arc_end_deg.points()))
         }
@@ -240,16 +239,20 @@ pub(super) fn show_dial(mut dial: MacContextThumbDial<'_>, ui: &mut Ui) -> MacCo
             redo_clicked = true;
             taptic_event = Some(MacTapticEvent::HistoryStep { is_redo: true });
         } else if is_quick_tap && mem.started_in_hub && mem.active_sector.is_none() && mem.joystick_offset == Vec2::ZERO {
-            if !dial.latched_mask.is_empty() {
+            if let Some(bound_layer) = dial.layer_binding.as_deref_mut() {
+                mem.latched_sector = None;
+                *dial.latched_mask = MacThumbIntentMask::NONE;
+                let next_layer = cur_layer.toggle();
+                mem.stored_layer = next_layer;
+                *bound_layer = next_layer;
+                taptic_event = Some(MacTapticEvent::LayerSwitched(next_layer));
+            } else if !dial.latched_mask.is_empty() {
                 mem.latched_sector = None;
                 *dial.latched_mask = MacThumbIntentMask::NONE;
                 taptic_event = Some(MacTapticEvent::SectorUnlatched);
             } else {
                 let next_layer = cur_layer.toggle();
                 mem.stored_layer = next_layer;
-                if let Some(bound_layer) = dial.layer_binding.as_deref_mut() {
-                    *bound_layer = next_layer;
-                }
                 taptic_event = Some(MacTapticEvent::LayerSwitched(next_layer));
             }
         } else if is_quick_tap && cur_layer == MacThumbDialLayer::CompassModifiers && !mem.started_in_hub && !mem.started_in_rotary {
@@ -265,15 +268,71 @@ pub(super) fn show_dial(mut dial: MacContextThumbDial<'_>, ui: &mut Ui) -> MacCo
                 }
             }
         }
-        let (saved_layer, saved_latch) = (mem.stored_layer, mem.latched_sector);
-        mem = ThumbDialPressMemory { stored_layer: saved_layer, latched_sector: saved_latch, ..Default::default() };
+        let (saved_layer, saved_latch, saved_txt, saved_t0, saved_key) =
+            (mem.stored_layer, mem.latched_sector, mem.tooltip_text.clone(), mem.tooltip_triggered_at, mem.last_tooltip_key);
+        mem = ThumbDialPressMemory {
+            stored_layer: saved_layer,
+            latched_sector: saved_latch,
+            tooltip_text: saved_txt,
+            tooltip_triggered_at: saved_t0,
+            last_tooltip_key: saved_key,
+            ..Default::default()
+        };
+    } else if response.clicked() {
+        let cur_layer = mem.stored_layer;
+        if hovered_undo && dial.can_undo {
+            undo_clicked = true;
+            taptic_event = Some(MacTapticEvent::HistoryStep { is_redo: false });
+        } else if hovered_redo && dial.can_redo {
+            redo_clicked = true;
+            taptic_event = Some(MacTapticEvent::HistoryStep { is_redo: true });
+        } else if let Some(sec) = hovered_sector {
+            if mem.latched_sector == Some(sec) {
+                mem.latched_sector = None;
+                *dial.latched_mask = MacThumbIntentMask::NONE;
+                taptic_event = Some(MacTapticEvent::SectorUnlatched);
+            } else {
+                mem.latched_sector = Some(sec);
+                *dial.latched_mask = sec.intent_mask();
+                taptic_event = Some(MacTapticEvent::SectorLatched(sec));
+            }
+        } else if pointer_pos.is_some_and(|p| (p - hub_center).length() <= r_hub) {
+            mem.latched_sector = None;
+            *dial.latched_mask = MacThumbIntentMask::NONE;
+            let next_layer = cur_layer.toggle();
+            mem.stored_layer = next_layer;
+            if let Some(bound_layer) = dial.layer_binding.as_deref_mut() {
+                *bound_layer = next_layer;
+            }
+            taptic_event = Some(MacTapticEvent::LayerSwitched(next_layer));
+        }
     }
 
-    let active_layer = mem.stored_layer;
-    let latched_sector = mem.latched_sector;
-    ui.ctx().data_mut(|d| d.insert_temp(mem_id, mem));
-
+    let (active_layer, latched_sector) = (mem.stored_layer, mem.latched_sector);
     let held_sector = if is_down && active_layer == MacThumbDialLayer::CompassModifiers { mem.active_sector } else { None };
+    let (cur_key, cur_tip): (u8, &str) = if let Some(sec) = held_sector.or(hovered_sector) {
+        ((sec as u8) + 1, dial.sectors.sector(sec).label)
+    } else if hovered_undo {
+        (10, "Undo")
+    } else if hovered_redo {
+        (11, "Redo")
+    } else if hovered_rotary {
+        (12, "Rotary Ring")
+    } else {
+        (0, "")
+    };
+    if cur_key != 0 && cur_key != mem.last_tooltip_key {
+        mem.last_tooltip_key = cur_key;
+        mem.trigger_tooltip(cur_tip, now);
+    } else if cur_key == 0 {
+        mem.last_tooltip_key = 0;
+    }
+    let (tooltip_alpha, tooltip_str) = (mem.tooltip_opacity_at(now), mem.active_tooltip_text(now).map(str::to_owned));
+    if tooltip_alpha > 0.0 {
+        ui.ctx().request_repaint();
+    }
+    ui.ctx().data_mut(|d| d.insert_temp(mem_id, mem.clone()));
+
     let momentary_mask = held_sector.map(MacThumbSector::intent_mask).unwrap_or(MacThumbIntentMask::NONE);
     let effective_mask = dial.latched_mask.union(momentary_mask);
     let nudge_delta = if joystick_nudge != Vec2::ZERO {
@@ -290,19 +349,26 @@ pub(super) fn show_dial(mut dial: MacContextThumbDial<'_>, ui: &mut Ui) -> MacCo
 
     let accent_col = theme.resolve_glass_accent_on(dial.glass_accent, theme.popover_background());
     let painter = ui.painter_at(rect.intersect(ui.clip_rect()));
-    let state = DialPaintState {
-        hub_center,
-        active_layer,
-        latched_sector,
-        held_sector,
-        hovered_sector,
-        hovered_rotary,
-        hovered_undo,
-        hovered_redo,
-        joystick_offset: mem.joystick_offset,
-        accent_col,
-    };
-    paint_dial_layers(&painter, theme, m, &dial, state);
+    paint_dial_layers(
+        &painter,
+        theme,
+        m,
+        &dial,
+        DialPaintState {
+            hub_center,
+            active_layer,
+            latched_sector,
+            held_sector,
+            hovered_sector,
+            hovered_rotary,
+            hovered_undo,
+            hovered_redo,
+            joystick_offset: mem.joystick_offset,
+            accent_col,
+            tooltip_alpha,
+            tooltip_str,
+        },
+    );
 
     MacContextThumbResponse {
         response,
@@ -322,161 +388,5 @@ pub(super) fn show_dial(mut dial: MacContextThumbDial<'_>, ui: &mut Ui) -> MacCo
         effective_glass_accent: accent_col,
         taptic_event,
         sector_centers,
-    }
-}
-
-struct DialPaintState {
-    hub_center: Pos2,
-    active_layer: MacThumbDialLayer,
-    latched_sector: Option<MacThumbSector>,
-    held_sector: Option<MacThumbSector>,
-    hovered_sector: Option<MacThumbSector>,
-    hovered_rotary: bool,
-    hovered_undo: bool,
-    hovered_redo: bool,
-    joystick_offset: Vec2,
-    accent_col: Color32,
-}
-
-fn paint_dial_layers(painter: &Painter, theme: &MacTheme, m: &ThumbDialMetrics, dial: &MacContextThumbDial<'_>, st: DialPaintState) {
-    let s = dial.scale;
-    let hub_center = st.hub_center;
-    let r_hub = m.hub_radius.points() * s;
-    let gap = m.ring_gap.points() * s;
-    let r_clover_in = r_hub + gap;
-    let r_clover_out = m.clover_outer_radius.points() * s;
-    let r_outer = m.outer_radius.points() * s;
-    let r_skirt_in = m.skirt_inner_radius.points() * s;
-    let r_skirt_out = m.skirt_outer_radius.points() * s;
-    let r_wheel_in = r_clover_out + gap;
-    let bw = m.border_stroke_width.points();
-
-    let border_stroke = Stroke::new(bw, theme.separator());
-    let active_stroke = Stroke::new(m.active_stroke_width.points(), st.accent_col);
-    let specular_col = theme.knob_fill().gamma_multiply(m.glass_specular_alpha.points());
-    let glass_bg = theme.popover_background().gamma_multiply(m.glass_fill_alpha.points());
-
-    // 5-Layer 3D Liquid Glass Base Puck (deep drop shadow + recessed rim + frosted disc + top Fresnel ring)
-    painter.circle_filled(hub_center + Vec2::new(0.0, gap * 2.0), r_outer + bw, theme.drop_shadow());
-    painter.circle_filled(hub_center + Vec2::new(0.0, gap), r_outer, theme.drop_shadow());
-    painter.circle(hub_center, r_outer, glass_bg, border_stroke);
-    painter.circle_stroke(hub_center, r_outer - bw, Stroke::new(m.active_stroke_width.points(), specular_col));
-
-    // Outer tactile rim ring
-    let wheel_bg = if st.hovered_rotary { theme.control() } else { theme.box_background().gamma_multiply(m.glass_fill_alpha.points()) };
-    paint_annular_wedge(
-        painter,
-        WedgeGeometry { center: hub_center, r_in: r_wheel_in, r_out: r_outer, start_deg: 0.0, end_deg: m.full_circle_deg.points() },
-        wheel_bg,
-        border_stroke,
-        m,
-    );
-
-    if st.active_layer == MacThumbDialLayer::FreeJoystickBowl {
-        let marble_center = hub_center + st.joystick_offset;
-        let puck_r = m.joystick_puck_radius.points() * s;
-        paint_3d_recessed_bowl(
-            painter,
-            MarblePaintSpec { hub_center, marble_center, puck_r, scale: s, accent_col: st.accent_col },
-            r_clover_out,
-            theme,
-            m,
-        );
-    } else {
-        // Layer 1: 6 Exclusive 3D Liquid Glass Cushions with Apple SF Symbol Vector Icons
-        let half_gap_deg = m.sector_gap_deg.points() * 0.5;
-        let r_clover_mid = (r_clover_in + r_clover_out) * 0.5;
-        painter.circle_filled(hub_center, r_clover_out + bw, theme.drop_shadow());
-        for sector in MacThumbSector::ALL {
-            let is_latched = st.latched_sector == Some(sector);
-            let is_held = st.held_sector == Some(sector);
-            let is_active = is_latched || is_held;
-            let is_hovered = st.hovered_sector == Some(sector);
-
-            let c_deg = sector.center_angle_deg(m);
-            let half_sweep = sector.sweep_deg(m) * 0.5 - half_gap_deg;
-            let fill = if is_held {
-                st.accent_col
-            } else if is_latched {
-                st.accent_col.gamma_multiply(m.active_fill_opacity.points())
-            } else if is_hovered {
-                st.accent_col.gamma_multiply(m.hover_fill_opacity.points())
-            } else if sector.is_diagonal_combo() {
-                theme.box_background().gamma_multiply(m.glass_fill_alpha.points())
-            } else {
-                theme.control_background().gamma_multiply(m.glass_fill_alpha.points())
-            };
-            let stroke = if is_active || is_hovered { active_stroke } else { Stroke::new(bw, specular_col) };
-            paint_annular_wedge(
-                painter,
-                WedgeGeometry {
-                    center: hub_center,
-                    r_in: r_clover_in,
-                    r_out: r_clover_out,
-                    start_deg: c_deg - half_sweep,
-                    end_deg: c_deg + half_sweep,
-                },
-                fill,
-                stroke,
-                m,
-            );
-
-            let spec = dial.sectors.sector(sector);
-            let center_pt = polar_pos(hub_center, r_clover_mid, c_deg, m);
-            let held_style = MacBackgroundStyle::from_color(st.accent_col);
-            let fg_col = if is_held { held_style.primary_text_color(theme) } else { theme.label() };
-            let icon_sz = m.label_font_size.points() * s;
-            let icon_rect = Rect::from_center_size(center_pt - Vec2::new(0.0, m.label_vertical_offset.points() * s), Vec2::splat(icon_sz));
-            paint_sector_icon(painter, spec.icon, icon_rect, fg_col, m);
-            painter.text(
-                center_pt + Vec2::new(0.0, m.hint_vertical_offset.points() * s),
-                Align2::CENTER_CENTER,
-                spec.label,
-                FontId::proportional(m.hint_font_size.points() * s),
-                fg_col,
-            );
-
-            if is_latched {
-                let dot_pos = polar_pos(hub_center, r_hub + m.latch_dot_inset.points() * s, c_deg, m);
-                let dot_r = m.latch_dot_radius.points() * s;
-                painter.circle_filled(dot_pos, dot_r * 2.0, theme.system_orange().gamma_multiply(m.active_fill_opacity.points()));
-                painter.circle_filled(dot_pos, dot_r, theme.system_orange());
-            }
-        }
-
-        // 3D Center Thumb Rest & Layer-Toggle Hub
-        let has_active = st.latched_sector.is_some() || st.held_sector.is_some();
-        let hub_fill = if has_active { theme.control() } else { theme.control_background().gamma_multiply(m.glass_fill_alpha.points()) };
-        painter.circle_filled(hub_center + Vec2::new(0.0, bw), r_hub, theme.drop_shadow());
-        painter.circle(hub_center, r_hub, hub_fill, if has_active { active_stroke } else { Stroke::new(bw, specular_col) });
-        let ch_arm = m.latch_dot_inset.points() * s;
-        painter.circle_stroke(hub_center, ch_arm * 0.5, border_stroke);
-        painter.line_segment([hub_center - Vec2::new(ch_arm, 0.0), hub_center + Vec2::new(ch_arm, 0.0)], border_stroke);
-        painter.line_segment([hub_center - Vec2::new(0.0, ch_arm), hub_center + Vec2::new(0.0, ch_arm)], border_stroke);
-    }
-
-    // Curved 3D Liquid Glass Undo / Redo Crescents
-    let ((undo_start, undo_end), (redo_start, redo_end)) = resolve_undo_redo_arcs(dial.arc_placement, m);
-    let r_skirt_mid = (r_skirt_in + r_skirt_out) * 0.5;
-    for (start_d, end_d, lbl, enabled, hovered) in [
-        (undo_start, undo_end, "↶ Undo", dial.can_undo, st.hovered_undo),
-        (redo_start, redo_end, "↷ Redo", dial.can_redo, st.hovered_redo),
-    ] {
-        let fill = if hovered && enabled {
-            st.accent_col.gamma_multiply(m.active_fill_opacity.points())
-        } else {
-            theme.control_background().gamma_multiply(m.glass_fill_alpha.points())
-        };
-        let stroke = if hovered && enabled { active_stroke } else { Stroke::new(bw, specular_col) };
-        paint_annular_wedge(
-            painter,
-            WedgeGeometry { center: hub_center, r_in: r_skirt_in, r_out: r_skirt_out, start_deg: start_d, end_deg: end_d },
-            fill,
-            stroke,
-            m,
-        );
-        let mid_pt = polar_pos(hub_center, r_skirt_mid, (start_d + end_d) * 0.5, m);
-        let fg = if enabled { theme.label() } else { theme.tertiary_label() };
-        painter.text(mid_pt, Align2::CENTER_CENTER, lbl, FontId::proportional(m.label_font_size.points() * s), fg);
     }
 }

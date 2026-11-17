@@ -144,8 +144,23 @@ impl MobileWebSession {
                     }
                 }
                 _ if line.starts_with("T ") => {
-                    if let Some(cur) = event_passes.last_mut().filter(|_| line.len() > 2) {
-                        cur.push(Event::Text(line[2..].to_string()));
+                    let payload = &line[2..];
+                    if let Some(rest) = payload.strip_prefix('\u{1f}') {
+                        let (name, kb) = rest.split_once('|').unwrap_or((rest, "1024"));
+                        let ext = std::path::Path::new(name).extension().and_then(|e| e.to_str()).unwrap_or("FILE").to_uppercase();
+                        self.app.center.finder_custom_entries.push(super::FinderCustomEntry {
+                            name: name.to_string(),
+                            path: std::path::PathBuf::from(format!("/Users/studio/Local_Disk/{name}")),
+                            is_dir: false,
+                            size_mb: (kb.parse::<u32>().unwrap_or(1024) / 1024).max(1),
+                            codec: ext,
+                            duration: "Local Disk".to_string(),
+                            rating: 5,
+                            tags: vec!["Local".to_string(), "Browser".to_string()],
+                        });
+                        self.app.center.finder_current_dir = Some(std::path::PathBuf::from("/Users/studio/Local_Disk"));
+                    } else if let Some(cur) = event_passes.last_mut().filter(|_| !payload.is_empty()) {
+                        cur.push(Event::Text(payload.to_string()));
                     }
                 }
                 _ => {}
@@ -363,11 +378,9 @@ fn handle_http_conn(mut stream: std::net::TcpStream, session: &Arc<Mutex<MobileW
 
 impl GalleryApp {
     pub(crate) fn render_mobile_compact_work_area(&mut self, work_ui: &mut Ui, theme: &MacTheme) {
-        let full_r = work_ui.max_rect();
-        let bar_h = 34.0;
+        let (full_r, bar_h) = (work_ui.max_rect(), 34.0);
         let bar_rect = Rect::from_min_size(full_r.min, vec2(full_r.width(), bar_h));
         let pane_rect = Rect::from_min_max(pos2(full_r.min.x, full_r.min.y + bar_h + 2.0), full_r.max);
-
         let mut bar_ui = work_ui.new_child(
             egui::UiBuilder::new().id_salt("mobile_top_switcher_bar").max_rect(bar_rect).layout(Layout::left_to_right(Align::Center)),
         );
@@ -380,15 +393,11 @@ impl GalleryApp {
         self.mobile_pane_idx = next_pane;
         bar_ui.add_space(6.0);
         for (i, scr) in GalleryScreen::ALL.iter().copied().enumerate() {
-            let lbl = format!("S{}", i + 1);
-            if bar_ui.add(MacButtonCell::new(&lbl).theme(theme).selected(self.active_screen == scr)).clicked() {
-                self.active_screen = scr;
-                self.sidebar.active_screen = scr;
-                self.sidebar.selected_node = scr.title().to_string();
-                self.mobile_pane_idx = 0;
+            if bar_ui.add(MacButtonCell::new(&format!("S{}", i + 1)).theme(theme).selected(self.active_screen == scr)).clicked() {
+                (self.active_screen, self.sidebar.active_screen, self.sidebar.selected_node, self.mobile_pane_idx) =
+                    (scr, scr, scr.title().to_string(), 0);
             }
         }
-
         let mut pane_ui = work_ui.new_child(
             egui::UiBuilder::new()
                 .id_salt(("mobile_active_pane", self.mobile_pane_idx))
@@ -425,120 +434,5 @@ impl GalleryApp {
                 self.active_screen = s;
             }
         }
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-#[allow(unsafe_code)]
-mod wasm_bridge {
-    use super::MobileWebSession;
-    use std::{
-        fmt::Write,
-        sync::{Mutex, OnceLock},
-    };
-
-    struct WasmRt {
-        session: MobileWebSession,
-        cmd_log: String,
-        last_frame: Vec<u8>,
-        last_atlas: Vec<u8>,
-    }
-
-    fn with_rt<R>(f: impl FnOnce(&mut WasmRt) -> R) -> Option<R> {
-        static RT: OnceLock<Mutex<WasmRt>> = OnceLock::new();
-        let mtx = RT.get_or_init(|| {
-            let session = MobileWebSession::new();
-            let last_atlas = session.encode_atlas();
-            Mutex::new(WasmRt { session, cmd_log: String::new(), last_frame: Vec::new(), last_atlas })
-        });
-        mtx.lock().ok().map(|mut g| f(&mut g))
-    }
-
-    #[no_mangle]
-    pub extern "C" fn wasm_init() {
-        let _ = with_rt(|_| {});
-    }
-    #[no_mangle]
-    pub extern "C" fn wasm_push_pointer_move(x: f32, y: f32) {
-        let _ = with_rt(|rt| writeln!(rt.cmd_log, "M {x:.1} {y:.1}"));
-    }
-    #[no_mangle]
-    pub extern "C" fn wasm_push_pointer_button(x: f32, y: f32, pressed: i32) {
-        let _ = with_rt(|rt| writeln!(rt.cmd_log, "{} {x:.1} {y:.1}", if pressed != 0 { "D" } else { "U" }));
-    }
-    #[no_mangle]
-    pub extern "C" fn wasm_push_wheel(dx: f32, dy: f32) {
-        let _ = with_rt(|rt| writeln!(rt.cmd_log, "W {dx:.1} {dy:.1}"));
-    }
-    #[no_mangle]
-    pub extern "C" fn wasm_push_key(key_code: i32) {
-        if let Some(k) = match key_code {
-            8 => Some("Backspace"),
-            13 => Some("Enter"),
-            38 => Some("ArrowUp"),
-            40 => Some("ArrowDown"),
-            27 => Some("Escape"),
-            _ => None,
-        } {
-            let _ = with_rt(|rt| writeln!(rt.cmd_log, "K {k}"));
-        }
-    }
-    #[no_mangle]
-    pub extern "C" fn wasm_push_char(codepoint: u32) {
-        if let Some(ch) = char::from_u32(codepoint) {
-            let _ = with_rt(|rt| writeln!(rt.cmd_log, "T {ch}"));
-        }
-    }
-    #[no_mangle]
-    pub extern "C" fn wasm_render_frame(w: f32, h: f32, dpr: f32, time_secs: f64) -> usize {
-        with_rt(|rt| {
-            let batch = format!("V {w:.1} {h:.1} {dpr:.2}\nC {time_secs:.4}\n{}", rt.cmd_log);
-            rt.cmd_log.clear();
-            let prev_ver = rt.session.atlas_version;
-            rt.last_frame = rt.session.encode_frame(w, h, dpr, &batch);
-            if rt.session.atlas_version != prev_ver || rt.last_atlas.is_empty() {
-                rt.last_atlas = rt.session.encode_atlas();
-            }
-            rt.last_frame.len()
-        })
-        .unwrap_or(0)
-    }
-    #[no_mangle]
-    pub extern "C" fn wasm_frame_ptr() -> usize {
-        with_rt(|rt| rt.last_frame.as_ptr() as usize).unwrap_or(0)
-    }
-    #[no_mangle]
-    pub extern "C" fn wasm_atlas_ptr() -> usize {
-        with_rt(|rt| rt.last_atlas.as_ptr() as usize).unwrap_or(0)
-    }
-    #[no_mangle]
-    pub extern "C" fn wasm_atlas_len() -> usize {
-        with_rt(|rt| rt.last_atlas.len()).unwrap_or(0)
-    }
-    #[no_mangle]
-    pub extern "C" fn wasm_media_state() -> u32 {
-        with_rt(|rt| {
-            let on_avkit = u32::from(rt.session.app.active_screen == super::super::types::GalleryScreen::AvKitMediaStudio);
-            on_avkit | (u32::from(rt.session.app.center.media_playing) << 1) | (((rt.session.app.center.codec_preset as u32) & 0xF) << 4)
-        })
-        .unwrap_or(0)
-    }
-    #[no_mangle]
-    pub extern "C" fn wasm_media_rect(idx: i32) -> f32 {
-        with_rt(|rt| {
-            let r = rt.session.app.center.last_video_viewport_rect;
-            [
-                r.min.x,
-                r.min.y,
-                r.width().max(0.0),
-                r.height().max(0.0),
-                rt.session.app.center.media_gain.clamp(0.0, 1.0),
-                rt.session.app.center.media_speed.clamp(0.25, 2.0),
-            ]
-            .get(idx as usize)
-            .copied()
-            .unwrap_or(0.0)
-        })
-        .unwrap_or(0.0)
     }
 }

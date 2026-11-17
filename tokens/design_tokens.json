@@ -2607,7 +2607,7 @@
           "sector_gap_deg": { "$type": "dimension", "$value": "4.0pt" },
           "cardinal_sweep_deg": { "$type": "dimension", "$value": "48.0pt" },
           "diagonal_sweep_deg": { "$type": "dimension", "$value": "38.0pt" },
-          "latch_tap_max_secs": { "$type": "dimension", "$value": "0.18pt" },
+          "latch_tap_max_secs": { "$type": "dimension", "$value": "0.60pt" },
           "latch_dot_radius": { "$type": "dimension", "$value": "3.0pt" },
           "latch_dot_inset": { "$type": "dimension", "$value": "7.0pt" },
           "ring_gap": { "$type": "dimension", "$value": "3.0pt" },

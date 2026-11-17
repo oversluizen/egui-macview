@@ -16,31 +16,42 @@ pub(crate) struct WedgeGeometry {
     pub(crate) end_deg: f32,
 }
 
+fn fill_annular_strip(
+    painter: &Painter,
+    center: Pos2,
+    (r_in, r_out): (f32, f32),
+    (start_deg, end_deg): (f32, f32),
+    color: Color32,
+    m: &ThumbDialMetrics,
+) {
+    let steps = 32usize;
+    let sweep = end_deg - start_deg;
+    let mut mesh = egui::epaint::Mesh::default();
+    mesh.vertices.reserve((steps + 1) * 2);
+    mesh.indices.reserve(steps * 6);
+    for i in 0..=steps {
+        let a = start_deg + sweep * (i as f32 / steps as f32);
+        mesh.colored_vertex(polar_pos(center, r_in, a, m), color);
+        mesh.colored_vertex(polar_pos(center, r_out, a, m), color);
+    }
+    for i in 0..steps {
+        let base = (i * 2) as u32;
+        mesh.add_triangle(base, base + 1, base + 3);
+        mesh.add_triangle(base, base + 3, base + 2);
+    }
+    painter.add(Shape::mesh(mesh));
+}
+
 pub(crate) fn paint_annular_wedge(painter: &Painter, geom: WedgeGeometry, fill: Color32, stroke: Stroke, m: &ThumbDialMetrics) {
-    let steps = 12usize;
+    let steps = 32usize;
     let sweep = geom.end_deg - geom.start_deg;
     let r_mid = (geom.r_in + geom.r_out) * 0.5;
-    let sheen = fill.gamma_multiply(m.hover_fill_opacity.points());
-    for i in 0..steps {
-        let t0 = i as f32 / steps as f32;
-        let t1 = (i + 1) as f32 / steps as f32;
-        let a0 = geom.start_deg + sweep * t0;
-        let a1 = geom.start_deg + sweep * t1;
-        let quad = vec![
-            polar_pos(geom.center, geom.r_in, a0, m),
-            polar_pos(geom.center, geom.r_out, a0, m),
-            polar_pos(geom.center, geom.r_out, a1, m),
-            polar_pos(geom.center, geom.r_in, a1, m),
-        ];
-        painter.add(Shape::convex_polygon(quad, fill, Stroke::NONE));
-        let outer_sheen = vec![
-            polar_pos(geom.center, r_mid, a0, m),
-            polar_pos(geom.center, geom.r_out, a0, m),
-            polar_pos(geom.center, r_out_clamp(geom.r_out), a1, m),
-            polar_pos(geom.center, r_mid, a1, m),
-        ];
-        painter.add(Shape::convex_polygon(outer_sheen, sheen, Stroke::NONE));
-    }
+    let r_top = (r_mid + geom.r_out) * 0.5;
+    let sheen = stroke.color.gamma_multiply(m.hover_fill_opacity.points());
+    let dome_hi = stroke.color.gamma_multiply(m.hover_fill_opacity.points() * 0.5);
+    fill_annular_strip(painter, geom.center, (geom.r_in, geom.r_out), (geom.start_deg, geom.end_deg), fill, m);
+    fill_annular_strip(painter, geom.center, (r_mid, geom.r_out), (geom.start_deg, geom.end_deg), dome_hi, m);
+    fill_annular_strip(painter, geom.center, (r_top, geom.r_out), (geom.start_deg, geom.end_deg), sheen, m);
     if stroke.width > 0.0 {
         let mut ring_pts = Vec::with_capacity((steps + 1) * 2);
         let mut outer_arc = Vec::with_capacity(steps + 1);
@@ -57,11 +68,6 @@ pub(crate) fn paint_annular_wedge(painter: &Painter, geom: WedgeGeometry, fill: 
         painter.add(Shape::closed_line(ring_pts, stroke));
         painter.add(Shape::line(outer_arc, Stroke::new(m.active_stroke_width.points(), stroke.color)));
     }
-}
-
-#[inline]
-const fn r_out_clamp(r: f32) -> f32 {
-    r
 }
 
 /// Official Apple SF Symbols identifiers rendered as resolution-independent vector strokes (`REQ-014-07`).
@@ -91,6 +97,18 @@ pub enum MacSFSymbol {
     Angle,
     /// `"point.topleft.down.curvedto.point.bottomright.up"` — Sharp cusp corner ($\wedge$) with broken handles.
     PointTopleftDownCurvedtoPointBottomrightUp,
+    /// `"angle.and.cusp"` — $45^\circ$ angle constraint combined with cusp corner apex.
+    AngleAndCusp,
+    /// `"sparkles.and.cusp"` — $G^2$ continuity star combined with cusp corner chevron.
+    SparklesAndCusp,
+    /// `"axis.and.square.on.square"` — Orthogonal axis lock combined with duplicate square.
+    AxisAndClone,
+    /// `"point.single.handle"` — Anchor point with single-side independent handle lever.
+    SingleSideHandle,
+    /// `"angle.and.plus"` — $15^\circ$ slice angle combined with add-node badge.
+    AngleAndPlus,
+    /// `"scope.and.plus"` — Grid snap target combined with add-node badge.
+    ScopeAndPlus,
     /// `"shift"` — Apple `⇧` Shift symbol.
     Shift,
     /// `"option"` — Apple `⌥` Option symbol.
@@ -118,6 +136,12 @@ impl MacSFSymbol {
             Self::HandRaised => "hand.raised",
             Self::Angle => "angle",
             Self::PointTopleftDownCurvedtoPointBottomrightUp => "point.topleft.down.curvedto.point.bottomright.up",
+            Self::AngleAndCusp => "angle.and.cusp",
+            Self::SparklesAndCusp => "sparkles.and.cusp",
+            Self::AxisAndClone => "axis.and.square.on.square",
+            Self::SingleSideHandle => "point.single.handle",
+            Self::AngleAndPlus => "angle.and.plus",
+            Self::ScopeAndPlus => "scope.and.plus",
             Self::Shift => "shift",
             Self::OptionKey => "option",
             Self::CommandKey => "command",
@@ -181,7 +205,12 @@ fn paint_sf_symbol_vector(painter: &Painter, sf: MacSFSymbol, rect: Rect, color:
         MacSFSymbol::AspectRatio => {
             let b = Rect::from_center_size(c, Vec2::splat(r * 2.0));
             painter.rect_stroke(b, 2, stroke, egui::StrokeKind::Inside);
-            painter.line_segment([b.min + Vec2::new(q * 0.5, q * 0.5), b.max - Vec2::new(q * 0.5, q * 0.5)], thin);
+            let p_tl = b.min + Vec2::new(q * 0.5, q * 0.5);
+            let p_br = b.max - Vec2::new(q * 0.5, q * 0.5);
+            painter.line_segment([p_tl, p_tl + Vec2::new(q, 0.0)], stroke);
+            painter.line_segment([p_tl, p_tl + Vec2::new(0.0, q)], stroke);
+            painter.line_segment([p_br, p_br - Vec2::new(q, 0.0)], stroke);
+            painter.line_segment([p_br, p_br - Vec2::new(0.0, q)], stroke);
         }
         MacSFSymbol::Scope => {
             painter.circle_stroke(c, r, stroke);
@@ -242,7 +271,16 @@ fn paint_sf_symbol_vector(painter: &Painter, sf: MacSFSymbol, rect: Rect, color:
         MacSFSymbol::ArrowUpAndDownAndLeftAndRight | MacSFSymbol::HandRaised => {
             painter.line_segment([c - Vec2::new(r, 0.0), c + Vec2::new(r, 0.0)], stroke);
             painter.line_segment([c - Vec2::new(0.0, r), c + Vec2::new(0.0, r)], stroke);
-            painter.circle_filled(c, q * 0.5, color);
+            let ah = q * 0.5;
+            painter.line_segment([c - Vec2::new(r, 0.0), c - Vec2::new(r - ah, ah)], thin);
+            painter.line_segment([c - Vec2::new(r, 0.0), c - Vec2::new(r - ah, -ah)], thin);
+            painter.line_segment([c + Vec2::new(r, 0.0), c + Vec2::new(r - ah, ah)], thin);
+            painter.line_segment([c + Vec2::new(r, 0.0), c + Vec2::new(r - ah, -ah)], thin);
+            painter.line_segment([c - Vec2::new(0.0, r), c - Vec2::new(ah, r - ah)], thin);
+            painter.line_segment([c - Vec2::new(0.0, r), c - Vec2::new(-ah, r - ah)], thin);
+            painter.line_segment([c + Vec2::new(0.0, r), c + Vec2::new(ah, r - ah)], thin);
+            painter.line_segment([c + Vec2::new(0.0, r), c + Vec2::new(-ah, r - ah)], thin);
+            painter.circle_filled(c, ah * 0.5, color);
         }
         MacSFSymbol::Angle => {
             let v = c + Vec2::new(-r + q * 0.5, r - q * 0.5);
@@ -255,6 +293,55 @@ fn paint_sf_symbol_vector(painter: &Painter, sf: MacSFSymbol, rect: Rect, color:
             painter.line_segment([c + Vec2::new(-r, r - q * 0.5), apex], stroke);
             painter.line_segment([apex, c + Vec2::new(r, r - q * 0.5)], stroke);
             painter.circle_filled(apex, q * 0.5, color);
+        }
+        MacSFSymbol::AngleAndCusp => {
+            let v = c + Vec2::new(-r + q * 0.5, r - q * 0.5);
+            painter.line_segment([v, c + Vec2::new(r, r - q * 0.5)], stroke);
+            painter.line_segment([v, c + Vec2::new(0.0, -r + q * 0.5)], stroke);
+            painter.circle_filled(c + Vec2::new(0.0, -r + q * 0.5), q * 0.5, color);
+            painter.rect_stroke(Rect::from_center_size(c + Vec2::new(q, 0.0), Vec2::splat(q)), 1, thin, egui::StrokeKind::Inside);
+        }
+        MacSFSymbol::SparklesAndCusp => {
+            let pts = vec![
+                c + Vec2::new(-q * 0.5, -r),
+                c + Vec2::new(0.0, -q * 0.5),
+                c + Vec2::new(q, 0.0),
+                c + Vec2::new(0.0, q * 0.5),
+                c + Vec2::new(-q * 0.5, r),
+                c + Vec2::new(-q, q * 0.5),
+                c + Vec2::new(-r, 0.0),
+                c + Vec2::new(-q, -q * 0.5),
+            ];
+            painter.add(Shape::convex_polygon(pts, color, thin));
+            painter.line_segment([c + Vec2::new(q * 0.5, q), c + Vec2::new(r, -q)], stroke);
+            painter.circle_filled(c + Vec2::new(r, -q), q * 0.5, color);
+        }
+        MacSFSymbol::AxisAndClone => {
+            painter.line_segment([c - Vec2::new(r, 0.0), c + Vec2::new(r, 0.0)], thin);
+            painter.line_segment([c - Vec2::new(0.0, r), c + Vec2::new(0.0, r)], thin);
+            let b = Rect::from_center_size(c + Vec2::new(q * 0.5, -q * 0.5), Vec2::splat(r));
+            painter.rect_stroke(b, 1, stroke, egui::StrokeKind::Inside);
+        }
+        MacSFSymbol::SingleSideHandle => {
+            let anchor = c + Vec2::new(-q, q * 0.5);
+            let handle = c + Vec2::new(r - q * 0.5, -r + q * 0.5);
+            painter.line_segment([anchor, handle], stroke);
+            painter.rect_filled(Rect::from_center_size(anchor, Vec2::splat(q)), 1, color);
+            painter.circle_stroke(handle, q * 0.5, stroke);
+        }
+        MacSFSymbol::AngleAndPlus => {
+            let v = c + Vec2::new(-r + q * 0.5, r - q * 0.5);
+            painter.line_segment([v, c + Vec2::new(r, r - q * 0.5)], stroke);
+            painter.line_segment([v, c + Vec2::new(0.0, -r + q * 0.5)], stroke);
+            let pc = c + Vec2::new(q, -q * 0.5);
+            painter.line_segment([pc - Vec2::new(q * 0.5, 0.0), pc + Vec2::new(q * 0.5, 0.0)], stroke);
+            painter.line_segment([pc - Vec2::new(0.0, q * 0.5), pc + Vec2::new(0.0, q * 0.5)], stroke);
+        }
+        MacSFSymbol::ScopeAndPlus => {
+            painter.circle_stroke(c - Vec2::new(q * 0.5, 0.0), r - q * 0.5, stroke);
+            let pc = c + Vec2::new(q, -q);
+            painter.line_segment([pc - Vec2::new(q * 0.5, 0.0), pc + Vec2::new(q * 0.5, 0.0)], stroke);
+            painter.line_segment([pc - Vec2::new(0.0, q * 0.5), pc + Vec2::new(0.0, q * 0.5)], stroke);
         }
         MacSFSymbol::Shift | MacSFSymbol::OptionKey | MacSFSymbol::CommandKey | MacSFSymbol::ControlKey => {
             painter.circle_stroke(c, r, stroke);

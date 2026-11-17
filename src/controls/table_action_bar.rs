@@ -201,14 +201,20 @@ impl<'a> MacTableActionBar<'a> {
         painter.rect_filled(active_cluster_rect, radius, theme.control().gamma_multiply(alpha));
 
         let hover_pos = ui.input(|i| i.pointer.hover_pos());
-        let pointer_down = response.is_pointer_button_down_on();
-        for (seg_r, seg_ok) in
-            [(add_rect, enabled && self.can_add), (rem_rect, enabled && self.can_remove), (act_rect, enabled && self.with_action_menu)]
-        {
-            if seg_ok && seg_r.is_positive() && hover_pos.is_some_and(|p| seg_r.contains(p)) {
-                let hi = if pointer_down { theme.selected_control_inactive() } else { theme.control_background() };
-                painter.rect_filled(seg_r, CornerRadius::ZERO, hi);
-            }
+        let add_hovered = enabled && self.can_add && add_rect.is_positive() && hover_pos.is_some_and(|p| add_rect.contains(p));
+        let rem_hovered = enabled && self.can_remove && rem_rect.is_positive() && hover_pos.is_some_and(|p| rem_rect.contains(p));
+        let act_hovered = enabled && self.with_action_menu && act_rect.is_positive() && hover_pos.is_some_and(|p| act_rect.contains(p));
+        let (add_hover_fg, add_hover_bg) = theme.semantic_add_hover_colors();
+        let (rem_hover_fg, rem_hover_bg) = theme.semantic_remove_hover_colors();
+
+        if add_hovered {
+            painter.rect_filled(add_rect, CornerRadius::ZERO, add_hover_bg);
+        }
+        if rem_hovered {
+            painter.rect_filled(rem_rect, CornerRadius::ZERO, rem_hover_bg);
+        }
+        if act_hovered {
+            painter.rect_filled(act_rect, CornerRadius::ZERO, theme.inspector_hover_fill());
         }
 
         let div_xs = [visual_rect.min.x + btn_w, visual_rect.min.x + btn_w * 2.0, visual_rect.min.x + cluster_w];
@@ -226,7 +232,8 @@ impl<'a> MacTableActionBar<'a> {
 
         if add_rect.width() >= btn_w * 0.5 {
             let add_alpha = if enabled && self.can_add { 1.0 } else { theme.disabled_opacity() };
-            let add_stroke = Stroke::new(glyph_w, base_fg.gamma_multiply(add_alpha));
+            let add_col = if add_hovered { add_hover_fg } else { base_fg.gamma_multiply(add_alpha) };
+            let add_stroke = Stroke::new(glyph_w, add_col);
             let ac = add_rect.center();
             painter.line_segment([Pos2::new(ac.x - arm_half, ac.y), Pos2::new(ac.x + arm_half, ac.y)], add_stroke);
             painter.line_segment([Pos2::new(ac.x, ac.y - arm_half), Pos2::new(ac.x, ac.y + arm_half)], add_stroke);
@@ -234,7 +241,8 @@ impl<'a> MacTableActionBar<'a> {
 
         if rem_rect.width() >= btn_w * 0.5 {
             let rem_alpha = if enabled && self.can_remove { 1.0 } else { theme.disabled_opacity() };
-            let rem_stroke = Stroke::new(glyph_w, base_fg.gamma_multiply(rem_alpha));
+            let rem_col = if rem_hovered { rem_hover_fg } else { base_fg.gamma_multiply(rem_alpha) };
+            let rem_stroke = Stroke::new(glyph_w, rem_col);
             let rc = rem_rect.center();
             painter.line_segment([Pos2::new(rc.x - arm_half, rc.y), Pos2::new(rc.x + arm_half, rc.y)], rem_stroke);
         }

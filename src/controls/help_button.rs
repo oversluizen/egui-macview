@@ -149,6 +149,17 @@ impl<'a> Widget for MacHelpButton<'a> {
     }
 }
 
+/// Semantic classification of an inline action button (`SPEC-015` `REQ-015-02`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InlineActionKind {
+    /// Semantic addition action (`+` or `MacSymbol::Plus`), tinted green on hover.
+    Add,
+    /// Semantic removal action (`-`, `−`, `–`, or `MacSymbol::Minus`), tinted red on hover.
+    Remove,
+    /// Neutral inline action (`×`, gear, ellipsis, etc.), tinted with subtle grey rollover on hover.
+    Neutral,
+}
+
 /// Circular `16x16pt` AppKit Inline Action Badge Button (used for inline `+`, `-`, `x`, or symbol actions).
 ///
 /// # Example
@@ -177,6 +188,27 @@ impl<'a> MacInlineActionButton<'a> {
     /// Creates an inline action badge button displaying a [`MacSymbol`].
     pub fn from_symbol(symbol: MacSymbol) -> Self {
         Self::new(symbol.as_str())
+    }
+
+    /// Classifies `glyph` into [`InlineActionKind`] for semantic hover feedback (`REQ-015-02`).
+    pub fn classify_glyph(glyph: &str) -> InlineActionKind {
+        let trimmed = glyph.trim();
+        if trimmed == "+" || trimmed == "＋" || trimmed == MacSymbol::Plus.as_str() {
+            InlineActionKind::Add
+        } else if trimmed == "-" || trimmed == "−" || trimmed == "–" || trimmed == MacSymbol::Minus.as_str() {
+            InlineActionKind::Remove
+        } else {
+            InlineActionKind::Neutral
+        }
+    }
+
+    /// Resolves `(foreground_icon_color, pill_background_color)` when hovering an inline action button (`REQ-015-02`).
+    pub fn hover_colors(theme: &MacTheme, kind: InlineActionKind) -> (egui::Color32, egui::Color32) {
+        match kind {
+            InlineActionKind::Add => theme.semantic_add_hover_colors(),
+            InlineActionKind::Remove => theme.semantic_remove_hover_colors(),
+            InlineActionKind::Neutral => (theme.label(), theme.inspector_hover_fill()),
+        }
     }
 
     /// Pins the inline action button to an exact NIB rectangle.
@@ -241,22 +273,28 @@ impl<'a> Widget for MacInlineActionButton<'a> {
             theme.paint_focus_ring(&painter, Rect::from_center_size(center, Vec2::splat(visual_diam)), visual_radius);
         }
 
+        let kind = Self::classify_glyph(self.glyph);
+        let (hover_fg, hover_bg) = Self::hover_colors(theme, kind);
+        let surface_bg = theme.active_surface_at(ui, center);
+
         let fill = if !enabled {
             theme.control().gamma_multiply(alpha)
-        } else if response.is_pointer_button_down_on() {
-            theme.selected_control_inactive()
-        } else if response.hovered() {
-            theme.control_background()
+        } else if response.is_pointer_button_down_on() || response.hovered() {
+            hover_bg
         } else {
-            theme.control()
+            theme.control().gamma_multiply(0.5)
         };
 
-        painter.circle(center, visual_radius, fill, Stroke::new(border_w, theme.separator().gamma_multiply(alpha)));
-        let surface_bg = theme.active_surface_at(ui, center);
+        let border_col = if enabled && response.hovered() && kind != InlineActionKind::Neutral {
+            hover_fg.gamma_multiply(0.5)
+        } else {
+            theme.separator().gamma_multiply(alpha)
+        };
+        painter.circle(center, visual_radius, fill, Stroke::new(border_w, border_col));
         let fg = if !enabled {
             theme.tertiary_label_on(surface_bg)
-        } else if response.hovered() {
-            theme.label_on(surface_bg)
+        } else if response.hovered() || response.is_pointer_button_down_on() {
+            hover_fg
         } else {
             theme.secondary_label_on(surface_bg)
         };

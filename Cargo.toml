@@ -1,6 +1,6 @@
 [package]
 name = "egui-macview"
-version = "0.8.0"
+version = "0.8.1"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 authors = ["Jaco Oversluizen", "egui-macview contributors"]
@@ -17,7 +17,7 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
-egui = { version = "0.37.0", default-features = false }
+egui = { version = "0.37.0", default-features = false, features = ["default_fonts"] }
 plist = "1.7"
 roxmltree = "0.20"
 serde = { version = "1.0", features = ["derive"] }
@@ -151,6 +151,10 @@ path = "tests/spec013_scene_ir_and_nib_compiler_tests.rs"
 [[test]]
 name = "spec014_context_thumb_dial_tests"
 path = "tests/spec014_context_thumb_dial_tests.rs"
+
+[[test]]
+name = "spec015_dual_visual_and_pro_inspector_tests"
+path = "tests/spec015_dual_visual_and_pro_inspector_tests.rs"
 
 [lints.rust]
 unsafe_code = "deny"

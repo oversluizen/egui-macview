@@ -4,10 +4,7 @@ use super::types::apply_blend_mode;
 use super::CenterState;
 use crate::CardModel;
 use egui::{pos2, vec2, Align2, Color32, CornerRadius, FontId, Pos2, Rect, Sense, Stroke, StrokeKind, Ui};
-use egui_macview::{
-    theme::MacTheme, MacBackgroundStyle, MacContextMenu, MacContextThumbDial, MacEdgeThumbwheel, MacFreeJoystickBowl, MacThumbArcPlacement,
-    MacThumbContextPreset, MacThumbDockZone, MacThumbIntent, MacToastManager, NSMenuItem,
-};
+use egui_macview::{theme::MacTheme, MacBackgroundStyle, MacContextMenu, MacToastManager, NSMenuItem};
 use std::cell::RefCell;
 
 impl CenterState {
@@ -22,7 +19,8 @@ impl CenterState {
     ) {
         let super::center_state::CenterRenderArgs { inspector_mode, snapping_enabled, unit_segmented_idx, vis_canvas, lock_canvas, .. } =
             *args;
-        let canvas_rect = slot_rect;
+        let vis_max_x = slot_rect.max.x.min(content_ui.clip_rect().max.x - 4.0).max(slot_rect.min.x + 260.0);
+        let canvas_rect = Rect::from_min_max(slot_rect.min, pos2(vis_max_x, slot_rect.max.y));
         let canvas_resp = content_ui.interact(canvas_rect, content_ui.scope_id().with("state1_vector_canvas_hit"), Sense::click());
         if canvas_resp.clicked() {
             self.bounce_start_time = Some(content_ui.input(|i| i.time));
@@ -61,12 +59,15 @@ impl CenterState {
         let card_h = (card.height.parse::<f32>().unwrap_or(140.0 * h_scale) / h_scale).clamp(40.0, 300.0);
         let card_radius = (card.radius.parse::<f32>().unwrap_or(10.0 * r_scale) / r_scale).clamp(0.0, 40.0);
 
-        let card_zone_max_x = (canvas_rect.max.x - 196.0).max(canvas_rect.min.x + 220.0);
-        let card_zone_center_x = (canvas_rect.min.x + card_zone_max_x) * 0.5;
+        let is_compact = inspector_mode == crate::InspectorMode::CompactHud;
+        let card_zone_min_x = if is_compact { canvas_rect.min.x + 196.0 } else { canvas_rect.min.x };
+        let card_zone_max_x =
+            if is_compact { canvas_rect.max.x - 16.0 } else { (canvas_rect.max.x - 196.0).max(canvas_rect.min.x + 180.0) };
+        let card_zone_center_x = (card_zone_min_x + card_zone_max_x) * 0.5;
         let (card_w, base_center_x) = match card.alignment_idx {
-            0 => (raw_card_w, canvas_rect.min.x + 24.0 + raw_card_w * 0.5),
+            0 => (raw_card_w, card_zone_min_x + 24.0 + raw_card_w * 0.5),
             2 => (raw_card_w, card_zone_max_x - 16.0 - raw_card_w * 0.5),
-            3 => ((card_zone_max_x - canvas_rect.min.x - 36.0).max(60.0), card_zone_center_x),
+            3 => ((card_zone_max_x - card_zone_min_x - 36.0).max(60.0), card_zone_center_x),
             _ => (raw_card_w, card_zone_center_x),
         };
         let cur_time = content_ui.input(|i| i.time);
@@ -187,6 +188,39 @@ impl CenterState {
             );
         }
 
+        // Draw Vector Artboard Selection Bounding Box + 8 White Square Handles + Reference Origin Crosshair
+        let bbox_stroke = Stroke::new(1.0, theme.control_accent());
+        for i in 0..4 {
+            cp.line_segment([corners_world[i], corners_world[(i + 1) % 4]], bbox_stroke);
+        }
+        let mid_pts = [
+            pos2((corners_world[0].x + corners_world[1].x) * 0.5, (corners_world[0].y + corners_world[1].y) * 0.5),
+            pos2((corners_world[1].x + corners_world[2].x) * 0.5, (corners_world[1].y + corners_world[2].y) * 0.5),
+            pos2((corners_world[2].x + corners_world[3].x) * 0.5, (corners_world[2].y + corners_world[3].y) * 0.5),
+            pos2((corners_world[3].x + corners_world[0].x) * 0.5, (corners_world[3].y + corners_world[0].y) * 0.5),
+        ];
+        for h_pt in corners_world.iter().chain(mid_pts.iter()) {
+            let hr = Rect::from_center_size(*h_pt, vec2(7.0, 7.0));
+            cp.rect(hr, CornerRadius::same(1), Color32::WHITE, Stroke::new(1.2, theme.control_accent()), StrokeKind::Inside);
+        }
+        let origin_local = match self.origin_anchor as usize {
+            0 => pos2(-hw, -hh),
+            1 => pos2(0.0, -hh),
+            2 => pos2(hw, -hh),
+            3 => pos2(-hw, 0.0),
+            5 => pos2(hw, 0.0),
+            6 => pos2(-hw, hh),
+            7 => pos2(0.0, hh),
+            8 => pos2(hw, hh),
+            _ => pos2(0.0, 0.0),
+        };
+        let origin_world =
+            pos2(card_center.x + a * origin_local.x + b * origin_local.y, card_center.y + c * origin_local.x + d * origin_local.y);
+        cp.circle_stroke(origin_world, 6.0, Stroke::new(1.5, theme.system_orange()));
+        cp.circle_filled(origin_world, 2.2, theme.system_orange());
+        cp.line_segment([origin_world - vec2(9.0, 0.0), origin_world + vec2(9.0, 0.0)], Stroke::new(1.2, theme.system_orange()));
+        cp.line_segment([origin_world - vec2(0.0, 9.0), origin_world + vec2(0.0, 9.0)], Stroke::new(1.2, theme.system_orange()));
+
         let handle_rect = Rect::from_center_size(corners_world[2], vec2(10.0, 10.0));
         cp.rect(
             handle_rect,
@@ -268,194 +302,6 @@ impl CenterState {
 
         self.render_state1_thumb_dial_overlay(content_ui, theme, card, args, toasts, canvas_rect);
         self.render_state1_hud_and_popover(content_ui, theme, card, inspector_mode, canvas_rect, (w_scale, h_scale, r_scale));
-    }
-
-    fn render_state1_thumb_dial_overlay(
-        &mut self,
-        content_ui: &mut Ui,
-        theme: &MacTheme,
-        card: &mut CardModel,
-        args: &super::center_state::CenterRenderArgs<'_>,
-        toasts: &RefCell<MacToastManager>,
-        canvas_rect: Rect,
-    ) {
-        let presets = MacThumbContextPreset::ALL;
-        let active_preset = presets[self.thumb_dial_preset_idx.min(presets.len() - 1)];
-        let pill_labels = ["Pen (P)", "Select (V)", "Prim (F)", "Knife (E)"];
-        let strip_w = 184.0f32;
-        let pill_w = strip_w / 4.0;
-        let strip_rect = Rect::from_min_size(pos2(canvas_rect.max.x - strip_w - 8.0, canvas_rect.min.y + 6.0), vec2(strip_w, 18.0));
-        let sp = content_ui.painter_at(strip_rect);
-        for (idx, lbl) in pill_labels.iter().enumerate() {
-            let p_rect = Rect::from_min_size(pos2(strip_rect.min.x + idx as f32 * pill_w, strip_rect.min.y), vec2(pill_w - 2.0, 18.0));
-            let hit = content_ui.interact(p_rect, content_ui.scope_id().with(("thumb_preset_pill", idx)), Sense::click());
-            if hit.clicked() {
-                self.thumb_dial_preset_idx = idx;
-            }
-            let is_sel = self.thumb_dial_preset_idx == idx;
-            let fill = if is_sel { theme.control_accent() } else { theme.box_background() };
-            let fg = if is_sel { theme.on_accent_text() } else { theme.label() };
-            sp.rect(p_rect, CornerRadius::same(4), fill, Stroke::new(1.0, theme.separator()), StrokeKind::Inside);
-            sp.text(p_rect.center(), Align2::CENTER_CENTER, *lbl, FontId::proportional(9.0), fg);
-        }
-
-        // Row 2: 3 Standalone Interchangeable Configurations + Apple Calculated Glass Accent ColorWell
-        let cfg_labels = ["Paired", "Rotary", "Select", "Joystick"];
-        let cfg_rect = Rect::from_min_size(pos2(strip_rect.min.x, strip_rect.max.y + 4.0), vec2(strip_w - 36.0, 18.0));
-        let cfg_w = cfg_rect.width() / 4.0;
-        let cp_cfg = content_ui.painter_at(cfg_rect);
-        let eff_accent = theme.resolve_glass_accent_on(Some(self.thumb_glass_color), theme.popover_background());
-        for (idx, lbl) in cfg_labels.iter().enumerate() {
-            let p_rect = Rect::from_min_size(pos2(cfg_rect.min.x + idx as f32 * cfg_w, cfg_rect.min.y), vec2(cfg_w - 2.0, 18.0));
-            let hit = content_ui.interact(p_rect, content_ui.scope_id().with(("thumb_cfg_mode_pill", idx)), Sense::click());
-            if hit.clicked() {
-                self.thumb_config_mode = idx;
-            }
-            let is_sel = self.thumb_config_mode == idx;
-            let fill = if is_sel { eff_accent } else { theme.box_background() };
-            let fg = if is_sel { MacBackgroundStyle::from_color(eff_accent).primary_text_color(theme) } else { theme.label() };
-            cp_cfg.rect(p_rect, CornerRadius::same(4), fill, Stroke::new(1.0, theme.separator()), StrokeKind::Inside);
-            cp_cfg.text(p_rect.center(), Align2::CENTER_CENTER, *lbl, FontId::proportional(8.5), fg);
-        }
-        let well_rect = Rect::from_min_size(pos2(cfg_rect.max.x + 2.0, cfg_rect.min.y), vec2(34.0, 18.0));
-        let well_hit = content_ui.interact(well_rect, content_ui.scope_id().with("thumb_glass_color_swatch"), Sense::click());
-        if well_hit.clicked() {
-            let pal = theme.tag_label_palette();
-            let cur_idx = pal.iter().position(|c| *c == self.thumb_glass_color).unwrap_or(0);
-            self.thumb_glass_color = pal[(cur_idx + 1) % pal.len()];
-        }
-        cp_cfg.rect(well_rect, CornerRadius::same(4), eff_accent, Stroke::new(1.0, theme.separator()), StrokeKind::Inside);
-        cp_cfg.text(
-            well_rect.center(),
-            Align2::CENTER_CENTER,
-            "Hue",
-            FontId::proportional(8.5),
-            MacBackgroundStyle::from_color(eff_accent).primary_text_color(theme),
-        );
-
-        let can_undo = args.undo_manager.borrow().can_undo();
-        let can_redo = args.undo_manager.borrow().can_redo();
-        let rot_str = format!("θ {:.0}°", card.rotation_deg);
-        let dial_scale = 0.74f32;
-        let mut undo_clicked = false;
-        let mut redo_clicked = false;
-        let mut nudge_delta = egui::Vec2::ZERO;
-        let mut rotary_delta_ticks = 0.0f32;
-        let mut effective_mask = egui_macview::MacThumbIntentMask::NONE;
-        let taptic_ev;
-
-        match self.thumb_config_mode {
-            1 => {
-                // Standalone Configuration 1: Cylindrical Rotary Wheel (MacEdgeThumbwheel) Only
-                let drum_w = (theme.thumb_dial().outer_radius.points() * 2.0 * dial_scale) * 0.72;
-                let w_resp = MacEdgeThumbwheel::new("state1_standalone_rotary", &mut card.rotation_deg, 0.0..=360.0)
-                    .wide_drum_width(drum_w)
-                    .scale(dial_scale)
-                    .glass_accent(self.thumb_glass_color)
-                    .dock_right_edge(canvas_rect)
-                    .theme(theme)
-                    .show(content_ui);
-                taptic_ev = w_resp.taptic_event;
-            }
-            2 => {
-                // Standalone Configuration 2: 6-Cushion Compass Selection Dial (MacContextThumbDial) Only
-                let mut fixed_layer = egui_macview::MacThumbDialLayer::CompassModifiers;
-                let resp = MacContextThumbDial::new("state1_standalone_select_dial", &mut self.thumb_dial_latched, &mut self.thumb_dial_rotary)
-                    .layer(&mut fixed_layer)
-                    .undo_arc_placement(MacThumbArcPlacement::TopCrown)
-                    .preset(active_preset)
-                    .rotary_parameter("Select", &rot_str)
-                    .can_undo(can_undo)
-                    .can_redo(can_redo)
-                    .scale(dial_scale)
-                    .glass_accent(self.thumb_glass_color)
-                    .dock_in_rect(canvas_rect, MacThumbDockZone::BottomRight)
-                    .theme(theme)
-                    .show(content_ui);
-                undo_clicked = resp.undo_clicked;
-                redo_clicked = resp.redo_clicked;
-                nudge_delta = resp.nudge_delta;
-                rotary_delta_ticks = resp.rotary_delta_ticks;
-                effective_mask = resp.effective_mask;
-                taptic_ev = resp.taptic_event;
-            }
-            3 => {
-                // Standalone Configuration 3: 360° Free Joystick Bowl with 3D Crystal Glass Marble (MacFreeJoystickBowl) Only
-                let j_resp = MacFreeJoystickBowl::new("state1_standalone_joystick_bowl")
-                    .undo_arc_placement(MacThumbArcPlacement::TopCrown)
-                    .can_undo(can_undo)
-                    .can_redo(can_redo)
-                    .scale(dial_scale)
-                    .glass_accent(self.thumb_glass_color)
-                    .dock_in_rect(canvas_rect, MacThumbDockZone::BottomRight)
-                    .theme(theme)
-                    .show(content_ui);
-                undo_clicked = j_resp.undo_clicked;
-                redo_clicked = j_resp.redo_clicked;
-                nudge_delta = j_resp.nudge_delta;
-                taptic_ev = j_resp.taptic_event;
-            }
-            _ => {
-                // Paired Configuration (Default): Compact 1:1 Dial (Stand 1 <-> Stand 2) + Narrower Centered Rotary Wheel in Stand 1
-                let resp = MacContextThumbDial::new("state1_canvas_thumb_dial", &mut self.thumb_dial_latched, &mut self.thumb_dial_rotary)
-                    .layer(&mut self.thumb_dial_layer)
-                    .undo_arc_placement(MacThumbArcPlacement::TopCrown)
-                    .preset(active_preset)
-                    .rotary_parameter("Tap: Mode", &rot_str)
-                    .can_undo(can_undo)
-                    .can_redo(can_redo)
-                    .scale(dial_scale)
-                    .glass_accent(self.thumb_glass_color)
-                    .dock_in_rect(canvas_rect, MacThumbDockZone::BottomRight)
-                    .theme(theme)
-                    .show(content_ui);
-                let mut ev = resp.taptic_event;
-                if self.thumb_dial_layer == egui_macview::MacThumbDialLayer::CompassModifiers {
-                    let drum_w = resp.response.rect.width() * 0.72;
-                    let w_resp = MacEdgeThumbwheel::new("state1_edge_thumbwheel", &mut card.rotation_deg, 0.0..=360.0)
-                        .wide_drum_width(drum_w)
-                        .scale(dial_scale)
-                        .glass_accent(self.thumb_glass_color)
-                        .dock_right_edge(canvas_rect)
-                        .theme(theme)
-                        .show(content_ui);
-                    ev = ev.or(w_resp.taptic_event);
-                }
-                taptic_ev = ev;
-                undo_clicked = resp.undo_clicked;
-                redo_clicked = resp.redo_clicked;
-                nudge_delta = resp.nudge_delta;
-                rotary_delta_ticks = resp.rotary_delta_ticks;
-                effective_mask = resp.effective_mask;
-            }
-        }
-        if let Some(ev) = taptic_ev {
-            super::audio_media::NativeAudioOutput::play_wav(&ev.synthesize_micro_click_wav());
-        }
-
-        if undo_clicked && args.undo_manager.borrow_mut().undo(card) {
-            *args.last_stable_card.borrow_mut() = card.clone();
-            toasts.borrow_mut().info("Thumb Dial: Undone");
-        }
-        if redo_clicked && args.undo_manager.borrow_mut().redo(card) {
-            *args.last_stable_card.borrow_mut() = card.clone();
-            toasts.borrow_mut().info("Thumb Dial: Redone");
-        }
-        if nudge_delta != egui::Vec2::ZERO && !args.lock_canvas {
-            self.card_drag_offset += nudge_delta;
-        }
-        if rotary_delta_ticks.abs() > 0.0 && !args.lock_canvas {
-            card.rotation_deg = (card.rotation_deg + rotary_delta_ticks * 5.0).rem_euclid(360.0);
-        }
-        if effective_mask.contains(MacThumbIntent::Constrain) {
-            card.constrain_proportions = true;
-        }
-        if effective_mask.contains(MacThumbIntent::Alter) && effective_mask.contains(MacThumbIntent::Constrain) {
-            card.alignment_idx = 1;
-        }
-        if effective_mask.contains(MacThumbIntent::Glide) && effective_mask.contains(MacThumbIntent::Alter) {
-            card.skew_deg = 12.0;
-        }
     }
 }
 

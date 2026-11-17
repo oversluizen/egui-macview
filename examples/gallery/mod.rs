@@ -14,12 +14,15 @@ pub mod nib_window_studio;
 pub mod sidebar;
 pub mod snippet;
 pub mod state1_canvas;
+pub mod state1_thumb_overlay;
 pub mod state2_symbols_layout;
 pub mod state3_command_state;
 pub mod state4_finder_browser;
 pub mod state5_avkit_media;
 pub mod types;
 pub mod video_scene;
+#[cfg(target_arch = "wasm32")]
+pub mod wasm_bridge;
 
 pub use center_state::CenterState;
 pub use chrome::detect_frameless_resize_dir;

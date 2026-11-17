@@ -59,6 +59,9 @@ impl CenterState {
     ) {
         let (w_scale, h_scale, r_scale) = scales;
         if inspector_mode == InspectorMode::CompactHud {
+            if self.hud_pos.x < 196.0 {
+                self.hud_pos.x = 204.0;
+            }
             let mut hud_abs_pos = pos2(canvas_rect.min.x + self.hud_pos.x, canvas_rect.min.y + self.hud_pos.y);
             let label_col = theme.hud_secondary_text();
             let font_pt = theme.text_field().compact_infobox.font_size.points();
@@ -250,10 +253,24 @@ impl CenterState {
                 store.floats.insert(bid, (self.audio_level_r as f64 - 10.0) * 4.8);
             }
             "vuTextL" => {
-                store.strings.insert(bid, format!("{:4.1} dB", self.audio_level_l - 10.0));
+                let disp_l = if self.media_playing {
+                    let bucket_t = (self.media_playhead * 5.0).floor() / 5.0;
+                    let (bl, _, _, _) = self.audio_track.compute_stereo_levels_at(bucket_t, self.media_gain, self.media_pan);
+                    bl.clamp(0.0, 10.0)
+                } else {
+                    self.audio_level_l
+                };
+                store.strings.insert(bid, format!("{:4.1} dB", disp_l - 10.0));
             }
             "vuTextR" => {
-                store.strings.insert(bid, format!("{:4.1} dB", self.audio_level_r - 10.0));
+                let disp_r = if self.media_playing {
+                    let bucket_t = (self.media_playhead * 5.0).floor() / 5.0;
+                    let (_, br, _, _) = self.audio_track.compute_stereo_levels_at(bucket_t, self.media_gain, self.media_pan);
+                    br.clamp(0.0, 10.0)
+                } else {
+                    self.audio_level_r
+                };
+                store.strings.insert(bid, format!("{:4.1} dB", disp_r - 10.0));
             }
             "takeRating" => {
                 store.floats.insert(bid, self.media_rating as f64);
@@ -315,7 +332,7 @@ impl CenterState {
                 self.typo_optical_kern = store.get_bool(bid);
             }
             "fontWeight" => {
-                self.typo_font_weight = store.get_i64(bid).clamp(0, 3) as usize;
+                self.typo_font_weight = store.get_i64(bid).clamp(0, 4) as usize;
             }
             "matrixInput" | "matrixText" => {
                 self.showcase_text = store.get_str(bid).to_string();
@@ -346,6 +363,9 @@ impl CenterState {
                 let mut c = card_cell.borrow_mut();
                 c.fill_color = col;
                 c.alpha_color = col.gamma_multiply(0.75);
+                self.wcag_bg = col;
+                self.symbol_tint = col;
+                self.thumb_glass_color = col;
             }
             "contrastTarget" => {
                 self.contrast_target = store.get_f64(bid).clamp(3.0, 15.0) as f32;
