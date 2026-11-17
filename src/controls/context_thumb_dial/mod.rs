@@ -7,11 +7,11 @@
 //! - **Layer 2 (`MacThumbDialLayer::FreeJoystickBowl`)**: An unobstructed $360^\circ$ analog
 //!   joystick bowl with `Fine` and `Fast` concentric speed rings and quadratic radial velocity scaling.
 
-mod render;
+pub(crate) mod render;
 
 use crate::theme::MacTheme;
 use crate::tokens::ThumbDialMetrics;
-use egui::{Id, Pos2, Rect, Response, Ui, Vec2};
+use egui::{Color32, Id, Pos2, Rect, Response, Ui, Vec2};
 use std::hash::Hash;
 
 /// Active operating layer of [`MacContextThumbDial`], toggled by tapping the center button (`REQ-014-02`, `REQ-014-03`).
@@ -333,6 +333,8 @@ pub struct MacContextThumbResponse {
     pub undo_rect: Rect,
     /// Screen-space hit rect of the curved `↷ Redo` button.
     pub redo_rect: Rect,
+    /// Effective Liquid Glass accent color resolved by the Apple calculated color system (`REQ-014-06`).
+    pub effective_glass_accent: Color32,
     pub(super) sector_centers: [Pos2; 6],
 }
 
@@ -379,6 +381,7 @@ pub struct MacContextThumbDial<'a> {
     pub(super) can_redo: bool,
     pub(super) dock_target: Option<(Rect, MacThumbDockZone)>,
     pub(super) scale: f32,
+    pub(super) glass_accent: Option<Color32>,
     pub(super) theme: Option<&'a MacTheme>,
 }
 
@@ -398,8 +401,15 @@ impl<'a> MacContextThumbDial<'a> {
             can_redo: true,
             dock_target: None,
             scale: 1.0,
+            glass_accent: None,
             theme: None,
         }
+    }
+
+    /// Overrides the Liquid Glass accent color (adapted through `MacTheme::resolve_glass_accent_on` in the Apple calculated color system, `REQ-014-06`).
+    pub fn glass_accent(mut self, color: Color32) -> Self {
+        self.glass_accent = Some(color);
+        self
     }
 
     /// Binds the active 2-layer state (`CompassModifiers` vs. `FreeJoystickBowl`), toggled by clicking the center button.

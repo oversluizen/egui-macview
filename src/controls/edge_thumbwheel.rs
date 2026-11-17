@@ -8,7 +8,7 @@
 //!   with velocity boost on fast flicks, and instant **Touch-to-Brake** when touched while spinning.
 
 use crate::theme::MacTheme;
-use egui::{CornerRadius, Id, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2};
+use egui::{Color32, CornerRadius, Id, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2};
 use std::hash::Hash;
 use std::ops::RangeInclusive;
 
@@ -32,6 +32,8 @@ pub struct MacEdgeThumbwheelResponse {
     pub delta_ticks: f32,
     /// `true` when the wheel is actively coasting under Free-Spin Flywheel inertia.
     pub is_free_spinning: bool,
+    /// Effective Liquid Glass accent color used to render the wheel glow and end-caps (`REQ-014-06`).
+    pub effective_glass_accent: Color32,
 }
 
 /// Top-Down Cylindrical Edge Scroll Wheel with Free-Spin Flywheel Inertia (`SPEC-014 §2.4`).
@@ -59,6 +61,7 @@ pub struct MacEdgeThumbwheel<'a> {
     dock_rect: Option<Rect>,
     wide_drum_width: Option<f32>,
     scale: f32,
+    glass_accent: Option<Color32>,
     theme: Option<&'a MacTheme>,
 }
 
@@ -72,8 +75,15 @@ impl<'a> MacEdgeThumbwheel<'a> {
             dock_rect: None,
             wide_drum_width: None,
             scale: 1.0,
+            glass_accent: None,
             theme: None,
         }
+    }
+
+    /// Overrides the Liquid Glass accent color used for the cylindrical end-cap rings and active flywheel glow (`REQ-014-06`).
+    pub fn glass_accent(mut self, color: Color32) -> Self {
+        self.glass_accent = Some(color);
+        self
     }
 
     /// Configures a wide cylindrical drum roller whose capsule width matches the `MacContextThumbDial` below it.
@@ -204,25 +214,41 @@ impl<'a> MacEdgeThumbwheel<'a> {
         ui.ctx().data_mut(|d| d.insert_temp(mem_id, mem));
 
         // Paint Top-Down Cylindrical Edge Thumbwheel in Liquid Glass
+        let accent_col = theme.resolve_glass_accent_on(self.glass_accent, theme.popover_background());
         let painter = ui.painter_at(rect.intersect(ui.clip_rect()));
         let outer_cr = CornerRadius::same((m.edge_wheel_corner_radius.points() * s) as u8);
         let pad = m.edge_wheel_slot_padding.points() * s;
         let inner_rect = rect.shrink(pad);
         let inner_cr = CornerRadius::same(((m.edge_wheel_corner_radius.points() * s) - pad).max(1.0) as u8);
 
+        let bw = m.border_stroke_width.points();
         let glass_housing = theme.popover_background().gamma_multiply(m.glass_fill_alpha.points());
-        let border_stroke = Stroke::new(m.border_stroke_width.points(), theme.separator());
+        let border_stroke = Stroke::new(bw, theme.separator());
+        let specular_col = theme.knob_fill().gamma_multiply(m.glass_specular_alpha.points());
         painter.rect(rect, outer_cr, glass_housing, border_stroke, StrokeKind::Inside);
+        painter.line_segment(
+            [Pos2::new(rect.min.x + pad, rect.min.y + bw), Pos2::new(rect.max.x - pad, rect.min.y + bw)],
+            Stroke::new(bw, specular_col),
+        );
 
         if is_free_spinning || is_down {
             let glow_stroke = Stroke::new(
                 m.active_stroke_width.points(),
-                theme.control_accent().gamma_multiply(m.active_fill_opacity.points()),
+                accent_col.gamma_multiply(m.active_fill_opacity.points()),
             );
             painter.rect_stroke(inner_rect.expand(1.0), inner_cr, glow_stroke, StrokeKind::Outside);
         }
 
         painter.rect(inner_rect, inner_cr, theme.window_background(), border_stroke, StrokeKind::Inside);
+
+        // Illuminated Liquid Glass End-Cap Rings on Left and Right Drum Edges
+        let cap_w = (m.ring_gap.points() * 2.0 * s).min(inner_rect.width() * m.hover_fill_opacity.points());
+        let cap_fill = accent_col.gamma_multiply(m.active_fill_opacity.points());
+        let cap_stroke = Stroke::new(m.border_stroke_width.points(), accent_col);
+        let left_cap = Rect::from_min_max(inner_rect.min, Pos2::new(inner_rect.min.x + cap_w, inner_rect.max.y));
+        let right_cap = Rect::from_min_max(Pos2::new(inner_rect.max.x - cap_w, inner_rect.min.y), inner_rect.max);
+        painter.rect(left_cap, inner_cr, cap_fill, cap_stroke, StrokeKind::Inside);
+        painter.rect(right_cap, inner_cr, cap_fill, cap_stroke, StrokeKind::Inside);
 
         let r_cyl = inner_rect.height() * 0.5;
         let y_c = inner_rect.center().y;
@@ -243,9 +269,8 @@ impl<'a> MacEdgeThumbwheel<'a> {
                 } else {
                     theme.label().gamma_multiply(crown_cos)
                 };
-                let x_inset = m.ring_gap.points() * s;
                 painter.line_segment(
-                    [Pos2::new(inner_rect.min.x + x_inset, y), Pos2::new(inner_rect.max.x - x_inset, y)],
+                    [Pos2::new(inner_rect.min.x + cap_w, y), Pos2::new(inner_rect.max.x - cap_w, y)],
                     Stroke::new(thickness, ridge_col),
                 );
             }
@@ -257,6 +282,7 @@ impl<'a> MacEdgeThumbwheel<'a> {
             value_delta,
             delta_ticks,
             is_free_spinning,
+            effective_glass_accent: accent_col,
         }
     }
 }

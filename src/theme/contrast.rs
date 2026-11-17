@@ -334,6 +334,30 @@ impl MacTheme {
         let min_ratio = self.label_metrics().wcag_aa_large_ratio.points();
         self.resolve_vibrant_on(surface_bg, 2, min_ratio)
     }
+
+    /// Adapts any user-supplied [`Color32`] (or [`Self::control_accent`] when `None`) through
+    /// the Apple AppKit calculated vibrancy & contrast system (`plus_darker` on light surfaces,
+    /// `plus_lighter` on dark surfaces, and `ensure_wcag_contrast` `>= 3.0:1` against `surface_bg`).
+    pub fn resolve_glass_accent_on(&self, custom_color: Option<Color32>, surface_bg: Color32) -> Color32 {
+        let base = custom_color.unwrap_or_else(|| self.control_accent());
+        let gain = self.label_metrics().vibrancy_gain.points();
+        let min_ratio = self.label_metrics().wcag_aa_large_ratio.points();
+        let style = MacBackgroundStyle::from_color(surface_bg);
+        let vibrant = match style {
+            MacBackgroundStyle::Light => {
+                let ref_bg = self.tokens().colors().aqua.window_background.to_color32();
+                plus_darker(base, surface_bg, ref_bg, gain)
+            }
+            MacBackgroundStyle::Dark => {
+                let ref_bg = match self.appearance {
+                    MacAppearance::Anthracite => self.tokens().colors().anthracite.window_background.to_color32(),
+                    MacAppearance::Aqua | MacAppearance::DarkAqua => self.tokens().colors().dark_aqua.window_background.to_color32(),
+                };
+                plus_lighter(base, surface_bg, ref_bg, gain)
+            }
+        };
+        ensure_wcag_contrast(vibrant, surface_bg, min_ratio)
+    }
 }
 
 /// macOS AppKit background style (`NSBackgroundStyle`).

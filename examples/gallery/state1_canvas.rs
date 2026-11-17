@@ -5,7 +5,7 @@ use super::CenterState;
 use crate::CardModel;
 use egui::{pos2, vec2, Align2, Color32, CornerRadius, FontId, Pos2, Rect, Sense, Stroke, StrokeKind, Ui};
 use egui_macview::{
-    theme::MacTheme, MacBackgroundStyle, MacContextMenu, MacContextThumbDial, MacEdgeThumbwheel, MacThumbArcPlacement,
+    theme::MacTheme, MacBackgroundStyle, MacContextMenu, MacContextThumbDial, MacEdgeThumbwheel, MacFreeJoystickBowl, MacThumbArcPlacement,
     MacThumbContextPreset, MacThumbDockZone, MacThumbIntent, MacToastManager, NSMenuItem,
 };
 use std::cell::RefCell;
@@ -299,55 +299,151 @@ impl CenterState {
             sp.text(p_rect.center(), Align2::CENTER_CENTER, *lbl, FontId::proportional(9.0), fg);
         }
 
+        // Row 2: 3 Standalone Interchangeable Configurations + Apple Calculated Glass Accent ColorWell
+        let cfg_labels = ["Paired", "Rotary", "Select", "Joystick"];
+        let cfg_rect = Rect::from_min_size(pos2(strip_rect.min.x, strip_rect.max.y + 4.0), vec2(strip_w - 36.0, 18.0));
+        let cfg_w = cfg_rect.width() / 4.0;
+        let cp_cfg = content_ui.painter_at(cfg_rect);
+        let eff_accent = theme.resolve_glass_accent_on(Some(self.thumb_glass_color), theme.popover_background());
+        for (idx, lbl) in cfg_labels.iter().enumerate() {
+            let p_rect = Rect::from_min_size(pos2(cfg_rect.min.x + idx as f32 * cfg_w, cfg_rect.min.y), vec2(cfg_w - 2.0, 18.0));
+            let hit = content_ui.interact(p_rect, content_ui.scope_id().with(("thumb_cfg_mode_pill", idx)), Sense::click());
+            if hit.clicked() {
+                self.thumb_config_mode = idx;
+            }
+            let is_sel = self.thumb_config_mode == idx;
+            let fill = if is_sel { eff_accent } else { theme.box_background() };
+            let fg = if is_sel { MacBackgroundStyle::from_color(eff_accent).primary_text_color(theme) } else { theme.label() };
+            cp_cfg.rect(p_rect, CornerRadius::same(4), fill, Stroke::new(1.0, theme.separator()), StrokeKind::Inside);
+            cp_cfg.text(p_rect.center(), Align2::CENTER_CENTER, *lbl, FontId::proportional(8.5), fg);
+        }
+        let well_rect = Rect::from_min_size(pos2(cfg_rect.max.x + 2.0, cfg_rect.min.y), vec2(34.0, 18.0));
+        let well_hit = content_ui.interact(well_rect, content_ui.scope_id().with("thumb_glass_color_swatch"), Sense::click());
+        if well_hit.clicked() {
+            let pal = theme.tag_label_palette();
+            let cur_idx = pal.iter().position(|c| *c == self.thumb_glass_color).unwrap_or(0);
+            self.thumb_glass_color = pal[(cur_idx + 1) % pal.len()];
+        }
+        cp_cfg.rect(well_rect, CornerRadius::same(4), eff_accent, Stroke::new(1.0, theme.separator()), StrokeKind::Inside);
+        cp_cfg.text(
+            well_rect.center(),
+            Align2::CENTER_CENTER,
+            "Hue",
+            FontId::proportional(8.5),
+            MacBackgroundStyle::from_color(eff_accent).primary_text_color(theme),
+        );
+
         let can_undo = args.undo_manager.borrow().can_undo();
         let can_redo = args.undo_manager.borrow().can_redo();
         let rot_str = format!("θ {:.0}°", card.rotation_deg);
-        let is_stand1 = self.thumb_dial_layer == egui_macview::MacThumbDialLayer::CompassModifiers;
-        let dial_scale = if is_stand1 { 0.72 } else { 0.92 };
-        let resp = MacContextThumbDial::new("state1_canvas_thumb_dial", &mut self.thumb_dial_latched, &mut self.thumb_dial_rotary)
-            .layer(&mut self.thumb_dial_layer)
-            .undo_arc_placement(MacThumbArcPlacement::TopCrown)
-            .preset(active_preset)
-            .rotary_parameter("Tap: Mode", &rot_str)
-            .can_undo(can_undo)
-            .can_redo(can_redo)
-            .scale(dial_scale)
-            .dock_in_rect(canvas_rect, MacThumbDockZone::BottomRight)
-            .theme(theme)
-            .show(content_ui);
+        let dial_scale = 0.74f32;
+        let mut undo_clicked = false;
+        let mut redo_clicked = false;
+        let mut nudge_delta = egui::Vec2::ZERO;
+        let mut rotary_delta_ticks = 0.0f32;
+        let mut effective_mask = egui_macview::MacThumbIntentMask::NONE;
 
-        if self.thumb_dial_layer == egui_macview::MacThumbDialLayer::CompassModifiers {
-            let drum_w = resp.response.rect.width();
-            let wheel_resp = MacEdgeThumbwheel::new("state1_edge_thumbwheel", &mut card.rotation_deg, 0.0..=360.0)
-                .wide_drum_width(drum_w)
-                .scale(0.76)
-                .dock_right_edge(canvas_rect)
-                .theme(theme)
-                .show(content_ui);
-            let _ = wheel_resp.is_free_spinning;
+        match self.thumb_config_mode {
+            1 => {
+                // Standalone Configuration 1: Cylindrical Rotary Wheel (MacEdgeThumbwheel) Only
+                let drum_w = (theme.thumb_dial().outer_radius.points() * 2.0 * dial_scale) * 0.72;
+                let _ = MacEdgeThumbwheel::new("state1_standalone_rotary", &mut card.rotation_deg, 0.0..=360.0)
+                    .wide_drum_width(drum_w)
+                    .scale(dial_scale)
+                    .glass_accent(self.thumb_glass_color)
+                    .dock_right_edge(canvas_rect)
+                    .theme(theme)
+                    .show(content_ui);
+            }
+            2 => {
+                // Standalone Configuration 2: 6-Cushion Compass Selection Dial (MacContextThumbDial) Only
+                let mut fixed_layer = egui_macview::MacThumbDialLayer::CompassModifiers;
+                let resp = MacContextThumbDial::new("state1_standalone_select_dial", &mut self.thumb_dial_latched, &mut self.thumb_dial_rotary)
+                    .layer(&mut fixed_layer)
+                    .undo_arc_placement(MacThumbArcPlacement::TopCrown)
+                    .preset(active_preset)
+                    .rotary_parameter("Select", &rot_str)
+                    .can_undo(can_undo)
+                    .can_redo(can_redo)
+                    .scale(dial_scale)
+                    .glass_accent(self.thumb_glass_color)
+                    .dock_in_rect(canvas_rect, MacThumbDockZone::BottomRight)
+                    .theme(theme)
+                    .show(content_ui);
+                undo_clicked = resp.undo_clicked;
+                redo_clicked = resp.redo_clicked;
+                nudge_delta = resp.nudge_delta;
+                rotary_delta_ticks = resp.rotary_delta_ticks;
+                effective_mask = resp.effective_mask;
+            }
+            3 => {
+                // Standalone Configuration 3: 360° Free Joystick Bowl with 3D Crystal Glass Marble (MacFreeJoystickBowl) Only
+                let j_resp = MacFreeJoystickBowl::new("state1_standalone_joystick_bowl")
+                    .undo_arc_placement(MacThumbArcPlacement::TopCrown)
+                    .can_undo(can_undo)
+                    .can_redo(can_redo)
+                    .scale(dial_scale)
+                    .glass_accent(self.thumb_glass_color)
+                    .dock_in_rect(canvas_rect, MacThumbDockZone::BottomRight)
+                    .theme(theme)
+                    .show(content_ui);
+                undo_clicked = j_resp.undo_clicked;
+                redo_clicked = j_resp.redo_clicked;
+                nudge_delta = j_resp.nudge_delta;
+            }
+            _ => {
+                // Paired Configuration (Default): Compact 1:1 Dial (Stand 1 <-> Stand 2) + Narrower Centered Rotary Wheel in Stand 1
+                let resp = MacContextThumbDial::new("state1_canvas_thumb_dial", &mut self.thumb_dial_latched, &mut self.thumb_dial_rotary)
+                    .layer(&mut self.thumb_dial_layer)
+                    .undo_arc_placement(MacThumbArcPlacement::TopCrown)
+                    .preset(active_preset)
+                    .rotary_parameter("Tap: Mode", &rot_str)
+                    .can_undo(can_undo)
+                    .can_redo(can_redo)
+                    .scale(dial_scale)
+                    .glass_accent(self.thumb_glass_color)
+                    .dock_in_rect(canvas_rect, MacThumbDockZone::BottomRight)
+                    .theme(theme)
+                    .show(content_ui);
+                if self.thumb_dial_layer == egui_macview::MacThumbDialLayer::CompassModifiers {
+                    let drum_w = resp.response.rect.width() * 0.72;
+                    let _ = MacEdgeThumbwheel::new("state1_edge_thumbwheel", &mut card.rotation_deg, 0.0..=360.0)
+                        .wide_drum_width(drum_w)
+                        .scale(dial_scale)
+                        .glass_accent(self.thumb_glass_color)
+                        .dock_right_edge(canvas_rect)
+                        .theme(theme)
+                        .show(content_ui);
+                }
+                undo_clicked = resp.undo_clicked;
+                redo_clicked = resp.redo_clicked;
+                nudge_delta = resp.nudge_delta;
+                rotary_delta_ticks = resp.rotary_delta_ticks;
+                effective_mask = resp.effective_mask;
+            }
         }
 
-        if resp.undo_clicked && args.undo_manager.borrow_mut().undo(card) {
+        if undo_clicked && args.undo_manager.borrow_mut().undo(card) {
             *args.last_stable_card.borrow_mut() = card.clone();
             toasts.borrow_mut().info("Thumb Dial: Undone");
         }
-        if resp.redo_clicked && args.undo_manager.borrow_mut().redo(card) {
+        if redo_clicked && args.undo_manager.borrow_mut().redo(card) {
             *args.last_stable_card.borrow_mut() = card.clone();
             toasts.borrow_mut().info("Thumb Dial: Redone");
         }
-        if resp.nudge_delta != egui::Vec2::ZERO && !args.lock_canvas {
-            self.card_drag_offset += resp.nudge_delta;
+        if nudge_delta != egui::Vec2::ZERO && !args.lock_canvas {
+            self.card_drag_offset += nudge_delta;
         }
-        if resp.rotary_delta_ticks.abs() > 0.0 && !args.lock_canvas {
-            card.rotation_deg = (card.rotation_deg + resp.rotary_delta_ticks * 5.0).rem_euclid(360.0);
+        if rotary_delta_ticks.abs() > 0.0 && !args.lock_canvas {
+            card.rotation_deg = (card.rotation_deg + rotary_delta_ticks * 5.0).rem_euclid(360.0);
         }
-        if resp.effective_mask.contains(MacThumbIntent::Constrain) {
+        if effective_mask.contains(MacThumbIntent::Constrain) {
             card.constrain_proportions = true;
         }
-        if resp.effective_mask.contains(MacThumbIntent::Alter) && resp.effective_mask.contains(MacThumbIntent::Constrain) {
+        if effective_mask.contains(MacThumbIntent::Alter) && effective_mask.contains(MacThumbIntent::Constrain) {
             card.alignment_idx = 1;
         }
-        if resp.effective_mask.contains(MacThumbIntent::Glide) && resp.effective_mask.contains(MacThumbIntent::Alter) {
+        if effective_mask.contains(MacThumbIntent::Glide) && effective_mask.contains(MacThumbIntent::Alter) {
             card.skew_deg = 12.0;
         }
     }

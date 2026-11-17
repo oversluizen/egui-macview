@@ -2,10 +2,11 @@
 //!
 //! Verifies `REQ-014-01` through `REQ-014-04` (`TC-014-01` .. `TC-014-05`).
 
-use egui::{Context, Event, PointerButton, Pos2, RawInput, Rect, Vec2};
+use egui::{Color32, Context, Event, PointerButton, Pos2, RawInput, Rect, Vec2};
 use egui_macview::{
-    setup_symbols_font, MacAppearance, MacContextThumbDial, MacEdgeThumbwheel, MacTheme, MacThumbArcPlacement, MacThumbContextPreset,
-    MacThumbDialLayer, MacThumbDockZone, MacThumbIntent, MacThumbIntentMask, MacThumbSector, VERSION,
+    contrast_ratio, setup_symbols_font, MacAppearance, MacContextThumbDial, MacEdgeThumbwheel, MacFreeJoystickBowl, MacTheme,
+    MacThumbArcPlacement, MacThumbContextPreset, MacThumbDialLayer, MacThumbDockZone, MacThumbIntent, MacThumbIntentMask, MacThumbSector,
+    VERSION,
 };
 
 fn init_headless_ctx() -> Context {
@@ -29,14 +30,18 @@ fn pointer_frame(pos: Pos2, pressed: Option<bool>, time: f64) -> RawInput {
     };
     input.events.push(Event::PointerMoved(pos));
     if let Some(is_down) = pressed {
-        input.events.push(Event::PointerButton {
-            pos,
-            button: PointerButton::Primary,
-            pressed: is_down,
-            modifiers: egui::Modifiers::NONE,
-        });
+        input.events.push(Event::PointerButton { pos, button: PointerButton::Primary, pressed: is_down, modifiers: egui::Modifiers::NONE });
     }
     input
+}
+
+fn tap_dial(ctx: &Context, id: &'static str, pos: Pos2, t: f64, latched: &mut MacThumbIntentMask, rot: &mut f32, theme: &MacTheme) {
+    run_frame(ctx, pointer_frame(pos, Some(true), t), |ui| {
+        MacContextThumbDial::new(id, latched, rot).preset(MacThumbContextPreset::Primitives).theme(theme).show(ui);
+    });
+    run_frame(ctx, pointer_frame(pos, Some(false), t + 0.05), |ui| {
+        MacContextThumbDial::new(id, latched, rot).preset(MacThumbContextPreset::Primitives).theme(theme).show(ui);
+    });
 }
 
 /// TC-014-01 (`REQ-014-01`): 4 Invariant Cardinal Intentions (`N`, `E`, `S`, `W`) + Diagonal Combination Wedges (`NE`, `SE`).
@@ -111,63 +116,19 @@ fn tc_014_02_tap_to_latch_multi_sector_chording_and_hub_clear() {
     });
 
     // 1. Quick tap (< 180 ms: 50 ms) on North ("1:1") -> latches CONSTRAIN
-    run_frame(&ctx, pointer_frame(north_pos, Some(true), 1.00), |ui| {
-        MacContextThumbDial::new("dial_latch_test", &mut latched, &mut rotary_val)
-            .preset(MacThumbContextPreset::Primitives)
-            .theme(&theme)
-            .show(ui);
-    });
-    run_frame(&ctx, pointer_frame(north_pos, Some(false), 1.05), |ui| {
-        MacContextThumbDial::new("dial_latch_test", &mut latched, &mut rotary_val)
-            .preset(MacThumbContextPreset::Primitives)
-            .theme(&theme)
-            .show(ui);
-    });
+    tap_dial(&ctx, "dial_latch_test", north_pos, 1.00, &mut latched, &mut rotary_val, &theme);
     assert_eq!(latched, MacThumbIntentMask::CONSTRAIN);
 
     // 2. Quick tap (< 180 ms: 50 ms) on East ("⊙ Center") -> latches BOTH CONSTRAIN and ALTER simultaneously!
-    run_frame(&ctx, pointer_frame(east_pos, Some(true), 2.00), |ui| {
-        MacContextThumbDial::new("dial_latch_test", &mut latched, &mut rotary_val)
-            .preset(MacThumbContextPreset::Primitives)
-            .theme(&theme)
-            .show(ui);
-    });
-    run_frame(&ctx, pointer_frame(east_pos, Some(false), 2.05), |ui| {
-        MacContextThumbDial::new("dial_latch_test", &mut latched, &mut rotary_val)
-            .preset(MacThumbContextPreset::Primitives)
-            .theme(&theme)
-            .show(ui);
-    });
+    tap_dial(&ctx, "dial_latch_test", east_pos, 2.00, &mut latched, &mut rotary_val, &theme);
     assert_eq!(latched, MacThumbIntentMask::CONSTRAIN.union(MacThumbIntentMask::ALTER));
 
     // 3. Quick tap on Center Thumb Rest Hub -> clears all active latches
-    run_frame(&ctx, pointer_frame(geom_center, Some(true), 3.00), |ui| {
-        MacContextThumbDial::new("dial_latch_test", &mut latched, &mut rotary_val)
-            .preset(MacThumbContextPreset::Primitives)
-            .theme(&theme)
-            .show(ui);
-    });
-    run_frame(&ctx, pointer_frame(geom_center, Some(false), 3.05), |ui| {
-        MacContextThumbDial::new("dial_latch_test", &mut latched, &mut rotary_val)
-            .preset(MacThumbContextPreset::Primitives)
-            .theme(&theme)
-            .show(ui);
-    });
+    tap_dial(&ctx, "dial_latch_test", geom_center, 3.00, &mut latched, &mut rotary_val, &theme);
     assert_eq!(latched, MacThumbIntentMask::NONE);
 
     // 4. Single quick tap on diagonal NorthEast ("1:1+⊙Center") -> latches BOTH CONSTRAIN and ALTER at once!
-    run_frame(&ctx, pointer_frame(ne_pos, Some(true), 4.00), |ui| {
-        MacContextThumbDial::new("dial_latch_test", &mut latched, &mut rotary_val)
-            .preset(MacThumbContextPreset::Primitives)
-            .theme(&theme)
-            .show(ui);
-    });
-    run_frame(&ctx, pointer_frame(ne_pos, Some(false), 4.05), |ui| {
-        MacContextThumbDial::new("dial_latch_test", &mut latched, &mut rotary_val)
-            .preset(MacThumbContextPreset::Primitives)
-            .theme(&theme)
-            .show(ui);
-    });
+    tap_dial(&ctx, "dial_latch_test", ne_pos, 4.00, &mut latched, &mut rotary_val, &theme);
     assert_eq!(latched, MacThumbIntentMask::CONSTRAIN.union(MacThumbIntentMask::ALTER));
 }
 
@@ -460,4 +421,117 @@ fn tc_014_07_edge_thumbwheel_free_spin_flywheel_and_touch_to_brake() {
         spinning_after_brake = resp.is_free_spinning;
     });
     assert!(!spinning_after_brake, "Touching the spinning wheel must immediately brake Free-Spin inertia to zero");
+}
+
+/// TC-014-08 (`REQ-014-06`): Three Standalone Interchangeable Widgets (`MacEdgeThumbwheel`, `MacContextThumbDial`, `MacFreeJoystickBowl`) & Custom `.glass_accent(Color32)` Adapted by the Apple Calculated Color System (`resolve_glass_accent_on`).
+#[test]
+fn tc_014_08_standalone_interchangeable_widgets_and_calculated_apple_glass_accent() {
+    let ctx = init_headless_ctx();
+    let dark_theme = MacTheme::new(MacAppearance::DarkAqua);
+    let light_theme = MacTheme::new(MacAppearance::Aqua);
+
+    // User-chosen custom colors:
+    // 1. Very dark navy-teal (too dark for DarkAqua without Apple PlusLighter + WCAG clamping!)
+    let too_dark_custom = Color32::from_rgb(12, 28, 36);
+    // 2. Very pale pastel mint (too light for Aqua without Apple PlusDarker + WCAG clamping!)
+    let too_light_custom = Color32::from_rgb(225, 248, 235);
+    // 3. Vibrant custom purple-magenta
+    let custom_violet = Color32::from_rgb(155, 70, 235);
+
+    let dark_surface = dark_theme.popover_background();
+    let light_surface = light_theme.popover_background();
+    let calc_dark = dark_theme.resolve_glass_accent_on(Some(too_dark_custom), dark_surface);
+    let calc_light = light_theme.resolve_glass_accent_on(Some(too_light_custom), light_surface);
+    assert!(
+        contrast_ratio(calc_dark, dark_surface) >= 3.0,
+        "Apple calculated color system must boost dark custom color on DarkAqua to >= 3.0:1 contrast"
+    );
+    assert!(
+        contrast_ratio(calc_light, light_surface) >= 3.0,
+        "Apple calculated color system must darken pale custom color on Aqua to >= 3.0:1 contrast"
+    );
+
+    let mut wheel_val = 120.0f32;
+    let mut latched = MacThumbIntentMask::NONE;
+    let mut rotary_val = 0.5f32;
+    let mut dial_size = Vec2::ZERO;
+    let mut joy_size = Vec2::ZERO;
+    let mut joy_center = Pos2::ZERO;
+    let mut joy_undo_center = Pos2::ZERO;
+
+    // Frame 0: Mount all 3 standalone widgets with user-defined Color32 values and verify Apple calculated color adaptation + exact 1:1 size parity
+    run_frame(&ctx, pointer_frame(Pos2::ZERO, None, 0.0), |ui| {
+        let w_resp = MacEdgeThumbwheel::new("standalone_wheel", &mut wheel_val, 0.0..=360.0)
+            .glass_accent(too_dark_custom)
+            .theme(&dark_theme)
+            .show(ui);
+        assert_eq!(w_resp.effective_glass_accent, calc_dark);
+
+        let d_resp = MacContextThumbDial::new("standalone_select_dial", &mut latched, &mut rotary_val)
+            .glass_accent(custom_violet)
+            .scale(0.76)
+            .theme(&dark_theme)
+            .show(ui);
+        assert_eq!(
+            d_resp.effective_glass_accent,
+            dark_theme.resolve_glass_accent_on(Some(custom_violet), dark_surface)
+        );
+        dial_size = d_resp.response.rect.size();
+
+        let j_resp = MacFreeJoystickBowl::new("standalone_joystick_bowl")
+            .glass_accent(too_light_custom)
+            .scale(0.76)
+            .can_undo(true)
+            .can_redo(true)
+            .theme(&light_theme)
+            .show(ui);
+        assert_eq!(j_resp.effective_glass_accent, calc_light);
+        joy_size = j_resp.response.rect.size();
+    });
+
+    assert_eq!(
+        dial_size, joy_size,
+        "Standalone MacFreeJoystickBowl must have the exact same compact 1:1 bounding size as MacContextThumbDial"
+    );
+
+    // Inspect standalone MacFreeJoystickBowl geometry when mounted alone in the slot
+    run_frame(&ctx, pointer_frame(Pos2::ZERO, None, 0.50), |ui| {
+        let j_resp = MacFreeJoystickBowl::new("standalone_joystick_bowl").scale(0.76).theme(&dark_theme).show(ui);
+        joy_center = j_resp.hub_center;
+        joy_undo_center = j_resp.undo_rect.center();
+    });
+
+    // Drag the 3D crystal glass marble inside standalone MacFreeJoystickBowl -> emits continuous 360° nudge_delta
+    let drag_pt = joy_center + Vec2::new(36.0, -24.0);
+    let mut standalone_nudge = Vec2::ZERO;
+    let mut marble_pos = Pos2::ZERO;
+    run_frame(&ctx, pointer_frame(drag_pt, Some(true), 1.00), |ui| {
+        let j_resp = MacFreeJoystickBowl::new("standalone_joystick_bowl")
+            .glass_accent(custom_violet)
+            .scale(0.76)
+            .theme(&dark_theme)
+            .show(ui);
+        standalone_nudge = j_resp.nudge_delta;
+        marble_pos = j_resp.marble_center;
+    });
+    run_frame(&ctx, pointer_frame(drag_pt, Some(false), 1.05), |ui| {
+        MacFreeJoystickBowl::new("standalone_joystick_bowl")
+            .glass_accent(custom_violet)
+            .scale(0.76)
+            .theme(&dark_theme)
+            .show(ui);
+    });
+    assert!(standalone_nudge.x > 0.0 && standalone_nudge.y < 0.0, "Standalone MacFreeJoystickBowl upper-right drag must emit (+x, -y) nudge_delta");
+    assert!((marble_pos - joy_center).length() > 10.0, "3D glass marble must displace toward pointer during drag");
+
+    // Click Undo on standalone MacFreeJoystickBowl
+    let mut joy_undo_clicked = false;
+    run_frame(&ctx, pointer_frame(joy_undo_center, Some(true), 2.00), |ui| {
+        MacFreeJoystickBowl::new("standalone_joystick_bowl").scale(0.76).can_undo(true).theme(&dark_theme).show(ui);
+    });
+    run_frame(&ctx, pointer_frame(joy_undo_center, Some(false), 2.04), |ui| {
+        let j_resp = MacFreeJoystickBowl::new("standalone_joystick_bowl").scale(0.76).can_undo(true).theme(&dark_theme).show(ui);
+        joy_undo_clicked = j_resp.undo_clicked;
+    });
+    assert!(joy_undo_clicked, "Clicking Undo crown on standalone MacFreeJoystickBowl must fire undo_clicked");
 }

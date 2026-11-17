@@ -142,6 +142,8 @@ pub struct CenterState {
     pub thumb_dial_layer: egui_macview::MacThumbDialLayer,
     pub thumb_dial_rotary: f32,
     pub thumb_dial_preset_idx: usize,
+    pub thumb_config_mode: usize,
+    pub thumb_glass_color: Color32,
     pub nib_studio: super::nib_window_studio::NibShowcaseWindowState,
     pub screen_nib_scenes: Vec<(egui_macview::scene::MacSceneIR, super::nib_showcase_builders::ShowcaseSceneDataStore)>,
 }
@@ -282,6 +284,8 @@ impl Default for CenterState {
             thumb_dial_layer: egui_macview::MacThumbDialLayer::CompassModifiers,
             thumb_dial_rotary: 0.35,
             thumb_dial_preset_idx: 2,
+            thumb_config_mode: 0,
+            thumb_glass_color: default_theme.control_accent(),
             nib_studio: super::nib_window_studio::NibShowcaseWindowState::default(),
             screen_nib_scenes: super::nib_showcase_builders::compile_gallery_screen_scenes(),
         }

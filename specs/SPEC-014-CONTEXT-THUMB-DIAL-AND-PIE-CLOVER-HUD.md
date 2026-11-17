@@ -32,7 +32,7 @@ Combining compass modifier slices, 360° point nudging, and a concentric rotary 
 
 ---
 
-## 2. Normative Requirements (`REQ-014-01` .. `REQ-014-05`)
+## 2. Normative Requirements (`REQ-014-01` .. `REQ-014-06`)
 
 ### 2.1 `REQ-014-01`: Four Cardinal Semantic Directions & Diagonal Single-Thumb Combination Wedges (Layer 1)
 
@@ -74,3 +74,13 @@ Combining compass modifier slices, 360° point nudging, and a concentric rotary 
 
 - `MacContextThumbDial` supports `MacThumbArcPlacement::{ BottomSkirt, TopCrown, TopAndBottomCaps }` and renders authentic *Liquid Glass* in both `MacAppearance::DarkAqua` and `MacAppearance::Aqua`.
 - `macview_gallery` (`State 1: Vector & Inspector Studio`) mounts both **`MacContextThumbDial`** (with Layer 1 $\leftrightarrow$ Layer 2 center-click switching and placement selector) and **`MacEdgeThumbwheel`** (with Free-Spin flywheel inertia) live on the vector canvas.
+
+### 2.6 `REQ-014-06`: Three Standalone Interchangeable Widget Configurations & Calculated Apple Vibrancy/Contrast Glass Color (`.glass_accent(Color32)`)
+
+1. **Three Standalone, Independently Mountable & Swappable Widgets:**
+   - **Configuration 1 — Standalone Rotary Wheel (`MacEdgeThumbwheel`):** Cylindrical top-down roller with $\cos(\phi)$ foreshortened ridges, illuminated end-cap accent rings, Free-Spin flywheel inertia, and Touch-to-Brake, usable either paired above the thumb dial or completely standalone.
+   - **Configuration 2 — Standalone 6-Cushion Selection / Modifier Dial (`MacContextThumbDial`):** Compact circular *Liquid Glass* 6-cushion compass modifier dial with curved `↶ Undo` / `↷ Redo` crown buttons (`MacThumbArcPlacement::TopCrown`), *Tap-to-Latch*, and *Hold-to-Momentary*.
+   - **Configuration 3 — Standalone $360^\circ$ Free Joystick Bowl (`MacFreeJoystickBowl`):** Dedicated standalone widget rendering the unobstructed $360^\circ$ recessed *Liquid Glass* bowl (at the exact same compact $1:1$ circular footprint as `MacContextThumbDial`), concentric `Fine` and `Fast` speed rings, curved `↶ Undo` / `↷ Redo` crown buttons, and a **5-layer 3D translucent crystal glass marble** (ambient drop shadow, refractive glass body, inner caustic glow, Fresnel rim highlight, and upper-left specular highlight dot) that glides across $360^\circ$ with quadratic radial velocity scaling.
+2. **Free User-Configurable `.glass_accent(Color32)` Adapted by the Apple Calculated Color System (`MacTheme::resolve_glass_accent_on`):**
+   - All three widgets (`MacEdgeThumbwheel`, `MacContextThumbDial`, and `MacFreeJoystickBowl`) accept any user-chosen `egui::Color32` via `.glass_accent(color: Color32)` (e.g., selected interactively via `MacColorWell`).
+   - Instead of painting the raw `Color32` unchecked, each widget passes the user's color through `MacTheme::resolve_glass_accent_on(custom_color, surface_bg)` in `src/theme/contrast.rs`, which applies Apple CoreGraphics surface vibrancy (`plus_darker` on light `Aqua` surfaces, `plus_lighter` on dark `DarkAqua`/`Anthracite` surfaces) and `ensure_wcag_contrast` (`>= 3.0:1` UI component contrast), while resolving all cushion and bowl typography through `theme.label_on(...)`, `theme.secondary_label_on(...)`, and `MacBackgroundStyle::from_color(...)`.

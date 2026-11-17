@@ -4,22 +4,23 @@ use super::{
     MacContextThumbDial, MacContextThumbResponse, MacThumbArcPlacement, MacThumbDialLayer, MacThumbDockZone, MacThumbIntent,
     MacThumbIntentMask, MacThumbSector, ThumbDialPressMemory,
 };
-use crate::theme::MacTheme;
+use crate::controls::free_joystick_bowl::{paint_crystal_glass_marble, MarblePaintSpec};
+use crate::theme::{MacBackgroundStyle, MacTheme};
 use crate::tokens::ThumbDialMetrics;
 use egui::{Align2, Color32, FontId, Painter, Pos2, Rect, Sense, Shape, Stroke, Ui, Vec2};
 
 #[inline]
-fn deg_to_rad(deg: f32, m: &ThumbDialMetrics) -> f32 {
+pub(crate) fn deg_to_rad(deg: f32, m: &ThumbDialMetrics) -> f32 {
     deg * std::f32::consts::PI / m.half_circle_deg.points()
 }
 
 #[inline]
-fn rad_to_deg(rad: f32, m: &ThumbDialMetrics) -> f32 {
+pub(crate) fn rad_to_deg(rad: f32, m: &ThumbDialMetrics) -> f32 {
     rad * m.half_circle_deg.points() / std::f32::consts::PI
 }
 
 #[inline]
-fn polar_pos(center: Pos2, radius: f32, angle_deg: f32, m: &ThumbDialMetrics) -> Pos2 {
+pub(crate) fn polar_pos(center: Pos2, radius: f32, angle_deg: f32, m: &ThumbDialMetrics) -> Pos2 {
     let rad = deg_to_rad(angle_deg, m);
     center + Vec2::new(rad.cos() * radius, rad.sin() * radius)
 }
@@ -61,15 +62,15 @@ fn hit_test_sector(angle_deg: f32, m: &ThumbDialMetrics) -> MacThumbSector {
     best_sector
 }
 
-struct WedgeGeometry {
-    center: Pos2,
-    r_in: f32,
-    r_out: f32,
-    start_deg: f32,
-    end_deg: f32,
+pub(crate) struct WedgeGeometry {
+    pub(crate) center: Pos2,
+    pub(crate) r_in: f32,
+    pub(crate) r_out: f32,
+    pub(crate) start_deg: f32,
+    pub(crate) end_deg: f32,
 }
 
-fn paint_annular_wedge(painter: &Painter, geom: WedgeGeometry, fill: Color32, stroke: Stroke, m: &ThumbDialMetrics) {
+pub(crate) fn paint_annular_wedge(painter: &Painter, geom: WedgeGeometry, fill: Color32, stroke: Stroke, m: &ThumbDialMetrics) {
     let steps = 12usize;
     let sweep = geom.end_deg - geom.start_deg;
     for i in 0..steps {
@@ -99,25 +100,22 @@ fn paint_annular_wedge(painter: &Painter, geom: WedgeGeometry, fill: Color32, st
     }
 }
 
-fn resolve_undo_redo_arcs(placement: MacThumbArcPlacement, m: &ThumbDialMetrics) -> ((f32, f32), (f32, f32)) {
+pub(crate) fn resolve_undo_redo_arcs(placement: MacThumbArcPlacement, m: &ThumbDialMetrics) -> ((f32, f32), (f32, f32)) {
     match placement {
-        MacThumbArcPlacement::TopCrown => (
-            (m.top_undo_arc_start_deg.points(), m.top_undo_arc_end_deg.points()),
-            (m.top_redo_arc_start_deg.points(), m.top_redo_arc_end_deg.points()),
-        ),
-        MacThumbArcPlacement::BottomSkirt => (
-            (m.undo_arc_start_deg.points(), m.undo_arc_end_deg.points()),
-            (m.redo_arc_start_deg.points(), m.redo_arc_end_deg.points()),
-        ),
-        MacThumbArcPlacement::TopAndBottomCaps => (
-            (m.cap_top_start_deg.points(), m.cap_top_end_deg.points()),
-            (m.cap_bottom_start_deg.points(), m.cap_bottom_end_deg.points()),
-        ),
+        MacThumbArcPlacement::TopCrown => {
+            ((m.top_undo_arc_start_deg.points(), m.top_undo_arc_end_deg.points()), (m.top_redo_arc_start_deg.points(), m.top_redo_arc_end_deg.points()))
+        }
+        MacThumbArcPlacement::BottomSkirt => {
+            ((m.undo_arc_start_deg.points(), m.undo_arc_end_deg.points()), (m.redo_arc_start_deg.points(), m.redo_arc_end_deg.points()))
+        }
+        MacThumbArcPlacement::TopAndBottomCaps => {
+            ((m.cap_top_start_deg.points(), m.cap_top_end_deg.points()), (m.cap_bottom_start_deg.points(), m.cap_bottom_end_deg.points()))
+        }
     }
 }
 
 #[inline]
-fn angle_in_arc(angle_deg: f32, start_deg: f32, end_deg: f32, m: &ThumbDialMetrics) -> bool {
+pub(crate) fn angle_in_arc(angle_deg: f32, start_deg: f32, end_deg: f32, m: &ThumbDialMetrics) -> bool {
     let mid = (start_deg + end_deg) * 0.5;
     let half = (end_deg - start_deg).abs() * 0.5;
     shortest_angle_diff_deg(angle_deg, mid, m).abs() <= half
@@ -296,6 +294,7 @@ pub(super) fn show_dial(mut dial: MacContextThumbDial<'_>, ui: &mut Ui) -> MacCo
         Vec2::ZERO
     };
 
+    let accent_col = theme.resolve_glass_accent_on(dial.glass_accent, theme.popover_background());
     let painter = ui.painter_at(rect.intersect(ui.clip_rect()));
     let state = DialPaintState {
         hub_center,
@@ -307,6 +306,7 @@ pub(super) fn show_dial(mut dial: MacContextThumbDial<'_>, ui: &mut Ui) -> MacCo
         hovered_undo,
         hovered_redo,
         joystick_offset: mem.joystick_offset,
+        accent_col,
     };
     paint_dial_layers(&painter, theme, m, &dial, state);
 
@@ -324,6 +324,7 @@ pub(super) fn show_dial(mut dial: MacContextThumbDial<'_>, ui: &mut Ui) -> MacCo
         hub_center,
         undo_rect,
         redo_rect,
+        effective_glass_accent: accent_col,
         sector_centers,
     }
 }
@@ -338,6 +339,7 @@ struct DialPaintState {
     hovered_undo: bool,
     hovered_redo: bool,
     joystick_offset: Vec2,
+    accent_col: Color32,
 }
 
 fn paint_dial_layers(painter: &Painter, theme: &MacTheme, m: &ThumbDialMetrics, dial: &MacContextThumbDial<'_>, st: DialPaintState) {
@@ -353,7 +355,7 @@ fn paint_dial_layers(painter: &Painter, theme: &MacTheme, m: &ThumbDialMetrics, 
     let r_wheel_in = r_clover_out + gap;
 
     let border_stroke = Stroke::new(m.border_stroke_width.points(), theme.separator());
-    let active_stroke = Stroke::new(m.active_stroke_width.points(), theme.control_accent());
+    let active_stroke = Stroke::new(m.active_stroke_width.points(), st.accent_col);
     let specular_col = theme.knob_fill().gamma_multiply(m.glass_specular_alpha.points());
     let glass_bg = theme.popover_background().gamma_multiply(m.glass_fill_alpha.points());
 
@@ -385,23 +387,24 @@ fn paint_dial_layers(painter: &Painter, theme: &MacTheme, m: &ThumbDialMetrics, 
             Align2::CENTER_CENTER,
             "Fine",
             FontId::proportional(m.hint_font_size.points() * s),
-            theme.secondary_label(),
+            theme.secondary_label_on(theme.window_background()),
         );
         painter.text(
             hub_center + Vec2::new(0.0, fast_r - m.hint_vertical_offset.points() * s),
             Align2::CENTER_CENTER,
             "Fast",
             FontId::proportional(m.hint_font_size.points() * s),
-            theme.secondary_label(),
+            theme.secondary_label_on(theme.window_background()),
         );
 
-        let puck_center = hub_center + st.joystick_offset;
-        painter.line_segment([hub_center, puck_center], active_stroke);
-        painter.circle_filled(hub_center, m.latch_dot_radius.points() * s, theme.control_accent());
+        let marble_center = hub_center + st.joystick_offset;
         let puck_r = m.joystick_puck_radius.points() * s;
-        let puck_fill = theme.control_accent().gamma_multiply(m.active_fill_opacity.points());
-        painter.circle(puck_center, puck_r, puck_fill, active_stroke);
-        painter.circle_filled(puck_center, m.latch_dot_radius.points() * s, theme.on_accent_text());
+        paint_crystal_glass_marble(
+            painter,
+            MarblePaintSpec { hub_center, marble_center, puck_r, scale: s, accent_col: st.accent_col },
+            theme,
+            m,
+        );
     } else {
         // Layer 1: 6 Frosted Liquid Glass Compass Cushions (N, NE, E, SE, S, W)
         let half_gap_deg = m.sector_gap_deg.points() * 0.5;
@@ -416,11 +419,11 @@ fn paint_dial_layers(painter: &Painter, theme: &MacTheme, m: &ThumbDialMetrics, 
             let c_deg = sector.center_angle_deg(m);
             let half_sweep = sector.sweep_deg(m) * 0.5 - half_gap_deg;
             let fill = if is_held {
-                theme.control_accent()
+                st.accent_col
             } else if is_latched {
-                theme.control_accent().gamma_multiply(m.active_fill_opacity.points())
+                st.accent_col.gamma_multiply(m.active_fill_opacity.points())
             } else if is_hovered {
-                theme.control_accent().gamma_multiply(m.hover_fill_opacity.points())
+                st.accent_col.gamma_multiply(m.hover_fill_opacity.points())
             } else if sector.is_diagonal_combo() {
                 theme.box_background().gamma_multiply(m.glass_fill_alpha.points())
             } else {
@@ -443,8 +446,9 @@ fn paint_dial_layers(painter: &Painter, theme: &MacTheme, m: &ThumbDialMetrics, 
 
             let spec = dial.sectors.sector(sector);
             let center_pt = polar_pos(hub_center, r_clover_mid, c_deg, m);
-            let text_col = if is_held { theme.on_accent_text() } else { theme.label() };
-            let hint_col = if is_held { theme.on_accent_text() } else { theme.secondary_label() };
+            let held_style = MacBackgroundStyle::from_color(st.accent_col);
+            let text_col = if is_held { held_style.primary_text_color(theme) } else { theme.label() };
+            let hint_col = if is_held { held_style.secondary_text_color(theme) } else { theme.secondary_label() };
             painter.text(
                 center_pt - Vec2::new(0.0, m.label_vertical_offset.points() * s),
                 Align2::CENTER_CENTER,
@@ -486,7 +490,7 @@ fn paint_dial_layers(painter: &Painter, theme: &MacTheme, m: &ThumbDialMetrics, 
         (redo_start, redo_end, "↷ Redo", dial.can_redo, st.hovered_redo),
     ] {
         let fill = if hovered && enabled {
-            theme.control_accent().gamma_multiply(m.active_fill_opacity.points())
+            st.accent_col.gamma_multiply(m.active_fill_opacity.points())
         } else {
             theme.control_background().gamma_multiply(m.glass_fill_alpha.points())
         };
