@@ -4,9 +4,9 @@
 | :--- | :--- |
 | **Document ID** | SPEC-INDEX |
 | **Document Title** | Specification Suite Index & Version Matrix |
-| **Document Version** | `0.6.11` |
+| **Document Version** | `0.8.0` |
 | **Status** | Accepted / Normative |
-| **Target Milestone** | Milestone 0.6.11 |
+| **Target Milestone** | Milestone 0.8.0 |
 | **Target Host** | Standalone crate `egui-macview` (Rust, egui 0.37) |
 | **Author** | Jaco Oversluizen / `egui-macview` contributors |
 | **Normative Standards** | ISO/IEC/IEEE 42010:2011, ISO/IEC/IEEE 29119-3:2021, RFC 2119/8174, Apple macOS HIG, W3C DTCG, SemVer 2.0.0 |
@@ -36,6 +36,8 @@
 | `0.6.9` | 2026-11-11 | Architecture Team | Milestone 0.6.9 Release: AppKit Pro-Inspector Controls (`MacOriginMatrix`, `MacTagColorPicker`, `MacTableActionBar`) & Semantic Tag Label Colors (`MacTagLabelColors`) |
 | `0.6.10` | 2026-11-12 | Architecture Team | Milestone 0.6.10 Release: AppKit NIB Control Properties (`MacSlider::tick_marks`, `MacControlSize` across `MacInputCell`/`MacCheckbox`/`MacRadioButton`/`MacPopUpButton`/`MacButtonCell`, `MacSegmentedControl::small_square` & `show_multi`, `MacTagColorPicker::rows`/`dot_size`/`spacing`, `MacPopoverSurface`) & Full `src/` Hardcoding Guard |
 | `0.6.11` | 2026-11-12 | Architecture Team | Milestone 0.6.11 Release: Clean-Room AppKit `NSSegmentedControl` Vector Icons (`SegmentItem::from_icon`), Per-Segment Widths & Enablement, Orthogonal `with_menu` / `with_shows_menu_indicator`, Press-and-Hold / Pull-Down / Secondary-Click Menu Triggers (`SegmentMenuTrigger`), and Sonoma Active-Pill Divider Suppression |
+| `0.7.0` | 2026-11-16 | Architecture Team | Milestone 0.7.0 Release: Three-Layer UI Compiler Architecture (`MacSceneIR`, `.nib`/`.xib`/`.strings` Importers, `SpatialSemanticNormalizer`, and Dual-Mode Layout Solver, `SPEC-013`) |
+| `0.8.0` | 2026-11-17 | Architecture Team | Milestone 0.8.0 Release: Context-Adaptive Bimanual Thumb Dial & Radial Clover / Pie HUD (`MacContextThumbDial`, `SPEC-014`) with 4 Cardinal Semantic Directions, Diagonal Single-Thumb Combination Wedges (`NE`/`SE`), Hybrid *Hold-to-Momentary* (`>= 180 ms`) / *Tap-to-Latch* (`< 180 ms`) + *Center Slide-Out*, Bottom `↶ Undo \| ↷ Redo` Arc, Tactile Rotary Ring, and Live Gallery Showcase |
 
 ---
 
@@ -60,6 +62,7 @@ The `egui-macview` specification suite provides the formal normative requirement
 | [**SPEC-011**](SPEC-011-STUDIO-AND-AVKIT-CONTROLS.md) | Studio & AVKit Media, Timeline and Publishing Controls | `0.5.0` | Accepted / Normative | `tests/studio_controls_v05_tests.rs`, `tests/zero_hardcoding_and_primitive_tests.rs` |
 | [**SPEC-012**](SPEC-012-ADVANCED-MEDIA-SCHEDULING-AND-GRID-CONTROLS.md) | Advanced Media, Scheduling, and Grid Controls | `0.6.10` | Accepted / Normative | `tests/spec012_advanced_controls_tests.rs`, `tests/spec012_appkit_and_battery_parity_tests.rs`, `tests/appkit_v065_nib_parity_tests.rs`, `tests/appkit_v069_pro_controls_tests.rs`, `tests/appkit_v0610_nib_controls_tests.rs` |
 | [**SPEC-013**](SPEC-013-DECLARATIVE-SCENE-IR-AND-NIB-XIB-COMPILER.md) | Three-Layer UI Compiler Architecture (`MacSceneIR`, `.nib`/`.xib` Importers & Dual-Mode Layout Solver) | `0.7.0` | Accepted / Normative | `tests/spec013_scene_ir_and_nib_compiler_tests.rs` |
+| [**SPEC-014**](SPEC-014-CONTEXT-THUMB-DIAL-AND-PIE-CLOVER-HUD.md) | Context-Adaptive Bimanual Thumb Dial & Radial Clover / Pie HUD (`MacContextThumbDial`) | `0.8.0` | Accepted / Normative | `tests/spec014_context_thumb_dial_tests.rs` |
 
 ---
 
@@ -77,7 +80,8 @@ The roadmap coordinates modular capability additions across designated release m
 | **Milestone 0.4.0** | `v0.4.0` (2026-11-07) | State Integrity (`NSUndoManager`), Context Menus & Micro-Feedback | Released | SPEC-008 (`0.4.0`) |
 | **Milestone 0.5.0** | `v0.5.0` (2026-11-08) | Studio & AVKit Media, Timeline and Publishing Controls | Released | SPEC-011 (`0.5.0`) |
 | **Milestone 0.6.0** | `v0.6.0` (2026-11-10) | Advanced Media, Scheduling, and Grid Controls | Released | SPEC-012 (`0.6.0`) |
-| **Milestone 0.7.0** | `v0.7.0` (Planned) | Three-Layer UI Compiler (`MacSceneIR`, `.nib`/`.xib`/`.strings` Frontends, Spatial Normalizer & Dual-Mode Solver) | Planned | SPEC-013 (`0.7.0-draft`) |
+| **Milestone 0.7.0** | `v0.7.0` (2026-11-16) | Three-Layer UI Compiler (`MacSceneIR`, `.nib`/`.xib`/`.strings` Frontends, Spatial Normalizer & Dual-Mode Solver) | Released | SPEC-013 (`0.7.0`) |
+| **Milestone 0.8.0** | `v0.8.0` (2026-11-17) | Context-Adaptive Bimanual Thumb Dial & Radial Clover / Pie HUD (`MacContextThumbDial`) | Released | SPEC-014 (`0.8.0`) |
 
 ### 2.2 Functional Capability Matrix
 
@@ -106,6 +110,8 @@ The roadmap coordinates modular capability additions across designated release m
 | `MacCollectionView` (`NSCollectionView`) | `src/controls/` | Milestone 0.6.0 | SPEC-012 | `tests/spec012_advanced_controls_tests.rs` | Released / Normative |
 | `MacBox` (`NSBox`) | `src/controls/` | Milestone 0.6.0 | SPEC-012 | `tests/spec012_advanced_controls_tests.rs` | Released / Normative |
 | `MacRuleEditor` (`NSRuleEditor`) | `src/controls/` | Milestone 0.6.1 | SPEC-012 | `tests/spec012_appkit_and_battery_parity_tests.rs` | Released / Normative |
+| `MacSceneIR` & `.nib`/`.xib` Compiler | `src/scene/` | Milestone 0.7.0 | SPEC-013 | `tests/spec013_scene_ir_and_nib_compiler_tests.rs` | Released / Normative |
+| `MacContextThumbDial` (`ContextThumbDial` Clover / Pie HUD) | `src/controls/` | Milestone 0.8.0 | SPEC-014 | `tests/spec014_context_thumb_dial_tests.rs` | Released / Normative |
 
 ---
 
@@ -136,6 +142,8 @@ All core specifications in this repository maintain exact version parity with th
 | **v0.6.9** | `0.6.9` | 2026-11-11 | Milestone 0.6.9 release: AppKit Pro-Inspector controls (`MacOriginMatrix`, `MacTagColorPicker`, `MacTableActionBar`) and semantic tag label colors (`MacTagLabelColors`), verified by `tests/appkit_v069_pro_controls_tests.rs`. |
 | **v0.6.10** | `0.6.10` | 2026-11-12 | Milestone 0.6.10 release: Five AppKit NIB properties (`MacSlider::tick_marks` with `4.0pt` neutral track, `1.0x4.0pt` tick marks at `3.0pt` offset, and `7.0x15.0pt` vertical pill thumb; `MacControlSize` across `MacInputCell`, `MacCheckbox`, `MacRadioButton`, `MacPopUpButton`, and `MacButtonCell`; `MacSegmentedControl::small_square` & `.show_multi`; `MacTagColorPicker::rows`, `.dot_size`, and `.spacing`; `MacPopoverSurface`) plus full `src/` hardcoding and `MacNibPrimitives` guard, verified by `tests/appkit_v0610_nib_controls_tests.rs`. |
 | **v0.6.11** | `0.6.11` | 2026-11-12 | Milestone 0.6.11 release: Clean-room AppKit `NSSegmentedControl` parity (`SegmentItem::from_icon`, per-segment `.with_width` and `.enabled`, orthogonal `.with_menu` vs `.with_shows_menu_indicator`, `PressAndHold` / `PullDown` / `SecondaryClick` menu triggers, analytical vector chevrons, and Sonoma active-pill divider suppression), verified by `tests/segmented_vector_icon_parity_tests.rs`. |
+| **v0.7.0** | `0.7.0` | 2026-11-16 | Milestone 0.7.0 release: Three-Layer Declarative UI Compiler (`MacSceneIR`, `.nib`/`.xib`/`.strings` importers, `SpatialSemanticNormalizer`, and Dual-Mode Layout Solver, `SPEC-013`), verified by `tests/spec013_scene_ir_and_nib_compiler_tests.rs`. |
+| **v0.8.0** | `0.8.0` | 2026-11-17 | Milestone 0.8.0 release: Context-Adaptive Bimanual Thumb Dial & Radial Clover / Pie HUD (`MacContextThumbDial`, `SPEC-014`) featuring 4 invariant cardinal geometric intentions (`North = Constrain ⇧`, `East = Alter/Break ⌥`, `South = Glide/Servo ⌘`, `West = Move/Pan ␣`), diagonal single-thumb combination wedges (`NorthEast = ⇧+⌥`, `SouthEast = ⌘+⌥`), hybrid *Hold-to-Momentary* (`>= 180 ms`) / *Tap-to-Latch* (`< 180 ms`) + *Center-Rest Slide-Out*, bottom `↶ Undo \| ↷ Redo` thumb arc, outer tactile rotary jog ring, and live interactive demonstrations in `macview_gallery` (`State 1` and `State 6`), verified by `tests/spec014_context_thumb_dial_tests.rs`. |
 
 ---
 

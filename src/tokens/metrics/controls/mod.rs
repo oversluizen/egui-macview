@@ -19,7 +19,9 @@ pub use extended::{
 };
 pub use media_and_date::{CollectionViewMetrics, DatePickerMetrics, PlayerViewMetrics};
 pub use nib_primitives::{CheckboxMetrics, CheckboxSizeMetrics, HelpButtonMetrics, InlineActionButtonMetrics, LabelMetrics};
-pub use pro_inspector::{ImageViewMetrics, OriginMatrixMetrics, TableActionBarMetrics, TagColorPickerMetrics, TextViewMetrics};
+pub use pro_inspector::{
+    ImageViewMetrics, OriginMatrixMetrics, TableActionBarMetrics, TagColorPickerMetrics, TextViewMetrics, ThumbDialMetrics,
+};
 pub use studio::{
     LevelIndicatorMetrics, PathControlMetrics, ProgressIndicatorMetrics, ProgressSizeMetrics, TableViewMetrics, TokenFieldMetrics,
     TrimScrubberMetrics,
@@ -103,4 +105,6 @@ pub struct MacControlMetrics {
     pub image_view: ImageViewMetrics,
     /// `NSTextView` multi-line text/code editor metrics.
     pub text_view: TextViewMetrics,
+    /// Context-Adaptive Bimanual Thumb Dial & Radial Clover / Pie HUD metrics (`SPEC-014`).
+    pub thumb_dial: ThumbDialMetrics,
 }

@@ -1,6 +1,6 @@
 [package]
 name = "egui-macview"
-version = "0.6.11"
+version = "0.8.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 authors = ["Jaco Oversluizen", "egui-macview contributors"]
@@ -147,6 +147,10 @@ path = "tests/segmented_a11y_keyboard_and_stack_tests.rs"
 [[test]]
 name = "spec013_scene_ir_and_nib_compiler_tests"
 path = "tests/spec013_scene_ir_and_nib_compiler_tests.rs"
+
+[[test]]
+name = "spec014_context_thumb_dial_tests"
+path = "tests/spec014_context_thumb_dial_tests.rs"
 
 [lints.rust]
 unsafe_code = "deny"

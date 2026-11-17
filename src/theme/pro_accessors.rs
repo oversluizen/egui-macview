@@ -3,6 +3,7 @@
 use super::MacTheme;
 use crate::tokens::{
     ImageViewMetrics, MacTagLabelColors, OriginMatrixMetrics, TableActionBarMetrics, TagColorPickerMetrics, TextViewMetrics,
+    ThumbDialMetrics,
 };
 use egui::Color32;
 
@@ -95,5 +96,10 @@ impl MacTheme {
     /// Returns `NSTextView` multi-line editor metrics tokens (`metrics.control.text_view`).
     pub fn text_view(&self) -> &TextViewMetrics {
         self.tokens.text_view_metrics()
+    }
+
+    /// Returns `MacContextThumbDial` metrics tokens (`metrics.control.thumb_dial`, `SPEC-014`).
+    pub fn thumb_dial(&self) -> &ThumbDialMetrics {
+        self.tokens.thumb_dial_metrics()
     }
 }

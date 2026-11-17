@@ -186,3 +186,146 @@ impl Default for TextViewMetrics {
         MacDesignTokens::default_shared().text_view_metrics().clone()
     }
 }
+
+/// Geometry and timing tokens for `MacContextThumbDial` (`SPEC-014`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ThumbDialMetrics {
+    /// Outer radius of the tactile rotary jog wheel (`84.0pt`).
+    pub outer_radius: DimensionValue,
+    /// Outer radius of the inner compass / clover sectors (`68.0pt`).
+    pub clover_outer_radius: DimensionValue,
+    /// Radius of the central Thumb Rest Hub (`24.0pt`).
+    pub hub_radius: DimensionValue,
+    /// Angular separation gap in degrees between adjacent sectors (`4.0pt`).
+    pub sector_gap_deg: DimensionValue,
+    /// Angular sweep in degrees of each cardinal sector (`48.0pt`).
+    pub cardinal_sweep_deg: DimensionValue,
+    /// Angular sweep in degrees of each diagonal combination sector (`38.0pt`).
+    pub diagonal_sweep_deg: DimensionValue,
+    /// Maximum press duration in seconds (`0.18pt`) classified as a Tap-to-Latch.
+    pub latch_tap_max_secs: DimensionValue,
+    /// Radius of the sticky latch indicator dot inside a latched sector (`3.0pt`).
+    pub latch_dot_radius: DimensionValue,
+    /// Radial inset from `hub_radius` to the sticky latch dot (`7.0pt`).
+    pub latch_dot_inset: DimensionValue,
+    /// Radial gap between concentric layers (`3.0pt`).
+    pub ring_gap: DimensionValue,
+    /// Inner radius of the curved bottom Undo/Redo skirt buttons (`88.0pt`).
+    pub skirt_inner_radius: DimensionValue,
+    /// Outer radius of the curved bottom Undo/Redo skirt buttons (`108.0pt`).
+    pub skirt_outer_radius: DimensionValue,
+    /// Start angle in degrees of the left bottom curved Undo button (`92.0pt`).
+    pub undo_arc_start_deg: DimensionValue,
+    /// End angle in degrees of the left bottom curved Undo button (`148.0pt`).
+    pub undo_arc_end_deg: DimensionValue,
+    /// Start angle in degrees of the right bottom curved Redo button (`32.0pt`).
+    pub redo_arc_start_deg: DimensionValue,
+    /// End angle in degrees of the right bottom curved Redo button (`88.0pt`).
+    pub redo_arc_end_deg: DimensionValue,
+    /// Start angle in degrees of the top-left crown Undo button (`-148.0pt`).
+    pub top_undo_arc_start_deg: DimensionValue,
+    /// End angle in degrees of the top-left crown Undo button (`-92.0pt`).
+    pub top_undo_arc_end_deg: DimensionValue,
+    /// Start angle in degrees of the top-right crown Redo button (`-88.0pt`).
+    pub top_redo_arc_start_deg: DimensionValue,
+    /// End angle in degrees of the top-right crown Redo button (`-32.0pt`).
+    pub top_redo_arc_end_deg: DimensionValue,
+    /// Start angle in degrees of the top cap Undo button (`-118.0pt`).
+    pub cap_top_start_deg: DimensionValue,
+    /// End angle in degrees of the top cap Undo button (`-62.0pt`).
+    pub cap_top_end_deg: DimensionValue,
+    /// Start angle in degrees of the bottom cap Redo button (`62.0pt`).
+    pub cap_bottom_start_deg: DimensionValue,
+    /// End angle in degrees of the bottom cap Redo button (`118.0pt`).
+    pub cap_bottom_end_deg: DimensionValue,
+    /// Normalized radius ratio of the Fine speed ring inside the Layer 2 Joystick Bowl (`0.45pt`).
+    pub joystick_fine_ratio: DimensionValue,
+    /// Normalized radius ratio of the Fast speed ring inside the Layer 2 Joystick Bowl (`0.82pt`).
+    pub joystick_fast_ratio: DimensionValue,
+    /// Radius of the movable glass thumb-stick puck in Layer 2 (`14.0pt`).
+    pub joystick_puck_radius: DimensionValue,
+    /// Maximum point-nudge speed per frame at full rim deflection in Layer 2 (`12.0pt`).
+    pub joystick_max_speed: DimensionValue,
+    /// Opacity of the Liquid Glass top specular rim highlight (`0.38pt`).
+    pub glass_specular_alpha: DimensionValue,
+    /// Opacity of the Liquid Glass cushion fill (`0.82pt`).
+    pub glass_fill_alpha: DimensionValue,
+    /// Outer width of `MacEdgeThumbwheel` (`34.0pt`).
+    pub edge_wheel_width: DimensionValue,
+    /// Outer height of `MacEdgeThumbwheel` (`136.0pt`).
+    pub edge_wheel_height: DimensionValue,
+    /// Inner slot padding around the cylindrical roller in `MacEdgeThumbwheel` (`5.0pt`).
+    pub edge_wheel_slot_padding: DimensionValue,
+    /// Capsule corner radius of `MacEdgeThumbwheel` (`17.0pt`).
+    pub edge_wheel_corner_radius: DimensionValue,
+    /// Maximum visible cylindrical angle in degrees (`75.0pt`).
+    pub edge_wheel_max_angle_deg: DimensionValue,
+    /// Minimum release speed in pt/s that triggers Free-Spin Flywheel inertia (`120.0pt`).
+    pub edge_wheel_flick_threshold: DimensionValue,
+    /// Exponential friction decay constant for Free-Spin Flywheel (`3.5pt`).
+    pub edge_wheel_friction_decay: DimensionValue,
+    /// Speed threshold in pt/s below which Free-Spin Flywheel snaps to rest (`4.0pt`).
+    pub edge_wheel_stop_threshold: DimensionValue,
+    /// Non-linear velocity boost gain for fast flywheel flicks (`0.01pt`).
+    pub edge_wheel_boost_gain: DimensionValue,
+    /// Height of the bottom Undo/Redo thumb arc (`24.0pt`).
+    pub undo_bar_height: DimensionValue,
+    /// Gap between outer rotary ring and bottom Undo/Redo arc (`6.0pt`).
+    pub undo_bar_gap: DimensionValue,
+    /// Corner radius of Undo/Redo buttons (`12.0pt`).
+    pub undo_bar_corner_radius: DimensionValue,
+    /// Hairline border stroke width (`1.0pt`).
+    pub border_stroke_width: DimensionValue,
+    /// Active/latched sector border stroke width (`1.5pt`).
+    pub active_stroke_width: DimensionValue,
+    /// Angular step in degrees per rotary detent tick (`15.0pt`).
+    pub detent_step_deg: DimensionValue,
+    /// Radial length of each detent tick mark (`4.0pt`).
+    pub detent_tick_length: DimensionValue,
+    /// Font size for live semantic action labels (`10.0pt`).
+    pub label_font_size: DimensionValue,
+    /// Font size for desktop shortcut hints (`8.5pt`).
+    pub hint_font_size: DimensionValue,
+    /// Font size for central hub parameter title (`8.5pt`).
+    pub hub_title_font_size: DimensionValue,
+    /// Font size for central hub value readout (`10.5pt`).
+    pub hub_value_font_size: DimensionValue,
+    /// Margin inset when docked in a canvas corner (`12.0pt`).
+    pub dock_margin: DimensionValue,
+    /// Center angle in degrees for North (`-90.0pt`).
+    pub angle_north_deg: DimensionValue,
+    /// Center angle in degrees for NorthEast (`-45.0pt`).
+    pub angle_north_east_deg: DimensionValue,
+    /// Center angle in degrees for East (`0.0pt`).
+    pub angle_east_deg: DimensionValue,
+    /// Center angle in degrees for SouthEast (`45.0pt`).
+    pub angle_south_east_deg: DimensionValue,
+    /// Center angle in degrees for South (`90.0pt`).
+    pub angle_south_deg: DimensionValue,
+    /// Center angle in degrees for SouthWest (`135.0pt`).
+    pub angle_south_west_deg: DimensionValue,
+    /// Center angle in degrees for West (`180.0pt`).
+    pub angle_west_deg: DimensionValue,
+    /// Center angle in degrees for NorthWest (`-135.0pt`).
+    pub angle_north_west_deg: DimensionValue,
+    /// Full circle angle in degrees (`360.0pt`).
+    pub full_circle_deg: DimensionValue,
+    /// Half circle angle in degrees (`180.0pt`).
+    pub half_circle_deg: DimensionValue,
+    /// Vertical offset for primary sector label (`4.0pt`).
+    pub label_vertical_offset: DimensionValue,
+    /// Vertical offset for secondary shortcut hint (`6.0pt`).
+    pub hint_vertical_offset: DimensionValue,
+    /// Active sector fill opacity (`0.28pt`).
+    pub active_fill_opacity: DimensionValue,
+    /// Hovered sector fill opacity (`0.14pt`).
+    pub hover_fill_opacity: DimensionValue,
+    /// Rotary sensitivity factor per degree (`0.02pt`).
+    pub rotary_sensitivity: DimensionValue,
+}
+
+impl Default for ThumbDialMetrics {
+    fn default() -> Self {
+        MacDesignTokens::default_shared().thumb_dial_metrics().clone()
+    }
+}

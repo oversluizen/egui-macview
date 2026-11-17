@@ -41,17 +41,19 @@ pub use theme::{
 
 pub use controls::{
     calculate_pan_weights, format_remaining_timecode, format_timecode, MacBox, MacButton, MacButtonCell, MacCheckbox, MacCircularSlider,
-    MacCollectionView, MacCollectionViewFlowLayout, MacColorWell, MacComboBox, MacControlSize, MacDate, MacDatePicker,
-    MacDatePickerElementFlags, MacDatePickerStyle, MacDisclosureButton, MacDisclosureGroup, MacDisclosureResponse, MacFontWeight,
-    MacHelpButton, MacImageFrameStyle, MacImageScaling, MacImageView, MacInlineActionButton, MacInputCell, MacInsets, MacLabel,
-    MacLabelColor, MacLevelIndicator, MacLevelIndicatorStyle, MacLevelOrientation, MacOriginAnchor, MacOriginMatrix, MacOutlineRow,
-    MacOutlineRowResponse, MacOutlineTree, MacOutlineView, MacPathComponent, MacPathControl, MacPathControlResponse,
-    MacPlayerControlsStyle, MacPlayerView, MacPopUpButton, MacProgressControlSize, MacProgressIndicator, MacProgressStyle, MacRadioButton,
-    MacRatingIndicator, MacRuleEditor, MacRuleRow, MacSearchField, MacSegmentEvent, MacSegmentItem, MacSegmentedControl, MacSlider,
-    MacSortDirection, MacStepper, MacSwitch, MacTabItem, MacTabStyle, MacTabView, MacTableActionBar, MacTableActionResponse,
-    MacTableColumn, MacTableView, MacTableViewOutput, MacTableViewResponse, MacTagColorPicker, MacTextView, MacThumbnailCell,
-    MacTimelineZone, MacToggle, MacTokenField, MacTrimScrubber, MacTrimScrubberResponse, SegmentContent, SegmentEvent, SegmentIconFn,
-    SegmentIconPainter, SegmentItem, SegmentMenuTrigger, UNIT_STAR,
+    MacCollectionView, MacCollectionViewFlowLayout, MacColorWell, MacComboBox, MacContextThumbDial, MacContextThumbResponse,
+    MacControlSize, MacDate, MacDatePicker, MacDatePickerElementFlags, MacDatePickerStyle, MacDisclosureButton, MacDisclosureGroup,
+    MacDisclosureResponse, MacEdgeThumbwheel, MacEdgeThumbwheelResponse, MacFontWeight, MacHelpButton, MacImageFrameStyle,
+    MacImageScaling, MacImageView, MacInlineActionButton, MacInputCell, MacInsets, MacLabel, MacLabelColor, MacLevelIndicator,
+    MacLevelIndicatorStyle, MacLevelOrientation, MacOriginAnchor, MacOriginMatrix, MacOutlineRow, MacOutlineRowResponse, MacOutlineTree,
+    MacOutlineView, MacPathComponent, MacPathControl, MacPathControlResponse, MacPlayerControlsStyle, MacPlayerView, MacPopUpButton,
+    MacProgressControlSize, MacProgressIndicator, MacProgressStyle, MacRadioButton, MacRatingIndicator, MacRuleEditor, MacRuleRow,
+    MacSearchField, MacSegmentEvent, MacSegmentItem, MacSegmentedControl, MacSlider, MacSortDirection, MacStepper, MacSwitch, MacTabItem,
+    MacTabStyle, MacTabView, MacTableActionBar, MacTableActionResponse, MacTableColumn, MacTableView, MacTableViewOutput,
+    MacTableViewResponse, MacTagColorPicker, MacTextView, MacThumbArcPlacement, MacThumbContextPreset, MacThumbDialLayer, MacThumbDockZone,
+    MacThumbIntent, MacThumbIntentMask, MacThumbSector, MacThumbSectorSet, MacThumbSectorSpec, MacThumbnailCell, MacTimelineZone,
+    MacToggle, MacTokenField, MacTrimScrubber, MacTrimScrubberResponse, SegmentContent, SegmentEvent, SegmentIconFn, SegmentIconPainter,
+    SegmentItem, SegmentMenuTrigger, UNIT_STAR,
 };
 pub use feedback::{clamp_menu_rect, MacContextMenu, MacToast, MacToastManager, ToastLevel};
 pub use layout::{
@@ -72,5 +74,5 @@ pub use tokens::{
     MacMotionTokens, MacTagLabelColors, MacTypographyTokens, OriginMatrixMetrics, OutlineViewMetrics, PathControlMetrics,
     PopUpButtonMetrics, ProgressIndicatorMetrics, ProgressSizeMetrics, ScrollViewMetrics, SearchFieldMetrics, SliderMetrics,
     SplitViewMetrics, StackViewMetrics, StepperMetrics, TableActionBarMetrics, TableViewMetrics, TagColorPickerMetrics, TextViewMetrics,
-    ThumbnailCellMetrics, ToggleMetrics, TokenFieldMetrics, TrimScrubberMetrics,
+    ThumbDialMetrics, ThumbnailCellMetrics, ToggleMetrics, TokenFieldMetrics, TrimScrubberMetrics,
 };

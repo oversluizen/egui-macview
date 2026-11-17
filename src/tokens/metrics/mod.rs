@@ -10,8 +10,8 @@ pub use controls::{
     InlineActionButtonMetrics, LabelMetrics, LevelIndicatorMetrics, MacControlMetrics, OriginMatrixMetrics, OutlineViewMetrics,
     PathControlMetrics, PlayerViewMetrics, PopUpButtonMetrics, ProgressIndicatorMetrics, ProgressSizeMetrics, RuleEditorMetrics,
     SearchFieldMetrics, SegmentedMetrics, SegmentedSizeMetrics, SliderMetrics, StepperMetrics, TabViewMetrics, TableActionBarMetrics,
-    TableViewMetrics, TagColorPickerMetrics, TextFieldMetrics, TextFieldSizeMetrics, TextViewMetrics, ThumbnailCellMetrics, ToggleMetrics,
-    TokenFieldMetrics, TrimScrubberMetrics,
+    TableViewMetrics, TagColorPickerMetrics, TextFieldMetrics, TextFieldSizeMetrics, TextViewMetrics, ThumbDialMetrics,
+    ThumbnailCellMetrics, ToggleMetrics, TokenFieldMetrics, TrimScrubberMetrics,
 };
 pub use layout::{LayoutMetrics, MacMetricsTokens, PopoverMetrics, ScrollViewMetrics, SplitViewMetrics, StackViewMetrics, ToolbarMetrics};
 pub use navigation::{

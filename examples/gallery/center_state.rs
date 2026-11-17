@@ -138,6 +138,10 @@ pub struct CenterState {
     pub codec_preset: usize,
     pub last_video_viewport_rect: Rect,
     pub export_preset: String,
+    pub thumb_dial_latched: egui_macview::MacThumbIntentMask,
+    pub thumb_dial_layer: egui_macview::MacThumbDialLayer,
+    pub thumb_dial_rotary: f32,
+    pub thumb_dial_preset_idx: usize,
     pub nib_studio: super::nib_window_studio::NibShowcaseWindowState,
     pub screen_nib_scenes: Vec<(egui_macview::scene::MacSceneIR, super::nib_showcase_builders::ShowcaseSceneDataStore)>,
 }
@@ -274,6 +278,10 @@ impl Default for CenterState {
             codec_preset: 0,
             last_video_viewport_rect: Rect::ZERO,
             export_preset: "ProRes 4444 XQ".to_string(),
+            thumb_dial_latched: egui_macview::MacThumbIntentMask::NONE,
+            thumb_dial_layer: egui_macview::MacThumbDialLayer::CompassModifiers,
+            thumb_dial_rotary: 0.35,
+            thumb_dial_preset_idx: 2,
             nib_studio: super::nib_window_studio::NibShowcaseWindowState::default(),
             screen_nib_scenes: super::nib_showcase_builders::compile_gallery_screen_scenes(),
         }

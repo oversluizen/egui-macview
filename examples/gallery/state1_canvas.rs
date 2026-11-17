@@ -4,7 +4,10 @@ use super::types::apply_blend_mode;
 use super::CenterState;
 use crate::CardModel;
 use egui::{pos2, vec2, Align2, Color32, CornerRadius, FontId, Pos2, Rect, Sense, Stroke, StrokeKind, Ui};
-use egui_macview::{theme::MacTheme, MacBackgroundStyle, MacContextMenu, MacToastManager, NSMenuItem};
+use egui_macview::{
+    theme::MacTheme, MacBackgroundStyle, MacContextMenu, MacContextThumbDial, MacEdgeThumbwheel, MacThumbArcPlacement,
+    MacThumbContextPreset, MacThumbDockZone, MacThumbIntent, MacToastManager, NSMenuItem,
+};
 use std::cell::RefCell;
 
 impl CenterState {
@@ -58,11 +61,13 @@ impl CenterState {
         let card_h = (card.height.parse::<f32>().unwrap_or(140.0 * h_scale) / h_scale).clamp(40.0, 300.0);
         let card_radius = (card.radius.parse::<f32>().unwrap_or(10.0 * r_scale) / r_scale).clamp(0.0, 40.0);
 
+        let card_zone_max_x = (canvas_rect.max.x - 196.0).max(canvas_rect.min.x + 220.0);
+        let card_zone_center_x = (canvas_rect.min.x + card_zone_max_x) * 0.5;
         let (card_w, base_center_x) = match card.alignment_idx {
             0 => (raw_card_w, canvas_rect.min.x + 24.0 + raw_card_w * 0.5),
-            2 => (raw_card_w, canvas_rect.max.x - 24.0 - raw_card_w * 0.5),
-            3 => ((canvas_rect.width() - 48.0).max(60.0), canvas_rect.center().x),
-            _ => (raw_card_w, canvas_rect.center().x),
+            2 => (raw_card_w, card_zone_max_x - 16.0 - raw_card_w * 0.5),
+            3 => ((card_zone_max_x - canvas_rect.min.x - 36.0).max(60.0), card_zone_center_x),
+            _ => (raw_card_w, card_zone_center_x),
         };
         let cur_time = content_ui.input(|i| i.time);
         if self.bounce_start_time.is_some_and(|t| t < 0.0) {
@@ -261,7 +266,85 @@ impl CenterState {
             }
         }
 
+        self.render_state1_thumb_dial_overlay(content_ui, theme, card, args, toasts, canvas_rect);
         self.render_state1_hud_and_popover(content_ui, theme, card, inspector_mode, canvas_rect, (w_scale, h_scale, r_scale));
+    }
+
+    fn render_state1_thumb_dial_overlay(
+        &mut self,
+        content_ui: &mut Ui,
+        theme: &MacTheme,
+        card: &mut CardModel,
+        args: &super::center_state::CenterRenderArgs<'_>,
+        toasts: &RefCell<MacToastManager>,
+        canvas_rect: Rect,
+    ) {
+        let presets = MacThumbContextPreset::ALL;
+        let active_preset = presets[self.thumb_dial_preset_idx.min(presets.len() - 1)];
+        let pill_labels = ["Pen (P)", "Select (V)", "Prim (F)", "Knife (E)"];
+        let strip_w = 184.0f32;
+        let pill_w = strip_w / 4.0;
+        let strip_rect = Rect::from_min_size(pos2(canvas_rect.max.x - strip_w - 8.0, canvas_rect.min.y + 6.0), vec2(strip_w, 18.0));
+        let sp = content_ui.painter_at(strip_rect);
+        for (idx, lbl) in pill_labels.iter().enumerate() {
+            let p_rect = Rect::from_min_size(pos2(strip_rect.min.x + idx as f32 * pill_w, strip_rect.min.y), vec2(pill_w - 2.0, 18.0));
+            let hit = content_ui.interact(p_rect, content_ui.scope_id().with(("thumb_preset_pill", idx)), Sense::click());
+            if hit.clicked() {
+                self.thumb_dial_preset_idx = idx;
+            }
+            let is_sel = self.thumb_dial_preset_idx == idx;
+            let fill = if is_sel { theme.control_accent() } else { theme.box_background() };
+            let fg = if is_sel { theme.on_accent_text() } else { theme.label() };
+            sp.rect(p_rect, CornerRadius::same(4), fill, Stroke::new(1.0, theme.separator()), StrokeKind::Inside);
+            sp.text(p_rect.center(), Align2::CENTER_CENTER, *lbl, FontId::proportional(9.0), fg);
+        }
+
+        let can_undo = args.undo_manager.borrow().can_undo();
+        let can_redo = args.undo_manager.borrow().can_redo();
+        let rot_str = format!("θ {:.0}°", card.rotation_deg);
+        let dial_canvas_rect = Rect::from_min_max(canvas_rect.min, pos2(canvas_rect.max.x - 42.0, canvas_rect.max.y));
+        let resp = MacContextThumbDial::new("state1_canvas_thumb_dial", &mut self.thumb_dial_latched, &mut self.thumb_dial_rotary)
+            .layer(&mut self.thumb_dial_layer)
+            .undo_arc_placement(MacThumbArcPlacement::TopCrown)
+            .preset(active_preset)
+            .rotary_parameter("Tap: Mode", &rot_str)
+            .can_undo(can_undo)
+            .can_redo(can_redo)
+            .scale(0.76)
+            .dock_in_rect(dial_canvas_rect, MacThumbDockZone::BottomRight)
+            .theme(theme)
+            .show(content_ui);
+
+        let wheel_resp = MacEdgeThumbwheel::new("state1_edge_thumbwheel", &mut card.rotation_deg, 0.0..=360.0)
+            .scale(0.90)
+            .dock_right_edge(canvas_rect)
+            .theme(theme)
+            .show(content_ui);
+        let _ = wheel_resp.is_free_spinning;
+
+        if resp.undo_clicked && args.undo_manager.borrow_mut().undo(card) {
+            *args.last_stable_card.borrow_mut() = card.clone();
+            toasts.borrow_mut().info("Thumb Dial: Undone");
+        }
+        if resp.redo_clicked && args.undo_manager.borrow_mut().redo(card) {
+            *args.last_stable_card.borrow_mut() = card.clone();
+            toasts.borrow_mut().info("Thumb Dial: Redone");
+        }
+        if resp.nudge_delta != egui::Vec2::ZERO && !args.lock_canvas {
+            self.card_drag_offset += resp.nudge_delta;
+        }
+        if resp.rotary_delta_ticks.abs() > 0.0 && !args.lock_canvas {
+            card.rotation_deg = (card.rotation_deg + resp.rotary_delta_ticks * 5.0).rem_euclid(360.0);
+        }
+        if resp.effective_mask.contains(MacThumbIntent::Constrain) {
+            card.constrain_proportions = true;
+        }
+        if resp.effective_mask.contains(MacThumbIntent::Alter) && resp.effective_mask.contains(MacThumbIntent::Constrain) {
+            card.alignment_idx = 1;
+        }
+        if resp.effective_mask.contains(MacThumbIntent::Glide) && resp.effective_mask.contains(MacThumbIntent::Alter) {
+            card.skew_deg = 12.0;
+        }
     }
 }
 

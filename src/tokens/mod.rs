@@ -20,8 +20,8 @@ pub use metrics::{
     PopUpButtonMetrics, PopoverMetrics, ProgressIndicatorMetrics, ProgressSizeMetrics, RuleEditorMetrics, ScrollViewMetrics,
     SearchFieldMetrics, SegmentedMetrics, SegmentedSizeMetrics, SliderMetrics, SplitViewMetrics, StackViewMetrics, StepperMetrics,
     TabViewMetrics, TableActionBarMetrics, TableViewMetrics, TagColorPickerMetrics, TextFieldMetrics, TextFieldSizeMetrics,
-    TextViewMetrics, ThumbnailCellMetrics, ToastMetrics, ToggleMetrics, TokenFieldMetrics, ToolbarMetrics, TrimScrubberMetrics,
-    CANVAS_FOOTER_HEIGHT, COMMAND_PALETTE_HEIGHT, COMMAND_PALETTE_WIDTH, DEFAULT_TOAST_DURATION,
+    TextViewMetrics, ThumbDialMetrics, ThumbnailCellMetrics, ToastMetrics, ToggleMetrics, TokenFieldMetrics, ToolbarMetrics,
+    TrimScrubberMetrics, CANVAS_FOOTER_HEIGHT, COMMAND_PALETTE_HEIGHT, COMMAND_PALETTE_WIDTH, DEFAULT_TOAST_DURATION,
 };
 pub use motion::{MacMotionTokens, MotionPresetToken};
 pub use tag_colors::MacTagLabelColors;
@@ -319,6 +319,11 @@ impl MacDesignTokens {
     #[inline]
     pub fn text_view_metrics(&self) -> &TextViewMetrics {
         &self.macview.metrics.control.text_view
+    }
+    /// Accesses context thumb dial metrics tokens (`SPEC-014`).
+    #[inline]
+    pub fn thumb_dial_metrics(&self) -> &ThumbDialMetrics {
+        &self.macview.metrics.control.thumb_dial
     }
     /// Accesses semantic color tokens.
     #[inline]

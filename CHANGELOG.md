@@ -5,6 +5,21 @@ All notable changes to the `egui-macview` crate will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-11-17
+
+### Added
+- **4-Layer Concentric Context-Adaptive Bimanual Thumb Dial & Radial Clover / Pie HUD (`MacContextThumbDial`, `MacThumbContextPreset`, `MacThumbSector`, `MacThumbIntent`, `MacThumbIntentMask`, `SPEC-014`)**:
+  - **Layer 1 (Central Thumb-Rest Hub)**: Neutral thumb rest pad displaying the active parameter and formatted value, supporting slide-out gesture initiation and 1-tap latch clearing.
+  - **Layer 2 (Inner Compass / Clover Wedges)**: Four invariant cardinal directions (`North` = `⇧ Constrain`, `East` = `⌥ Alter / Break`, `South` = `⌘ Glide / Servo`, `West` = `␣ Move / Pan`) interleaved with diagonal single-thumb combination wedges (`NorthEast` = `⇧+⌥`, `SouthEast` = `⌘+⌥`), displaying live tool-specific action labels (`∠ 45°`, `∧ Cusp`, `1:1`, `⊙ Center`, `1:1+⊙Center`, `⇄ Shear`, `↝ Slide`, `✥ Move Pt`, `⊕ Nodes`) and hybrid *Hold-to-Momentary* (`>= 180 ms`) + *Tap-to-Latch* (`< 180 ms`) chording with inner latch indicator dots.
+  - **Layer 3 (Outer 360° Tactile Rotary Jog Wheel)**: Continuous rotatable outer ring wrapping around all compass directions with 24 radial detent ticks and rotary thumb indicator knob for value scrubbing and fast directional N/S ($\Delta Y$) or E/W ($\Delta X$) point nudging.
+  - **Layer 4 (Concentrically Wrapped Bottom `↶ Undo | ↷ Redo` Arc Buttons)**: Two curved trackball-style mouse buttons wrapped around the lower contour of the outer rotary wheel (`[92°..148°]` for `↶ Undo`, `[32°..88°]` for `↷ Redo`).
+  - **Live Interactive Canvas Integration (`macview_gallery`)**: Docked live on the State 1 (`Vector & Inspector Studio`) canvas with a 4-preset tool switcher (`Pen`, `Select`, `Primitives`, `Knife`) and full two-way binding to `CardModel` and `NSUndoManager`.
+
+## [0.7.0] - 2026-11-16
+
+### Added
+- **Three-Layer Declarative UI Compiler (`MacSceneIR`, `.nib`/`.xib`/`.strings` Frontends, `SpatialSemanticNormalizer` & Dual-Mode Layout Solver, `SPEC-013`)**: Added clean-room binary `.nib` (`NIBArchive` & `NSKeyedArchiver` `bplist00`) and XML `.xib` frontends, SwiftUI bidirectional parser/exporter, and `MacImageView` / `MacTextView` NIB primitives.
+
 ## [0.6.11] - 2026-11-12
 
 ### Added

@@ -10,8 +10,10 @@ pub mod circular_slider;
 pub mod collection_view;
 pub mod color_well;
 pub mod combo_box;
+pub mod context_thumb_dial;
 pub mod date_picker;
 pub mod disclosure_group;
+pub mod edge_thumbwheel;
 pub mod help_button;
 pub mod image_view;
 pub mod input_cell;
@@ -46,8 +48,13 @@ pub use circular_slider::MacCircularSlider;
 pub use collection_view::{MacCollectionView, MacCollectionViewFlowLayout};
 pub use color_well::MacColorWell;
 pub use combo_box::MacComboBox;
+pub use context_thumb_dial::{
+    MacContextThumbDial, MacContextThumbResponse, MacThumbArcPlacement, MacThumbContextPreset, MacThumbDialLayer, MacThumbDockZone,
+    MacThumbIntent, MacThumbIntentMask, MacThumbSector, MacThumbSectorSet, MacThumbSectorSpec,
+};
 pub use date_picker::{MacDate, MacDatePicker, MacDatePickerElementFlags, MacDatePickerStyle};
 pub use disclosure_group::{MacDisclosureButton, MacDisclosureGroup, MacDisclosureResponse};
+pub use edge_thumbwheel::{MacEdgeThumbwheel, MacEdgeThumbwheelResponse};
 pub use help_button::{MacHelpButton, MacInlineActionButton};
 pub use image_view::{MacImageFrameStyle, MacImageScaling, MacImageView};
 pub use input_cell::{MacControlSize, MacInputCell};
