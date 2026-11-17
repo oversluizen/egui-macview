@@ -302,7 +302,8 @@ impl CenterState {
         let can_undo = args.undo_manager.borrow().can_undo();
         let can_redo = args.undo_manager.borrow().can_redo();
         let rot_str = format!("θ {:.0}°", card.rotation_deg);
-        let dial_canvas_rect = Rect::from_min_max(canvas_rect.min, pos2(canvas_rect.max.x - 42.0, canvas_rect.max.y));
+        let is_stand1 = self.thumb_dial_layer == egui_macview::MacThumbDialLayer::CompassModifiers;
+        let dial_scale = if is_stand1 { 0.72 } else { 0.92 };
         let resp = MacContextThumbDial::new("state1_canvas_thumb_dial", &mut self.thumb_dial_latched, &mut self.thumb_dial_rotary)
             .layer(&mut self.thumb_dial_layer)
             .undo_arc_placement(MacThumbArcPlacement::TopCrown)
@@ -310,17 +311,21 @@ impl CenterState {
             .rotary_parameter("Tap: Mode", &rot_str)
             .can_undo(can_undo)
             .can_redo(can_redo)
-            .scale(0.76)
-            .dock_in_rect(dial_canvas_rect, MacThumbDockZone::BottomRight)
+            .scale(dial_scale)
+            .dock_in_rect(canvas_rect, MacThumbDockZone::BottomRight)
             .theme(theme)
             .show(content_ui);
 
-        let wheel_resp = MacEdgeThumbwheel::new("state1_edge_thumbwheel", &mut card.rotation_deg, 0.0..=360.0)
-            .scale(0.90)
-            .dock_right_edge(canvas_rect)
-            .theme(theme)
-            .show(content_ui);
-        let _ = wheel_resp.is_free_spinning;
+        if self.thumb_dial_layer == egui_macview::MacThumbDialLayer::CompassModifiers {
+            let drum_w = resp.response.rect.width();
+            let wheel_resp = MacEdgeThumbwheel::new("state1_edge_thumbwheel", &mut card.rotation_deg, 0.0..=360.0)
+                .wide_drum_width(drum_w)
+                .scale(0.76)
+                .dock_right_edge(canvas_rect)
+                .theme(theme)
+                .show(content_ui);
+            let _ = wheel_resp.is_free_spinning;
+        }
 
         if resp.undo_clicked && args.undo_manager.borrow_mut().undo(card) {
             *args.last_stable_card.borrow_mut() = card.clone();

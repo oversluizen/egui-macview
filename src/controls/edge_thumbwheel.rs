@@ -57,6 +57,7 @@ pub struct MacEdgeThumbwheel<'a> {
     value: &'a mut f32,
     range: RangeInclusive<f32>,
     dock_rect: Option<Rect>,
+    wide_drum_width: Option<f32>,
     scale: f32,
     theme: Option<&'a MacTheme>,
 }
@@ -69,12 +70,19 @@ impl<'a> MacEdgeThumbwheel<'a> {
             value,
             range,
             dock_rect: None,
+            wide_drum_width: None,
             scale: 1.0,
             theme: None,
         }
     }
 
-    /// Docks the thumbwheel along the right edge of `canvas_rect`.
+    /// Configures a wide cylindrical drum roller whose capsule width matches the `MacContextThumbDial` below it.
+    pub fn wide_drum_width(mut self, width_pt: f32) -> Self {
+        self.wide_drum_width = Some(width_pt);
+        self
+    }
+
+    /// Docks the thumbwheel at `target_rect`.
     pub fn dock_right_edge(mut self, canvas_rect: Rect) -> Self {
         self.dock_rect = Some(canvas_rect);
         self
@@ -99,8 +107,12 @@ impl<'a> MacEdgeThumbwheel<'a> {
         let m = theme.thumb_dial();
         let s = self.scale;
 
-        let w = m.edge_wheel_width.points() * s;
-        let h = m.edge_wheel_height.points() * s;
+        let w = self.wide_drum_width.unwrap_or_else(|| m.edge_wheel_width.points() * s);
+        let h = if self.wide_drum_width.is_some() {
+            m.edge_wheel_width.points() * 2.0 * s
+        } else {
+            m.edge_wheel_height.points() * s
+        };
         let desired = Vec2::new(w, h);
 
         let (rect, mut response) = if let Some(c_rect) = self.dock_rect {
