@@ -7,6 +7,7 @@
 //! - Supports **Ratchet Mode** on slow drags, **Free-Spin Flywheel Inertia** ($\omega(t) = \omega_0 e^{-\lambda t}$)
 //!   with velocity boost on fast flicks, and instant **Touch-to-Brake** when touched while spinning.
 
+use crate::controls::context_thumb_dial::icons::MacTapticEvent;
 use crate::theme::MacTheme;
 use egui::{Color32, CornerRadius, Id, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2};
 use std::hash::Hash;
@@ -34,6 +35,8 @@ pub struct MacEdgeThumbwheelResponse {
     pub is_free_spinning: bool,
     /// Effective Liquid Glass accent color used to render the wheel glow and end-caps (`REQ-014-06`).
     pub effective_glass_accent: Color32,
+    /// Semantic Haptic / Auditory Micro-Click event emitted on this frame (`REQ-014-07`).
+    pub taptic_event: Option<MacTapticEvent>,
 }
 
 /// Top-Down Cylindrical Edge Scroll Wheel with Free-Spin Flywheel Inertia (`SPEC-014 §2.4`).
@@ -151,10 +154,14 @@ impl<'a> MacEdgeThumbwheel<'a> {
         let is_down = response.is_pointer_button_down_on();
         let pointer_pos = response.interact_pointer_pos().or_else(|| ui.input(|i| i.pointer.hover_pos()));
         let mut step_pt = 0.0f32;
+        let mut taptic_event = None;
 
         if is_down {
             if !mem.was_down {
                 // Touch-to-Brake: immediately zero any active flywheel coasting on finger contact!
+                if mem.velocity_pt_s.abs() > m.edge_wheel_stop_threshold.points() {
+                    taptic_event = Some(MacTapticEvent::FlywheelBraked);
+                }
                 mem.velocity_pt_s = 0.0;
                 mem.was_down = true;
                 mem.last_drag_y = pointer_pos.map(|p| p.y);
@@ -198,9 +205,15 @@ impl<'a> MacEdgeThumbwheel<'a> {
         let mut value_delta = 0.0f32;
         let mut delta_ticks = 0.0f32;
         if step_pt.abs() > 0.0 {
+            let step_deg = m.detent_step_deg.points().max(1.0);
+            let prev_detent = (mem.phase_deg / step_deg).floor() as i32;
             let phase_step_deg = step_pt * (m.half_circle_deg.points() / h.max(1.0));
             mem.phase_deg = (mem.phase_deg + phase_step_deg) % m.full_circle_deg.points();
-            delta_ticks = phase_step_deg / m.detent_step_deg.points().max(1.0);
+            let next_detent = (mem.phase_deg / step_deg).floor() as i32;
+            if next_detent != prev_detent && taptic_event.is_none() {
+                taptic_event = Some(MacTapticEvent::RotaryDetentTick);
+            }
+            delta_ticks = phase_step_deg / step_deg;
             let prev = *self.value;
             let next = (prev + (step_pt / h.max(1.0)) * span).clamp(min_val, max_val);
             *self.value = next;
@@ -241,17 +254,29 @@ impl<'a> MacEdgeThumbwheel<'a> {
 
         painter.rect(inner_rect, inner_cr, theme.window_background(), border_stroke, StrokeKind::Inside);
 
-        // Illuminated Liquid Glass End-Cap Rings on Left and Right Drum Edges
+        // 3D Cylindrical Shading Bands (top/bottom curvature shadows + center horizon reflection band)
+        let r_cyl = inner_rect.height() * 0.5;
+        let y_c = inner_rect.center().y;
+        let band_h = r_cyl * 0.5;
+        let top_shadow = Rect::from_min_max(inner_rect.min, Pos2::new(inner_rect.max.x, inner_rect.min.y + band_h));
+        let bot_shadow = Rect::from_min_max(Pos2::new(inner_rect.min.x, inner_rect.max.y - band_h), inner_rect.max);
+        let mid_horizon = Rect::from_min_max(
+            Pos2::new(inner_rect.min.x, y_c - band_h * 0.5),
+            Pos2::new(inner_rect.max.x, y_c + band_h * 0.5),
+        );
+        painter.rect_filled(top_shadow, inner_cr, theme.drop_shadow());
+        painter.rect_filled(bot_shadow, inner_cr, theme.drop_shadow());
+        painter.rect_filled(mid_horizon, CornerRadius::ZERO, specular_col.gamma_multiply(m.active_fill_opacity.points()));
+
+        // Illuminated 3D Liquid Glass End-Cap Rings on Left and Right Drum Edges
         let cap_w = (m.ring_gap.points() * 2.0 * s).min(inner_rect.width() * m.hover_fill_opacity.points());
         let cap_fill = accent_col.gamma_multiply(m.active_fill_opacity.points());
-        let cap_stroke = Stroke::new(m.border_stroke_width.points(), accent_col);
+        let cap_stroke = Stroke::new(m.active_stroke_width.points(), accent_col);
         let left_cap = Rect::from_min_max(inner_rect.min, Pos2::new(inner_rect.min.x + cap_w, inner_rect.max.y));
         let right_cap = Rect::from_min_max(Pos2::new(inner_rect.max.x - cap_w, inner_rect.min.y), inner_rect.max);
         painter.rect(left_cap, inner_cr, cap_fill, cap_stroke, StrokeKind::Inside);
         painter.rect(right_cap, inner_cr, cap_fill, cap_stroke, StrokeKind::Inside);
 
-        let r_cyl = inner_rect.height() * 0.5;
-        let y_c = inner_rect.center().y;
         let max_ang = m.edge_wheel_max_angle_deg.points();
         let step_deg = m.detent_step_deg.points().max(1.0);
         let phase_mod = mem.phase_deg.rem_euclid(step_deg);
@@ -283,6 +308,7 @@ impl<'a> MacEdgeThumbwheel<'a> {
             delta_ticks,
             is_free_spinning,
             effective_glass_accent: accent_col,
+            taptic_event,
         }
     }
 }

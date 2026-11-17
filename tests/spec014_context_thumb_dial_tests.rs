@@ -4,9 +4,9 @@
 
 use egui::{Color32, Context, Event, PointerButton, Pos2, RawInput, Rect, Vec2};
 use egui_macview::{
-    contrast_ratio, setup_symbols_font, MacAppearance, MacContextThumbDial, MacEdgeThumbwheel, MacFreeJoystickBowl, MacTheme,
-    MacThumbArcPlacement, MacThumbContextPreset, MacThumbDialLayer, MacThumbDockZone, MacThumbIntent, MacThumbIntentMask, MacThumbSector,
-    VERSION,
+    contrast_ratio, setup_symbols_font, MacAppearance, MacContextThumbDial, MacEdgeThumbwheel, MacFreeJoystickBowl, MacSFSymbol,
+    MacTapticEvent, MacTheme, MacThumbArcPlacement, MacThumbContextPreset, MacThumbDialLayer, MacThumbDockZone, MacThumbIntent,
+    MacThumbIntentMask, MacThumbSector, MacThumbSectorIcon, VERSION,
 };
 
 fn init_headless_ctx() -> Context {
@@ -44,56 +44,44 @@ fn tap_dial(ctx: &Context, id: &'static str, pos: Pos2, t: f64, latched: &mut Ma
     });
 }
 
-/// TC-014-01 (`REQ-014-01`): 4 Invariant Cardinal Intentions (`N`, `E`, `S`, `W`) + Diagonal Combination Wedges (`NE`, `SE`).
+/// TC-014-01 (`REQ-014-01`, `REQ-014-07`): 4 Invariant Cardinal Intentions, Diagonal Combos, Official Apple `MacSFSymbol` Names & Concise Labels.
 #[test]
 fn tc_014_01_cardinal_intentions_and_diagonal_combination_sectors() {
-    let pen = MacThumbContextPreset::Pen.sectors();
-    assert_eq!(pen.sector(MacThumbSector::North).label, "∠ 45°");
-    assert_eq!(pen.sector(MacThumbSector::North).shortcut_hint, "⇧");
-    assert_eq!(pen.sector(MacThumbSector::East).label, "∧ Cusp");
-    assert_eq!(pen.sector(MacThumbSector::East).shortcut_hint, "⌥");
-    assert_eq!(pen.sector(MacThumbSector::South).label, "★ Genius");
-    assert_eq!(pen.sector(MacThumbSector::South).shortcut_hint, "⌘");
-    assert_eq!(pen.sector(MacThumbSector::West).label, "✥ Move Pt");
-    assert_eq!(pen.sector(MacThumbSector::West).shortcut_hint, "␣");
-    assert_eq!(pen.sector(MacThumbSector::NorthEast).label, "∠45°+∧Cusp");
-    assert_eq!(pen.sector(MacThumbSector::NorthEast).shortcut_hint, "⇧+⌥");
-
-    let select = MacThumbContextPreset::Select.sectors();
-    assert_eq!(select.sector(MacThumbSector::North).label, "∠ Axis");
-    assert_eq!(select.sector(MacThumbSector::East).label, "⧉ Clone");
-    assert_eq!(select.sector(MacThumbSector::South).label, "↝ Slide");
-    assert_eq!(select.sector(MacThumbSector::West).label, "✋ Pan");
-    assert_eq!(select.sector(MacThumbSector::SouthEast).label, "↝Slide+1-Side");
+    for preset in MacThumbContextPreset::ALL {
+        let set = preset.sectors();
+        for sec in MacThumbSector::ALL {
+            let spec = set.sector(sec);
+            assert!(spec.label.chars().count() <= 6, "Cushion label '{}' must be <= 6 chars to prevent visual clutter", spec.label);
+            if let MacThumbSectorIcon::SFSymbol(sf) = spec.icon {
+                assert!(!sf.sf_symbol_name().is_empty());
+            } else {
+                panic!("Default preset sector must carry an official MacSFSymbol");
+            }
+        }
+    }
 
     let prim = MacThumbContextPreset::Primitives.sectors();
-    assert_eq!(prim.sector(MacThumbSector::North).label, "1:1");
-    assert_eq!(prim.sector(MacThumbSector::East).label, "⊙ Center");
-    assert_eq!(prim.sector(MacThumbSector::NorthEast).label, "1:1+⊙Center");
-    assert_eq!(prim.sector(MacThumbSector::SouthEast).label, "⇄ Shear");
-    assert_eq!(prim.sector(MacThumbSector::West).label, "✥ Move");
+    assert_eq!(prim.sector(MacThumbSector::North).icon, MacThumbSectorIcon::SFSymbol(MacSFSymbol::AspectRatio));
+    assert_eq!(prim.sector(MacThumbSector::NorthEast).icon, MacThumbSectorIcon::SFSymbol(MacSFSymbol::Viewfinder));
+    assert_eq!(prim.sector(MacThumbSector::East).icon, MacThumbSectorIcon::SFSymbol(MacSFSymbol::Scope));
+    assert_eq!(prim.sector(MacThumbSector::SouthEast).icon, MacThumbSectorIcon::SFSymbol(MacSFSymbol::Skew));
+    assert_eq!(prim.sector(MacThumbSector::South).icon, MacThumbSectorIcon::SFSymbol(MacSFSymbol::Scribble));
+    assert_eq!(prim.sector(MacThumbSector::West).icon, MacThumbSectorIcon::SFSymbol(MacSFSymbol::ArrowUpAndDownAndLeftAndRight));
+    assert_eq!(MacSFSymbol::AspectRatio.sf_symbol_name(), "aspectratio");
+    assert_eq!(MacSFSymbol::Scope.sf_symbol_name(), "scope");
+    assert_eq!(MacSFSymbol::PlusSquareOnSquare.sf_symbol_name(), "plus.square.on.square");
+    assert_eq!(MacSFSymbol::Skew.sf_symbol_name(), "skew");
+    assert_eq!(MacSFSymbol::Scribble.sf_symbol_name(), "scribble");
 
-    let knife = MacThumbContextPreset::Knife.sectors();
-    assert_eq!(knife.sector(MacThumbSector::North).label, "∠ 15°");
-    assert_eq!(knife.sector(MacThumbSector::East).label, "⊕ Nodes");
-    assert_eq!(knife.sector(MacThumbSector::South).label, "⌖ Snap");
-    assert_eq!(knife.sector(MacThumbSector::West).label, "✋ Pan");
-
-    assert_eq!(
-        MacThumbSector::NorthEast.intent_mask(),
-        MacThumbIntentMask::CONSTRAIN.union(MacThumbIntentMask::ALTER)
-    );
-    assert_eq!(
-        MacThumbSector::SouthEast.intent_mask(),
-        MacThumbIntentMask::GLIDE.union(MacThumbIntentMask::ALTER)
-    );
+    assert_eq!(MacThumbSector::NorthEast.intent_mask(), MacThumbIntentMask::CONSTRAIN.union(MacThumbIntentMask::ALTER));
+    assert_eq!(MacThumbSector::SouthEast.intent_mask(), MacThumbIntentMask::GLIDE.union(MacThumbIntentMask::ALTER));
     assert!(MacThumbSector::NorthEast.intent_mask().contains(MacThumbIntent::Constrain));
     assert!(MacThumbSector::NorthEast.intent_mask().contains(MacThumbIntent::Alter));
 }
 
-/// TC-014-02 (`REQ-014-02`): Hybrid Tap-to-Latch (`< 180 ms`), Sequential Multi-Sector Chording, and Center Hub Clear.
+/// TC-014-02 (`REQ-014-02`): Exclusive Single-Sector Radio Latching (`< 180 ms`), Toggle-Off, and Center Hub Clear.
 #[test]
-fn tc_014_02_tap_to_latch_multi_sector_chording_and_hub_clear() {
+fn tc_014_02_exclusive_single_sector_radio_latch_and_hub_clear() {
     let ctx = init_headless_ctx();
     let theme = MacTheme::new(MacAppearance::DarkAqua);
     let mut latched = MacThumbIntentMask::NONE;
@@ -103,7 +91,6 @@ fn tc_014_02_tap_to_latch_multi_sector_chording_and_hub_clear() {
     let mut east_pos = Pos2::ZERO;
     let mut ne_pos = Pos2::ZERO;
 
-    // Frame 0: Layout inspection
     run_frame(&ctx, pointer_frame(Pos2::ZERO, None, 0.0), |ui| {
         let resp = MacContextThumbDial::new("dial_latch_test", &mut latched, &mut rotary_val)
             .preset(MacThumbContextPreset::Primitives)
@@ -115,21 +102,23 @@ fn tc_014_02_tap_to_latch_multi_sector_chording_and_hub_clear() {
         ne_pos = resp.sector_center(MacThumbSector::NorthEast);
     });
 
-    // 1. Quick tap (< 180 ms: 50 ms) on North ("1:1") -> latches CONSTRAIN
+    // 1. Quick tap (< 180 ms) on North ("1:1") -> latches ONLY North (CONSTRAIN)
     tap_dial(&ctx, "dial_latch_test", north_pos, 1.00, &mut latched, &mut rotary_val, &theme);
     assert_eq!(latched, MacThumbIntentMask::CONSTRAIN);
 
-    // 2. Quick tap (< 180 ms: 50 ms) on East ("⊙ Center") -> latches BOTH CONSTRAIN and ALTER simultaneously!
+    // 2. Quick tap (< 180 ms) on East ("Center") -> switches EXCLUSIVELY to East (ALTER), unlatching North!
     tap_dial(&ctx, "dial_latch_test", east_pos, 2.00, &mut latched, &mut rotary_val, &theme);
-    assert_eq!(latched, MacThumbIntentMask::CONSTRAIN.union(MacThumbIntentMask::ALTER));
+    assert_eq!(latched, MacThumbIntentMask::ALTER, "Tapping East must switch exclusively to East instead of selecting all sectors");
 
-    // 3. Quick tap on Center Thumb Rest Hub -> clears all active latches
+    // 3. Quick tap on Center Thumb Rest Hub -> clears active latch
     tap_dial(&ctx, "dial_latch_test", geom_center, 3.00, &mut latched, &mut rotary_val, &theme);
     assert_eq!(latched, MacThumbIntentMask::NONE);
 
-    // 4. Single quick tap on diagonal NorthEast ("1:1+⊙Center") -> latches BOTH CONSTRAIN and ALTER at once!
+    // 4. Quick tap on diagonal NorthEast ("1:1+⊙") -> latches ONLY NorthEast (CONSTRAIN | ALTER), second tap unlatches it!
     tap_dial(&ctx, "dial_latch_test", ne_pos, 4.00, &mut latched, &mut rotary_val, &theme);
     assert_eq!(latched, MacThumbIntentMask::CONSTRAIN.union(MacThumbIntentMask::ALTER));
+    tap_dial(&ctx, "dial_latch_test", ne_pos, 5.00, &mut latched, &mut rotary_val, &theme);
+    assert_eq!(latched, MacThumbIntentMask::NONE);
 }
 
 /// TC-014-03 (`REQ-014-02`): Center-Rest Slide-Out Gesture & Hold-to-Momentary (`>= 180 ms`).
@@ -526,12 +515,31 @@ fn tc_014_08_standalone_interchangeable_widgets_and_calculated_apple_glass_accen
 
     // Click Undo on standalone MacFreeJoystickBowl
     let mut joy_undo_clicked = false;
+    let mut joy_taptic = None;
     run_frame(&ctx, pointer_frame(joy_undo_center, Some(true), 2.00), |ui| {
         MacFreeJoystickBowl::new("standalone_joystick_bowl").scale(0.76).can_undo(true).theme(&dark_theme).show(ui);
     });
     run_frame(&ctx, pointer_frame(joy_undo_center, Some(false), 2.04), |ui| {
         let j_resp = MacFreeJoystickBowl::new("standalone_joystick_bowl").scale(0.76).can_undo(true).theme(&dark_theme).show(ui);
         joy_undo_clicked = j_resp.undo_clicked;
+        joy_taptic = j_resp.taptic_event;
     });
     assert!(joy_undo_clicked, "Clicking Undo crown on standalone MacFreeJoystickBowl must fire undo_clicked");
+    assert_eq!(joy_taptic, Some(MacTapticEvent::HistoryStep { is_redo: false }));
+
+    // Custom host application icon override via .with_sector_icon(sector, MacThumbSectorIcon::CustomFn) + micro-click audio synthesis
+    static CUSTOM_ICON_CALLED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+    fn custom_tool_icon(painter: &egui::Painter, rect: Rect, color: Color32) {
+        CUSTOM_ICON_CALLED.store(true, std::sync::atomic::Ordering::Relaxed);
+        painter.circle_filled(rect.center(), 2.0, color);
+    }
+    run_frame(&ctx, pointer_frame(Pos2::ZERO, None, 3.00), |ui| {
+        MacContextThumbDial::new("custom_icon_dial", &mut latched, &mut rotary_val)
+            .with_sector_icon(MacThumbSector::East, MacThumbSectorIcon::CustomFn(custom_tool_icon))
+            .theme(&dark_theme)
+            .show(ui);
+    });
+    assert!(CUSTOM_ICON_CALLED.load(std::sync::atomic::Ordering::Relaxed), "Host CustomFn icon callback must be invoked during show()");
+    let wav = MacTapticEvent::RotaryDetentTick.synthesize_micro_click_wav();
+    assert!(wav.len() > 44 && &wav[0..4] == b"RIFF", "MacTapticEvent must synthesize valid RIFF/WAVE micro-click audio");
 }

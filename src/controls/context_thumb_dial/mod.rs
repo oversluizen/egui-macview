@@ -7,7 +7,10 @@
 //! - **Layer 2 (`MacThumbDialLayer::FreeJoystickBowl`)**: An unobstructed $360^\circ$ analog
 //!   joystick bowl with `Fine` and `Fast` concentric speed rings and quadratic radial velocity scaling.
 
+pub mod icons;
 pub(crate) mod render;
+
+pub use icons::{MacSFSymbol, MacTapticEvent, MacThumbSectorIcon};
 
 use crate::theme::MacTheme;
 use crate::tokens::ThumbDialMetrics;
@@ -181,12 +184,14 @@ impl MacThumbSector {
     }
 }
 
-/// Visual label and desktop shortcut hint for a single [`MacThumbSector`].
+/// Visual icon, short caption, and desktop shortcut hint for a single [`MacThumbSector`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MacThumbSectorSpec<'a> {
-    /// Live semantic action label (e.g. `"∧ Cusp"`, `"1:1"`, `"⊙ Center"`, `"↝ Slide"`).
+    /// Pluggable Apple SF Symbol, Cupertino icon, or custom host painter function (`REQ-014-07`).
+    pub icon: MacThumbSectorIcon,
+    /// Concise semantic action caption (`<= 6` chars, e.g. `"1:1"`, `"Center"`, `"Shear"`, `"Slide"`).
     pub label: &'a str,
-    /// Subtle desktop shortcut hint (e.g. `"⇧"`, `"⌥"`, `"⌘"`, `"␣"`, `"⇧+⌥"`, `"⌘+⌥"`).
+    /// Subtle desktop shortcut hint (`"⇧"`, `"⌥"`, `"⌘"`, `"␣"`, `"⇧⌥"`, `"⌘⌥"`).
     pub shortcut_hint: &'a str,
 }
 
@@ -233,47 +238,49 @@ impl MacThumbContextPreset {
         }
     }
 
-    /// Resolves the 6-sector semantic label and desktop hint table for this preset (`REQ-014-01`).
+    /// Resolves the 6-sector Apple SF Symbol icon and concise caption table for this preset (`REQ-014-01`, `REQ-014-07`).
     pub const fn sectors(self) -> MacThumbSectorSet<'static> {
+        use MacSFSymbol as SF;
+        use MacThumbSectorIcon::SFSymbol;
         match self {
             Self::Pen => MacThumbSectorSet {
                 items: [
-                    MacThumbSectorSpec { label: "∠ 45°", shortcut_hint: "⇧" },
-                    MacThumbSectorSpec { label: "∠45°+∧Cusp", shortcut_hint: "⇧+⌥" },
-                    MacThumbSectorSpec { label: "∧ Cusp", shortcut_hint: "⌥" },
-                    MacThumbSectorSpec { label: "★G2+∧Cusp", shortcut_hint: "⌘+⌥" },
-                    MacThumbSectorSpec { label: "★ Genius", shortcut_hint: "⌘" },
-                    MacThumbSectorSpec { label: "✥ Move Pt", shortcut_hint: "␣" },
+                    MacThumbSectorSpec { icon: SFSymbol(SF::Angle), label: "45°", shortcut_hint: "⇧" },
+                    MacThumbSectorSpec { icon: SFSymbol(SF::PointTopleftDownCurvedtoPointBottomrightUp), label: "45+∧", shortcut_hint: "⇧⌥" },
+                    MacThumbSectorSpec { icon: SFSymbol(SF::PointTopleftDownCurvedtoPointBottomrightUp), label: "Cusp", shortcut_hint: "⌥" },
+                    MacThumbSectorSpec { icon: SFSymbol(SF::Sparkles), label: "G2+∧", shortcut_hint: "⌘⌥" },
+                    MacThumbSectorSpec { icon: SFSymbol(SF::Sparkles), label: "G2", shortcut_hint: "⌘" },
+                    MacThumbSectorSpec { icon: SFSymbol(SF::ArrowUpAndDownAndLeftAndRight), label: "Move", shortcut_hint: "␣" },
                 ],
             },
             Self::Select => MacThumbSectorSet {
                 items: [
-                    MacThumbSectorSpec { label: "∠ Axis", shortcut_hint: "⇧" },
-                    MacThumbSectorSpec { label: "∠Axis+⧉Clone", shortcut_hint: "⇧+⌥" },
-                    MacThumbSectorSpec { label: "⧉ Clone", shortcut_hint: "⌥" },
-                    MacThumbSectorSpec { label: "↝Slide+1-Side", shortcut_hint: "⌘+⌥" },
-                    MacThumbSectorSpec { label: "↝ Slide", shortcut_hint: "⌘" },
-                    MacThumbSectorSpec { label: "✋ Pan", shortcut_hint: "␣" },
+                    MacThumbSectorSpec { icon: SFSymbol(SF::Angle), label: "Axis", shortcut_hint: "⇧" },
+                    MacThumbSectorSpec { icon: SFSymbol(SF::PlusSquareOnSquare), label: "Ax+Dup", shortcut_hint: "⇧⌥" },
+                    MacThumbSectorSpec { icon: SFSymbol(SF::PlusSquareOnSquare), label: "Clone", shortcut_hint: "⌥" },
+                    MacThumbSectorSpec { icon: SFSymbol(SF::Scribble), label: "1-Side", shortcut_hint: "⌘⌥" },
+                    MacThumbSectorSpec { icon: SFSymbol(SF::Scribble), label: "Slide", shortcut_hint: "⌘" },
+                    MacThumbSectorSpec { icon: SFSymbol(SF::HandRaised), label: "Pan", shortcut_hint: "␣" },
                 ],
             },
             Self::Primitives => MacThumbSectorSet {
                 items: [
-                    MacThumbSectorSpec { label: "1:1", shortcut_hint: "⇧" },
-                    MacThumbSectorSpec { label: "1:1+⊙Center", shortcut_hint: "⇧+⌥" },
-                    MacThumbSectorSpec { label: "⊙ Center", shortcut_hint: "⌥" },
-                    MacThumbSectorSpec { label: "⇄ Shear", shortcut_hint: "⌘+⌥" },
-                    MacThumbSectorSpec { label: "⇄ Shear", shortcut_hint: "⌘" },
-                    MacThumbSectorSpec { label: "✥ Move", shortcut_hint: "␣" },
+                    MacThumbSectorSpec { icon: SFSymbol(SF::AspectRatio), label: "1:1", shortcut_hint: "⇧" },
+                    MacThumbSectorSpec { icon: SFSymbol(SF::Viewfinder), label: "1:1+⊙", shortcut_hint: "⇧⌥" },
+                    MacThumbSectorSpec { icon: SFSymbol(SF::Scope), label: "Center", shortcut_hint: "⌥" },
+                    MacThumbSectorSpec { icon: SFSymbol(SF::Skew), label: "Shear", shortcut_hint: "⌘⌥" },
+                    MacThumbSectorSpec { icon: SFSymbol(SF::Scribble), label: "Slide", shortcut_hint: "⌘" },
+                    MacThumbSectorSpec { icon: SFSymbol(SF::ArrowUpAndDownAndLeftAndRight), label: "Move", shortcut_hint: "␣" },
                 ],
             },
             Self::Knife => MacThumbSectorSet {
                 items: [
-                    MacThumbSectorSpec { label: "∠ 15°", shortcut_hint: "⇧" },
-                    MacThumbSectorSpec { label: "∠15°+⊕Nodes", shortcut_hint: "⇧+⌥" },
-                    MacThumbSectorSpec { label: "⊕ Nodes", shortcut_hint: "⌥" },
-                    MacThumbSectorSpec { label: "⌖Snap+⊕Nodes", shortcut_hint: "⌘+⌥" },
-                    MacThumbSectorSpec { label: "⌖ Snap", shortcut_hint: "⌘" },
-                    MacThumbSectorSpec { label: "✋ Pan", shortcut_hint: "␣" },
+                    MacThumbSectorSpec { icon: SFSymbol(SF::Angle), label: "15°", shortcut_hint: "⇧" },
+                    MacThumbSectorSpec { icon: SFSymbol(SF::PlusCircle), label: "15+⊕", shortcut_hint: "⇧⌥" },
+                    MacThumbSectorSpec { icon: SFSymbol(SF::PlusCircle), label: "Nodes", shortcut_hint: "⌥" },
+                    MacThumbSectorSpec { icon: SFSymbol(SF::Scope), label: "Snap+⊕", shortcut_hint: "⌘⌥" },
+                    MacThumbSectorSpec { icon: SFSymbol(SF::Scope), label: "Snap", shortcut_hint: "⌘" },
+                    MacThumbSectorSpec { icon: SFSymbol(SF::HandRaised), label: "Pan", shortcut_hint: "␣" },
                 ],
             },
         }
@@ -299,6 +306,7 @@ pub(super) struct ThumbDialPressMemory {
     pub started_in_rotary: bool,
     pub initial_sector: Option<MacThumbSector>,
     pub active_sector: Option<MacThumbSector>,
+    pub latched_sector: Option<MacThumbSector>,
     pub last_rotary_angle_deg: Option<f32>,
     pub joystick_offset: Vec2,
     pub stored_layer: MacThumbDialLayer,
@@ -311,6 +319,8 @@ pub struct MacContextThumbResponse {
     pub response: Response,
     /// Active dial layer (`CompassModifiers` or `FreeJoystickBowl`).
     pub active_layer: MacThumbDialLayer,
+    /// Exclusively latched single sector (`REQ-014-02`: at most 1 sector latched at a time).
+    pub latched_sector: Option<MacThumbSector>,
     /// Sticky latched intent mask (`Tap-to-Latch`).
     pub latched_mask: MacThumbIntentMask,
     /// Momentary held/slid intent mask (`Hold-to-Momentary` or `Center Slide-Out`).
@@ -335,6 +345,8 @@ pub struct MacContextThumbResponse {
     pub redo_rect: Rect,
     /// Effective Liquid Glass accent color resolved by the Apple calculated color system (`REQ-014-06`).
     pub effective_glass_accent: Color32,
+    /// Semantic Haptic / Auditory Micro-Click event emitted on this frame (`REQ-014-07`).
+    pub taptic_event: Option<MacTapticEvent>,
     pub(super) sector_centers: [Pos2; 6],
 }
 
@@ -433,6 +445,12 @@ impl<'a> MacContextThumbDial<'a> {
     /// Injects custom 6-sector labels and shortcut hints (e.g. from `grafia::ControllerTelemetryDescriptor`).
     pub fn custom_sectors(mut self, sectors: MacThumbSectorSet<'a>) -> Self {
         self.sectors = sectors;
+        self
+    }
+
+    /// Overrides the vector icon (`MacThumbSectorIcon`: `SFSymbol`, `Cupertino`, or `CustomFn`) of a single `sector` (`REQ-014-07`).
+    pub fn with_sector_icon(mut self, sector: MacThumbSector, icon: MacThumbSectorIcon) -> Self {
+        self.sectors.items[sector as usize].icon = icon;
         self
     }
 

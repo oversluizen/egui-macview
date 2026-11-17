@@ -32,7 +32,7 @@ Combining compass modifier slices, 360° point nudging, and a concentric rotary 
 
 ---
 
-## 2. Normative Requirements (`REQ-014-01` .. `REQ-014-06`)
+## 2. Normative Requirements (`REQ-014-01` .. `REQ-014-07`)
 
 ### 2.1 `REQ-014-01`: Four Cardinal Semantic Directions & Diagonal Single-Thumb Combination Wedges (Layer 1)
 
@@ -45,13 +45,17 @@ Combining compass modifier slices, 360° point nudging, and a concentric rotary 
 | **`South`** | `+90°` | **GLIDE / SERVO** | `⌘` | `★ Genius` | `↝ Slide` | `⇄ Shear` | `⌖ Snap` |
 | **`West`** | `180°` | **MOVE / PAN** | `␣` | `✥ Move Pt` | `✋ Pan` | `✥ Move` | `✋ Pan` |
 
-### 2.2 `REQ-014-02`: Hybrid *Tap-to-Latch* (`< 180 ms`), *Hold-to-Momentary* (`>= 180 ms`) & Center Layer Switch
+### 2.2 `REQ-014-02`: Exclusive Single-Sector *Tap-to-Latch* (`< 180 ms`), *Hold-to-Momentary* (`>= 180 ms`) & Center Layer Switch
 
-1. **Quick Tap (`< 180 ms`) on a Sector in Layer 1:** Toggles sticky latching in `latched_mask: MacThumbIntentMask` and illuminates the warm orange inner **Latch LED dot**. Multiple sectors can be latched sequentially.
-2. **Hold (`>= 180 ms`) or Center Slide-Out in Layer 1:** Activates `momentary_mask` while held and clears it on pointer release.
+1. **Exclusive Single-Sector Latch (`latched_sector: Option<MacThumbSector>`):**
+   - Because diagonal combination cushions (`NorthEast` = `⇧+⌥`, `SouthEast` = `⌘+⌥`) are dedicated physical cushions on the dial, **at most one sector cushion can be latched at any time** (exclusive radio-latch behavior).
+   - **Quick Tap (`< 180 ms`) on a Sector in Layer 1:**
+     - If that sector is already the active `latched_sector`, unlatches it (`latched_sector = None`, `latched_mask = MacThumbIntentMask::NONE`).
+     - Otherwise, switches `latched_sector` exclusively to that tapped sector (`Some(sector)`), sets `latched_mask = sector.intent_mask()`, and illuminates the warm orange inner **Latch LED dot** (with halo) on **only that single sector**.
+2. **Hold (`>= 180 ms`) or Center Slide-Out in Layer 1:** Activates `momentary_mask` for that single hovered/held sector while held and clears it on pointer release.
 3. **Quick Tap on the Center Hub (`r <= r_hub`):**
-   - If `latched_mask` is non-empty, clears all active latches (`latched_mask = MacThumbIntentMask::NONE`).
-   - If `latched_mask` is empty (or when `.layer(&mut layer)` is bound), toggles the active dial layer between **`MacThumbDialLayer::CompassModifiers` (Layer 1)** and **`MacThumbDialLayer::FreeJoystickBowl` (Layer 2)**.
+   - If `latched_sector` is `Some(_)` (or `latched_mask` is non-empty), clears the active latch (`None` / `MacThumbIntentMask::NONE`).
+   - If no sector is latched, toggles the active dial layer between **`MacThumbDialLayer::CompassModifiers` (Layer 1)** and **`MacThumbDialLayer::FreeJoystickBowl` (Layer 2)**.
 
 ### 2.3 `REQ-014-03`: Layer 2 — Unobstructed $360^\circ$ Free Analog Joystick Bowl
 
@@ -84,3 +88,23 @@ Combining compass modifier slices, 360° point nudging, and a concentric rotary 
 2. **Free User-Configurable `.glass_accent(Color32)` Adapted by the Apple Calculated Color System (`MacTheme::resolve_glass_accent_on`):**
    - All three widgets (`MacEdgeThumbwheel`, `MacContextThumbDial`, and `MacFreeJoystickBowl`) accept any user-chosen `egui::Color32` via `.glass_accent(color: Color32)` (e.g., selected interactively via `MacColorWell`).
    - Instead of painting the raw `Color32` unchecked, each widget passes the user's color through `MacTheme::resolve_glass_accent_on(custom_color, surface_bg)` in `src/theme/contrast.rs`, which applies Apple CoreGraphics surface vibrancy (`plus_darker` on light `Aqua` surfaces, `plus_lighter` on dark `DarkAqua`/`Anthracite` surfaces) and `ensure_wcag_contrast` (`>= 3.0:1` UI component contrast), while resolving all cushion and bowl typography through `theme.label_on(...)`, `theme.secondary_label_on(...)`, and `MacBackgroundStyle::from_color(...)`.
+
+### 2.7 `REQ-014-07`: Pluggable Apple SF Symbol & Custom Vector Icon Interface (`MacSFSymbol`, `MacThumbSectorIcon`), Haptic/Auditory Micro-Click Telemetry (`MacTapticEvent`) & 5-Layer 3D *Liquid Glass* Depth
+
+1. **Pluggable Per-Sector Vector Icon Interface (`MacSFSymbol`, `MacThumbSectorIcon` & `SegmentIconFn`):**
+   - Every sector descriptor [`MacThumbSectorSpec`] carries a typed `icon: MacThumbSectorIcon` alongside a concise short caption (`label: &'a str`, max 5 chars) so small radial cushions never suffer from cramped text strings or missing font glyphs:
+     - `MacThumbSectorIcon::SFSymbol(MacSFSymbol)`: Official Apple SF Symbols (`AspectRatio` `"aspectratio"`, `Scope` `"scope"`, `Viewfinder` `"viewfinder"`, `PlusSquareOnSquare` `"plus.square.on.square"`, `Skew` `"skew"`, `Scribble` `"scribble"`, `Sparkles` `"sparkles"`, `PlusCircle` `"plus.circle"`, `ArrowUpAndDownAndLeftAndRight` `"arrow.up.and.down.and.left.and.right"`, `HandRaised` `"hand.raised"`, `Angle` `"angle"`, `PointTopleftDownCurvedtoPointBottomrightUp` `"point.topleft.down.curvedto.point.bottomright.up"`, `Shift` `"shift"`, `OptionKey` `"option"`, `CommandKey` `"command"`, `ControlKey` `"control"`).
+     - `MacThumbSectorIcon::Cupertino(MacSymbol)`: Any embedded `CupertinoIcons` vector symbol (`SPEC-008A`).
+     - `MacThumbSectorIcon::CustomFn(SegmentIconFn)`: Any host-provided `fn(&Painter, Rect, Color32)` callback (sharing the exact [`SegmentIconFn`] signature of `MacSegmentedControl`), enabling host vector editors to swap in custom tool-specific vector icons dynamically whenever the active tool changes (via `.custom_sectors(...)` or `.with_sector_icon(sector, icon)`).
+2. **Haptic & Auditory Micro-Click Telemetry (`MacTapticEvent`):**
+   - `MacEdgeThumbwheelResponse`, `MacContextThumbResponse`, and `MacFreeJoystickResponse` expose `pub taptic_event: Option<MacTapticEvent>`, emitting:
+     - `MacTapticEvent::RotaryDetentTick` on each $15^\circ$ ridge step (including during Free-Spin flywheel coasting),
+     - `MacTapticEvent::FlywheelBraked` on Touch-to-Brake contact while spinning,
+     - `MacTapticEvent::SectorLatched(MacThumbSector)` and `MacTapticEvent::SectorUnlatched`,
+     - `MacTapticEvent::LayerSwitched(MacThumbDialLayer)` on center-button layer toggle,
+     - `MacTapticEvent::JoystickRingCrossed` when the 3D crystal marble crosses the `Fine` or `Fast` speed ring, and
+     - `MacTapticEvent::HistoryStep { is_redo: bool }` on `↶ Undo` / `↷ Redo`.
+3. **5-Layer 3D *Liquid Glass* Cushion, Bowl & Cylindrical Drum Depth:**
+   - **Rounded Cushions:** Rendered with recessed dark outer grooves, dual-zone vertical glass sheen (bright upper specular zone + deep lower refraction zone), a crisp `1.5px` top-arc Fresnel specular highlight, and a multi-ring radial bloom + glowing LED halo on the single active sector.
+   - **Recessed 3D Joystick Bowl:** Rendered with an inner top-rim shadow gradient, lower-rim upward reflection arc, dotted `Fine`/`Fast` speed rings (discrete circular dots), and a 5-layer 3D crystal glass marble with a lower caustic crescent.
+   - **3D Cylindrical Drum (`MacEdgeThumbwheel`):** Rendered with multi-band vertical cylindrical shading (dark top/bottom curvature roll-off, bright center horizon reflection band, and glowing 3D end-cap rings).

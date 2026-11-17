@@ -48,12 +48,12 @@ pub use controls::{
     MacLevelIndicatorStyle, MacLevelOrientation, MacOriginAnchor, MacOriginMatrix, MacOutlineRow, MacOutlineRowResponse, MacOutlineTree,
     MacOutlineView, MacPathComponent, MacPathControl, MacPathControlResponse, MacPlayerControlsStyle, MacPlayerView, MacPopUpButton,
     MacProgressControlSize, MacProgressIndicator, MacProgressStyle, MacRadioButton, MacRatingIndicator, MacRuleEditor, MacRuleRow,
-    MacSearchField, MacSegmentEvent, MacSegmentItem, MacSegmentedControl, MacSlider, MacSortDirection, MacStepper, MacSwitch, MacTabItem,
-    MacTabStyle, MacTabView, MacTableActionBar, MacTableActionResponse, MacTableColumn, MacTableView, MacTableViewOutput,
-    MacTableViewResponse, MacTagColorPicker, MacTextView, MacThumbArcPlacement, MacThumbContextPreset, MacThumbDialLayer, MacThumbDockZone,
-    MacThumbIntent, MacThumbIntentMask, MacThumbSector, MacThumbSectorSet, MacThumbSectorSpec, MacThumbnailCell, MacTimelineZone,
-    MacToggle, MacTokenField, MacTrimScrubber, MacTrimScrubberResponse, SegmentContent, SegmentEvent, SegmentIconFn, SegmentIconPainter,
-    SegmentItem, SegmentMenuTrigger, UNIT_STAR,
+    MacSFSymbol, MacSearchField, MacSegmentEvent, MacSegmentItem, MacSegmentedControl, MacSlider, MacSortDirection, MacStepper, MacSwitch,
+    MacTabItem, MacTabStyle, MacTabView, MacTableActionBar, MacTableActionResponse, MacTableColumn, MacTableView, MacTableViewOutput,
+    MacTableViewResponse, MacTagColorPicker, MacTapticEvent, MacTextView, MacThumbArcPlacement, MacThumbContextPreset, MacThumbDialLayer,
+    MacThumbDockZone, MacThumbIntent, MacThumbIntentMask, MacThumbSector, MacThumbSectorIcon, MacThumbSectorSet, MacThumbSectorSpec,
+    MacThumbnailCell, MacTimelineZone, MacToggle, MacTokenField, MacTrimScrubber, MacTrimScrubberResponse, SegmentContent, SegmentEvent,
+    SegmentIconFn, SegmentIconPainter, SegmentItem, SegmentMenuTrigger, UNIT_STAR,
 };
 pub use feedback::{clamp_menu_rect, MacContextMenu, MacToast, MacToastManager, ToastLevel};
 pub use layout::{

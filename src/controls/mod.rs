@@ -50,8 +50,9 @@ pub use collection_view::{MacCollectionView, MacCollectionViewFlowLayout};
 pub use color_well::MacColorWell;
 pub use combo_box::MacComboBox;
 pub use context_thumb_dial::{
-    MacContextThumbDial, MacContextThumbResponse, MacThumbArcPlacement, MacThumbContextPreset, MacThumbDialLayer, MacThumbDockZone,
-    MacThumbIntent, MacThumbIntentMask, MacThumbSector, MacThumbSectorSet, MacThumbSectorSpec,
+    MacContextThumbDial, MacContextThumbResponse, MacSFSymbol, MacTapticEvent, MacThumbArcPlacement, MacThumbContextPreset,
+    MacThumbDialLayer, MacThumbDockZone, MacThumbIntent, MacThumbIntentMask, MacThumbSector, MacThumbSectorIcon, MacThumbSectorSet,
+    MacThumbSectorSpec,
 };
 pub use date_picker::{MacDate, MacDatePicker, MacDatePickerElementFlags, MacDatePickerStyle};
 pub use disclosure_group::{MacDisclosureButton, MacDisclosureGroup, MacDisclosureResponse};
