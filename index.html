@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>egui-macview — Mobile &amp; Tablet Studio</title>
+<style>
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    overflow: hidden; background: #1e1e1e;
+    touch-action: none; user-select: none; -webkit-user-select: none;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  #glcanvas {
+    position: fixed; inset: 0;
+    display: block; width: 100%; height: 100%;
+  }
+  #kbinput {
+    position: fixed; top: -100px; left: -100px; width: 1px; height: 1px; opacity: 0;
+  }
+</style>
+</head>
+<body>
+<canvas id="glcanvas"></canvas>
+<input id="kbinput" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+<video id="streamVid" src="https://media.w3.org/2010/05/bunny/trailer.mp4" preload="auto" loop playsinline style="display:none; position:fixed; border-radius:6px; border:1px solid rgba(255,255,255,0.22); z-index:9; object-fit:cover; background:#14161a;" controls></video>
+<script>
+const canvas = document.getElementById('glcanvas');
+const kbInput = document.getElementById('kbinput');
+const streamVid = document.getElementById('streamVid');
+const gl = canvas.getContext('webgl2', { alpha: false, antialias: true, premultipliedAlpha: true });
+
+streamVid.addEventListener('loadedmetadata', () => {
+  if (activePresetIdx < 4 && streamVid.currentTime < 0.5) {
+    try { streamVid.currentTime = 2.0; } catch (_) {}
+  }
+});
+
+let scrollMode = false;
+const MEDIA_STREAMS = [
+  'https://media.w3.org/2010/05/bunny/trailer.mp4',
+  'https://media.w3.org/2010/05/sintel/trailer.mp4',
+  'https://archive.org/download/Tears-of-Steel/tears_of_steel_720p.mp4',
+  'https://media.w3.org/2010/05/video/movie_300.mp4',
+  'https://upload.wikimedia.org/wikipedia/commons/transcoded/b/b0/Bach_-_Brandenburg_Concerto_No._3_-_1._Allegro.ogg/Bach_-_Brandenburg_Concerto_No._3_-_1._Allegro.ogg.mp3',
+  'https://upload.wikimedia.org/wikipedia/commons/transcoded/b/be/Clair_de_lune_%28Claude_Debussy%29_Suite_bergamasque.ogg/Clair_de_lune_%28Claude_Debussy%29_Suite_bergamasque.ogg.mp3'
+];
+let activePresetIdx = -1;
+let lastPlayingState = false;
+
+function syncAvKitMediaOverlay(wPts, hPts) {
+  if (!wasmExports || !wasmExports.wasm_media_state || !wasmExports.wasm_media_rect) return;
+  const st = wasmExports.wasm_media_state();
+  const onAvKit = (st & 1) !== 0;
+  const playing = (st & 2) !== 0;
+  const presetIdx = (st >> 4) & 0xF;
+  if (!onAvKit) {
+    if (streamVid.style.display !== 'none') {
+      streamVid.pause();
+      streamVid.style.display = 'none';
+    }
+    lastPlayingState = false;
+    return;
+  }
+  const vx = wasmExports.wasm_media_rect(0);
+  const vy = wasmExports.wasm_media_rect(1);
+  const vw = wasmExports.wasm_media_rect(2);
+  const vh = wasmExports.wasm_media_rect(3);
+  const gain = wasmExports.wasm_media_rect(4);
+  const speed = wasmExports.wasm_media_rect(5);
+  const vol = Math.max(0, Math.min(1, gain));
+  const rate = Math.max(0.25, Math.min(2.0, speed || 1.0));
+  if (vw < 40 || vh < 30) {
+    streamVid.style.display = 'none';
+    return;
+  }
+  const isAudioStream = presetIdx >= 4;
+  if (presetIdx !== activePresetIdx) {
+    activePresetIdx = presetIdx;
+    streamVid.src = MEDIA_STREAMS[presetIdx] || MEDIA_STREAMS[0];
+    streamVid.load();
+    if (playing) {
+      lastPlayingState = true;
+      streamVid.play().catch(() => {});
+    }
+  }
+  const r = canvas.getBoundingClientRect();
+  const sx = r.width / Math.max(1, wPts);
+  const sy = r.height / Math.max(1, hPts);
+  streamVid.style.left = `${Math.round(r.left + vx * sx)}px`;
+  streamVid.style.top = `${Math.round(r.top + vy * sy)}px`;
+  streamVid.style.width = `${Math.round(vw * sx)}px`;
+  streamVid.style.height = `${Math.round(vh * sy)}px`;
+  streamVid.style.background = isAudioStream ? 'rgba(20, 22, 26, 0.30)' : '#14161a';
+  streamVid.volume = vol;
+  streamVid.playbackRate = rate;
+  streamVid.style.display = 'block';
+  if (playing !== lastPlayingState) {
+    lastPlayingState = playing;
+    if (playing) streamVid.play().catch(() => {});
+    else streamVid.pause();
+  }
+}
+
+const vsSrc = `#version 300 es
+precision highp float;
+layout(location = 0) in vec2 a_pos;
+layout(location = 1) in vec2 a_uv;
+layout(location = 2) in vec4 a_color;
+uniform vec2 u_screen;
+out vec2 v_uv;
+out vec4 v_color;
+void main() {
+  gl_Position = vec4(2.0 * a_pos.x / u_screen.x - 1.0, 1.0 - 2.0 * a_pos.y / u_screen.y, 0.0, 1.0);
+  v_uv = a_uv;
+  v_color = a_color / 255.0;
+}`;
+
+const fsSrc = `#version 300 es
+precision highp float;
+in vec2 v_uv;
+in vec4 v_color;
+uniform sampler2D u_tex;
+out vec4 fragColor;
+void main() {
+  fragColor = v_color * texture(u_tex, v_uv);
+}`;
+
+function compileShader(type, src) {
+  const s = gl.createShader(type);
+  gl.shaderSource(s, src);
+  gl.compileShader(s);
+  return s;
+}
+const prog = gl.createProgram();
+gl.attachShader(prog, compileShader(gl.VERTEX_SHADER, vsSrc));
+gl.attachShader(prog, compileShader(gl.FRAGMENT_SHADER, fsSrc));
+gl.linkProgram(prog);
+gl.useProgram(prog);
+
+const uScreen = gl.getUniformLocation(prog, 'u_screen');
+const vao = gl.createVertexArray();
+gl.bindVertexArray(vao);
+const vbo = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+gl.enableVertexAttribArray(0);
+gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 20, 0);
+gl.enableVertexAttribArray(1);
+gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 20, 8);
+gl.enableVertexAttribArray(2);
+gl.vertexAttribPointer(2, 4, gl.UNSIGNED_BYTE, false, 20, 16);
+const ibo = gl.createBuffer();
+gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
+
+const tex = gl.createTexture();
+gl.bindTexture(gl.TEXTURE_2D, tex);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+let eventQueue = [];
+let atlasVer = 0;
+let lastTouch = null;
+let inFlight = false;
+let dirty = true;
+let wasmExports = null;
+
+fetch('macview_gallery.wasm?v=0706')
+  .then(r => r.ok ? r.arrayBuffer() : Promise.reject())
+  .then(bytes => WebAssembly.instantiate(bytes, {}))
+  .then(res => {
+    wasmExports = res.instance.exports;
+    if (wasmExports.wasm_init) wasmExports.wasm_init();
+    atlasVer = 0;
+    dirty = true;
+  })
+  .catch(() => {});
+
+function getViewportMetrics() {
+  const r = canvas.getBoundingClientRect();
+  const wPts = Math.max(280, Math.round(r.width || window.innerWidth || 390));
+  const hPts = Math.max(320, Math.round(r.height || window.innerHeight || 844));
+  const dpr = Math.min(window.devicePixelRatio || 2, 3);
+  return { r, wPts, hPts, dpr };
+}
+function canvasXY(clientX, clientY) {
+  const { r, wPts, hPts } = getViewportMetrics();
+  const x = (clientX - r.left) * (wPts / Math.max(1, r.width));
+  const y = (clientY - r.top) * (hPts / Math.max(1, r.height));
+  return { x, y, str: `${x.toFixed(1)} ${y.toFixed(1)}` };
+}
+function pushEv(cmd) {
+  if (wasmExports) {
+    const parts = cmd.split(' ');
+    if (parts[0] === 'M') wasmExports.wasm_push_pointer_move(parseFloat(parts[1]), parseFloat(parts[2]));
+    else if (parts[0] === 'D') wasmExports.wasm_push_pointer_button(parseFloat(parts[1]), parseFloat(parts[2]), 1);
+    else if (parts[0] === 'U') wasmExports.wasm_push_pointer_button(parseFloat(parts[1]), parseFloat(parts[2]), 0);
+    else if (parts[0] === 'W') wasmExports.wasm_push_wheel(parseFloat(parts[1]), parseFloat(parts[2]));
+    else if (parts[0] === 'K') {
+      const map = { Backspace: 8, Enter: 13, ArrowUp: 38, ArrowDown: 40, Escape: 27 };
+      if (map[parts[1]]) wasmExports.wasm_push_key(map[parts[1]]);
+    } else if (cmd.startsWith('T ')) {
+      const txt = cmd.slice(2);
+      for (const ch of txt) wasmExports.wasm_push_char(ch.codePointAt(0));
+    }
+  } else {
+    eventQueue.push(cmd);
+  }
+  dirty = true;
+}
+
+function stepWasmOnGesture() {
+  if (!wasmExports || inFlight) return;
+  const { wPts, hPts, dpr } = getViewportMetrics();
+  if (canvas.width !== Math.round(wPts * dpr) || canvas.height !== Math.round(hPts * dpr)) {
+    canvas.width = Math.round(wPts * dpr);
+    canvas.height = Math.round(hPts * dpr);
+  }
+  const fLen = wasmExports.wasm_render_frame(wPts, hPts, dpr, performance.now() / 1000.0);
+  if (fLen >= 20) {
+    const fPtr = wasmExports.wasm_frame_ptr();
+    const buf = wasmExports.memory.buffer.slice(fPtr, fPtr + fLen);
+    renderMwgl(buf, wPts, hPts, dpr);
+  }
+}
+
+canvas.addEventListener('mousedown', e => { pushEv(`D ${canvasXY(e.clientX, e.clientY).str}`); });
+canvas.addEventListener('mousemove', e => { pushEv(`M ${canvasXY(e.clientX, e.clientY).str}`); });
+window.addEventListener('mouseup', e => { pushEv(`U ${canvasXY(e.clientX, e.clientY).str}`); stepWasmOnGesture(); });
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  pushEv(`W ${-e.deltaX} ${-e.deltaY}`);
+}, { passive: false });
+
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  if (e.touches.length === 1) {
+    const p = canvasXY(e.touches[0].clientX, e.touches[0].clientY);
+    lastTouch = { x: p.x, y: p.y, moved: false };
+    if (!scrollMode) pushEv(`D ${p.str}`);
+  } else if (e.touches.length === 2) {
+    const p0 = canvasXY(e.touches[0].clientX, e.touches[0].clientY);
+    const p1 = canvasXY(e.touches[1].clientX, e.touches[1].clientY);
+    lastTouch = { x: (p0.x + p1.x) * 0.5, y: (p0.y + p1.y) * 0.5, two: true };
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (e.touches.length === 1 && lastTouch) {
+    const p = canvasXY(e.touches[0].clientX, e.touches[0].clientY);
+    const dx = p.x - lastTouch.x;
+    const dy = p.y - lastTouch.y;
+    if (Math.hypot(dx, dy) > 4) lastTouch.moved = true;
+    if (scrollMode) {
+      pushEv(`W ${dx.toFixed(1)} ${dy.toFixed(1)}`);
+    } else {
+      pushEv(`M ${p.str}`);
+    }
+    lastTouch.x = p.x; lastTouch.y = p.y;
+  } else if (e.touches.length === 2 && lastTouch) {
+    const p0 = canvasXY(e.touches[0].clientX, e.touches[0].clientY);
+    const p1 = canvasXY(e.touches[1].clientX, e.touches[1].clientY);
+    const mx = (p0.x + p1.x) * 0.5;
+    const my = (p0.y + p1.y) * 0.5;
+    pushEv(`W ${(mx - lastTouch.x).toFixed(1)} ${(my - lastTouch.y).toFixed(1)}`);
+    lastTouch.x = mx; lastTouch.y = my;
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  if (lastTouch && !lastTouch.two) {
+    const posStr = `${lastTouch.x.toFixed(1)} ${lastTouch.y.toFixed(1)}`;
+    if (scrollMode && !lastTouch.moved) {
+      pushEv(`D ${posStr}`);
+      pushEv(`U ${posStr}`);
+    } else if (!scrollMode) {
+      pushEv(`U ${posStr}`);
+    }
+    stepWasmOnGesture();
+  }
+  lastTouch = null;
+}, { passive: false });
+
+kbInput.addEventListener('input', e => {
+  if (kbInput.value) { pushEv(`T ${kbInput.value}`); kbInput.value = ''; }
+});
+window.addEventListener('keydown', e => {
+  if (['Backspace', 'Enter', 'ArrowUp', 'ArrowDown', 'Escape'].includes(e.key)) {
+    pushEv(`K ${e.key}`);
+  } else if (e.key.length === 1 && document.activeElement !== kbInput) {
+    pushEv(`T ${e.key}`);
+  }
+});
+window.addEventListener('resize', () => { dirty = true; });
+
+async function syncAtlas() {
+  let buf;
+  if (wasmExports) {
+    const ptr = wasmExports.wasm_atlas_ptr();
+    const len = wasmExports.wasm_atlas_len();
+    if (len < 8) return;
+    buf = wasmExports.memory.buffer.slice(ptr, ptr + len);
+  } else {
+    const res = await fetch('/atlas.bin');
+    buf = await res.arrayBuffer();
+  }
+  if (buf.byteLength < 8) return;
+  const dv = new DataView(buf);
+  const w = dv.getUint32(0, true);
+  const h = dv.getUint32(4, true);
+  const pixels = new Uint8Array(buf, 8, w * h * 4);
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+}
+
+function renderMwgl(buf, wPts, hPts, dpr) {
+  const dv = new DataView(buf);
+  if (buf.byteLength < 20) return;
+  const rawVer = dv.getUint32(4, true);
+  const srvAtlasVer = rawVer & 0x0FFFFFFF;
+  const cursorCode = (rawVer >>> 28) & 0x7;
+  const cursors = ['default', 'ew-resize', 'ns-resize', 'nwse-resize', 'pointer', 'text'];
+  const nextCursor = cursors[cursorCode] || 'default';
+  if (canvas.style.cursor !== nextCursor) canvas.style.cursor = nextCursor;
+  if ((rawVer & 0x80000000) !== 0) {
+    dirty = true;
+  }
+  syncAvKitMediaOverlay(wPts, hPts);
+  const meshCount = dv.getUint32(16, true);
+  if (srvAtlasVer !== atlasVer) {
+    atlasVer = srvAtlasVer;
+    syncAtlas().then(() => { dirty = true; });
+  }
+  gl.viewport(0, 0, canvas.width, canvas.height);
+  gl.disable(gl.SCISSOR_TEST);
+  gl.clearColor(0.12, 0.12, 0.13, 1.0);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+  gl.enable(gl.SCISSOR_TEST);
+  gl.useProgram(prog);
+  gl.uniform2f(uScreen, wPts, hPts);
+  gl.bindVertexArray(vao);
+
+  let off = 20;
+  for (let i = 0; i < meshCount; i++) {
+    if (off + 24 > buf.byteLength) break;
+    const minX = dv.getFloat32(off, true);
+    const minY = dv.getFloat32(off + 4, true);
+    const maxX = dv.getFloat32(off + 8, true);
+    const maxY = dv.getFloat32(off + 12, true);
+    const vCount = dv.getUint32(off + 16, true);
+    const iCount = dv.getUint32(off + 20, true);
+    off += 24;
+    const vBytes = vCount * 20;
+    const iBytes = iCount * 4;
+    if (off + vBytes + iBytes > buf.byteLength) break;
+
+    const sx = Math.max(0, Math.floor(minX * dpr));
+    const sy = Math.max(0, Math.floor((hPts - maxY) * dpr));
+    const sw = Math.max(0, Math.ceil((maxX - minX) * dpr));
+    const sh = Math.max(0, Math.ceil((maxY - minY) * dpr));
+    gl.scissor(sx, sy, sw, sh);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+    gl.bufferData(gl.ARRAY_BUFFER, new Uint8Array(buf, off, vBytes), gl.STREAM_DRAW);
+    off += vBytes;
+
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint8Array(buf, off, iBytes), gl.STREAM_DRAW);
+    off += iBytes;
+
+    gl.drawElements(gl.TRIANGLES, iCount, gl.UNSIGNED_INT, 0);
+  }
+}
+
+async function tick() {
+  if (!inFlight && (dirty || eventQueue.length > 0)) {
+    inFlight = true;
+    dirty = false;
+    const { wPts, hPts, dpr } = getViewportMetrics();
+    if (canvas.width !== Math.round(wPts * dpr) || canvas.height !== Math.round(hPts * dpr)) {
+      canvas.width = Math.round(wPts * dpr);
+      canvas.height = Math.round(hPts * dpr);
+    }
+    const nowSecs = performance.now() / 1000.0;
+    if (wasmExports) {
+      const fLen = wasmExports.wasm_render_frame(wPts, hPts, dpr, nowSecs);
+      if (fLen >= 20) {
+        const fPtr = wasmExports.wasm_frame_ptr();
+        const buf = wasmExports.memory.buffer.slice(fPtr, fPtr + fLen);
+        renderMwgl(buf, wPts, hPts, dpr);
+      }
+    } else {
+      const batch = [`V ${wPts} ${hPts} ${dpr}`, `C ${nowSecs.toFixed(4)}`, ...eventQueue];
+      eventQueue = [];
+      try {
+        const res = await fetch(`/frame?w=${wPts}&h=${hPts}&dpr=${dpr}`, { method: 'POST', body: batch.join('\n') });
+        const buf = await res.arrayBuffer();
+        renderMwgl(buf, wPts, hPts, dpr);
+      } catch (_) {}
+    }
+    inFlight = false;
+  }
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+setInterval(() => { dirty = true; }, 250);
+</script>
+</body>
+</html>
