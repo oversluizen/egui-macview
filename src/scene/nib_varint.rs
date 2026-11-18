@@ -34,47 +34,6 @@ pub fn write_nib_varint(buf: &mut Vec<u8>, mut val: u32) {
     buf.push((val as u8) | 0x80);
 }
 
-#[derive(Debug, Clone)]
-enum NibVal {
-    Int(i64),
-    Bytes(Vec<u8>),
-    ObjRef(usize),
-    Other,
-}
-
-impl NibVal {
-    fn as_str(&self) -> Option<&str> {
-        let NibVal::Bytes(b) = self else { return None };
-        std::str::from_utf8(b.strip_suffix(&[0]).unwrap_or(b.as_slice())).ok()
-    }
-    fn as_u32(&self) -> Option<u32> {
-        if let NibVal::Int(v) = self {
-            Some(*v as u32)
-        } else {
-            None
-        }
-    }
-    fn as_obj_ref(&self) -> Option<usize> {
-        if let NibVal::ObjRef(idx) = self {
-            Some(*idx)
-        } else {
-            None
-        }
-    }
-    fn as_nsrect(&self) -> Option<[f32; 4]> {
-        let NibVal::Bytes(b) = self else { return None };
-        if b.len() != 17 || b[0] != 6 {
-            return None;
-        }
-        Some([
-            f32::from_le_bytes(b[1..5].try_into().ok()?),
-            f32::from_le_bytes(b[5..9].try_into().ok()?),
-            f32::from_le_bytes(b[9..13].try_into().ok()?),
-            f32::from_le_bytes(b[13..17].try_into().ok()?),
-        ])
-    }
-}
-
 /// Decodes `NSCell` `cFlags` bits `18..=20` into control size string (`SPEC-013 §3.1.2`).
 pub fn decode_cflags_control_size(cflags: u32) -> &'static str {
     match (cflags >> 18) & 0x07 {
@@ -87,109 +46,11 @@ pub fn decode_cflags_control_size(cflags: u32) -> &'static str {
 
 /// Decodes a genuine binary `NIBArchive\x01\x00\x00\x00` stream with varint tables & `NSCell` fusion.
 pub fn decode_real_nib_archive_v1(bytes: &[u8], mapper: &CustomClassMapper) -> Result<MacSceneIR, SceneCompileError> {
-    if let Ok(graph) = crate::scene::nib_ibtool::IbNibGraph::parse(bytes) {
-        if graph.classes.iter().any(|c| c == "NSIBObjectData") {
-            return crate::scene::nib_ibtool::decode_ibtool_nib_archive(&graph, mapper);
-        }
+    let graph = crate::scene::nib_ibtool::IbNibGraph::parse(bytes)?;
+    if graph.classes.iter().any(|c| c == "NSIBObjectData") {
+        return crate::scene::nib_ibtool::decode_ibtool_nib_archive(&graph, mapper);
     }
-    if bytes.len() < 52 {
-        return Err(SceneCompileError("NIBArchive shorter than 52 bytes".into()));
-    }
-    let read_u32 = |off: usize| -> u32 { u32::from_le_bytes(bytes[off..off + 4].try_into().unwrap_or([0; 4])) };
-    let obj_count = read_u32(18) as usize;
-    let obj_offset = read_u32(22) as usize;
-    let key_count = read_u32(26) as usize;
-    let key_offset = read_u32(30) as usize;
-    let val_count = read_u32(34) as usize;
-    let val_offset = read_u32(38) as usize;
-    let cls_count = read_u32(42) as usize;
-    let cls_offset = read_u32(46) as usize;
-
-    if obj_count == 0 || key_offset >= bytes.len() || val_offset >= bytes.len() || cls_offset >= bytes.len() {
-        return Err(SceneCompileError("Invalid NIBArchive section offsets".into()));
-    }
-
-    let mut cur = key_offset;
-    let mut keys = Vec::with_capacity(key_count);
-    for _ in 0..key_count {
-        let len = read_nib_varint(bytes, &mut cur).ok_or_else(|| SceneCompileError("Bad key varint".into()))? as usize;
-        let slice = bytes.get(cur..cur + len).ok_or_else(|| SceneCompileError("Key OOB".into()))?;
-        keys.push(String::from_utf8_lossy(slice).to_string());
-        cur += len;
-    }
-
-    cur = cls_offset;
-    let mut classes = Vec::with_capacity(cls_count);
-    for _ in 0..cls_count {
-        let len = read_nib_varint(bytes, &mut cur).ok_or_else(|| SceneCompileError("Bad cls varint".into()))? as usize;
-        let extra = read_nib_varint(bytes, &mut cur).unwrap_or(0) as usize;
-        cur += extra * 4;
-        let raw = bytes.get(cur..cur + len).ok_or_else(|| SceneCompileError("Class OOB".into()))?;
-        let trimmed = raw.strip_suffix(&[0]).unwrap_or(raw);
-        classes.push(String::from_utf8_lossy(trimmed).to_string());
-        cur += len;
-    }
-
-    cur = val_offset;
-    let mut values: Vec<(usize, NibVal)> = Vec::with_capacity(val_count);
-    for _ in 0..val_count {
-        let key_idx = read_nib_varint(bytes, &mut cur).ok_or_else(|| SceneCompileError("Bad val key".into()))? as usize;
-        let vtype = *bytes.get(cur).ok_or_else(|| SceneCompileError("Bad val type".into()))?;
-        cur += 1;
-        let val = match vtype {
-            0 => {
-                let v = *bytes.get(cur).unwrap_or(&0) as i8 as i64;
-                cur += 1;
-                NibVal::Int(v)
-            }
-            1 => {
-                let v = i16::from_le_bytes(bytes.get(cur..cur + 2).and_then(|s| s.try_into().ok()).unwrap_or([0; 2])) as i64;
-                cur += 2;
-                NibVal::Int(v)
-            }
-            2 => {
-                let v = i32::from_le_bytes(bytes.get(cur..cur + 4).and_then(|s| s.try_into().ok()).unwrap_or([0; 4])) as i64;
-                cur += 4;
-                NibVal::Int(v)
-            }
-            3 => {
-                let v = i64::from_le_bytes(bytes.get(cur..cur + 8).and_then(|s| s.try_into().ok()).unwrap_or([0; 8]));
-                cur += 8;
-                NibVal::Int(v)
-            }
-            4 | 5 | 9 => NibVal::Other,
-            6 => {
-                cur += 4;
-                NibVal::Other
-            }
-            7 => {
-                cur += 8;
-                NibVal::Other
-            }
-            8 => {
-                let len = read_nib_varint(bytes, &mut cur).unwrap_or(0) as usize;
-                let data = bytes.get(cur..cur + len).unwrap_or(&[]).to_vec();
-                cur += len;
-                NibVal::Bytes(data)
-            }
-            10 => {
-                let idx = u32::from_le_bytes(bytes.get(cur..cur + 4).and_then(|s| s.try_into().ok()).unwrap_or([0; 4])) as usize;
-                cur += 4;
-                NibVal::ObjRef(idx)
-            }
-            _ => return Err(SceneCompileError(format!("Unknown NIB value type {vtype}"))),
-        };
-        values.push((key_idx, val));
-    }
-
-    cur = obj_offset;
-    let mut objects = Vec::with_capacity(obj_count);
-    for _ in 0..obj_count {
-        let cls_idx = read_nib_varint(bytes, &mut cur).ok_or_else(|| SceneCompileError("Bad obj cls".into()))? as usize;
-        let val_start = read_nib_varint(bytes, &mut cur).ok_or_else(|| SceneCompileError("Bad obj val_start".into()))? as usize;
-        let val_len = read_nib_varint(bytes, &mut cur).ok_or_else(|| SceneCompileError("Bad obj val_len".into()))? as usize;
-        objects.push((cls_idx, val_start, val_len));
-    }
+    let crate::scene::nib_ibtool::IbNibGraph { keys, classes, values, objects } = graph;
 
     let mut nodes: Vec<SceneNode> = Vec::new();
     let mut obj_to_node_idx: Vec<Option<usize>> = vec![None; objects.len()];

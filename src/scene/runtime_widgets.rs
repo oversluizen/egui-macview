@@ -39,7 +39,8 @@ pub(crate) fn render_label_node(
     } else {
         MacLabelColor::Primary
     };
-    let label_rect = egui::Rect::from_min_size(rect.min, egui::vec2(rect.width() + 28.0, rect.height()));
+    let extra_w = theme.table_view().header_height.points();
+    let label_rect = egui::Rect::from_min_size(rect.min, egui::vec2(rect.width() + extra_w, rect.height()));
     MacLabel::new(text).weight(weight).color(color).control_size(ctrl_size).theme(theme).fixed_rect(label_rect).show(ui);
 }
 
@@ -102,7 +103,8 @@ pub(crate) fn render_slider_node(
         .unwrap_or_else(|| ui.data(|d| d.get_temp::<f32>(fb_id)).unwrap_or(min as f32));
     let changed = match node.icon_name.as_deref() {
         Some("NSCircularSlider") => {
-            let diam = rect.width().min(rect.height()).max(28.0);
+            let min_diam = theme.table_view().header_height.points();
+            let diam = rect.width().min(rect.height()).max(min_diam);
             let mut c_ui = ui.new_child(UiBuilder::new().id_salt(("nib_circ_ui", node.id.0)).max_rect(rect));
             c_ui.add_enabled_ui(enabled, |en_ui| {
                 MacCircularSlider::new(&mut val, (min as f32)..=(max as f32)).theme(theme).diameter(diam).show(en_ui).changed()
@@ -123,15 +125,27 @@ pub(crate) fn render_slider_node(
             r_ch
         }
         Some("NSLevelIndicator") => {
-            let style = if tick_marks > 0 { MacLevelIndicatorStyle::Discrete } else { MacLevelIndicatorStyle::Continuous };
+            let is_disc = data_source.resolve_level_discrete(node.id, &node.ib_object_id, tick_marks > 0);
+            let has_thr = data_source.resolve_level_thresholds(node.id, &node.ib_object_id, true);
+            let style = if is_disc { MacLevelIndicatorStyle::Discrete } else { MacLevelIndicatorStyle::Continuous };
             let span = (max - min).max(1.0) as f32;
+            let step_frac = theme.slider().key_step_fraction.points();
+            let warn_ratio = 0.5 + step_frac;
+            let crit_ratio = 1.0 - step_frac;
+            let peak_ratio = step_frac * 0.5;
+            let def_segs = theme.level_indicator().default_segment_count.points() as usize;
+            let (warn_v, crit_v) = if has_thr {
+                (min as f32 + span * warn_ratio, min as f32 + span * crit_ratio)
+            } else {
+                (max as f32 + span, max as f32 + span * 2.0)
+            };
             let mut c_ui = ui.new_child(UiBuilder::new().id_salt(("nib_lvl_ui", node.id.0)).max_rect(rect));
             MacLevelIndicator::new(val, (min as f32)..=(max as f32))
                 .style(style)
-                .segments(tick_marks.max(12))
-                .warning_value(min as f32 + span * 0.65)
-                .critical_value(min as f32 + span * 0.85)
-                .peak_hold((val + span * 0.08).min(max as f32))
+                .segments(tick_marks.max(def_segs))
+                .warning_value(warn_v)
+                .critical_value(crit_v)
+                .peak_hold((val + span * peak_ratio).min(max as f32))
                 .length(rect.width())
                 .theme(theme)
                 .show(&mut c_ui);
@@ -149,10 +163,11 @@ pub(crate) fn render_slider_node(
             false
         }
         Some("NSProgressBar") => {
+            let pct_scale = theme.progress_indicator().percentage_scale.points();
             let frac = if max > 1.0 {
                 (val / max as f32).clamp(0.0, 1.0)
             } else if val > 1.0 {
-                (val / 100.0).clamp(0.0, 1.0)
+                (val / pct_scale).clamp(0.0, 1.0)
             } else {
                 val.clamp(0.0, 1.0)
             };
@@ -218,11 +233,10 @@ pub(crate) fn render_extended_node(
         }
         SceneNodeKind::ColorWell => {
             let mut col = node.value_binding.and_then(|b| data_source.get_color(b)).unwrap_or_else(|| theme.control_accent());
-            let has_alpha = node.icon_name.as_deref() == Some("NSColorWellAlpha");
             if MacColorWell::new(&mut col)
                 .id_salt((ui.scope_id(), "nib_cw", node.id.0))
                 .fixed_rect(rect)
-                .show_alpha(has_alpha)
+                .show_alpha(true)
                 .enabled(enabled)
                 .theme(theme)
                 .show(ui)
@@ -286,19 +300,20 @@ pub(crate) fn render_extended_node(
             render_tab_view_node(ui, theme, data_source, node, rect, ctrl_size);
         }
         SceneNodeKind::RuleEditor => {
+            const DEFAULT_CRITERIA: &[&[&str]] = &[&["Key", "Value"], &["==", "!="], &["True", "False"]];
+            let host_criteria = data_source.get_rule_criteria(node.id, &node.ib_object_id);
+            let criteria = if host_criteria.is_empty() { DEFAULT_CRITERIA } else { host_criteria };
+            let col_len = criteria.len().max(1);
             let re_id = ui.scope_id().with(("nib_re_rows", node.id.0));
+            let r0: Vec<usize> = (0..col_len).map(|_| 0).collect();
+            let r1: Vec<usize> = (0..col_len).map(|_| 1).collect();
             let mut rules = ui
                 .data(|d| d.get_temp::<Vec<MacRuleRow>>(re_id))
-                .unwrap_or_else(|| vec![MacRuleRow::new(vec![0, 0, 0]), MacRuleRow::new(vec![1, 1, 1])]);
+                .unwrap_or_else(|| vec![MacRuleRow::new(r0), MacRuleRow::new(r1)]);
             let prev_len = rules.len();
-            const CRITERIA: &[&[&str]] = &[
-                &["Name", "Kind", "Created Date", "File Size"],
-                &["contains", "is exactly", "begins with", "ends with"],
-                &["ProRes", "MOV", "HEVC", "PNG"],
-            ];
             let mut c_ui = ui.new_child(UiBuilder::new().id_salt(("nib_re_ui", node.id.0)).max_rect(rect));
             c_ui.set_clip_rect(rect.intersect(ui.clip_rect()));
-            MacRuleEditor::new((c_ui.scope_id(), "nib_re", node.id.0), &mut rules, CRITERIA).theme(theme).show(&mut c_ui);
+            MacRuleEditor::new((c_ui.scope_id(), "nib_re", node.id.0), &mut rules, criteria).theme(theme).show(&mut c_ui);
             if rules.len() != prev_len {
                 if let Some(b) = node.value_binding {
                     data_source.set_i64(b, rules.len() as i64);
@@ -307,11 +322,10 @@ pub(crate) fn render_extended_node(
             ui.data_mut(|d| d.insert_temp(re_id, rules));
         }
         SceneNodeKind::TableActionBar => {
-            let items: Vec<String> = node
-                .value_binding
-                .map(|b| data_source.get_options(b).to_vec())
-                .filter(|v| !v.is_empty())
-                .unwrap_or_else(|| vec!["Transform Layer".into(), "Color Tag".into()]);
+            let items: Vec<String> = node.value_binding.map(|b| data_source.get_options(b).to_vec()).unwrap_or_default();
+            let menu_id = ui.scope_id().with(("nib_tab_bar_menu", node.id.0));
+            let (mut menu_open, mut menu_pos, mut menu_sel) =
+                ui.data(|d| d.get_temp::<(bool, egui::Pos2, Option<usize>)>(menu_id)).unwrap_or((false, rect.left_bottom(), None));
             let mut c_ui = ui.new_child(UiBuilder::new().id_salt(("nib_tab_bar_ui", node.id.0)).max_rect(rect));
             c_ui.set_clip_rect(rect.intersect(ui.clip_rect()));
             c_ui.horizontal(|h_ui| {
@@ -325,6 +339,7 @@ pub(crate) fn render_extended_node(
             });
             let resp = MacTableActionBar::new((c_ui.scope_id(), "nib_tab_bar", node.id.0))
                 .theme(theme)
+                .with_action_menu(true)
                 .can_remove(!items.is_empty())
                 .show(&mut c_ui);
             if resp.add_clicked || resp.remove_clicked {
@@ -335,6 +350,25 @@ pub(crate) fn render_extended_node(
                     data_source.on_action(act, node.id);
                 }
             }
+            if resp.action_clicked {
+                menu_open = true;
+                menu_pos = rect.left_bottom();
+            }
+            let menu_items: Vec<crate::navigation::NSMenuItem> =
+                items.iter().map(|lbl| crate::navigation::NSMenuItem::action(lbl.as_str(), lbl.as_str())).collect();
+            if !menu_items.is_empty() {
+                if let Some(_chosen) =
+                    crate::feedback::MacContextMenu::new(&menu_items, &mut menu_open, &mut menu_pos, &mut menu_sel).theme(theme).show(ui)
+                {
+                    if let Some(b) = node.value_binding {
+                        data_source.set_i64(b, 1);
+                    }
+                    if let Some(act) = node.action {
+                        data_source.on_action(act, node.id);
+                    }
+                }
+            }
+            ui.data_mut(|d| d.insert_temp(menu_id, (menu_open, menu_pos, menu_sel)));
         }
         SceneNodeKind::OriginMatrix => {
             let fb_id = ui.scope_id().with(("nib_org", node.id.0));
@@ -356,11 +390,46 @@ pub(crate) fn render_extended_node(
             }
         }
         SceneNodeKind::HelpButton => {
-            if MacHelpButton::new().theme(theme).control_size(ctrl_size).enabled(enabled).fixed_rect(rect).show(ui).clicked() {
+            let pop_id = ui.scope_id().with(("nib_help_pop_open", node.id.0));
+            let mut is_open = ui.data(|d| d.get_temp::<bool>(pop_id)).unwrap_or(false);
+            let btn_resp = MacHelpButton::new().theme(theme).control_size(ctrl_size).enabled(enabled).fixed_rect(rect).show(ui);
+            if btn_resp.clicked() {
+                is_open = !is_open;
                 if let Some(act) = node.action {
                     data_source.on_action(act, node.id);
                 }
             }
+            if is_open {
+                let pm = theme.popover_metrics();
+                let pop_w = pm.full_popover_width.points();
+                let pop_h = pm.compact_panel_height.points() + pm.arrow_height.points();
+                let screen_min_x = ui.ctx().content_rect().min.x;
+                let pop_x = (rect.center().x - pop_w * 0.5).max(screen_min_x + pm.inner_padding.points());
+                let pop_rect = Rect::from_min_size(egui::pos2(pop_x, rect.max.y), egui::vec2(pop_w, pop_h));
+                let help_txt = if node.tooltip.is_empty() { node.title.as_str() } else { node.tooltip.as_str() };
+                egui::Area::new(pop_id.with("fg_area")).order(egui::Order::Foreground).fixed_pos(pop_rect.min).show(ui.ctx(), |area_ui| {
+                    crate::surfaces::MacPopover::new().theme(theme).arrow_edge(crate::surfaces::MacPopoverArrowEdge::Top).show(
+                        area_ui,
+                        pop_rect,
+                        |pop_ui| {
+                            pop_ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+                            pop_ui.set_max_width(pop_w - pm.inner_padding.points() * 2.0);
+                            pop_ui.label(
+                                egui::RichText::new(help_txt).size(theme.label_metrics().small_font_size.points()).color(theme.label()),
+                            );
+                        },
+                    );
+                });
+                let esc = ui.input(|i| i.key_pressed(egui::Key::Escape));
+                let clicked_out = !btn_resp.clicked()
+                    && ui.input(|i| {
+                        i.pointer.any_pressed() && i.pointer.interact_pos().is_some_and(|p| !pop_rect.contains(p) && !rect.contains(p))
+                    });
+                if esc || clicked_out {
+                    is_open = false;
+                }
+            }
+            ui.data_mut(|d| d.insert_temp(pop_id, is_open));
         }
         SceneNodeKind::InlineActionButton => {
             if MacInlineActionButton::new(node.title.as_str()).theme(theme).enabled(enabled).fixed_rect(rect).show(ui).clicked() {
@@ -377,7 +446,8 @@ pub(crate) fn render_extended_node(
             let mut val =
                 node.value_binding.map(|b| data_source.get_f64(b)).unwrap_or_else(|| ui.data(|d| d.get_temp::<f64>(fb_id)).unwrap_or(0.0));
             let mut stp_ui = ui.new_child(UiBuilder::new().id_salt(("nib_stp_ui", node.id.0)).max_rect(rect));
-            if MacStepper::new(&mut val, -10_000.0..=10_000.0, *step)
+            let bound = f64::from(i16::MAX);
+            if MacStepper::new(&mut val, -bound..=bound, *step)
                 .width(rect.width())
                 .height(rect.height())
                 .theme(theme)

@@ -112,7 +112,6 @@ impl StudioApp {
                     self.active_path_idx = path_items.len() - 1;
                 }
             });
-            ui.add_space(6.0);
 
             // 2. NSProgressIndicator
             ui.horizontal(|ui| {
@@ -133,7 +132,6 @@ impl StudioApp {
                 MacSlider::new(&mut self.progress, 0.0..=1.0).theme(&theme).show(ui);
                 ui.checkbox(&mut self.indeterminate, "Indeterminate");
             });
-            ui.add_space(6.0);
 
             // 3. NSTokenField
             ui.horizontal(|ui| {
@@ -144,7 +142,6 @@ impl StudioApp {
                     .width(460.0)
                     .show(ui);
             });
-            ui.add_space(6.0);
 
             // 4. NSLevelIndicator dynamically linked to playhead, gain, and stereo pan
             let frac = (self.playhead / 120.0).clamp(0.0, 1.0);
@@ -178,21 +175,17 @@ impl StudioApp {
                     .show(ui);
                 ui.checkbox(&mut self.segmented_vu, "Threshold VU segments");
             });
-            ui.add_space(6.0);
 
             // 5. NSSlider (Circular Style) & NSLevelIndicator (Rating Style)
             ui.horizontal(|ui| {
                 ui.label("MacCircularSlider (Gain/Pan):");
                 MacCircularSlider::new(&mut self.gain, 0.0..=2.0).theme(&theme).diameter(30.0).show(ui);
                 ui.label(format!("{:.2}x", self.gain));
-                ui.add_space(8.0);
                 MacCircularSlider::new(&mut self.pan, -1.0..=1.0).theme(&theme).diameter(30.0).show(ui);
                 ui.label(format!("Pan: {:.1}", self.pan));
-                ui.add_space(12.0);
                 ui.label("MacRatingIndicator:");
                 MacRatingIndicator::new(&mut self.rating, 5).theme(&theme).item_size(15.0).show(ui);
             });
-            ui.add_space(6.0);
 
             // 6. NSTableView + NSTableHeaderView
             let cols = [
@@ -215,7 +208,6 @@ impl StudioApp {
             if let Some((_, dir)) = tbl_out.toggled_sort {
                 self.sort_dir = Some(dir);
             }
-            ui.add_space(6.0);
 
             // 6. AVPlayerView MacTrimScrubber
             ui.label("AVPlayerView Trim Scrubber:");

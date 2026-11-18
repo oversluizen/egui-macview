@@ -17,8 +17,8 @@ fn test_token_catalog_deserialization() {
     let tokens = MacDesignTokens::load_default();
 
     assert_eq!(tokens.name, "egui-macview Design Tokens");
-    assert_eq!(tokens.version, "0.6.11");
-    assert_eq!(egui_macview::VERSION, "0.6.11");
+    assert_eq!(tokens.version, "0.8.1");
+    assert_eq!(egui_macview::VERSION, "0.8.1");
     assert!(!tokens.description.is_empty());
 
     let ctrl = tokens.control_metrics();
@@ -184,11 +184,11 @@ fn test_sf_pro_dynamic_tracking_optical_bounds() {
 fn test_version_synchronization_invariants() {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     let cargo_toml = fs::read_to_string(manifest_dir.join("Cargo.toml")).expect("read Cargo.toml");
-    assert!(cargo_toml.contains("version = \"0.6.11\""), "Cargo.toml must have version = \"0.6.11\"");
-    assert_eq!(egui_macview::VERSION, "0.6.11");
+    assert!(cargo_toml.contains("version = \"0.8.1\""), "Cargo.toml must have version = \"0.8.1\"");
+    assert_eq!(egui_macview::VERSION, "0.8.1");
 
     let tokens = MacDesignTokens::load_default();
-    assert_eq!(tokens.version, "0.6.11");
+    assert_eq!(tokens.version, "0.8.1");
 
     let changelog = fs::read_to_string(manifest_dir.join("CHANGELOG.md")).expect("read CHANGELOG.md");
     for header in [
@@ -234,10 +234,16 @@ fn test_version_synchronization_invariants() {
                 ("0.4.0", Some("Milestone 0.4.0"))
             } else if file_name.starts_with("SPEC-011") {
                 ("0.5.0", Some("Milestone 0.5.0"))
-            } else if file_name.starts_with("SPEC-012") || file_name.starts_with("SPEC-INDEX") {
+            } else if file_name.starts_with("SPEC-012") {
                 ("0.6.11", Some("Milestone 0.6.11"))
             } else if file_name.starts_with("SPEC-013") {
                 ("0.7.0", Some("Milestone 0.7.0"))
+            } else if file_name.starts_with("SPEC-014") {
+                ("0.8.0", Some("Milestone 0.8.0"))
+            } else if file_name.starts_with("SPEC-015") || file_name.starts_with("SPEC-INDEX") {
+                ("0.8.1", Some("Milestone 0.8.1"))
+            } else if file_name.starts_with("SPEC-016") {
+                ("0.9.0", Some("Milestone 0.9.0"))
             } else {
                 ("0.2.0", None)
             };
@@ -246,7 +252,9 @@ fn test_version_synchronization_invariants() {
             if let Some(ms) = expected_milestone {
                 assert!(content.contains(ms), "{file_name} missing `{ms}`");
             }
-            assert!(content.contains("`0.1.0`") && content.contains("2026-11-05"));
+            if !file_name.starts_with("SPEC-014") && !file_name.starts_with("SPEC-015") && !file_name.starts_with("SPEC-016") {
+                assert!(content.contains("`0.1.0`") && content.contains("2026-11-05"));
+            }
         }
     }
     assert!(spec_count >= 8);

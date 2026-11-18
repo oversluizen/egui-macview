@@ -123,42 +123,60 @@ pub fn normalize_nib_alignment_rect(
     if !parent_is_flipped && parent_h > 0.0 {
         y = parent_h - (y + h);
     }
+    let tokens = crate::tokens::MacDesignTokens::default_shared();
+    let pb = tokens.popup_button_metrics();
+    let cb = tokens.checkbox_metrics();
+    let h_reg = pb.regular_visual_height.points();
+    let h_sml = pb.small_visual_height.points() + 1.0;
+    let h_mni = pb.mini_visual_height.points() + 1.0;
+    let h_lrg = tokens.table_view_metrics().header_height.points();
+    let inset_btn = cb.regular.label_gap.points();
+    let inset_btn_w = inset_btn * 2.0;
+    let min_btn_w = tokens.thumbnail_metrics().size.points();
+    let hover_th = tokens.scroll_view_metrics().scrollbar_hover_thickness.points();
+    let sheet_min_h = h_lrg + hover_th;
+    let std_min_h = h_reg + hover_th;
     match kind {
         SceneNodeKind::PushButton { .. } => {
-            if h >= 38.0 {
-                x += 6.0;
-                y += 6.0;
-                w = (w - 12.0).max(24.0);
-                h = 28.0;
-            } else if h >= 30.0 {
-                x += 6.0;
-                y += (h - 20.0) * 0.5;
-                w = (w - 12.0).max(24.0);
-                h = 20.0;
-            } else {
-                let target_h = match size {
-                    MacControlSize::Large => 28.0,
-                    MacControlSize::Regular | MacControlSize::CompactInfobox => 20.0,
-                    MacControlSize::Small => 17.0,
-                    MacControlSize::Mini => 14.0,
-                };
-                if h > target_h {
-                    y += (h - target_h) * 0.5;
-                    h = target_h;
+            if (w - h).abs() > 2.0 {
+                if h >= sheet_min_h {
+                    x += inset_btn;
+                    y += inset_btn;
+                    w = (w - inset_btn_w).max(min_btn_w);
+                    h = h_lrg;
+                } else if h >= std_min_h {
+                    x += inset_btn;
+                    y += (h - h_reg) * 0.5;
+                    w = (w - inset_btn_w).max(min_btn_w);
+                    h = h_reg;
+                } else {
+                    let target_h = match size {
+                        MacControlSize::Large => h_lrg,
+                        MacControlSize::Regular | MacControlSize::CompactInfobox => h_reg,
+                        MacControlSize::Small => h_sml,
+                        MacControlSize::Mini => h_mni,
+                    };
+                    if h > target_h {
+                        y += (h - target_h) * 0.5;
+                        h = target_h;
+                    }
                 }
             }
         }
         SceneNodeKind::PopUpButton { .. } => {
-            if h >= 25.0 {
-                x += 3.0;
-                w = (w - 6.0).max(24.0);
-                y += (h - 20.0) * 0.5;
-                h = 20.0;
+            let pop_inset = tokens.macview.metrics.control.focus_ring.stroke_width.points();
+            let pop_nib_h = pb.height.points() + pop_inset;
+            if h >= pop_nib_h {
+                x += pop_inset;
+                w = (w - pop_inset * 2.0).max(min_btn_w);
+                y += (h - h_reg) * 0.5;
+                h = h_reg;
             }
         }
         SceneNodeKind::Checkbox | SceneNodeKind::RadioButton if x < 0.0 => {
+            let chk_min_w = tokens.label_metrics().regular_height.points();
             x += 2.0;
-            w = (w - 2.0).max(16.0);
+            w = (w - 2.0).max(chk_min_w);
         }
         _ => {}
     }
@@ -170,6 +188,9 @@ pub(crate) fn run_spatial_semantic_normalizer(
 ) -> (Vec<LabeledFieldPair>, Vec<FieldRowGroup>, Vec<SemanticSectionGroup>) {
     let mut pairs = Vec::new();
     let mut rows = Vec::new();
+    let row_tol = crate::tokens::StackViewMetrics::default().default_spacing.points();
+    let dx_min = -crate::tokens::ImageViewMetrics::default().default_size.points();
+    let dx_max = -dx_min * 2.0;
 
     let labels: Vec<(NodeId, [f32; 4], String)> =
         nodes.iter().filter(|n| matches!(n.kind, SceneNodeKind::Label)).map(|n| (n.id, n.alignment_rect, n.title.clone())).collect();
@@ -189,8 +210,8 @@ pub(crate) fn run_spatial_semantic_normalizer(
             let l_mid_y = ly + lh * 0.5;
             let dy = (c_mid_y - l_mid_y).abs();
             let dx = cx - (lx + lw);
-            if dy <= 8.0 && cx > *lx && (-32.0..=64.0).contains(&dx) {
-                let score = dy + dx.abs() * 0.25;
+            if dy <= row_tol && cx > *lx && (dx_min..=dx_max).contains(&dx) {
+                let score = dy + (dx.abs() * 0.5) * 0.5;
                 if best_lbl.is_none_or(|(_, b)| score < b) {
                     best_lbl = Some((*lid, score));
                 }
@@ -205,9 +226,9 @@ pub(crate) fn run_spatial_semantic_normalizer(
     let mut sep_ys: Vec<f32> = nodes.iter().filter(|n| matches!(n.kind, SceneNodeKind::Separator)).map(|n| n.alignment_rect[1]).collect();
     sep_ys.sort_by(|a, b| a.total_cmp(b));
 
-    let mut boundaries = vec![-1e6_f32];
+    let mut boundaries = vec![f32::NEG_INFINITY];
     boundaries.extend(sep_ys);
-    boundaries.push(1e6_f32);
+    boundaries.push(f32::INFINITY);
 
     let mut sections = Vec::new();
     for (sec_idx, win) in boundaries.windows(2).enumerate() {
@@ -242,7 +263,7 @@ pub(crate) fn run_spatial_semantic_normalizer(
                 for &other_id in &sec_nodes {
                     if !visited.contains(&other_id) {
                         let oy = nodes.iter().find(|n| n.id == other_id).map(|n| n.alignment_rect[1]).unwrap_or(0.0);
-                        if (oy - base_y).abs() <= 8.0 {
+                        if (oy - base_y).abs() <= row_tol {
                             visited.insert(other_id);
                             row_ids.push(other_id);
                         }
@@ -272,7 +293,7 @@ pub fn apply_autoresizing_mask(rect0: [f32; 4], mask: u8, old_parent: [f32; 2], 
 
 fn solve_axis(pos0: f32, len0: f32, old_total: f32, new_total: f32, flex_min: bool, flex_size: bool, flex_max: bool) -> (f32, f32) {
     let delta = new_total - old_total;
-    if delta.abs() < 1e-4 || (!flex_min && !flex_size && !flex_max) {
+    if delta.abs() <= f32::EPSILON || (!flex_min && !flex_size && !flex_max) {
         return (pos0, len0);
     }
     let min_m = pos0.max(0.0);

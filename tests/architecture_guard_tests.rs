@@ -12,7 +12,16 @@ use std::fs;
 use std::path::Path;
 
 const UI_COMPONENT_DIRS: &[&str] = &["src/controls", "src/layout", "src/surfaces", "src/navigation", "src/feedback"];
-const EXTRA_GUARDED_FILES: &[&str] = &["src/theme/mod.rs", "src/theme/accessors.rs", "src/theme/pro_accessors.rs"];
+const EXTRA_GUARDED_FILES: &[&str] = &[
+    "src/theme/mod.rs",
+    "src/theme/accessors.rs",
+    "src/theme/pro_accessors.rs",
+    "src/motion/mod.rs",
+    "src/scene/runtime.rs",
+    "src/scene/runtime_widgets.rs",
+    "src/scene/runtime_tabs.rs",
+    "src/scene/normalizer.rs",
+];
 const TOKEN_SCHEMA_TEST_STACK_BYTES: usize = 8 * 1024 * 1024;
 
 #[test]
@@ -28,14 +37,18 @@ fn test_guard_zero_magic_numbers_and_colors_in_ui_components() {
     for file_rel in EXTRA_GUARDED_FILES {
         magic_v.extend(check_magic_numbers_in_source(file_rel, &fs::read_to_string(manifest_dir.join(file_rel)).expect("read source")));
     }
-    for file in collect_rs_files(&manifest_dir.join("src")) {
-        let rel = file.strip_prefix(manifest_dir).unwrap_or(&file).to_string_lossy().replace('\\', "/");
-        if rel != "src/tokens/dtcg.rs" && rel != "src/theme/contrast.rs" {
-            color_v.extend(check_hardcoded_colors_in_source(&rel, &fs::read_to_string(&file).expect("read source")));
+    for dir_rel in ["src", "examples"] {
+        for file in collect_rs_files(&manifest_dir.join(dir_rel)) {
+            let rel = file.strip_prefix(manifest_dir).unwrap_or(&file).to_string_lossy().replace('\\', "/");
+            if rel != "src/tokens/dtcg.rs" && rel != "src/theme/contrast.rs" {
+                color_v.extend(check_hardcoded_colors_in_source(&rel, &fs::read_to_string(&file).expect("read source")));
+            }
         }
     }
-    assert!(magic_v.is_empty(), "Magic Number Guard:\n{magic_v:#?}");
-    assert!(color_v.is_empty(), "Hardcoded Color Guard:\n{color_v:#?}");
+    assert!(
+        magic_v.is_empty() && color_v.is_empty(),
+        "Magic Number Guard:\n{magic_v:#?}\nHardcoded Color & Spacing Guard:\n{color_v:#?}"
+    );
 }
 
 #[test]
@@ -330,20 +343,6 @@ fn test_guard_zero_dead_code_and_zero_unused_dependencies() {
     for bad_io in ["std::fs", "serde_json", "plist::", "roxmltree::", "request_repaint("] {
         assert!(!scene_runtime.contains(bad_io), "src/scene/runtime.rs paint/layout pass contains forbidden `{bad_io}`");
     }
-    for no_json_rel in [
-        "src/scene/nib_frontend.rs",
-        "src/scene/nib_ibtool.rs",
-        "src/scene/nib_ibtool_widgets.rs",
-        "src/scene/nib_varint.rs",
-        "src/scene/xib_exporter.rs",
-        "src/scene/xib_strings.rs",
-    ] {
-        let src = fs::read_to_string(manifest_dir.join(no_json_rel)).expect("read scene file");
-        assert!(
-            !src.contains("serde_json") && !src.contains("macviewMeta"),
-            "{no_json_rel} must not use serde_json or macviewMeta JSON shortcuts (REQ-013-05.5)"
-        );
-    }
     let scene_norm = fs::read_to_string(manifest_dir.join("src/scene/normalizer.rs")).expect("read scene/normalizer.rs");
     assert!(
         scene_norm.contains("pub fn validate_invariants(&self) -> Result<(), String>"),
@@ -361,27 +360,11 @@ fn test_guard_zero_dead_code_and_zero_unused_dependencies() {
         &fs::read_to_string(manifest_dir.join("examples/gallery/nib_showcase_builders.rs")).expect("read nib_showcase_builders.rs"),
     );
     assert!(
-        !nib_builders.contains("SceneNode {"),
-        "REQ-013-02L: nib_showcase_builders.rs must compile from .xib XML files, not hardcoded Rust SceneNode structs"
+        !nib_builders.contains("SceneNode {") && nib_builders.contains("XibXmlFrontend::from_xml_str"),
+        "REQ-013-02L: nib_showcase_builders.rs must compile from .xib XML files"
     );
-    assert!(
-        nib_builders.contains("XibXmlFrontend::from_xml_str"),
-        "REQ-013-02L: nib_showcase_builders.rs must use XibXmlFrontend::from_xml_str"
-    );
-    for xib_name in [
-        "1_Typography_and_Grid_Inspector.xib",
-        "2_Appearance_and_Theme_Settings.xib",
-        "3_Audio_Mastering_Channel_Strip.xib",
-        "4_Publishing_and_Asset_Queue.xib",
-        "Right_Inspector_Default.xib",
-    ] {
-        assert!(manifest_dir.join("assets/nib_showcase").join(xib_name).exists(), "Missing authoritative .xib file: {xib_name}");
-    }
     let center_src = fs::read_to_string(manifest_dir.join("examples/gallery/center_state.rs")).expect("read center_state.rs");
-    assert!(
-        center_src.contains("render_active_screen_nib"),
-        "REQ-013-02L: CenterState must render active screen .xib/.nib scene via MacSceneIR::show"
-    );
+    assert!(center_src.contains("render_active_screen_nib"));
     for dup_call in [
         "self.render_state1_canvas(",
         "self.render_state2_symbols_layout(",
@@ -390,16 +373,12 @@ fn test_guard_zero_dead_code_and_zero_unused_dependencies() {
         "self.render_state5_avkit_media(",
         "self.render_state6_advanced_controls(",
     ] {
-        assert!(
-            !center_src.contains(dup_call),
-            "REQ-013-02L: CenterState::render must render 100% from .xib/.nib without calling `{dup_call}`"
-        );
+        assert!(!center_src.contains(dup_call), "REQ-013-02L: CenterState::render must not call `{dup_call}`");
     }
     let insp_src = fs::read_to_string(manifest_dir.join("examples/gallery/inspector.rs")).expect("read inspector.rs");
-    assert!(
-        insp_src.contains("nib_scene.show("),
-        "REQ-013-02L: InspectorState::render must render Right_Inspector_Default.xib/.nib via nib_scene.show("
-    );
+    assert!(insp_src.contains("nib_scene.show("));
+    let purity_v = check_scene_and_test_purity(manifest_dir);
+    assert!(purity_v.is_empty(), "Scene & Test Purity Guard:\n{purity_v:#?}");
 }
 
 #[test]

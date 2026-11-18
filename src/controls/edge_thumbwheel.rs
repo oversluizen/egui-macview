@@ -83,6 +83,17 @@ impl<'a> MacEdgeThumbwheel<'a> {
         }
     }
 
+    /// Immediately zeroes any active free-spin flywheel momentum for the thumbwheel identified by `id_source` (`REQ-015-10`).
+    pub fn brake_flywheel(ctx: &egui::Context, id_source: impl Hash + std::fmt::Debug) {
+        let mem_id = Id::NULL.with(id_source).with("edge_thumbwheel_state");
+        ctx.data_mut(|d| {
+            if let Some(mut mem) = d.get_temp::<EdgeWheelMemory>(mem_id) {
+                mem.velocity_pt_s = 0.0;
+                d.insert_temp(mem_id, mem);
+            }
+        });
+    }
+
     /// Overrides the Liquid Glass accent color used for the cylindrical end-cap rings and active flywheel glow (`REQ-014-06`).
     pub fn glass_accent(mut self, color: Color32) -> Self {
         self.glass_accent = Some(color);
@@ -121,11 +132,7 @@ impl<'a> MacEdgeThumbwheel<'a> {
         let s = self.scale;
 
         let w = self.wide_drum_width.unwrap_or_else(|| m.edge_wheel_width.points() * s);
-        let h = if self.wide_drum_width.is_some() {
-            m.edge_wheel_width.points() * 2.0 * s
-        } else {
-            m.edge_wheel_height.points() * s
-        };
+        let h = if self.wide_drum_width.is_some() { m.edge_wheel_width.points() * 2.0 * s } else { m.edge_wheel_height.points() * s };
         let desired = Vec2::new(w, h);
 
         let (rect, mut response) = if let Some(c_rect) = self.dock_rect {
@@ -149,10 +156,7 @@ impl<'a> MacEdgeThumbwheel<'a> {
         let mem_id = self.id_source.with("edge_thumbwheel_state");
         let mut mem = ui.ctx().data_mut(|d| d.get_temp::<EdgeWheelMemory>(mem_id).unwrap_or_default());
         let now = ui.input(|i| i.time);
-        let dt = mem
-            .last_time
-            .map(|prev| (now - prev).clamp(0.0, 0.5) as f32)
-            .unwrap_or(0.0);
+        let dt = mem.last_time.map(|prev| (now - prev).clamp(0.0, 0.5) as f32).unwrap_or(0.0);
         mem.last_time = Some(now);
 
         let is_down = response.is_pointer_button_down_on();
@@ -200,11 +204,28 @@ impl<'a> MacEdgeThumbwheel<'a> {
                 }
             }
             if mem.velocity_pt_s.abs() > m.edge_wheel_stop_threshold.points() {
-                ui.ctx().request_repaint();
+                ui.ctx().request_repaint_after(std::time::Duration::from_millis(16));
             }
         } else {
             mem.velocity_pt_s = 0.0;
         }
+
+        if response.has_focus() {
+            let key_dir = ui.input(|i| {
+                if i.key_pressed(egui::Key::ArrowUp) || i.key_pressed(egui::Key::ArrowRight) {
+                    1.0f32
+                } else if i.key_pressed(egui::Key::ArrowDown) || i.key_pressed(egui::Key::ArrowLeft) {
+                    -1.0f32
+                } else {
+                    0.0f32
+                }
+            });
+            if key_dir.abs() > 0.0 {
+                let detent_deg = m.detent_step_deg.points().max(1.0);
+                step_pt = key_dir * (h * detent_deg / m.half_circle_deg.points().max(1.0));
+            }
+        }
+        response.widget_info(|| egui::WidgetInfo::slider(true, f64::from(*self.value), "Rotary Edge Thumbwheel"));
 
         let mut value_delta = 0.0f32;
         let mut delta_ticks = 0.0f32;
@@ -249,28 +270,40 @@ impl<'a> MacEdgeThumbwheel<'a> {
         );
 
         if is_free_spinning || is_down {
-            let glow_stroke = Stroke::new(
-                m.active_stroke_width.points(),
-                accent_col.gamma_multiply(m.active_fill_opacity.points()),
-            );
+            let glow_stroke = Stroke::new(m.active_stroke_width.points(), accent_col.gamma_multiply(m.active_fill_opacity.points()));
             painter.rect_stroke(inner_rect.expand(1.0), inner_cr, glow_stroke, StrokeKind::Outside);
         }
 
         painter.rect(inner_rect, inner_cr, theme.window_background(), border_stroke, StrokeKind::Inside);
 
-        // 3D Cylindrical Shading Bands (top/bottom curvature shadows + center horizon reflection band)
+        // 16-Band Cosine-Interpolated 3D Cylindrical Shading Mesh
         let r_cyl = inner_rect.height() * 0.5;
         let y_c = inner_rect.center().y;
-        let band_h = r_cyl * 0.5;
-        let top_shadow = Rect::from_min_max(inner_rect.min, Pos2::new(inner_rect.max.x, inner_rect.min.y + band_h));
-        let bot_shadow = Rect::from_min_max(Pos2::new(inner_rect.min.x, inner_rect.max.y - band_h), inner_rect.max);
-        let mid_horizon = Rect::from_min_max(
-            Pos2::new(inner_rect.min.x, y_c - band_h * 0.5),
-            Pos2::new(inner_rect.max.x, y_c + band_h * 0.5),
-        );
-        painter.rect_filled(top_shadow, inner_cr, theme.drop_shadow());
-        painter.rect_filled(bot_shadow, inner_cr, theme.drop_shadow());
-        painter.rect_filled(mid_horizon, CornerRadius::ZERO, specular_col.gamma_multiply(m.active_fill_opacity.points()));
+        let bands = 16usize;
+        let mut cyl_mesh = egui::epaint::Mesh::default();
+        cyl_mesh.vertices.reserve((bands + 1) * 2);
+        cyl_mesh.indices.reserve(bands * 6);
+        let shadow_col = theme.drop_shadow();
+        let crown_col = specular_col.gamma_multiply(m.active_fill_opacity.points());
+        for i in 0..=bands {
+            let frac = (i as f32) / (bands as f32);
+            let y_i = inner_rect.min.y + inner_rect.height() * frac;
+            let phi = (frac * 2.0 - 1.0) * std::f32::consts::FRAC_PI_2;
+            let c_val = phi.cos().clamp(0.0, 1.0);
+            let band_col = if c_val > m.joystick_fast_ratio.points() {
+                crown_col
+            } else {
+                shadow_col.gamma_multiply(1.0 - c_val)
+            };
+            cyl_mesh.colored_vertex(Pos2::new(inner_rect.min.x, y_i), band_col);
+            cyl_mesh.colored_vertex(Pos2::new(inner_rect.max.x, y_i), band_col);
+        }
+        for i in 0..bands {
+            let b = (i * 2) as u32;
+            cyl_mesh.add_triangle(b, b + 1, b + 3);
+            cyl_mesh.add_triangle(b, b + 3, b + 2);
+        }
+        painter.add(egui::Shape::mesh(cyl_mesh));
 
         // Illuminated 3D Liquid Glass End-Cap Rings on Left and Right Drum Edges
         let cap_w = (m.ring_gap.points() * 2.0 * s).min(inner_rect.width() * m.hover_fill_opacity.points());
@@ -293,11 +326,8 @@ impl<'a> MacEdgeThumbwheel<'a> {
                 let y = y_c - r_cyl * phi_rad.sin();
                 let crown_cos = phi_rad.cos().clamp(0.0, 1.0);
                 let thickness = m.border_stroke_width.points() + crown_cos * m.active_stroke_width.points();
-                let ridge_col = if crown_cos > m.joystick_fast_ratio.points() {
-                    theme.knob_fill()
-                } else {
-                    theme.label().gamma_multiply(crown_cos)
-                };
+                let ridge_col =
+                    if crown_cos > m.joystick_fast_ratio.points() { theme.knob_fill() } else { theme.label().gamma_multiply(crown_cos) };
                 painter.line_segment(
                     [Pos2::new(inner_rect.min.x + cap_w, y), Pos2::new(inner_rect.max.x - cap_w, y)],
                     Stroke::new(thickness, ridge_col),
@@ -306,13 +336,6 @@ impl<'a> MacEdgeThumbwheel<'a> {
             base_ang += step_deg;
         }
 
-        MacEdgeThumbwheelResponse {
-            response,
-            value_delta,
-            delta_ticks,
-            is_free_spinning,
-            effective_glass_accent: accent_col,
-            taptic_event,
-        }
+        MacEdgeThumbwheelResponse { response, value_delta, delta_ticks, is_free_spinning, effective_glass_accent: accent_col, taptic_event }
     }
 }

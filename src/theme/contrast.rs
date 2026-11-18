@@ -435,6 +435,18 @@ impl MacTheme {
         }
     }
 
+    /// Returns the optimal next repaint delay in seconds for a transient HUD tooltip (`REQ-015-11`):
+    /// schedules a single wake at `1.0 - elapsed_secs` during the static hold window, and `0.016s` (`60 Hz`) during the `0.35s` fade-out.
+    pub fn transient_hud_tooltip_repaint_delay(elapsed_secs: f32) -> Option<f32> {
+        if !(0.0..1.35).contains(&elapsed_secs) {
+            None
+        } else if elapsed_secs < 1.0 {
+            Some((1.0 - elapsed_secs).max(0.016))
+        } else {
+            Some(0.016)
+        }
+    }
+
     /// Unlocks saturation and brightness on an achromatic (`s < 0.08` or `v < 0.15`) `Hsva` color
     /// when the user selects a hue in `MacColorWell` (`REQ-015-05`).
     pub fn unlock_achromatic_hsva(mut hsva: egui::epaint::Hsva) -> egui::epaint::Hsva {

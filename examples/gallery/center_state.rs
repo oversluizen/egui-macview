@@ -144,14 +144,34 @@ pub struct CenterState {
     pub thumb_dial_preset_idx: usize,
     pub thumb_config_mode: usize,
     pub thumb_glass_color: Color32,
+    pub thumbwheel_angle_deg: f32,
+    pub origin_detent_accum_deg: f32,
+    pub prev_thumb_effective_mask: egui_macview::MacThumbIntentMask,
+    pub sym_menu_open: bool,
+    pub sym_menu_pos: Pos2,
+    pub sym_menu_selected: Option<usize>,
+    pub finder_menu_open: bool,
+    pub finder_menu_pos: Pos2,
+    pub finder_menu_selected: Option<usize>,
     pub nib_studio: super::nib_window_studio::NibShowcaseWindowState,
-    pub screen_nib_scenes: Vec<(egui_macview::scene::MacSceneIR, super::nib_showcase_builders::ShowcaseSceneDataStore)>,
+    pub screen_nib_scenes: Vec<(std::sync::Arc<egui_macview::scene::MacSceneIR>, super::nib_showcase_builders::ShowcaseSceneDataStore)>,
 }
 
 impl Default for CenterState {
     fn default() -> Self {
         let default_theme = MacTheme::default();
-        let track = audio_media::AudioTrack::default();
+        let screen_nib_scenes = super::nib_showcase_builders::compile_gallery_screen_scenes();
+        let init_stream_title = screen_nib_scenes
+            .get(4)
+            .and_then(|(_, st)| {
+                st.path_to_id
+                    .get("codecPreset")
+                    .or_else(|| st.path_to_id.get("values.codecPreset"))
+                    .and_then(|bid| st.options.get(bid))
+                    .and_then(|opts| opts.first().cloned())
+            })
+            .unwrap_or_else(|| "AppKit_Master_Mix.wav".to_string());
+        let track = audio_media::AudioTrack::from_stream_descriptor(&init_stream_title, 0);
         let waveform = track.waveform_peaks.clone();
         Self {
             search_query: String::new(),
@@ -222,7 +242,7 @@ impl Default for CenterState {
             media_contrast: 1.0,
             media_zoom: 1.0,
             media_rating: 5,
-            media_sound_output: false,
+            media_sound_output: true,
             media_discrete_vu: true,
             media_threshold_vu: true,
             audio_level_l: 7.4,
@@ -233,7 +253,7 @@ impl Default for CenterState {
             audio_levels_key: (-1.0, -1.0, -99.0),
             audio_track: track,
             media_last_audio_restart: -10.0,
-            media_was_window_active: true,
+            media_was_window_active: false,
             avkit_undo: NSUndoManager::new(),
             last_stable_avkit: None,
             advanced_combo_text: "Apple ProRes 422 HQ".to_string(),
@@ -286,8 +306,17 @@ impl Default for CenterState {
             thumb_dial_preset_idx: 2,
             thumb_config_mode: 0,
             thumb_glass_color: default_theme.control_accent(),
+            thumbwheel_angle_deg: 0.0,
+            origin_detent_accum_deg: 0.0,
+            prev_thumb_effective_mask: egui_macview::MacThumbIntentMask::NONE,
+            sym_menu_open: false,
+            sym_menu_pos: Pos2::ZERO,
+            sym_menu_selected: None,
+            finder_menu_open: false,
+            finder_menu_pos: Pos2::ZERO,
+            finder_menu_selected: None,
             nib_studio: super::nib_window_studio::NibShowcaseWindowState::default(),
-            screen_nib_scenes: super::nib_showcase_builders::compile_gallery_screen_scenes(),
+            screen_nib_scenes,
         }
     }
 }
@@ -343,7 +372,7 @@ impl CenterState {
             .show(&mut footer_ui, footer_rect.width())
         {
             Some(MacCanvasFooterAction::SelectZoom(z)) => {
-                args.card_cell.borrow_mut().scale_pct = z * 100.0;
+                self.apply_footer_zoom_preset(z, args.card_cell, *active_screen);
                 toasts.borrow_mut().info("Preset applied");
             }
             Some(MacCanvasFooterAction::BreadcrumbClicked(crumb_idx)) => {

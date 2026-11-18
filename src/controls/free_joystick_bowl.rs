@@ -7,11 +7,14 @@
 //! Apple calculated vibrancy & contrast system, and [`MacTapticEvent`] micro-click telemetry.
 
 use crate::controls::context_thumb_dial::icons::{paint_annular_wedge, MacTapticEvent, WedgeGeometry};
-use crate::controls::context_thumb_dial::render::{angle_in_arc, polar_pos, rad_to_deg, resolve_undo_redo_arcs};
+use crate::controls::context_thumb_dial::paint::{paint_undo_redo_crescent_arcs, UndoRedoPaintStyle};
+use crate::controls::context_thumb_dial::render::{
+    allocate_docked_thumb_rect, compute_undo_redo_hit_rects, hit_test_undo_redo_arcs, polar_pos, step_joystick_bowl_physics,
+};
 use crate::controls::{MacThumbArcPlacement, MacThumbDockZone};
 use crate::theme::MacTheme;
 use crate::tokens::ThumbDialMetrics;
-use egui::{Align2, Color32, FontId, Id, Painter, Pos2, Rect, Response, Sense, Stroke, Ui, Vec2};
+use egui::{Align2, Color32, FontId, Id, Painter, Pos2, Rect, Response, Stroke, Ui, Vec2};
 use std::hash::Hash;
 
 pub(crate) struct MarblePaintSpec {
@@ -22,13 +25,7 @@ pub(crate) struct MarblePaintSpec {
     pub(crate) accent_col: Color32,
 }
 
-pub(crate) fn paint_3d_recessed_bowl(
-    painter: &Painter,
-    spec: MarblePaintSpec,
-    r_bowl: f32,
-    theme: &MacTheme,
-    m: &ThumbDialMetrics,
-) {
+pub(crate) fn paint_3d_recessed_bowl(painter: &Painter, spec: MarblePaintSpec, r_bowl: f32, theme: &MacTheme, m: &ThumbDialMetrics) {
     let s = spec.scale;
     let bw = m.border_stroke_width.points();
     let border_stroke = Stroke::new(bw, theme.separator());
@@ -38,7 +35,11 @@ pub(crate) fn paint_3d_recessed_bowl(
     // 3D Recessed Bowl: inner top shadow ring + base bowl + inner bottom reflection ring
     painter.circle_filled(spec.hub_center, r_bowl + bw, theme.drop_shadow());
     painter.circle(spec.hub_center, r_bowl, bowl_fill, border_stroke);
-    painter.circle_stroke(spec.hub_center - Vec2::new(0.0, bw), r_bowl - bw, Stroke::new(m.active_stroke_width.points(), theme.drop_shadow()));
+    painter.circle_stroke(
+        spec.hub_center - Vec2::new(0.0, bw),
+        r_bowl - bw,
+        Stroke::new(m.active_stroke_width.points(), theme.drop_shadow()),
+    );
     painter.circle_stroke(spec.hub_center + Vec2::new(0.0, bw), r_bowl - bw, Stroke::new(bw, specular_col));
 
     // Dotted concentric Fine and Fast speed rings (24 discrete circular dots around 360°)
@@ -79,7 +80,10 @@ pub(crate) fn paint_crystal_glass_marble(painter: &Painter, spec: MarblePaintSpe
     let bw = m.border_stroke_width.points();
 
     // Luminous vector ray + center socket ring
-    painter.line_segment([spec.hub_center, spec.marble_center], Stroke::new(m.active_stroke_width.points() * 2.0, spec.accent_col.gamma_multiply(m.active_fill_opacity.points())));
+    painter.line_segment(
+        [spec.hub_center, spec.marble_center],
+        Stroke::new(m.active_stroke_width.points() * 2.0, spec.accent_col.gamma_multiply(m.active_fill_opacity.points())),
+    );
     painter.line_segment([spec.hub_center, spec.marble_center], active_stroke);
     painter.circle_stroke(spec.hub_center, dot_r * 2.0, Stroke::new(bw, spec.accent_col.gamma_multiply(m.active_fill_opacity.points())));
     painter.circle_filled(spec.hub_center, dot_r, spec.accent_col);
@@ -238,50 +242,19 @@ impl<'a> MacFreeJoystickBowl<'a> {
         let r_wheel_in = r_clover_out + gap;
         let bw = m.border_stroke_width.points();
 
-        let widget_w = (r_outer + gap) * 2.0;
-        let widget_h = (r_skirt_out + gap) * 2.0;
-        let desired_size = Vec2::new(widget_w, widget_h);
-
-        let (rect, response) = if let Some((canvas_rect, zone)) = self.dock_target {
-            let margin = m.dock_margin.points() * s;
-            let min_pos = match zone {
-                MacThumbDockZone::BottomLeft => Pos2::new(canvas_rect.min.x + margin, canvas_rect.max.y - widget_h - margin),
-                MacThumbDockZone::BottomRight | MacThumbDockZone::Inline => {
-                    Pos2::new(canvas_rect.max.x - widget_w - margin, canvas_rect.max.y - widget_h - margin)
-                }
-            };
-            let docked_rect = Rect::from_min_size(min_pos, desired_size);
-            let resp = ui.interact(docked_rect, self.id_source, Sense::click_and_drag());
-            (docked_rect, resp)
-        } else {
-            ui.allocate_exact_size(desired_size, Sense::click_and_drag())
-        };
+        let desired_size = Vec2::new((r_outer + gap) * 2.0, (r_skirt_out + gap) * 2.0);
+        let (rect, response) = allocate_docked_thumb_rect(ui, self.id_source, self.dock_target, desired_size, m, s);
 
         let hub_center = rect.center();
-        let ((undo_start, undo_end), (redo_start, redo_end)) = resolve_undo_redo_arcs(self.arc_placement, m);
-        let r_skirt_mid = (r_skirt_in + r_skirt_out) * 0.5;
-        let undo_center = polar_pos(hub_center, r_skirt_mid, (undo_start + undo_end) * 0.5, m);
-        let redo_center = polar_pos(hub_center, r_skirt_mid, (redo_start + redo_end) * 0.5, m);
-        let btn_hit_size = Vec2::new((r_skirt_out - r_skirt_in) * 2.0, r_skirt_out - r_skirt_in);
-        let undo_rect = Rect::from_center_size(undo_center, btn_hit_size);
-        let redo_rect = Rect::from_center_size(redo_center, btn_hit_size);
+        let (arcs, undo_rect, redo_rect) = compute_undo_redo_hit_rects(hub_center, self.arc_placement, r_skirt_in, r_skirt_out, m);
 
         let mem_id = self.id_source.with("free_joystick_bowl_state");
         let mut mem = ui.ctx().data_mut(|d| d.get_temp::<FreeJoystickMemory>(mem_id).unwrap_or_default());
 
         let pointer_pos = response.interact_pointer_pos().or_else(|| ui.input(|i| i.pointer.hover_pos()));
-        let mut hovered_undo = false;
-        let mut hovered_redo = false;
-        if let Some(pos) = pointer_pos {
-            let delta = pos - hub_center;
-            let dist = delta.length();
-            let angle_deg = rad_to_deg(delta.y.atan2(delta.x), m);
-            if undo_rect.contains(pos) || (dist >= r_outer && dist <= r_skirt_out && angle_in_arc(angle_deg, undo_start, undo_end, m)) {
-                hovered_undo = true;
-            } else if redo_rect.contains(pos) || (dist >= r_outer && dist <= r_skirt_out && angle_in_arc(angle_deg, redo_start, redo_end, m)) {
-                hovered_redo = true;
-            }
-        }
+        let (hovered_undo, hovered_redo) = pointer_pos
+            .map(|pos| hit_test_undo_redo_arcs(pos, hub_center, (r_outer, r_skirt_out), arcs, (undo_rect, redo_rect), m))
+            .unwrap_or((false, false));
 
         let is_down = response.is_pointer_button_down_on();
         let mut nudge_delta = Vec2::ZERO;
@@ -296,18 +269,10 @@ impl<'a> MacFreeJoystickBowl<'a> {
                     mem.is_dragging_bowl = true;
                 }
                 if mem.is_dragging_bowl {
-                    let prev_r = mem.joystick_offset.length();
                     let delta = pos - hub_center;
-                    let dist = delta.length();
-                    let clamped_r = dist.min(r_clover_out);
-                    let dir = if dist > 0.0 { delta / dist } else { Vec2::ZERO };
-                    mem.joystick_offset = dir * clamped_r;
-                    let fine_r = r_clover_out * m.joystick_fine_ratio.points();
-                    if (prev_r < fine_r && clamped_r >= fine_r) || (prev_r < r_clover_out && clamped_r >= r_clover_out) {
-                        taptic_event = Some(MacTapticEvent::JoystickRingCrossed);
-                    }
-                    let ratio = (clamped_r / r_clover_out.max(1.0)).clamp(0.0, 1.0);
-                    nudge_delta = dir * (ratio * ratio * m.joystick_max_speed.points());
+                    let (nudge, tap) = step_joystick_bowl_physics(&mut mem.joystick_offset, delta, delta.length(), r_clover_out, m);
+                    nudge_delta = nudge;
+                    taptic_event = tap;
                 }
             }
         } else if mem.was_pressed {
@@ -326,7 +291,6 @@ impl<'a> MacFreeJoystickBowl<'a> {
 
         let painter = ui.painter_at(rect.intersect(ui.clip_rect()));
         let border_stroke = Stroke::new(bw, theme.separator());
-        let active_stroke = Stroke::new(m.active_stroke_width.points(), accent_col);
         let specular_col = theme.knob_fill().gamma_multiply(m.glass_specular_alpha.points());
         let glass_bg = theme.popover_background().gamma_multiply(m.glass_fill_alpha.points());
 
@@ -354,27 +318,14 @@ impl<'a> MacFreeJoystickBowl<'a> {
             m,
         );
 
-        for (start_d, end_d, lbl, enabled, hovered) in [
-            (undo_start, undo_end, "↶ Undo", self.can_undo, hovered_undo),
-            (redo_start, redo_end, "↷ Redo", self.can_redo, hovered_redo),
-        ] {
-            let fill = if hovered && enabled {
-                accent_col.gamma_multiply(m.active_fill_opacity.points())
-            } else {
-                theme.control_background().gamma_multiply(m.glass_fill_alpha.points())
-            };
-            let stroke = if hovered && enabled { active_stroke } else { Stroke::new(bw, specular_col) };
-            paint_annular_wedge(
-                &painter,
-                WedgeGeometry { center: hub_center, r_in: r_skirt_in, r_out: r_skirt_out, start_deg: start_d, end_deg: end_d },
-                fill,
-                stroke,
-                m,
-            );
-            let mid_pt = polar_pos(hub_center, r_skirt_mid, (start_d + end_d) * 0.5, m);
-            let fg = if enabled { theme.label() } else { theme.tertiary_label() };
-            painter.text(mid_pt, Align2::CENTER_CENTER, lbl, FontId::proportional(m.label_font_size.points() * s), fg);
-        }
+        paint_undo_redo_crescent_arcs(
+            &painter,
+            theme,
+            m,
+            (hub_center, r_skirt_in, r_skirt_out, s),
+            arcs,
+            UndoRedoPaintStyle { can_undo: self.can_undo, can_redo: self.can_redo, hovered_undo, hovered_redo, accent_col },
+        );
 
         MacFreeJoystickResponse {
             response,

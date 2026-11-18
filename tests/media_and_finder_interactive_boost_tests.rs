@@ -204,7 +204,7 @@ fn test_finder_browser_real_filesystem_and_drag_drop_loading() {
     let corrupt = b"RIFF\x00\x00\x00\x00WAVEfmt \x02\x00\x00\x00\x01\x00";
     assert!(AudioTrack::from_wav_bytes("bad.wav", corrupt).is_err());
     let track = AudioTrack::default();
-    let inverted_wav = track.to_wav_bytes(60.0, 10.0);
+    let inverted_wav = track.to_wav_bytes_mixed(60.0, 10.0, 1.0, 0.0);
     assert!(inverted_wav.len() >= 44);
 }
 
@@ -330,4 +330,116 @@ fn test_finder_nib_xib_showcase_files_and_swiftui_studio_window() {
     assert!((app.card.borrow().scale_pct - 145.0).abs() < 1e-3);
     assert_eq!(app.appearance, MacAppearance::DarkAqua);
     assert!((app.center.media_gain - 1.65).abs() < 1e-3);
+}
+
+#[test]
+fn test_req_015_12_all_seven_xib_and_nib_help_buttons_have_non_empty_tooltips_and_foreground_popover() {
+    use egui_macview::scene::{CustomClassMapper, NibArchiveFrontend, SceneNodeKind, XibXmlFrontend};
+    let assets = [
+        "1_Vector_and_Transform_Inspector",
+        "1_Typography_and_Grid_Inspector",
+        "2_Appearance_and_Theme_Settings",
+        "3_AVKit_Audio_Mastering_Strip",
+        "4_Publishing_and_Asset_Queue",
+        "2_Theme_and_Appearance_Studio",
+        "Right_Inspector_Default",
+    ];
+    let mapper = CustomClassMapper::default_studio_mappings();
+    for stem in assets {
+        let xib_path = format!("assets/nib_showcase/{stem}.xib");
+        let xml = std::fs::read_to_string(&xib_path).expect("read xib");
+        let xib_scene = XibXmlFrontend::from_xml_str(&xml).expect("compile xib");
+        let xib_helps: Vec<_> = xib_scene.nodes().iter().filter(|n| matches!(n.kind, SceneNodeKind::HelpButton)).collect();
+        assert!(!xib_helps.is_empty(), "{xib_path} must contain a HelpButton");
+        for h in xib_helps {
+            assert!(h.tooltip.len() >= 24 && h.tooltip != "?", "{xib_path} HelpButton `{}` missing toolTip", h.ib_object_id);
+        }
+
+        let nib_path = format!("assets/nib_showcase/{stem}.nib");
+        let nib_bytes = std::fs::read(&nib_path).expect("read nib");
+        let nib_scene = NibArchiveFrontend::from_bytes(&nib_bytes, &mapper).expect("decode nib");
+        let nib_helps: Vec<_> = nib_scene.nodes().iter().filter(|n| matches!(n.kind, SceneNodeKind::HelpButton)).collect();
+        assert!(!nib_helps.is_empty(), "{nib_path} must contain a HelpButton");
+        for h in nib_helps {
+            assert!(h.tooltip.len() >= 24 && h.tooltip != "?", "{nib_path} HelpButton `{}` missing toolTip", h.ib_object_id);
+        }
+    }
+    let rw_src = std::fs::read_to_string("src/scene/runtime_widgets.rs").expect("read runtime_widgets.rs");
+    assert!(rw_src.contains("Order::Foreground") && rw_src.contains("TextWrapMode::Wrap"));
+}
+
+#[test]
+fn test_req_015_07_avkit_video_viewport_uses_interactive_mac_player_view_and_unmuted_audio_by_default() {
+    use egui_macview::scene::MacSceneDataSource;
+    let video_src = std::fs::read_to_string("examples/gallery/video_scene.rs").expect("read video_scene.rs");
+    assert!(video_src.contains("MacPlayerView") && video_src.contains("MacPlayerControlsStyle::Floating"));
+    assert!(!video_src.contains("❚❚"), "video_scene.rs must not contain missing Unicode glyph `❚❚`");
+
+    let app = GalleryApp::new();
+    assert!(app.center.media_sound_output, "media_sound_output must default to true");
+    assert!(app.center.audio_track.name.contains("Big Buck Bunny"), "audio_track.name must seed from s5-pop-codec option 0");
+
+    let avkit_store = &app.center.screen_nib_scenes[4].1;
+    let mgain_bid = *avkit_store.path_to_id.get("mediaGain").or_else(|| avkit_store.path_to_id.get("values.mediaGain")).expect("mediaGain");
+    let mgain_str = avkit_store.get_str(mgain_bid);
+    assert_ne!(mgain_str, "100", "s5-num-mgain must not seed with stale `100`");
+    assert!(mgain_str.starts_with("1"), "s5-num-mgain must format 1.0 gain cleanly, got {mgain_str:?}");
+}
+
+#[test]
+fn test_req_015_13_canvas_footer_50_100_200_zoom_buttons_click_reliably_and_sync_across_screens() {
+    use egui_macview::{MacCanvasFooter, MacCanvasFooterAction, MacControlSize};
+    let ctx = Context::default();
+    let theme = MacTheme::new(MacAppearance::Aqua);
+    let fm = theme.footer_metrics();
+    let right_edge = 600.0 - theme.stack_view().default_spacing.points();
+    let (pw, gap) = (fm.preset_width.points(), fm.preset_spacing.points());
+    let (x_200, x_100, x_50) = (right_edge - pw * 0.5, right_edge - pw * 1.5 - gap, right_edge - pw * 2.5 - gap * 2.0);
+
+    for (click_x, expected_zoom) in [(x_50, 0.5f32), (x_100, 1.0f32), (x_200, 2.0f32)] {
+        let pos = Pos2::new(click_x, 12.0);
+        let mut action_out = None;
+        for (pressed, is_release) in [(false, false), (true, false), (false, true)] {
+            let events = if !pressed && !is_release {
+                vec![Event::PointerMoved(pos)]
+            } else {
+                vec![
+                    Event::PointerMoved(pos),
+                    Event::PointerButton { pos, button: PointerButton::Primary, pressed, modifiers: Modifiers::NONE },
+                ]
+            };
+            let _ = run_ui_cleared(
+                &ctx,
+                RawInput {
+                    screen_rect: Some(egui::Rect::from_min_size(Pos2::ZERO, egui::vec2(600.0, 24.0))),
+                    events,
+                    ..Default::default()
+                },
+                |ui| {
+                    action_out = MacCanvasFooter::new(&["Workspace", "Typography"], Some(pos), 1.0).theme(&theme).show(ui, 600.0);
+                },
+            );
+        }
+        assert_eq!(action_out, Some(MacCanvasFooterAction::SelectZoom(expected_zoom)));
+    }
+
+    let mut app = GalleryApp::new();
+    app.active_screen = GalleryScreen::VectorAssets;
+    app.center.apply_footer_zoom_preset(0.5, &app.card, app.active_screen);
+    assert_eq!((app.card.borrow().scale_pct, app.center.symbol_preview_size_idx), (50.0, 0));
+    app.center.apply_footer_zoom_preset(2.0, &app.card, app.active_screen);
+    assert_eq!((app.card.borrow().scale_pct, app.center.symbol_preview_size_idx), (200.0, 2));
+
+    app.active_screen = GalleryScreen::AvKitMediaStudio;
+    app.center.apply_footer_zoom_preset(2.0, &app.card, app.active_screen);
+    assert!((app.center.media_zoom - 2.0).abs() < 1e-4);
+
+    app.active_screen = GalleryScreen::AdvancedControls;
+    app.center.screen_nib_scenes[5].1.set_path_i64("nibPresetIdx", 1);
+    let _ = run_app_frame(&ctx, &mut app, 40.0, None);
+    assert_eq!((app.center.nib_preset_idx, app.center.resolved_state6_control_size()), (1, MacControlSize::Small));
+
+    app.center.screen_nib_scenes[5].1.set_path_i64("nibPresetIdx", 2);
+    let _ = run_app_frame(&ctx, &mut app, 41.0, None);
+    assert_eq!((app.center.nib_preset_idx, app.center.resolved_state6_control_size()), (2, MacControlSize::Mini));
 }

@@ -57,7 +57,7 @@
                             <action selector="addTransformLayer:" target="-2" id="a-s6-disc-grp"/>
                         </connections>
                         <userDefinedRuntimeAttributes>
-                            <userDefinedRuntimeAttribute type="string" keyPath="ibTitle" value="Transform &amp; Output Geometry"/>
+                            <userDefinedRuntimeAttribute type="string" keyPath="title" value="Transform &amp; Output Geometry"/>
                             <userDefinedRuntimeAttribute type="string" keyPath="trailingAddButton" value="YES"/>
                         </userDefinedRuntimeAttributes>
                     </customView>
@@ -114,11 +114,8 @@
                         <connections>
                             <binding destination="-2" name="selectedIndex" keyPath="values.nibPresetIdx" id="b-s6-en-pop-preset"/>
                         </connections>
-                        <userDefinedRuntimeAttributes>
-                            <userDefinedRuntimeAttribute type="string" keyPath="ibIcon" value="NSAccentBadge"/>
-                        </userDefinedRuntimeAttributes>
                     </popUpButton>
-                    <button identifier="s6-en-help" verticalHuggingPriority="750" id="s6-en-help">
+                    <button identifier="s6-en-help" verticalHuggingPriority="750" toolTip="AppKit NIB Inspector Help: Toggle control sizes (Regular 14pt, Small 12pt, Mini 10pt), switch macOS HIG profiles, and edit RuleEditor predicates." id="s6-en-help">
                         <rect key="frame" x="400" y="706" width="22" height="22"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <buttonCell key="cell" type="help" title="?" bezelStyle="helpButton" inset="2" id="cell-s6-en-help">
@@ -272,19 +269,19 @@
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <font key="font" metaFont="system"/>
                         <tabViewItems>
-                            <tabViewItem label="General" identifier="0" id="tvi-s6-tabs-0">
+                            <tabViewItem label="AVPlayer HUD" identifier="0" id="tvi-s6-tabs-0">
                                 <view key="view" id="tvv-s6-tabs-0">
                                     <rect key="frame" x="10" y="33" width="348" height="172"/>
                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                 </view>
                             </tabViewItem>
-                            <tabViewItem label="Codecs" identifier="1" id="tvi-s6-tabs-1">
+                            <tabViewItem label="Collection Grid" identifier="1" id="tvi-s6-tabs-1">
                                 <view key="view" id="tvv-s6-tabs-1">
                                     <rect key="frame" x="10" y="33" width="348" height="172"/>
                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                 </view>
                             </tabViewItem>
-                            <tabViewItem label="Metadata" identifier="2" id="tvi-s6-tabs-2">
+                            <tabViewItem label="Clock &amp; Calendar" identifier="2" id="tvi-s6-tabs-2">
                                 <view key="view" id="tvv-s6-tabs-2">
                                     <rect key="frame" x="10" y="33" width="348" height="172"/>
                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
@@ -301,9 +298,6 @@
                         <connections>
                             <binding destination="-2" name="value" keyPath="values.ruleCount" id="b-s6-rules"/>
                         </connections>
-                        <userDefinedRuntimeAttributes>
-                            <userDefinedRuntimeAttribute type="string" keyPath="ibDesignFrame" value="{{28, 274}, {660, 118}}"/>
-                        </userDefinedRuntimeAttributes>
                     </ruleEditor>
                     <box identifier="s6-sep-2" verticalHuggingPriority="750" boxType="separator" id="s6-sep-2">
                         <rect key="frame" x="28" y="262" width="660" height="2"/>
@@ -332,15 +326,12 @@
                             <font key="font" metaFont="systemMedium"/>
                         </textFieldCell>
                     </textField>
-                    <customView identifier="s6-origin" customClass="GSOriginPointControl" controlSize="small" id="s6-origin">
+                    <customView identifier="s6-origin" customClass="GSOriginPointControl" id="s6-origin">
                         <rect key="frame" x="88" y="184" width="46" height="46"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <connections>
                             <binding destination="-2" name="value" keyPath="values.originAnchor" id="b-s6-origin"/>
                         </connections>
-                        <userDefinedRuntimeAttributes>
-                            <userDefinedRuntimeAttribute type="string" keyPath="ibSize" value="small"/>
-                        </userDefinedRuntimeAttributes>
                     </customView>
                     <textField identifier="s6-lbl-org-val" horizontalHuggingPriority="251" verticalHuggingPriority="750" controlSize="small" id="s6-lbl-org-val">
                         <rect key="frame" x="144" y="198" width="100" height="22"/>

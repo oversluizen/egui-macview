@@ -216,15 +216,15 @@ impl MacToastManager {
         let center_x = screen_rect.center().x;
 
         for (idx, toast) in self.toasts.iter_mut().enumerate() {
-            let fraction = toast.entry_fraction().clamp(0.0, 1.0 + 0.5);
+            let fraction = toast.entry_fraction().clamp(0.0, 2.0);
             let target_y = start_y + (idx as f32) * (toast_h + spacing);
             let anim_y = -toast_h + (target_y - (-toast_h)) * fraction;
-            let text_w = ctx.fonts_mut(|f| f.layout_no_wrap(toast.message.clone(), font_id.clone(), theme.label()).size().x);
+            let galley = ctx.fonts_mut(|f| f.layout_no_wrap(toast.message.clone(), font_id.clone(), theme.label()));
+            let text_w = galley.size().x;
             let toast_w = (text_w + padding_h * 2.0).max(min_w);
             let toast_rect = Rect::from_center_size(Pos2::new(center_x, anim_y + toast_h * 0.5), Vec2::new(toast_w, toast_h));
             let toast_area_id = area_id.with(&toast.id);
             Area::new(toast_area_id).order(Order::Tooltip).fixed_pos(toast_rect.min).show(ctx, |ui| {
-                let galley = ui.painter().layout_no_wrap(toast.message.clone(), font_id.clone(), theme.label());
                 let painter = ui.painter();
                 let (bg, border) = match toast.level {
                     ToastLevel::Info => (theme.window_background(), theme.separator()),

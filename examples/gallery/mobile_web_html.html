@@ -113,7 +113,9 @@ function syncAvKitMediaOverlay(wPts, hPts) {
   streamVid.style.top = `${Math.round(r.top + vy * sy)}px`;
   streamVid.style.width = `${Math.round(vw * sx)}px`;
   streamVid.style.height = `${Math.round(vh * sy)}px`;
-  streamVid.style.background = isAudioStream ? 'rgba(20, 22, 26, 0.30)' : '#14161a';
+  streamVid.style.pointerEvents = 'none';
+  streamVid.style.opacity = (!isAudioStream && streamVid.readyState >= 2) ? '0.88' : '0.01';
+  streamVid.style.background = 'transparent';
   streamVid.volume = vol;
   streamVid.playbackRate = rate;
   streamVid.style.display = 'block';

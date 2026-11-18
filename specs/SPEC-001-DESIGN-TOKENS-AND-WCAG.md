@@ -182,3 +182,21 @@ pub enum WindowControlsStyle {
 - Disables client-side synthesized window controls completely.
 - Window decorations (title, minimize, maximize, close) are provided natively by the operating system window manager.
 - Reclaims toolbar margins for custom client items.
+
+---
+
+## 6. Universal Zero-Hardcoding & Token/Theme Purity Across All Modules (`REQ-001-06`)
+
+1. **Workspace-Wide Zero-Magic-Number & Zero-`add_space` Guard Across `src/` and `examples/`**:
+   - In addition to `src/controls`, `src/layout`, `src/surfaces`, `src/navigation`, and `src/feedback`, the scene compiler/runtime and motion modules (`src/scene/*.rs` and `src/motion/mod.rs`) and `examples/` SHALL be enforced by `check_magic_numbers_in_source` in `tests/architecture_guard_tests.rs`.
+   - All control heights, alignment-rect insets, baseline offsets, spatial pairing tolerances, reflow gaps, and default spring parameters (`CASpring::default()`) SHALL be resolved from `MacDesignTokens` (`tokens/design_tokens.json`) or `SceneNode` metadata rather than inline float literals.
+2. **Universal Zero-Hardcoded-Color Guard Across `src/` and `examples/`**:
+   - Every `.rs` file in `src/` (except the low-level hex parser `src/tokens/dtcg.rs` and relative-luminance math in `src/theme/contrast.rs`) AND every `.rs` file in `examples/` SHALL be automatically discovered via directory traversal and pass `check_hardcoded_colors_in_source` with zero violations.
+   - Direct calls to `Color32::from_rgb`, `Color32::from_rgba_premultiplied`, `Color32::from_rgba_unmultiplied`, `Color32::from_black_alpha`, `Color32::from_gray`, `Color32::WHITE`, `Color32::BLACK`, `Color32::RED`, `Color32::GREEN`, `Color32::BLUE`, `Color32::YELLOW`, `Color32::GRAY`, `Color32::LIGHT_GRAY`, `Color32::DARK_GRAY`, or inline hex strings (`"#RRGGBB"`) in `src/` or `examples/` are strictly forbidden; all colors SHALL be obtained from `MacTheme` or `MacDesignTokens`.
+   - Hardcoded pixel spacing calls (`ui.add_space(<float_literal>)`) are forbidden across both `src/` and `examples/`; layout spacing SHALL use `MacTheme` / `MacDesignTokens` metrics or `.xib` coordinates.
+3. **Zero Synthetic Ghost Shapes & COTS Test-Suite Architecture Hygiene (`REQ-001-06.3`)**:
+   - Production widgets in `src/` (such as `src/controls/help_button.rs`) SHALL NEVER emit synthetic `Color32::TRANSPARENT` invisible `TextShape` primitives to satisfy test shape scrapers.
+   - Functional test files in `tests/*.rs` (outside `tests/architecture_guard_tests.rs` and `tests/guard_helpers/`) SHALL NOT perform source-code string grepping (`read_to_string("src/...")` / `read_all_gallery_sources()`), SHALL NOT duplicate monolithic `#[path = "../examples/..."]` inclusions across multiple test binaries, and SHALL share a canonical COTS test harness (`tests/common/mod.rs`) with multi-frame press/release input simulation and `ib_object_id` layout lookup.
+
+
+

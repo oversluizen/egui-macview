@@ -34,12 +34,13 @@ pub fn apply_blend_mode(base: Color32, top: Color32, mode_idx: usize) -> Color32
             _ => t,
         }
     };
-    Color32::from_rgba_unmultiplied(
+    egui::Rgba::from_srgba_unmultiplied(
         (blend_ch(br, tr).clamp(0.0, 1.0) * 255.0) as u8,
         (blend_ch(bg, tg).clamp(0.0, 1.0) * 255.0) as u8,
         (blend_ch(bb, tb).clamp(0.0, 1.0) * 255.0) as u8,
         top.a(),
     )
+    .into()
 }
 
 /// Formats uppercase section headers with optical tracking without intermediate `Vec` allocations.

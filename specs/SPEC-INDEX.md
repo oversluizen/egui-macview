@@ -4,9 +4,9 @@
 | :--- | :--- |
 | **Document ID** | SPEC-INDEX |
 | **Document Title** | Specification Suite Index & Version Matrix |
-| **Document Version** | `0.8.0` |
+| **Document Version** | `0.8.1` |
 | **Status** | Accepted / Normative |
-| **Target Milestone** | Milestone 0.8.0 |
+| **Target Milestone** | Milestone 0.8.1 |
 | **Target Host** | Standalone crate `egui-macview` (Rust, egui 0.37) |
 | **Author** | Jaco Oversluizen / `egui-macview` contributors |
 | **Normative Standards** | ISO/IEC/IEEE 42010:2011, ISO/IEC/IEEE 29119-3:2021, RFC 2119/8174, Apple macOS HIG, W3C DTCG, SemVer 2.0.0 |
@@ -64,6 +64,7 @@ The `egui-macview` specification suite provides the formal normative requirement
 | [**SPEC-013**](SPEC-013-DECLARATIVE-SCENE-IR-AND-NIB-XIB-COMPILER.md) | Three-Layer UI Compiler Architecture (`MacSceneIR`, `.nib`/`.xib` Importers & Dual-Mode Layout Solver) | `0.7.0` | Accepted / Normative | `tests/spec013_scene_ir_and_nib_compiler_tests.rs` |
 | [**SPEC-014**](SPEC-014-CONTEXT-THUMB-DIAL-AND-PIE-CLOVER-HUD.md) | Context-Adaptive Bimanual Thumb Dial & Radial Clover / Pie HUD (`MacContextThumbDial`) | `0.8.0` | Accepted / Normative | `tests/spec014_context_thumb_dial_tests.rs` |
 | [**SPEC-015**](SPEC-015-FONT-INJECTION-AND-V081-STABILITY.md) | External Font Injection API, Pro-Inspector Micro-Styling & v0.8.1 Stability Suite | `0.8.1` | Accepted / Normative | `tests/spec015_dual_visual_and_pro_inspector_tests.rs` |
+| [**SPEC-016**](SPEC-016-APPLE-LIQUID-GLASS-OPTICAL-ENGINE.md) | Apple Liquid Glass Optical Engine, Interactive Lensing & Fluid Morphing (`v0.9.0`) | `0.9.0` | Accepted / Normative | `tests/spec016_liquid_glass_optical_engine_tests.rs` |
 
 ---
 

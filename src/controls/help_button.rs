@@ -298,9 +298,22 @@ impl<'a> Widget for MacInlineActionButton<'a> {
         } else {
             theme.secondary_label_on(surface_bg)
         };
-        let galley = theme.layout_tracked_galley(ui, self.glyph, FontId::proportional(icon_sz), fg, f32::INFINITY);
-        let pos = Align2::CENTER_CENTER.anchor_size(center, galley.size()).min;
-        painter.galley(pos, galley, fg);
+        let stroke_w = im.icon_stroke_width.points();
+        let arm = im.glyph_half_span.points();
+        match kind {
+            InlineActionKind::Add => {
+                painter.line_segment([Pos2::new(center.x - arm, center.y), Pos2::new(center.x + arm, center.y)], Stroke::new(stroke_w, fg));
+                painter.line_segment([Pos2::new(center.x, center.y - arm), Pos2::new(center.x, center.y + arm)], Stroke::new(stroke_w, fg));
+            }
+            InlineActionKind::Remove => {
+                painter.line_segment([Pos2::new(center.x - arm, center.y), Pos2::new(center.x + arm, center.y)], Stroke::new(stroke_w, fg));
+            }
+            InlineActionKind::Neutral => {
+                let galley = theme.layout_tracked_galley(ui, self.glyph, FontId::proportional(icon_sz), fg, f32::INFINITY);
+                let pos = Align2::CENTER_CENTER.anchor_size(center, galley.size()).min;
+                painter.galley(pos, galley, fg);
+            }
+        }
         response
     }
 }

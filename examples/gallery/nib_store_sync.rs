@@ -16,8 +16,10 @@ impl CenterState {
             (*sync.appearance, *sync.window_controls_style, *sync.inspector_mode, &*sync.sidebar, &*sync.inspector);
         let paths: Vec<(String, BindingId)> = store.path_to_id.iter().map(|(k, &v)| (k.clone(), v)).collect();
         let set_num = |st: &mut ShowcaseSceneDataStore, b: BindingId, v: f64| {
-            st.floats.insert(b, v);
-            st.strings.insert(b, format!("{v:.0}"));
+            let changed = st.floats.insert(b, v).is_none_or(|prev| (prev - v).abs() > 1e-4);
+            if changed || sync_strings || !st.strings.contains_key(&b) {
+                st.strings.insert(b, super::nib_showcase_builders::format_nib_num(v));
+            }
         };
         for (path, bid) in paths {
             match path.strip_prefix("values.").unwrap_or(path.as_str()) {
@@ -75,6 +77,7 @@ impl CenterState {
                         match appearance {
                             MacAppearance::Aqua => 0,
                             MacAppearance::Anthracite => 1,
+                            MacAppearance::DarkAqua if self.high_contrast => 3,
                             MacAppearance::DarkAqua => 2,
                         },
                     );
@@ -280,10 +283,16 @@ impl CenterState {
                 }
                 "opticalAlignment" | "alignmentMode" => {
                     card_cell.borrow_mut().alignment_idx = store.get_i64(bid).clamp(0, 3) as usize;
+                    self.card_drag_offset.x = 0.0;
                 }
                 "themeVariant" => {
-                    **appearance = [MacAppearance::Aqua, MacAppearance::Anthracite, MacAppearance::DarkAqua, MacAppearance::DarkAqua]
-                        [store.get_i64(bid).clamp(0, 3) as usize];
+                    let sel = store.get_i64(bid).clamp(0, 3) as usize;
+                    **appearance = [MacAppearance::Aqua, MacAppearance::Anthracite, MacAppearance::DarkAqua, MacAppearance::DarkAqua][sel];
+                    self.high_contrast = sel == 3;
+                    if sel == 3 {
+                        let dark_theme = egui_macview::theme::MacTheme::new(MacAppearance::DarkAqua);
+                        (self.wcag_fg, self.wcag_bg) = (dark_theme.on_accent_text(), dark_theme.control_accent());
+                    }
                 }
                 "windowChrome" | "windowStyle" => {
                     **chrome = [
@@ -312,6 +321,7 @@ impl CenterState {
                 }
                 "glyphScaleIdx" => {
                     self.symbol_preview_size_idx = store.get_i64(bid).clamp(0, 2) as usize;
+                    card_cell.borrow_mut().scale_pct = [50.0, 100.0, 200.0][self.symbol_preview_size_idx];
                 }
                 "symbolTint" => {
                     if let Some(col) = store.get_color(bid) {
@@ -326,6 +336,7 @@ impl CenterState {
                 }
                 "matrixControlSize" => {
                     self.showcase_control_size_idx = store.get_i64(bid).clamp(0, 2) as usize;
+                    card_cell.borrow_mut().scale_pct = [200.0, 100.0, 50.0][self.showcase_control_size_idx];
                 }
                 "matrixEnabled" => {
                     self.showcase_controls_enabled = store.get_bool(bid);
@@ -348,6 +359,7 @@ impl CenterState {
                 }
                 "mediaZoom" => {
                     self.media_zoom = store.get_f64(bid) as f32;
+                    card_cell.borrow_mut().scale_pct = (self.media_zoom * 100.0).clamp(25.0, 250.0);
                 }
                 "mediaPlayhead" => {
                     self.media_playhead = store.get_f64(bid).clamp(self.media_in_point, self.media_out_point);
@@ -381,12 +393,21 @@ impl CenterState {
                 }
                 "wcagHighContrast" | "nibCheckRegular" => {
                     self.nib_check_regular = store.get_bool(bid);
+                    if self.nib_check_regular {
+                        (self.nib_check_small, self.nib_check_mini_mixed, self.showcase_control_size_idx) = (false, false, 0);
+                    }
                 }
                 "showAlignmentGuides" | "nibCheckSmall" => {
                     self.nib_check_small = store.get_bool(bid);
+                    if self.nib_check_small {
+                        (self.nib_check_regular, self.nib_check_mini_mixed, self.showcase_control_size_idx) = (false, false, 1);
+                    }
                 }
                 "nibCheckMini" => {
                     self.nib_check_mini_mixed = store.get_bool(bid);
+                    if self.nib_check_mini_mixed {
+                        (self.nib_check_regular, self.nib_check_small, self.showcase_control_size_idx) = (false, false, 2);
+                    }
                 }
                 "nibSmallExpr" => {
                     self.nib_small_text = store.get_str(bid).to_string();
@@ -398,13 +419,16 @@ impl CenterState {
                     self.nib_inspector_enabled = store.get_bool(bid);
                 }
                 "advancedGroupExpanded" => {
-                    self.advanced_disclosure_open = store.get_bool(bid);
+                    let v = store.get_bool(bid);
+                    (self.advanced_disclosure_open, self.advanced_button_open) = (v, v);
                 }
                 "advancedButtonOpen" => {
-                    self.advanced_button_open = store.get_bool(bid);
+                    let v = store.get_bool(bid);
+                    (self.advanced_button_open, self.advanced_disclosure_open) = (v, v);
                 }
                 "guideProfile" | "nibPresetIdx" => {
-                    self.nib_preset_idx = store.get_i64(bid).clamp(0, 2) as usize;
+                    let idx = store.get_i64(bid).max(0) as usize;
+                    self.apply_os_preset_profile(store, bid, idx, card_cell, toasts);
                 }
                 "finderTagColor" => {
                     let v = store.get_i64(bid);

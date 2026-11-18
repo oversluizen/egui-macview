@@ -54,6 +54,7 @@ fn main() -> eframe::Result<()> {
         "macview_gallery",
         options,
         Box::new(|cc| {
+            gallery::audio_media::NativeAudioOutput::enable_os_audio(true);
             setup_system_or_custom_fonts(&cc.egui_ctx);
             let boxed_app = std::thread::Builder::new()
                 .name("gallery_init".into())
@@ -236,10 +237,10 @@ impl GalleryApp {
             Stroke::new(1.0, theme.separator()),
         );
 
+        let menu_inner_rect = Rect::from_min_max(pos2(menu_bar_rect.min.x + theme.stack_view().default_spacing.points(), menu_bar_rect.min.y), menu_bar_rect.max);
         let mut menu_ui = ui.new_child(
-            egui::UiBuilder::new().id_salt("gallery_menu_bar").max_rect(menu_bar_rect).layout(Layout::left_to_right(Align::Center)),
+            egui::UiBuilder::new().id_salt("gallery_menu_bar").max_rect(menu_inner_rect).layout(Layout::left_to_right(Align::Center)),
         );
-        menu_ui.add_space(8.0);
         if let Some(action) =
             MacMenuBar::new(&self.menus, &mut self.open_menu_idx, &mut self.highlighted_item_idx).theme(&theme).show(&mut menu_ui)
         {
@@ -298,14 +299,13 @@ impl GalleryApp {
         self.mobile_compact_active = work_rect.width() < 760.0;
         if self.is_window_closed || self.is_minimized {
             work_ui.vertical_centered(|v_ui| {
-                v_ui.add_space(work_rect.height() * 0.35);
+                v_ui.spacing_mut().item_spacing.y = theme.stack_view().default_spacing.points();
                 let msg = if self.is_window_closed {
                     "macOS AppWindow Closed — Click below to reopen session"
                 } else {
                     "Window Minimized to Dock — Click below to restore"
                 };
                 v_ui.label(egui::RichText::new(msg).size(14.0).color(theme.secondary_label()));
-                v_ui.add_space(10.0);
                 if v_ui.add(egui_macview::MacButtonCell::new("Reopen AppWindow in Workspace").theme(&theme).selected(true)).clicked() {
                     self.is_window_closed = false;
                     self.is_minimized = false;
@@ -329,7 +329,11 @@ impl GalleryApp {
             self.center.render(&mut work_ui, &theme, args, &mut s, &self.toasts);
             if self.active_screen != s {
                 (self.active_screen, self.sidebar.active_screen, self.sidebar.selected_node) = (s, s, s.title().to_string());
-                (self.center.media_playing, self.center.is_publishing) = (false, false);
+                self.center.media_playing = s == GalleryScreen::AvKitMediaStudio;
+                self.center.is_publishing = false;
+                if !self.center.media_playing {
+                    gallery::audio_media::NativeAudioOutput::stop();
+                }
             }
         } else {
             let (sidebar, center, card, inspector) = (&mut self.sidebar, &mut self.center, &self.card, &mut self.inspector);
@@ -397,7 +401,11 @@ impl GalleryApp {
             if self.active_screen != new_screen {
                 (self.active_screen, self.sidebar.active_screen, self.sidebar.selected_node) =
                     (new_screen, new_screen, new_screen.title().to_string());
-                (self.center.media_playing, self.center.is_publishing) = (false, false);
+                self.center.media_playing = new_screen == GalleryScreen::AvKitMediaStudio;
+                self.center.is_publishing = false;
+                if !self.center.media_playing {
+                    gallery::audio_media::NativeAudioOutput::stop();
+                }
             }
             self.left_split_pos = left_split_pos;
             self.inspector_width = (available_body_w - right_split_pos).clamp(min_inspector_w, max_inspector_w);

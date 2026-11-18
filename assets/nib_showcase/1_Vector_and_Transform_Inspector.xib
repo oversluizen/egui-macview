@@ -289,7 +289,7 @@
                         <rect key="frame" x="28" y="56" width="658" height="2"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                     </box>
-                    <button identifier="s1-help" verticalHuggingPriority="750" id="s1-help">
+                    <button identifier="s1-help" verticalHuggingPriority="750" toolTip="AppKit Vector &amp; CASpring Help: Use the 9-point Origin Matrix, Scale/Rotation sliders, or Edge Thumb Dial to transform the active vector contour." id="s1-help">
                         <rect key="frame" x="28" y="26" width="22" height="22"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <buttonCell key="cell" type="help" title="?" bezelStyle="helpButton" inset="2" id="cell-s1-help">

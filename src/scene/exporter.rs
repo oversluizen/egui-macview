@@ -140,13 +140,16 @@ fn emit_swiftui_node(scene: &MacSceneIR, node: &SceneNode, out: &mut String, ind
         SceneNodeKind::Checkbox => {
             format!("Toggle(\"{}\", isOn: {}){}", escape_swift(&node.title), binding_str, modifiers)
         }
+        SceneNodeKind::RadioButton => {
+            format!("Toggle(\"{}\", isOn: {}).toggleStyle(.radioGroup){}", escape_swift(&node.title), binding_str, modifiers)
+        }
         SceneNodeKind::Switch => {
             format!("Toggle(\"{}\", isOn: {}).toggleStyle(.switch){}", escape_swift(&node.title), binding_str, modifiers)
         }
         SceneNodeKind::TextField | SceneNodeKind::NumberField { .. } => {
             format!("TextField(\"{}\", text: {}){}", escape_swift(&node.title), binding_str, modifiers)
         }
-        SceneNodeKind::PushButton { .. } => {
+        SceneNodeKind::PushButton { .. } | SceneNodeKind::HelpButton | SceneNodeKind::InlineActionButton => {
             let act = node.action_selector.as_deref().unwrap_or("performAction:");
             format!("Button(\"{}\", action: \"{}\"){}", escape_swift(&node.title), escape_swift(act), modifiers)
         }
@@ -157,7 +160,14 @@ fn emit_swiftui_node(scene: &MacSceneIR, node: &SceneNode, out: &mut String, ind
             format!("Picker(\"{}\", selection: {}).pickerStyle(.segmented){}", escape_swift(&node.title), binding_str, modifiers)
         }
         SceneNodeKind::Slider { min, max, .. } => {
-            format!("Slider(value: {}, in: {:.1}...{:.1}){}", binding_str, min, max, modifiers)
+            if matches!(node.icon_name.as_deref(), Some("NSProgressBar" | "NSProgressSpinning")) {
+                let style = if node.icon_name.as_deref() == Some("NSProgressSpinning") { ".progressViewStyle(.circular)" } else { "" };
+                format!("ProgressView(\"{}\", value: {}){}{}", escape_swift(&node.title), binding_str, style, modifiers)
+            } else if matches!(node.icon_name.as_deref(), Some("NSLevelIndicator" | "NSRatingIndicator")) {
+                format!("Gauge(\"{}\", value: {}, in: {:.1}...{:.1}){}", escape_swift(&node.title), binding_str, min, max, modifiers)
+            } else {
+                format!("Slider(value: {}, in: {:.1}...{:.1}){}", binding_str, min, max, modifiers)
+            }
         }
         SceneNodeKind::Stepper { step } => {
             format!("Stepper(\"{}\", value: {}, step: {:.1}){}", escape_swift(&node.title), binding_str, step, modifiers)
@@ -171,6 +181,38 @@ fn emit_swiftui_node(scene: &MacSceneIR, node: &SceneNode, out: &mut String, ind
         }
         SceneNodeKind::OriginMatrix => {
             format!("OriginPointPicker(selection: {}){}", binding_str, modifiers)
+        }
+        SceneNodeKind::ColorWell => {
+            format!("ColorPicker(\"{}\", selection: {}){}", escape_swift(&node.title), binding_str, modifiers)
+        }
+        SceneNodeKind::DatePicker { clock_and_calendar } => {
+            let style = if *clock_and_calendar { ".datePickerStyle(.graphical)" } else { "" };
+            format!("DatePicker(\"{}\", selection: {}){}{}", escape_swift(&node.title), binding_str, style, modifiers)
+        }
+        SceneNodeKind::TabView { .. } => {
+            format!("TabView(\"{}\", selection: {}){}", escape_swift(&node.title), binding_str, modifiers)
+        }
+        SceneNodeKind::DisclosureGroup { trailing_add_button } => {
+            let add_mod = if *trailing_add_button { ".trailingAddButton(true)" } else { "" };
+            format!("DisclosureGroup(\"{}\", isExpanded: {}){}{}", escape_swift(&node.title), binding_str, add_mod, modifiers)
+        }
+        SceneNodeKind::SearchField => {
+            format!("SearchField(\"{}\", text: {}){}", escape_swift(&node.title), binding_str, modifiers)
+        }
+        SceneNodeKind::ComboBox { .. } => {
+            format!("ComboBox(\"{}\", text: {}){}", escape_swift(&node.title), binding_str, modifiers)
+        }
+        SceneNodeKind::RuleEditor => {
+            format!("RuleEditor(\"{}\", selection: {}){}", escape_swift(&node.title), binding_str, modifiers)
+        }
+        SceneNodeKind::TableView { .. } => {
+            format!("Table(\"{}\", selection: {}){}", escape_swift(&node.title), binding_str, modifiers)
+        }
+        SceneNodeKind::TagColorPicker => {
+            format!("TagColorPicker(selection: {}){}", binding_str, modifiers)
+        }
+        SceneNodeKind::TableActionBar => {
+            format!("TableActionBar(selection: {}){}", binding_str, modifiers)
         }
         _ => {
             format!("Text(\"{}\"){}", escape_swift(&node.title), modifiers)

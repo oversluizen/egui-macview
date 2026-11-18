@@ -148,7 +148,12 @@ impl<'a> MacDisclosureGroup<'a> {
             if ui.is_rect_visible(plus_rect) {
                 let p = ui.painter_at(plus_rect);
                 let c = plus_rect.center();
-                let col = if plus_resp.hovered() { primary_fg } else { secondary_fg };
+                let is_hov = enabled && (plus_resp.hovered() || plus_resp.is_pointer_button_down_on());
+                let (add_fg, add_bg) = theme.semantic_add_hover_colors();
+                if is_hov {
+                    p.rect_filled(plus_rect, egui::CornerRadius::same(plus_half as u8), add_bg);
+                }
+                let col = if is_hov { add_fg } else { secondary_fg };
                 let stroke = Stroke::new(plus_stroke_w, col);
                 p.line_segment([Pos2::new(c.x - plus_half, c.y), Pos2::new(c.x + plus_half, c.y)], stroke);
                 p.line_segment([Pos2::new(c.x, c.y - plus_half), Pos2::new(c.x, c.y + plus_half)], stroke);

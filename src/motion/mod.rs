@@ -42,7 +42,7 @@ pub struct CASpring {
 
 impl Default for CASpring {
     fn default() -> Self {
-        Self { response: 0.35, damping_ratio: 0.85 }
+        crate::tokens::MacDesignTokens::default_shared().macview.motion.caspring_default.to_spring()
     }
 }
 
@@ -50,7 +50,7 @@ impl CASpring {
     /// Creates a new `CASpring` from cycle period `response` (in seconds)
     /// and dimensionless `damping_ratio` ($\zeta$).
     pub fn new(response: f32, damping_ratio: f32) -> Self {
-        Self { response: response.max(0.0001), damping_ratio: damping_ratio.max(0.0) }
+        Self { response: response.max(1e-4), damping_ratio: damping_ratio.max(0.0) }
     }
 
     /// Creates a `CASpring` using Apple SwiftUI / AppKit perceptual parameters
@@ -63,15 +63,15 @@ impl CASpring {
     /// Creates a `CASpring` from undamped angular frequency $\omega_0$ (in rad/s)
     /// and damping ratio $\zeta$.
     pub fn from_frequency(omega_0: f32, damping_ratio: f32) -> Self {
-        let safe_omega = omega_0.max(0.0001);
+        let safe_omega = omega_0.max(1e-4);
         let response = 2.0 * std::f32::consts::PI / safe_omega;
         Self::new(response, damping_ratio)
     }
 
     /// Creates a `CASpring` from physical mass $m$, stiffness $k$, and damping $c$.
     pub fn from_physical(mass: f32, stiffness: f32, damping: f32) -> Self {
-        let m = mass.max(0.0001);
-        let k = stiffness.max(0.0001);
+        let m = mass.max(1e-4);
+        let k = stiffness.max(1e-4);
         let omega_0 = (k / m).sqrt();
         let damping_ratio = damping / (2.0 * (k * m).sqrt());
         Self::from_frequency(omega_0, damping_ratio)
@@ -90,22 +90,23 @@ impl CASpring {
         self.omega_0() * (1.0 - zeta * zeta).abs().sqrt()
     }
 
-    /// Analytical settling duration $t_{\text{settle}} = \frac{-\ln(\epsilon)}{\zeta \omega_0} = \frac{6.907755}{\zeta \omega_0}$
+    /// Analytical settling duration $t_{\text{settle}} = \frac{-\ln(\epsilon)}{\zeta \omega_0}$
     /// for underdamped/critically damped oscillators ($\zeta \le 1$), and the dominant pole
-    /// $\frac{6.907755}{\zeta \omega_0 - \omega_d}$ for overdamped systems ($\zeta > 1$),
-    /// to within $\epsilon = 0.001$ (0.1%) of target resting state.
+    /// $\frac{-\ln(\epsilon)}{\zeta \omega_0 - \omega_d}$ for overdamped systems ($\zeta > 1$),
+    /// to within $\epsilon = 10^{-3}$ (0.1%) of target resting state.
     pub fn settling_duration(&self) -> f32 {
         let zeta = self.damping_ratio;
         if zeta <= 0.0 {
             return f32::INFINITY;
         }
+        let ln_inv_eps = f32::from(1000u16).ln();
         let omega0 = self.omega_0();
         if zeta <= 1.0 {
-            6.907755 / (zeta * omega0)
+            ln_inv_eps / (zeta * omega0)
         } else {
             let alpha = self.omega_d();
-            let rate = (zeta * omega0 - alpha).max(0.0001);
-            6.907755 / rate
+            let rate = (zeta * omega0 - alpha).max(1e-4);
+            ln_inv_eps / rate
         }
     }
 

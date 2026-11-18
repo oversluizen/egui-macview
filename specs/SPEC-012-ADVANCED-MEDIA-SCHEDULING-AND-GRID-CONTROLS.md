@@ -32,6 +32,7 @@
 | `0.6.9` | 2026-11-11 | Architecture Team | Milestone 0.6.9 Release: AppKit Pro-Inspector controls (`MacOriginMatrix`, `MacTagColorPicker`, `MacTableActionBar`) fully driven by W3C DTCG tokens (`metrics.control.origin_matrix`, `metrics.control.tag_color_picker`, `metrics.control.table_action_bar`, `color.tag_labels`), verified by `tests/appkit_v069_pro_controls_tests.rs`. |
 | `0.6.10` | 2026-11-12 | Architecture Team | Milestone 0.6.10 Release: AppKit NIB properties (`MacSlider::tick_marks`, `MacControlSize` across `MacInputCell`/`MacCheckbox`/`MacRadioButton`/`MacPopUpButton`/`MacButtonCell`, `MacSegmentedControl::small_square` & `show_multi`, `MacTagColorPicker::rows`/`dot_size`/`spacing`, and `MacPopoverSurface`) verified by `tests/appkit_v0610_nib_controls_tests.rs`. |
 | `0.6.11` | 2026-11-12 | Architecture Team | Milestone 0.6.11 Release: Clean-room AppKit `NSSegmentedControl` vector icon closures, per-segment widths & enablement, orthogonal menu vs. indicator builders, press-and-hold / pull-down / secondary-click triggers, and Sonoma divider suppression (`SPEC-002` §2.3), verified by `tests/segmented_vector_icon_parity_tests.rs`. |
+| `0.8.1` | 2026-11-17 | Architecture Team | Glyphs 4.1.1 Golden Master `+`/`−` button styling across `MacDisclosureGroup` (`GSMouseOverButton` borderless-at-rest hover square), `MacTableActionBar` (`+  −  |  ⚙▾` footer bar), and `MacRuleEditor` (`16×16pt` delicate circular stepper badges), plus live `MacTabView` `AVPlayer HUD` video preview & dynamic `Collection Grid` item addition/removal. |
 
 ---
 
@@ -195,13 +196,19 @@ All controls specified herein SHALL resolve styling exclusively via `MacTheme` b
   - Spatial 2D Navigation: Arrow keys (`Up`, `Down`, `Left`, `Right`) calculate nearest neighbor indices across column count $C = \lfloor (W_{\text{viewport}} + S_{\text{item}}) / (W_{\text{item}} + S_{\text{item}}) \rfloor$.
   - Viewport Culling: All items outside `ui.clip_rect()` are strictly bypassed during layout and draw calls to ensure constant frame budgets at $10{,}000+$ items.
 
-### 3.7 Supplementary Primitives — `REQ-012-07`
+### 3.7 Supplementary Primitives & Glyphs 4 Action Button Fidelity — `REQ-012-07`
 - **`MacBox` (`NSBox`):**
   - Primary grouped box: Insets from border `{top: 20.0, bottom: 10.0, left: 9.0, right: 9.0}\,\text{pt}$, corner radius $R = 5.0\,\text{pt}$, stroke $1.0\,\text{pt}$ in `theme.separator_color()`.
   - Separator variant: $1.0\,\text{pt}$ hairline centered inside a $5.0\,\text{pt}$ alignment bounding box.
-- **`MacRuleEditor` (`NSRuleEditor`):**
+- **`MacRuleEditor` (`NSRuleEditor`) & Glyphs 4 Action Buttons (`MacDisclosureGroup`, `MacTableActionBar`, `MacInlineActionButton`):**
   - Slice row height: $32.0\,\text{pt}$.
-  - Action buttons: Add (`[+]`) and Remove (`[-]`) stepper buttons sized $20.0 \times 20.0\,\text{pt}$ with standard AppKit symbol glyphs.
+  - Grounded in Golden Master captures `comp_FontInfoFontTab_894x729.png` and `AUDIT-EXHAUSTIVE-059_crop.png` (Glyphs 4.1.1 on macOS Sonoma 14.8.9):
+    1. `MacDisclosureGroup` trailing `+` (`GSMouseOverButton`): borderless at rest (zero circular border at rest), revealing a subtle $16 \times 16\,\text{pt}$ rounded square ($R = 3.5\,\text{pt}$) on hover with semantic green `+` crosshair ($3.5\,\text{pt}$ half-arm, $1.25\,\text{pt}$ stroke).
+    2. `MacTableActionBar`: flat Layers-palette footer strip (`+  −  |  ⚙▾`) with crisp $8 \times 8\,\text{pt}$ `+`/`−` glyphs ($4.0\,\text{pt}$ half-arm) and an active `.with_action_menu(true)` trailing gear/action menu trigger.
+    3. `MacRuleEditor` & `MacInlineActionButton`: $16 \times 16\,\text{pt}$ / $14 \times 14\,\text{pt}$ circular stepper badges with $1.0\,\text{pt}$ border stroke and delicate $3.2\,\text{pt}$ half-arm crosshairs (ample breathing room inside the circle, never touching the rim).
+- **Interactive `MacTabView` Panes in Scene Runtime (`REQ-012-08`):**
+  - Tab 0 (`AVPlayer HUD`): renders an animated 16:9 video preview backdrop behind a fitting `MacPlayerView` whose timeline `progress` advances at 60 fps while `playing == true`.
+  - Tab 1 (`Collection Grid`): dynamically adds and removes tiles in response to `MacTableActionBar` (`+` / `−` / `[⚙▾]` action menu) and the header `+` button.
 
 ---
 

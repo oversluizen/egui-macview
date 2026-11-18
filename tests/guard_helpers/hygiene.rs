@@ -135,3 +135,132 @@ pub fn collect_json_leaf_paths(val: &serde_json::Value, prefix: String, is_in_me
         }
     }
 }
+
+/// Checks scene purity, declarative bindings, and test-suite architecture hygiene (`REQ-001-06`, `REQ-013-07`).
+pub fn check_scene_and_test_purity(manifest_dir: &std::path::Path) -> Vec<String> {
+    use std::fs;
+    let mut violations = Vec::new();
+    for no_json_rel in [
+        "src/scene/nib_frontend.rs",
+        "src/scene/nib_ibtool.rs",
+        "src/scene/nib_ibtool_widgets.rs",
+        "src/scene/nib_varint.rs",
+        "src/scene/xib_exporter.rs",
+        "src/scene/xib_strings.rs",
+    ] {
+        let src = fs::read_to_string(manifest_dir.join(no_json_rel)).expect("read scene file");
+        if src.contains("serde_json") || src.contains("macviewMeta") {
+            violations.push(format!("{no_json_rel} must not use serde_json or macviewMeta JSON shortcuts (REQ-013-05.5)"));
+        }
+        for bad_ib in ["\"ibTip\"", "\"ibTitle\"", "\"ibSize\"", "\"ibIcon\"", "\"ibDesignFrame\"", "\"ibId\""] {
+            if src.contains(bad_ib) {
+                violations.push(format!("{no_json_rel} contains forbidden custom runtime attribute {bad_ib} (REQ-013-07.1)"));
+            }
+        }
+    }
+    if let Ok(entries) = fs::read_dir(manifest_dir.join("assets/nib_showcase")) {
+        for entry in entries.flatten() {
+            let p = entry.path();
+            if p.extension().and_then(|s| s.to_str()) == Some("xib") {
+                let xib_txt = fs::read_to_string(&p).expect("read xib");
+                for bad_ib in [
+                    "keyPath=\"ibTip\"",
+                    "keyPath=\"ibTitle\"",
+                    "keyPath=\"ibSize\"",
+                    "keyPath=\"ibIcon\"",
+                    "keyPath=\"ibDesignFrame\"",
+                    "keyPath=\"ibId\"",
+                ] {
+                    if xib_txt.contains(bad_ib) {
+                        violations.push(format!("{:?} contains forbidden {bad_ib} (REQ-013-07.1)", p.file_name()));
+                    }
+                }
+            }
+        }
+    }
+    let rt_tabs = fs::read_to_string(manifest_dir.join("src/scene/runtime_tabs.rs")).expect("read runtime_tabs.rs");
+    for bad_tab in [
+        "AVPlayer HUD",
+        "Collection Grid",
+        "Clock & Calendar",
+        "MacPlayerView",
+        "MacCollectionView",
+        "MacDatePicker",
+        "macview_tab_collection_count",
+    ] {
+        if rt_tabs.contains(bad_tab) {
+            violations.push(format!("src/scene/runtime_tabs.rs contains hardcoded demo tab logic `{bad_tab}` (REQ-013-07.2)"));
+        }
+    }
+    let rt_widgets = fs::read_to_string(manifest_dir.join("src/scene/runtime_widgets.rs")).expect("read runtime_widgets.rs");
+    for bad_w in ["\"ProRes\"", "\"HEVC\"", "\"Created Date\"", "macview_tab_collection_count", "-10_000.0..=10_000.0"] {
+        if rt_widgets.contains(bad_w) {
+            violations.push(format!("src/scene/runtime_widgets.rs contains hardcoded widget data `{bad_w}` (REQ-013-07.2)"));
+        }
+    }
+    for (gal_rel, bad_list) in [
+        ("examples/gallery/state1_canvas.rs", &["\"Normal\"", "\"Multiply\""][..]),
+        ("examples/gallery/state2_symbols_layout.rs", &["\"Inter Regular (OFL)\"", "\"Semibold\""][..]),
+        ("examples/gallery/state3_command_state.rs", &["\"Apple ProRes\"", "\"H.264\""][..]),
+        ("examples/gallery/nib_actions.rs", &["\"ProRes 4444 XQ\"", "\"WAV 96kHz\""][..]),
+        ("examples/gallery/nib_showcase_builders.rs", &["starts_with(\"s6-en-"][..]),
+    ] {
+        let gsrc = fs::read_to_string(manifest_dir.join(gal_rel)).expect("read gallery file");
+        for bad_str in bad_list {
+            if gsrc.contains(bad_str) {
+                violations.push(format!("{gal_rel} contains hardcoded .xib duplicate `{bad_str}` (REQ-013-07.3)"));
+            }
+        }
+    }
+    let thumb_ov = fs::read_to_string(manifest_dir.join("examples/gallery/state1_thumb_overlay.rs")).unwrap_or_default();
+    if thumb_ov.contains("sp.rect(p_rect") || thumb_ov.contains("sp.rect(s_rect") {
+        violations.push("examples/gallery/state1_thumb_overlay.rs contains hand-painted `sp.rect` fake mode strips instead of MacSegmentedControl/MacColorWell".into());
+    }
+    let builders = fs::read_to_string(manifest_dir.join("examples/gallery/nib_showcase_builders.rs")).unwrap_or_default();
+    if builders.contains("(65.0..=155.0)") || builders.contains("(170.0..=255.0)") {
+        violations.push("examples/gallery/nib_showcase_builders.rs contains hardcoded Y-coordinate ranges `(65.0..=155.0)` / `(170.0..=255.0)` instead of declarative `enabled_binding`".into());
+    }
+    let bad_ctors = [
+        "MacButtonCell::new",
+        "MacSegmentedControl::new",
+        "MacPopUpButton::new",
+        "MacCheckbox::new",
+        "MacColorWell::new",
+        "MacStepper::new",
+        "MacComboBox::new",
+    ];
+    for rel_file in [
+        "examples/gallery/state1_canvas.rs",
+        "examples/gallery/state2_symbols_layout.rs",
+        "examples/gallery/state3_command_state.rs",
+        "examples/gallery/state4_finder_browser.rs",
+        "examples/gallery/state5_avkit_media.rs",
+        "examples/gallery/inspector.rs",
+        "examples/gallery/inspector_nib.rs",
+    ] {
+        let src = fs::read_to_string(manifest_dir.join(rel_file)).expect("read screen source");
+        for bad_ctor in bad_ctors {
+            if src.contains(bad_ctor) {
+                violations.push(format!("REQ-013-02P: {rel_file} must not construct `{bad_ctor}` imperatively"));
+            }
+        }
+    }
+    for test_rel in [
+        "tests/gallery_binding_tests.rs",
+        "tests/runtime_hygiene_and_invariants_tests.rs",
+        "tests/media_and_finder_interactive_boost_tests.rs",
+        "tests/palette_and_footer_tests.rs",
+        "tests/spec015_dual_visual_and_pro_inspector_tests.rs",
+        "tests/symbol_tests.rs",
+    ] {
+        let tsrc = fs::read_to_string(manifest_dir.join(test_rel)).unwrap_or_default();
+        if tsrc.contains("read_all_gallery_sources") {
+            violations.push(format!("{test_rel} contains forbidden `read_all_gallery_sources` string-grep anti-pattern"));
+        }
+        if tsrc.contains("studio_controls_v05.rs") {
+            violations.push(format!("{test_rel} contains forbidden legacy `studio_controls_v05.rs` monolith import"));
+        }
+    }
+    violations
+}
+

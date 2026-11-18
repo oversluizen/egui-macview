@@ -19,6 +19,7 @@
 | Version | Date | Author | Description / Milestone |
 | :--- | :--- | :--- | :--- |
 | `0.5.0` | 2026-11-08 | Architecture Team | Milestone 0.5.0 Release: Formal specification of 6 domain-agnostic AppKit & AVKit studio controls (`MacProgressIndicator`, `MacTableView`, `MacTokenField`, `MacLevelIndicator`, `MacTrimScrubber`, `MacPathControl`) and W3C DTCG token extensions |
+| `0.8.1` | 2026-11-17 | Architecture Team | Versatile Desktop & Web Audio/Video Engine (`REQ-011-07`): 60 fps procedural broadcast monitor with distinct visual scenes per stream preset, live RGB/LUFS waveform & vectorscope overlay, embedded `MacPlayerView` transport bar, and multi-preset polyphonic WAV/WebAudio synthesis + local media file loading |
 
 ---
 
@@ -141,6 +142,12 @@ Each appearance (`aqua` and `dark_aqua`) in `tokens/design_tokens.json` SHALL de
   - Clicking segment $i$ sets `clicked_segment = Some(i)` on `MacPathControlResponse`.
 - **Trailing Choose Button:**
   - When `.show_choose_button(true)` is active, renders a compact trailing `Choose...` push button at the right edge of the path bar; clicking it sets `choose_clicked = true` on `MacPathControlResponse`.
+
+### 3.7 Versatile Desktop & Web Audio/Video Playback Engine — `REQ-011-07`
+- **Self-Contained 60 FPS Video Viewport (`NSAvKitVideoAndScrubberView`):**
+  - Renders a distinct, smooth 60 fps dynamic RGB visual scene per `codec_preset` (`0..=5`: Cinema 4K HDR grade, Logic Pro Mastering Stem Analyzer, Spatial Audio 3D Soundfield, Documentary Color Grade, Broadcast SMPTE/Vectorscope Monitor, and Custom Local Media Inspector) complete with real-time RGB parade / vectorscope / LUFS overlays and an interactive `MacPlayerView` transport bar inside the video viewport.
+- **Audible Multi-Preset Polyphonic Synthesis & Local File Loading:**
+  - `AudioTrack::preset_track(preset)` synthesizes 6 distinct stereo harmonic compositions (ambient pad, funky bassline, spatial arpeggio, warm acoustic chord progression, broadcast reference tone + chimes, and percussive studio groove) modulated in real time by `media_gain`, `media_pan`, `sat_drive`, `brickwall_limiter`, and `bus_mode`, playing audibly via OS audio / WebAudio (`AudioContext`) without relying on fragile external third-party URLs while also supporting local `.wav`/`.mp4` file loading.
 
 ---
 

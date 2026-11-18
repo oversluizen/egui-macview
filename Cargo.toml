@@ -156,6 +156,18 @@ path = "tests/spec014_context_thumb_dial_tests.rs"
 name = "spec015_dual_visual_and_pro_inspector_tests"
 path = "tests/spec015_dual_visual_and_pro_inspector_tests.rs"
 
+[[test]]
+name = "spec013_appkit_swiftui_compliance_tests"
+path = "tests/spec013_appkit_swiftui_compliance_tests.rs"
+
+[[test]]
+name = "spec013_nib_bijection_and_drawing_rect_tests"
+path = "tests/spec013_nib_bijection_and_drawing_rect_tests.rs"
+
+[[test]]
+name = "spec016_liquid_glass_optical_engine_tests"
+path = "tests/spec016_liquid_glass_optical_engine_tests.rs"
+
 [lints.rust]
 unsafe_code = "deny"
 dead_code = "deny"

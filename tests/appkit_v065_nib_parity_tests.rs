@@ -1,15 +1,11 @@
 //! COTS Integration & Behavioral Verification Suite for `egui-macview` v0.6.5 AppKit NIB Parity.
 
-use egui::{
-    Align, Color32, Context, Event, FontFamily, FontId, Modifiers, PointerButton, Pos2, RawInput,
-    Rect, Vec2,
-};
+use egui::{Align, Color32, Context, Event, FontFamily, FontId, Modifiers, PointerButton, Pos2, RawInput, Rect, Vec2};
 use egui_macview::{
-    setup_macview_fonts, setup_symbols_font, MacAppearance, MacBox, MacButtonCell, MacCheckbox,
-    MacComboBox, MacControlSize, MacDisclosureGroup, MacFontWeight, MacHelpButton,
-    MacInlineActionButton, MacInputCell, MacLabel, MacLabelColor, MacOutlineView, MacPopUpButton,
-    MacSegmentedControl, MacTableColumn, MacTableView, MacTheme, INTER_REGULAR_FONT_BYTES,
-    INTER_REGULAR_FONT_NAME, INTER_SEMIBOLD_FONT_BYTES, INTER_SEMIBOLD_FONT_NAME,
+    setup_macview_fonts, setup_symbols_font, MacAppearance, MacBox, MacButtonCell, MacCheckbox, MacComboBox, MacControlSize,
+    MacDisclosureGroup, MacFontWeight, MacHelpButton, MacInlineActionButton, MacInputCell, MacLabel, MacLabelColor, MacOutlineView,
+    MacPopUpButton, MacSegmentedControl, MacTableColumn, MacTableView, MacTheme, INTER_REGULAR_FONT_BYTES, INTER_REGULAR_FONT_NAME,
+    INTER_SEMIBOLD_FONT_BYTES, INTER_SEMIBOLD_FONT_NAME,
 };
 use std::collections::BTreeSet;
 
@@ -78,13 +74,21 @@ fn test_v065_optical_tracking_galley_and_controls() {
         MacCheckbox::new(&mut checked, "TrackedCheck").theme(&theme).show(ui);
         MacLabel::new("TrackedLbl").theme(&theme).show(ui);
         MacSegmentedControl::new(&["SegOne", "SegTwo"], 0).theme(&theme).show(ui, |_| {});
-        MacDisclosureGroup::new("trk_disc", "TrackedSection", &mut disc_open).theme(&theme).show(ui, |u| { u.label("Body"); });
-        MacBox::new("TrackedBox").theme(&theme).show(ui, |u| { u.label("Inside"); });
+        MacDisclosureGroup::new("trk_disc", "TrackedSection", &mut disc_open).theme(&theme).show(ui, |u| {
+            u.label("Body");
+        });
+        MacBox::new("TrackedBox").theme(&theme).show(ui, |u| {
+            u.label("Inside");
+        });
         MacOutlineView::new("trk_out").theme(&theme).show(ui, |tree| {
-            tree.row("r1", 0, false, &mut tree_exp, false, |row| { row.label("TrackedRow"); });
+            tree.row("r1", 0, false, &mut tree_exp, false, |row| {
+                row.label("TrackedRow");
+            });
         });
         let cols = [MacTableColumn::new("TrackedHdr", 120.0)];
-        MacTableView::new("trk_tbl", &cols, 1, &mut table_sel).theme(&theme).show(ui, |u, _, _| { u.label("Cell"); });
+        MacTableView::new("trk_tbl", &cols, 1, &mut table_sel).theme(&theme).show(ui, |u, _, _| {
+            u.label("Cell");
+        });
     });
 
     let mut texts = Vec::new();
@@ -93,8 +97,17 @@ fn test_v065_optical_tracking_galley_and_controls() {
     }
 
     for expected_label in [
-        "TrackedBtn", "TrackedPop", "TrackedInput", "TrackedCombo", "TrackedCheck",
-        "TrackedLbl", "SegOne", "TrackedSection", "TrackedBox", "TrackedRow", "TrackedHdr",
+        "TrackedBtn",
+        "TrackedPop",
+        "TrackedInput",
+        "TrackedCombo",
+        "TrackedCheck",
+        "TrackedLbl",
+        "SegOne",
+        "TrackedSection",
+        "TrackedBox",
+        "TrackedRow",
+        "TrackedHdr",
     ] {
         let shape = texts.iter().find(|t| t.galley.text() == expected_label).unwrap();
         let font_sz = shape.galley.job.sections[0].format.font_id.size;
@@ -113,36 +126,90 @@ fn test_v065_input_cell_control_sizes_fixed_rect_and_alignment() {
     let theme = MacTheme::new(MacAppearance::Aqua);
     let tf = theme.text_field();
 
-    assert_eq!((tf.regular.height.points(), tf.regular.font_size.points(), tf.regular.corner_radius.points(), tf.regular.padding_horizontal.points()), (22.0, 13.0, 2.0, 7.0));
-    assert_eq!((tf.regular.padding_vertical.as_ref().unwrap().points(), tf.regular.first_baseline_offset_from_top.points(), tf.regular.baseline_offset_from_bottom.points()), (2.0, 15.0, 6.0));
-    assert_eq!((tf.small.height.points(), tf.small.font_size.points(), tf.small.corner_radius.points(), tf.small.padding_horizontal.points()), (19.0, 11.0, 2.0, 5.0));
+    assert_eq!(
+        (
+            tf.regular.height.points(),
+            tf.regular.font_size.points(),
+            tf.regular.corner_radius.points(),
+            tf.regular.padding_horizontal.points()
+        ),
+        (22.0, 13.0, 2.0, 7.0)
+    );
+    assert_eq!(
+        (
+            tf.regular.padding_vertical.as_ref().unwrap().points(),
+            tf.regular.first_baseline_offset_from_top.points(),
+            tf.regular.baseline_offset_from_bottom.points()
+        ),
+        (2.0, 15.0, 6.0)
+    );
+    assert_eq!(
+        (tf.small.height.points(), tf.small.font_size.points(), tf.small.corner_radius.points(), tf.small.padding_horizontal.points()),
+        (19.0, 11.0, 2.0, 5.0)
+    );
     assert_eq!((tf.mini.font_size.points(), tf.mini.corner_radius.points(), tf.mini.padding_horizontal.points()), (9.0, 1.5, 4.0));
-    assert_eq!((tf.compact_infobox.height.points(), tf.compact_infobox.corner_radius.points(), theme.popup_button().corner_radius.points()), (18.0, 2.0, 5.0));
+    assert_eq!(
+        (tf.compact_infobox.height.points(), tf.compact_infobox.corner_radius.points(), theme.popup_button().corner_radius.points()),
+        (18.0, 2.0, 5.0)
+    );
 
     let mut v_default = "Default22".to_string();
-    let (mut v_reg, mut v_sm, mut v_hud, mut v_mini) = ("AutoReg".to_string(), "AutoSm".to_string(), "AutoHud".to_string(), "AutoMini".to_string());
+    let (mut v_reg, mut v_sm, mut v_hud, mut v_mini) =
+        ("AutoReg".to_string(), "AutoSm".to_string(), "AutoHud".to_string(), "AutoMini".to_string());
     let (mut v_left, mut v_right, mut default_h) = ("42.0".to_string(), "42.0".to_string(), 0.0);
 
     let shapes = run_pass(&ctx, RawInput::default(), |ui| {
         default_h = MacInputCell::new("def_cell", &mut v_default).theme(&theme).show(ui).rect.height();
-        MacInputCell::new("r_reg", &mut v_reg).theme(&theme).fixed_rect(Rect::from_min_size(Pos2::new(10.0, 40.0), Vec2::new(100.0, 22.0))).show(ui);
-        MacInputCell::new("r_sm", &mut v_sm).theme(&theme).fixed_rect(Rect::from_min_size(Pos2::new(10.0, 70.0), Vec2::new(100.0, 19.0))).show(ui);
-        MacInputCell::new("r_hud", &mut v_hud).theme(&theme).fixed_rect(Rect::from_min_size(Pos2::new(10.0, 100.0), Vec2::new(100.0, 18.0))).show(ui);
-        MacInputCell::new("r_mini", &mut v_mini).theme(&theme).fixed_rect(Rect::from_min_size(Pos2::new(10.0, 130.0), Vec2::new(100.0, 16.0))).show(ui);
-        MacInputCell::new("align_l", &mut v_left).theme(&theme).fixed_rect(Rect::from_min_size(Pos2::new(140.0, 40.0), Vec2::new(100.0, 22.0))).text_align(Align::LEFT).show(ui);
-        MacInputCell::new("align_r", &mut v_right).theme(&theme).fixed_rect(Rect::from_min_size(Pos2::new(140.0, 70.0), Vec2::new(100.0, 22.0))).text_align(Align::RIGHT).show(ui);
+        MacInputCell::new("r_reg", &mut v_reg)
+            .theme(&theme)
+            .fixed_rect(Rect::from_min_size(Pos2::new(10.0, 40.0), Vec2::new(100.0, 22.0)))
+            .show(ui);
+        MacInputCell::new("r_sm", &mut v_sm)
+            .theme(&theme)
+            .fixed_rect(Rect::from_min_size(Pos2::new(10.0, 70.0), Vec2::new(100.0, 19.0)))
+            .show(ui);
+        MacInputCell::new("r_hud", &mut v_hud)
+            .theme(&theme)
+            .fixed_rect(Rect::from_min_size(Pos2::new(10.0, 100.0), Vec2::new(100.0, 18.0)))
+            .show(ui);
+        MacInputCell::new("r_mini", &mut v_mini)
+            .theme(&theme)
+            .fixed_rect(Rect::from_min_size(Pos2::new(10.0, 130.0), Vec2::new(100.0, 16.0)))
+            .show(ui);
+        MacInputCell::new("align_l", &mut v_left)
+            .theme(&theme)
+            .fixed_rect(Rect::from_min_size(Pos2::new(140.0, 40.0), Vec2::new(100.0, 22.0)))
+            .text_align(Align::LEFT)
+            .show(ui);
+        MacInputCell::new("align_r", &mut v_right)
+            .theme(&theme)
+            .fixed_rect(Rect::from_min_size(Pos2::new(140.0, 70.0), Vec2::new(100.0, 22.0)))
+            .text_align(Align::RIGHT)
+            .show(ui);
     });
 
     assert_eq!(default_h, 22.0);
-    let input_rect_radii: Vec<u8> = shapes.iter().filter_map(|cs| match &cs.shape {
-        egui::Shape::Rect(r) if r.fill == theme.control_background() && (r.rect.left() - 10.0).abs() < 1.0 && r.rect.height() >= 18.0 => Some(r.corner_radius.nw),
-        _ => None,
-    }).collect();
+    let input_rect_radii: Vec<u8> = shapes
+        .iter()
+        .filter_map(|cs| match &cs.shape {
+            egui::Shape::Rect(r)
+                if r.fill == theme.control_background() && (r.rect.left() - 10.0).abs() < 1.0 && r.rect.height() >= 18.0 =>
+            {
+                Some(r.corner_radius.nw)
+            }
+            _ => None,
+        })
+        .collect();
     assert_eq!(input_rect_radii, vec![2, 2, 2]);
     let mut texts = Vec::new();
-    for cs in &shapes { collect_text_shapes(&cs.shape, &mut texts); }
+    for cs in &shapes {
+        collect_text_shapes(&cs.shape, &mut texts);
+    }
     let font_size_of = |label: &str| texts.iter().find(|t| t.galley.text() == label).unwrap().galley.job.sections[0].format.font_id.size;
-    assert_eq!((font_size_of("AutoReg"), font_size_of("AutoSm"), font_size_of("AutoHud"), font_size_of("AutoMini")), (13.0, 11.0, 11.0, 9.0));
+    assert_eq!(
+        (font_size_of("AutoReg"), font_size_of("AutoSm"), font_size_of("AutoHud"), font_size_of("AutoMini")),
+        (13.0, 11.0, 11.0, 9.0)
+    );
     let matching_42: Vec<_> = texts.iter().filter(|t| t.galley.text() == "42.0").collect();
     assert!(matching_42[1].pos.x > matching_42[0].pos.x + 20.0);
 }
@@ -162,23 +229,33 @@ fn test_v065_popup_button_double_chevron_and_nib_frame_visual_clamping() {
     let mut sel = 0usize;
     let nib_frame = Rect::from_min_size(Pos2::new(20.0, 20.0), Vec2::new(140.0, 25.0));
     let shapes = run_pass(&ctx, RawInput::default(), |ui| {
-        MacPopUpButton::new(&mut sel, &["Item A", "Item B"]).theme(&theme).control_size(MacControlSize::Regular).fixed_rect(nib_frame).show(ui);
+        MacPopUpButton::new(&mut sel, &["Item A", "Item B"])
+            .theme(&theme)
+            .control_size(MacControlSize::Regular)
+            .fixed_rect(nib_frame)
+            .show(ui);
     });
 
-    let bezel_rect = shapes.iter().find_map(|cs| match &cs.shape {
-        egui::Shape::Rect(r) if r.fill == theme.control_background() => {
-            assert_eq!(r.corner_radius.nw, 5);
-            Some(r.rect)
-        }
-        _ => None,
-    }).unwrap();
+    let bezel_rect = shapes
+        .iter()
+        .find_map(|cs| match &cs.shape {
+            egui::Shape::Rect(r) if r.fill == theme.control_background() => {
+                assert_eq!(r.corner_radius.nw, 5);
+                Some(r.rect)
+            }
+            _ => None,
+        })
+        .unwrap();
     assert!((bezel_rect.height() - 20.0).abs() < 0.5);
 
     let cy = bezel_rect.center().y;
-    let lines: Vec<_> = shapes.iter().filter_map(|cs| match &cs.shape {
-        egui::Shape::LineSegment { points, stroke } => Some((*points, *stroke)),
-        _ => None,
-    }).collect();
+    let lines: Vec<_> = shapes
+        .iter()
+        .filter_map(|cs| match &cs.shape {
+            egui::Shape::LineSegment { points, stroke } => Some((*points, *stroke)),
+            _ => None,
+        })
+        .collect();
     assert!(lines.len() >= 4);
     for (_, stroke) in &lines {
         assert_eq!(stroke.color, theme.label());
@@ -197,7 +274,10 @@ fn test_v065_mac_checkbox_box_surfaces_combo_badge_and_disclosure() {
 
     assert_eq!((aqua.box_background(), aqua.box_border()), (Color32::from_rgb(0xE5, 0xE5, 0xE5), Color32::from_rgb(0xD8, 0xD8, 0xD8)));
     assert_eq!((dark.box_background(), dark.box_border()), (Color32::from_rgb(0x23, 0x25, 0x28), Color32::from_rgb(0x3A, 0x3D, 0x42)));
-    assert_eq!((aqua.checkbox().regular.box_size.points(), aqua.checkbox().small.box_size.points(), aqua.checkbox().mini.box_size.points()), (14.0, 12.0, 10.0));
+    assert_eq!(
+        (aqua.checkbox().regular.box_size.points(), aqua.checkbox().small.box_size.points(), aqua.checkbox().mini.box_size.points()),
+        (14.0, 12.0, 10.0)
+    );
 
     let (mut c_off, mut c_on, mut c_mix, mut is_open) = (false, true, false, true);
     let (mut cb_text, mut off_rect, mut disc_rect) = ("Sonoma".to_string(), Rect::NOTHING, Rect::NOTHING);
@@ -206,27 +286,50 @@ fn test_v065_mac_checkbox_box_surfaces_combo_badge_and_disclosure() {
         off_rect = MacCheckbox::new(&mut c_off, "Unchecked").theme(&aqua).show(ui).rect;
         MacCheckbox::new(&mut c_on, "Checked").theme(&aqua).control_size(MacControlSize::Small).show(ui);
         MacCheckbox::new(&mut c_mix, "Mixed").theme(&aqua).control_size(MacControlSize::Mini).mixed(true).show(ui);
-        MacBox::new("Metrics").theme(&aqua).fixed_rect(Rect::from_min_size(Pos2::new(20.0, 90.0), Vec2::new(200.0, 50.0))).show(ui, |b_ui| { b_ui.label("Inside"); });
-        MacComboBox::new("cb_nib", &mut cb_text, &["Sonoma", "Sequoia"]).theme(&aqua).fixed_rect(Rect::from_min_size(Pos2::new(20.0, 150.0), Vec2::new(160.0, 23.0))).show(ui);
+        MacBox::new("Metrics").theme(&aqua).fixed_rect(Rect::from_min_size(Pos2::new(20.0, 90.0), Vec2::new(200.0, 50.0))).show(
+            ui,
+            |b_ui| {
+                b_ui.label("Inside");
+            },
+        );
+        MacComboBox::new("cb_nib", &mut cb_text, &["Sonoma", "Sequoia"])
+            .theme(&aqua)
+            .fixed_rect(Rect::from_min_size(Pos2::new(20.0, 150.0), Vec2::new(160.0, 23.0)))
+            .show(ui);
     });
 
     assert!(shapes.iter().any(|cs| matches!(&cs.shape, egui::Shape::Rect(r) if r.fill == aqua.box_background())));
-    assert!(shapes.iter().any(|cs| matches!(&cs.shape, egui::Shape::Rect(r) if r.fill == aqua.control_accent() && (r.rect.width() - 17.0).abs() < 1.5)));
+    assert!(shapes
+        .iter()
+        .any(|cs| matches!(&cs.shape, egui::Shape::Rect(r) if r.fill == aqua.control_accent() && (r.rect.width() - 17.0).abs() < 1.5)));
 
     for pressed in [true, false] {
-        run_pass(&ctx, click_at(off_rect.center(), pressed), |ui| { MacCheckbox::new(&mut c_off, "Unchecked").theme(&aqua).show(ui); });
+        run_pass(&ctx, click_at(off_rect.center(), pressed), |ui| {
+            MacCheckbox::new(&mut c_off, "Unchecked").theme(&aqua).show(ui);
+        });
     }
     assert!(c_off);
 
     run_pass(&ctx, RawInput::default(), |ui| {
-        disc_rect = MacDisclosureGroup::new("axes_sec", "Axes", &mut is_open).theme(&aqua).with_trailing_add_button(true).show(ui, |u| { u.label("Weight Axis"); }).response.rect;
+        disc_rect = MacDisclosureGroup::new("axes_sec", "Axes", &mut is_open)
+            .theme(&aqua)
+            .with_trailing_add_button(true)
+            .show(ui, |u| {
+                u.label("Weight Axis");
+            })
+            .response
+            .rect;
     });
     let plus_pos = Pos2::new(disc_rect.right() - 8.0, disc_rect.center().y);
     let mut trailing_clicked = false;
     for pressed in [true, false] {
         run_pass(&ctx, click_at(plus_pos, pressed), |ui| {
-            let r = MacDisclosureGroup::new("axes_sec", "Axes", &mut is_open).theme(&aqua).with_trailing_add_button(true).show(ui, |u| { u.label("Weight Axis"); });
-            if !pressed { trailing_clicked = r.trailing_clicked; }
+            let r = MacDisclosureGroup::new("axes_sec", "Axes", &mut is_open).theme(&aqua).with_trailing_add_button(true).show(ui, |u| {
+                u.label("Weight Axis");
+            });
+            if !pressed {
+                trailing_clicked = r.trailing_clicked;
+            }
         });
     }
     assert!(trailing_clicked && is_open);
@@ -239,7 +342,11 @@ fn test_v065_inter_and_cupertino_fonts_and_cross_platform_baseline_alignment() {
     let mut fonts = egui::FontDefinitions::default();
     setup_macview_fonts(&mut fonts);
     setup_symbols_font(&mut fonts);
-    assert!(fonts.font_data.contains_key(INTER_REGULAR_FONT_NAME) && fonts.font_data.contains_key(INTER_SEMIBOLD_FONT_NAME) && fonts.font_data.contains_key("cupertino_icons"));
+    assert!(
+        fonts.font_data.contains_key(INTER_REGULAR_FONT_NAME)
+            && fonts.font_data.contains_key(INTER_SEMIBOLD_FONT_NAME)
+            && fonts.font_data.contains_key("cupertino_icons")
+    );
     assert_eq!(fonts.families[&FontFamily::Proportional][0], INTER_REGULAR_FONT_NAME);
 
     let ctx = Context::default();
@@ -248,20 +355,40 @@ fn test_v065_inter_and_cupertino_fonts_and_cross_platform_baseline_alignment() {
     let mut val = "1920".to_string();
 
     let shapes = run_pass(&ctx, RawInput::default(), |ui| {
-        MacLabel::new("Width:").theme(&theme).weight(MacFontWeight::Semibold).color(MacLabelColor::Primary).alignment(Align::RIGHT).fixed_rect(Rect::from_min_size(Pos2::new(20.0, 43.0), Vec2::new(60.0, 16.0))).show(ui);
-        MacInputCell::new("w_in", &mut val).theme(&theme).fixed_rect(Rect::from_min_size(Pos2::new(88.0, 41.0), Vec2::new(80.0, 22.0))).show(ui);
+        MacLabel::new("Width:")
+            .theme(&theme)
+            .weight(MacFontWeight::Semibold)
+            .color(MacLabelColor::Primary)
+            .alignment(Align::RIGHT)
+            .fixed_rect(Rect::from_min_size(Pos2::new(20.0, 43.0), Vec2::new(60.0, 16.0)))
+            .show(ui);
+        MacInputCell::new("w_in", &mut val)
+            .theme(&theme)
+            .fixed_rect(Rect::from_min_size(Pos2::new(88.0, 41.0), Vec2::new(80.0, 22.0)))
+            .show(ui);
         MacHelpButton::new().theme(&theme).fixed_rect(Rect::from_min_size(Pos2::new(180.0, 40.0), Vec2::new(25.0, 25.0))).show(ui);
-        MacInlineActionButton::new("+").theme(&theme).fixed_rect(Rect::from_min_size(Pos2::new(212.0, 44.0), Vec2::new(16.0, 16.0))).show(ui);
+        MacInlineActionButton::new("+")
+            .theme(&theme)
+            .fixed_rect(Rect::from_min_size(Pos2::new(212.0, 44.0), Vec2::new(16.0, 16.0)))
+            .show(ui);
     });
 
     let mut texts = Vec::new();
-    for cs in &shapes { collect_text_shapes(&cs.shape, &mut texts); }
+    for cs in &shapes {
+        collect_text_shapes(&cs.shape, &mut texts);
+    }
     let lbl_shape = texts.iter().find(|t| t.galley.text() == "Width:").unwrap();
     let in_shape = texts.iter().find(|t| t.galley.text() == "1920").unwrap();
     assert_eq!(lbl_shape.galley.job.sections[0].format.font_id.family, FontFamily::Name(INTER_SEMIBOLD_FONT_NAME.into()));
     assert!((lbl_shape.pos.y - in_shape.pos.y).abs() <= 0.5);
 
-    let circles: Vec<_> = shapes.iter().filter_map(|cs| match &cs.shape { egui::Shape::Circle(c) => Some(c.radius), _ => None }).collect();
+    let circles: Vec<_> = shapes
+        .iter()
+        .filter_map(|cs| match &cs.shape {
+            egui::Shape::Circle(c) => Some(c.radius),
+            _ => None,
+        })
+        .collect();
     assert!(circles.iter().any(|&r| (r - 10.0).abs() < 0.5) && circles.iter().any(|&r| (r - 8.0).abs() < 0.5));
 }
 
@@ -283,24 +410,43 @@ fn test_v066_help_button_sizes_popup_accent_badge_and_zero_idle_repaint() {
     let _ = run_pass(&ctx, RawInput::default(), |ui| (post_reg_font, post_reg_has_semibold) = theme.semibold_font_id(ui, 13.0));
     assert!(post_reg_has_semibold && post_reg_font.family == FontFamily::Name(INTER_SEMIBOLD_FONT_NAME.into()));
     assert_eq!(
-        (MacHelpButton::new().theme(&theme).control_size(MacControlSize::Regular).font_size(), MacHelpButton::new().theme(&theme).control_size(MacControlSize::Small).font_size(), MacHelpButton::new().theme(&theme).control_size(MacControlSize::Mini).font_size()),
+        (
+            MacHelpButton::new().theme(&theme).control_size(MacControlSize::Regular).font_size(),
+            MacHelpButton::new().theme(&theme).control_size(MacControlSize::Small).font_size(),
+            MacHelpButton::new().theme(&theme).control_size(MacControlSize::Mini).font_size()
+        ),
         (12.0, 10.0, 9.0)
     );
 
     let (mut val, mut pop_idx, mut cb_val, mut chk, mut disc) = ("1080".to_string(), 0usize, "4K UHD".to_string(), true, true);
     let (mut last_repaint_after, mut shapes) = (std::time::Duration::ZERO, Vec::new());
     for step in 0..3 {
-        let raw = RawInput { time: Some(1.0 + step as f64 * 0.05), screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(800.0, 600.0))), ..Default::default() };
+        let raw = RawInput {
+            time: Some(1.0 + step as f64 * 0.05),
+            screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(800.0, 600.0))),
+            ..Default::default()
+        };
         let mut out = ctx.run_ui(raw, |ui| {
             MacLabel::new("Resolution:").theme(&theme).weight(MacFontWeight::Medium).show(ui);
             MacInputCell::new("nib_in", &mut val).theme(&theme).show(ui);
             MacPopUpButton::new(&mut pop_idx, &["1080p Ultra Wide Cinema", "4K"]).theme(&theme).width(90.0).accent_badge(true).show(ui);
             MacComboBox::new("nib_cb", &mut cb_val, &["4K UHD", "8K"]).theme(&theme).show(ui);
             MacCheckbox::new(&mut chk, "Preserve Aspect").theme(&theme).show(ui);
-            MacBox::new("Group").theme(&theme).show(ui, |b_ui| { MacLabel::new("Caption").theme(&theme).color(MacLabelColor::Secondary).show(b_ui); });
-            MacHelpButton::new().theme(&theme).control_size(MacControlSize::Regular).fixed_rect(Rect::from_min_size(Pos2::new(350.0, 20.0), Vec2::new(14.0, 14.0))).show(ui);
-            MacInlineActionButton::new("+").theme(&theme).fixed_rect(Rect::from_min_size(Pos2::new(300.0, 20.0), Vec2::new(24.0, 24.0))).show(ui);
-            MacDisclosureGroup::new("nib_disc", "Advanced", &mut disc).theme(&theme).with_trailing_add_button(true).show(ui, |d_ui| { MacLabel::new("Nested").theme(&theme).show(d_ui); });
+            MacBox::new("Group").theme(&theme).show(ui, |b_ui| {
+                MacLabel::new("Caption").theme(&theme).color(MacLabelColor::Secondary).show(b_ui);
+            });
+            MacHelpButton::new()
+                .theme(&theme)
+                .control_size(MacControlSize::Regular)
+                .fixed_rect(Rect::from_min_size(Pos2::new(350.0, 20.0), Vec2::new(14.0, 14.0)))
+                .show(ui);
+            MacInlineActionButton::new("+")
+                .theme(&theme)
+                .fixed_rect(Rect::from_min_size(Pos2::new(300.0, 20.0), Vec2::new(24.0, 24.0)))
+                .show(ui);
+            MacDisclosureGroup::new("nib_disc", "Advanced", &mut disc).theme(&theme).with_trailing_add_button(true).show(ui, |d_ui| {
+                MacLabel::new("Nested").theme(&theme).show(d_ui);
+            });
         });
         out.textures_delta.clear();
         last_repaint_after = out.viewport_output.get(&egui::ViewportId::ROOT).map(|v| v.repaint_delay).unwrap_or(std::time::Duration::MAX);
@@ -309,26 +455,22 @@ fn test_v066_help_button_sizes_popup_accent_badge_and_zero_idle_repaint() {
 
     assert_eq!(last_repaint_after, std::time::Duration::MAX);
 
-    let inline_circles: Vec<_> = shapes.iter().filter_map(|cs| match &cs.shape {
-        egui::Shape::Circle(c) if (c.center.x - 312.0).abs() < 1.0 => Some(c.radius),
-        _ => None,
-    }).collect();
+    let inline_circles: Vec<_> =
+        shapes.iter().filter_map(|cs| if let egui::Shape::Circle(c) = &cs.shape { ((c.center.x - 312.0).abs() < 1.0).then_some(c.radius) } else { None }).collect();
     assert_eq!(inline_circles, vec![8.0]);
 
-    let help_circles: Vec<_> = shapes.iter().filter_map(|cs| match &cs.shape {
-        egui::Shape::Circle(c) if (c.center.x - 357.0).abs() < 1.0 => Some(c.radius),
-        _ => None,
-    }).collect();
+    let help_circles: Vec<_> =
+        shapes.iter().filter_map(|cs| if let egui::Shape::Circle(c) = &cs.shape { ((c.center.x - 357.0).abs() < 1.0).then_some(c.radius) } else { None }).collect();
     assert!(help_circles.iter().all(|&r| (r - 7.0).abs() < 0.01));
 
-    let badge_rect = shapes.iter().find_map(|cs| match &cs.shape {
-        egui::Shape::Rect(r) if r.fill == theme.control_accent() && (r.rect.width() - 16.0).abs() < 1.5 => Some(r.rect),
-        _ => None,
-    }).expect("MacPopUpButton accent badge rect");
-    let popup_text_clip = shapes.iter().find_map(|cs| match &cs.shape {
-        egui::Shape::Text(t) if t.galley.job.text.contains("1080p") => Some(cs.clip_rect),
-        _ => None,
-    }).expect("MacPopUpButton text shape");
+    let badge_rect = shapes
+        .iter()
+        .find_map(|cs| if let egui::Shape::Rect(r) = &cs.shape { (r.fill == theme.control_accent() && (r.rect.width() - 16.0).abs() < 1.5).then_some(r.rect) } else { None })
+        .expect("MacPopUpButton accent badge rect");
+    let popup_text_clip = shapes
+        .iter()
+        .find_map(|cs| if let egui::Shape::Text(t) = &cs.shape { t.galley.job.text.contains("1080p").then_some(cs.clip_rect) } else { None })
+        .expect("MacPopUpButton text shape");
     assert!(popup_text_clip.max.x <= badge_rect.min.x);
 }
 
@@ -338,16 +480,15 @@ fn test_v067_mac_box_automatic_vibrancy_on_child_controls() {
     for appearance in [MacAppearance::Aqua, MacAppearance::DarkAqua, MacAppearance::Anthracite] {
         let theme = MacTheme::new(appearance);
         let (mut disc_win, mut disc_box, mut chk_box) = (true, true, false);
-
+        let (mut win_btn_rect, mut box_btn_rect) = (Rect::NOTHING, Rect::NOTHING);
         let shapes = run_pass(&ctx, RawInput::default(), |ui| {
             MacLabel::new("WinSec").theme(&theme).color(MacLabelColor::Secondary).show(ui);
-            MacInlineActionButton::new("+").theme(&theme).show(ui);
+            win_btn_rect = MacInlineActionButton::new("+").theme(&theme).show(ui).rect;
             MacDisclosureGroup::new("d_win", "WinDisc", &mut disc_win).theme(&theme).with_trailing_add_button(true).show(ui, |_| {});
-
             MacBox::new("BoxContainer").theme(&theme).show(ui, |b_ui| {
                 assert_eq!(theme.active_surface(b_ui), theme.box_background());
                 MacLabel::new("BoxSec").theme(&theme).color(MacLabelColor::Secondary).show(b_ui);
-                MacInlineActionButton::new("-").theme(&theme).show(b_ui);
+                box_btn_rect = MacInlineActionButton::new("-").theme(&theme).show(b_ui).rect;
                 MacCheckbox::new(&mut chk_box, "BoxChk").theme(&theme).enabled(false).show(b_ui);
                 MacDisclosureGroup::new("d_box", "BoxDisc", &mut disc_box).theme(&theme).with_trailing_add_button(true).show(b_ui, |_| {});
                 egui_macview::MacStackView::vertical().theme(&theme).show(b_ui, |stack| {
@@ -359,12 +500,25 @@ fn test_v067_mac_box_automatic_vibrancy_on_child_controls() {
             });
             assert_eq!(theme.active_surface(ui), theme.window_background());
         });
-
         let mut texts = Vec::new();
-        for cs in &shapes { collect_text_shapes(&cs.shape, &mut texts); }
+        for cs in &shapes {
+            collect_text_shapes(&cs.shape, &mut texts);
+        }
         let color_of = |label: &str| texts.iter().find(|t| t.galley.text() == label).unwrap().galley.job.sections[0].format.color;
-
-        let (win_sec, box_sec, win_btn, box_btn, box_chk) = (color_of("WinSec"), color_of("BoxSec"), color_of("+"), color_of("-"), color_of("BoxChk"));
+        let line_color_in = |target: Rect| -> egui::Color32 {
+            fn find_in(s: &egui::Shape, r: Rect) -> Option<egui::Color32> {
+                match s {
+                    egui::Shape::LineSegment { points, stroke } => {
+                        r.expand(2.0).contains(points[0]).then_some(stroke.color)
+                    }
+                    egui::Shape::Vec(v) => v.iter().find_map(|x| find_in(x, r)),
+                    _ => None,
+                }
+            }
+            shapes.iter().find_map(|cs| find_in(&cs.shape, target)).expect("vector crosshair line stroke")
+        };
+        let (win_sec, box_sec, win_btn, box_btn, box_chk) =
+            (color_of("WinSec"), color_of("BoxSec"), line_color_in(win_btn_rect), line_color_in(box_btn_rect), color_of("BoxChk"));
         assert_eq!((win_sec, box_sec), (theme.secondary_label_on(theme.window_background()), theme.secondary_label_on(theme.box_background())));
         assert_eq!((win_btn, box_btn), (theme.secondary_label_on(theme.window_background()), theme.secondary_label_on(theme.box_background())));
         assert_eq!(color_of("BoxStackHdr"), theme.secondary_label_on(theme.box_background()));
@@ -374,81 +528,5 @@ fn test_v067_mac_box_automatic_vibrancy_on_child_controls() {
     let (aqua, dark) = (MacTheme::new(MacAppearance::Aqua), MacTheme::new(MacAppearance::DarkAqua));
     aqua.apply_to_egui(&ctx);
     let _ = run_pass(&ctx, RawInput::default(), |ui| assert_eq!(dark.active_surface(ui), dark.window_background()));
-}
-
-#[test]
-fn test_v068_flat_nib_fixed_rect_peer_surface_vibrancy() {
-    let ctx = Context::default();
-    let box_rect = Rect::from_min_size(Pos2::new(20.0, 80.0), Vec2::new(240.0, 120.0));
-    let inside_lbl_rect = Rect::from_min_size(Pos2::new(32.0, 108.0), Vec2::new(120.0, 16.0));
-    let overhang_lbl_rect = Rect::from_min_size(Pos2::new(220.0, 108.0), Vec2::new(140.0, 16.0));
-    let overhang_chk_rect = Rect::from_min_size(Pos2::new(220.0, 132.0), Vec2::new(160.0, 18.0));
-    let inside_btn_rect = Rect::from_min_size(Pos2::new(200.0, 108.0), Vec2::new(16.0, 16.0));
-    let outside_lbl_rect = Rect::from_min_size(Pos2::new(20.0, 20.0), Vec2::new(120.0, 16.0));
-
-    for appearance in [MacAppearance::Aqua, MacAppearance::DarkAqua, MacAppearance::Anthracite] {
-        let theme = MacTheme::new(appearance);
-        let mut chk_disabled = false;
-
-        let shapes_a = run_pass(&ctx, RawInput::default(), |ui| {
-            MacLabel::new("OutsideNibLbl").theme(&theme).color(MacLabelColor::Secondary).fixed_rect(outside_lbl_rect).show(ui);
-            MacBox::new("FlatPaintAtBox").theme(&theme).paint_at(ui, box_rect);
-            assert_eq!(theme.active_surface_at(ui, inside_lbl_rect.center()), theme.box_background());
-            assert_eq!(theme.active_surface_at(ui, outside_lbl_rect.center()), theme.window_background());
-            MacLabel::new("FlatNibLabelA").theme(&theme).color(MacLabelColor::Secondary).fixed_rect(overhang_lbl_rect).show(ui);
-            MacCheckbox::new(&mut chk_disabled, "FlatNibChkA").theme(&theme).enabled(false).fixed_rect(overhang_chk_rect).show(ui);
-            MacInlineActionButton::new("+").theme(&theme).fixed_rect(inside_btn_rect).show(ui);
-        });
-        let shapes_b = run_pass(&ctx, RawInput::default(), |ui| {
-            egui_macview::MacCard::new().theme(&theme).fill(theme.window_background()).show(ui, Rect::from_min_size(Pos2::ZERO, Vec2::new(400.0, 300.0)), |c_ui, _| {
-                MacBox::new("FlatShowBox").theme(&theme).fixed_rect(box_rect).show(c_ui, |_| {});
-                MacLabel::new("FlatNibLabelB").theme(&theme).color(MacLabelColor::Secondary).fixed_rect(inside_lbl_rect).show(c_ui);
-            });
-        });
-
-        let (mut texts_a, mut texts_b) = (Vec::new(), Vec::new());
-        for cs in &shapes_a { collect_text_shapes(&cs.shape, &mut texts_a); }
-        for cs in &shapes_b { collect_text_shapes(&cs.shape, &mut texts_b); }
-        let color_a = |lbl: &str| texts_a.iter().find(|t| t.galley.text() == lbl).unwrap().galley.job.sections[0].format.color;
-        let color_b = |lbl: &str| texts_b.iter().find(|t| t.galley.text() == lbl).unwrap().galley.job.sections[0].format.color;
-
-        let (expected_box_sec, expected_win_sec) = (theme.secondary_label_on(theme.box_background()), theme.secondary_label_on(theme.window_background()));
-        assert_eq!((color_a("OutsideNibLbl"), color_a("FlatNibLabelA"), color_a("+")), (expected_win_sec, expected_box_sec, expected_box_sec));
-        assert_eq!((color_a("FlatNibChkA"), color_b("FlatNibLabelB")), (theme.tertiary_label_on(theme.box_background()), expected_box_sec));
-    }
-    let (aqua, ctx_a, ctx_b) = (MacTheme::new(MacAppearance::Aqua), Context::default(), Context::default());
-    let _ = run_pass(&ctx, RawInput::default(), |ui| assert_eq!(aqua.active_surface_at(ui, inside_lbl_rect.center()), aqua.window_background()));
-    let _ = run_pass(&ctx_a, RawInput::default(), |ui| {
-        MacBox::new("Outer").theme(&aqua).paint_at(ui, box_rect);
-        egui_macview::MacCard::new().theme(&aqua).fill(Color32::from_rgb(12, 34, 56)).show(ui, inside_lbl_rect, |c_ui, _| {
-            assert_eq!(aqua.active_surface(c_ui), Color32::from_rgb(12, 34, 56));
-        });
-        assert_eq!(aqua.active_surface_at(ui, inside_lbl_rect.center()), Color32::from_rgb(12, 34, 56));
-        assert_eq!(aqua.active_surface_at(ui, inside_btn_rect.center()), aqua.box_background());
-        for idx in 0..35 {
-            aqua.register_surface_rect(ui.ctx(), box_rect, Color32::from_rgb(idx as u8, 20, 30));
-        }
-        assert_eq!(aqua.active_surface_at(ui, inside_lbl_rect.center()), Color32::from_rgb(34, 20, 30));
-    });
-    let _ = run_pass(&ctx_b, RawInput::default(), |ui| assert_eq!(aqua.active_surface_at(ui, inside_lbl_rect.center()), aqua.window_background()));
-
-    let (r, mut chk, mut pop, mut disc, mut in_s, mut cb_s) = (Rect::from_min_size(Pos2::new(10.0, 20.0), Vec2::new(100.0, 26.0)), false, 0usize, false, "x".to_string(), "A".to_string());
-    let clamped = aqua.clamp_nib_visual_rect(r, 20.0, 2.0);
-    assert!((aqua.baseline_text_y(r, 15.0, 12.5, 2.0) - 22.5).abs() < 1e-4 && (clamped.height() - 20.0).abs() < 1e-4 && (clamped.center().y - r.center().y).abs() < 1e-4);
-    for press in [true, false] {
-        run_pass(&ctx_b, click_at(Pos2::new(30.0, 30.0), press), |ui| {
-            ui.add_enabled_ui(false, |d_ui| {
-                MacCheckbox::new(&mut chk, "DisChk").theme(&aqua).fixed_rect(Rect::from_min_size(Pos2::new(10.0, 20.0), Vec2::new(80.0, 20.0))).show(d_ui);
-                MacPopUpButton::new(&mut pop, &["A", "B"]).theme(&aqua).show(d_ui);
-                MacInputCell::new("dis_in", &mut in_s).theme(&aqua).show(d_ui);
-                MacComboBox::new("dis_cb", &mut cb_s, &["A", "B"]).theme(&aqua).show(d_ui);
-                MacHelpButton::new().theme(&aqua).show(d_ui);
-                MacInlineActionButton::new("+").theme(&aqua).show(d_ui);
-                d_ui.add(MacButtonCell::new("DisBtn").theme(&aqua));
-                MacDisclosureGroup::new("dis_d", "DisDisc", &mut disc).theme(&aqua).show(d_ui, |_| {});
-            });
-        });
-    }
-    assert!(!chk && pop == 0 && !disc);
 }
 

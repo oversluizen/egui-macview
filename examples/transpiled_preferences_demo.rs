@@ -64,12 +64,10 @@ impl SettingsNibGSAppearancePreferencesState {
                         h.label("Text View width:");
                         MacInputCell::with_id(Id::NULL.with("_NS:67"), &mut self.text_view_width).theme(theme).width(90.0).show(h);
                     });
-                    sec_ui.add_space(2.0);
                     sec_ui.horizontal(|h| {
                         h.label("Handle size:");
                         MacPopUpButton::new(&mut self.handle_size, &["Small", "Normal", "Large"]).theme(theme).width(110.0).show(h);
                     });
-                    sec_ui.add_space(2.0);
                     sec_ui.horizontal(|h| {
                         h.label("Info box size:");
                         MacPopUpButton::new(&mut self.info_box_size, &["Small", "Normal", "Large", "Extra Large"])
@@ -77,7 +75,6 @@ impl SettingsNibGSAppearancePreferencesState {
                             .width(110.0)
                             .show(h);
                     });
-                    sec_ui.add_space(4.0);
                     sec_ui.horizontal(|h| {
                         h.add(MacToggle::new(&mut self.display_mark_cloud).theme(theme));
                         h.label("Display mark cloud");
@@ -130,11 +127,9 @@ impl SettingsNibPanelViewStrokeSettingsState {
                     sec_ui.horizontal(|h| {
                         h.label("Width:");
                         MacInputCell::with_id(Id::NULL.with("w"), &mut self.w).theme(theme).width(60.0).show(h);
-                        h.add_space(8.0);
                         h.label("Height:");
                         MacInputCell::with_id(Id::NULL.with("h"), &mut self.h).theme(theme).width(60.0).show(h);
                     });
-                    sec_ui.add_space(4.0);
                     sec_ui.horizontal(|h| {
                         h.label("Align:");
                         MacSegmentedControl::new(&["Left", "Center", "Right"], self.selected_segment_2)
@@ -150,14 +145,12 @@ impl SettingsNibPanelViewStrokeSettingsState {
                             .theme(theme)
                             .show(h, |idx| self.selected_segment_7 = idx);
                     });
-                    sec_ui.add_space(4.0);
                     sec_ui.horizontal(|h| {
                         h.label("Join:");
                         MacSegmentedControl::new(&["Bevel", "Round", "Miter"], self.selected_segment_13)
                             .theme(theme)
                             .show(h, |idx| self.selected_segment_13 = idx);
                     });
-                    sec_ui.add_space(4.0);
                     sec_ui.horizontal(|h| {
                         h.label("Dash Ratio:");
                         MacInputCell::with_id(Id::NULL.with("_NS:38"), &mut self.input_6).theme(theme).width(60.0).show(h);

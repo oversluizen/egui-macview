@@ -2,7 +2,7 @@
 
 use crate::scene::constraints::ValueTransformer;
 use crate::scene::ir::{CustomClassMapper, NodeId, SceneNode, SceneNodeKind, VisibilityRule};
-use crate::scene::nib_ibtool::{parse_brace_rect, IbDecodeState, IbNibGraph, IbVal};
+use crate::scene::nib_ibtool::{IbDecodeState, IbNibGraph, IbVal};
 use crate::scene::nib_varint::decode_cflags_control_size;
 use std::collections::BTreeMap;
 
@@ -18,13 +18,9 @@ pub(crate) fn build_ibtool_node(st: &mut IbDecodeState<'_>, obj_i: usize, nid: N
     let ib_id = ["NSReuseIdentifierKey", "NSUserInterfaceItemIdentifier", "NSIdentifier", "NSID"]
         .into_iter()
         .find_map(|k| g.prop_val(obj_i, k).and_then(|v| g.resolve_str(v)))
-        .or_else(|| rattrs.and_then(|m| m.get("ibId")).cloned())
         .unwrap_or_else(|| format!("nib-{obj_i}"));
 
     let mut frame = g.resolve_rect(obj_i).unwrap_or([0.0, 0.0, 120.0, 22.0]);
-    if let Some(df) = rattrs.and_then(|m| m.get("ibDesignFrame")).and_then(|s| parse_brace_rect(s)) {
-        frame = df;
-    }
     let mask = g.prop_val(obj_i, "NSvFlags").and_then(IbVal::as_u32).map(|v| (v & 0x3F) as u8).unwrap_or(0);
     let cell_idx = g.prop_val(obj_i, "NSCell").and_then(IbVal::as_obj_ref);
     let title_cell_idx = cell_idx.or_else(|| g.prop_val(obj_i, "NSTitleCell").and_then(IbVal::as_obj_ref));
@@ -32,7 +28,7 @@ pub(crate) fn build_ibtool_node(st: &mut IbDecodeState<'_>, obj_i: usize, nid: N
         .and_then(|c| g.prop_val(c, "NSContents").or_else(|| g.prop_val(c, "NSTitle")))
         .or_else(|| g.prop_val(obj_i, "NSTitle").or_else(|| g.prop_val(obj_i, "NSContents")))
         .and_then(|v| g.resolve_str(v))
-        .or_else(|| rattrs.and_then(|m| m.get("ibTitle")).cloned())
+        .or_else(|| rattrs.and_then(|m| m.get("title")).cloned())
         .unwrap_or_default();
 
     let cflags = cell_idx.and_then(|c| g.prop_val(c, "NSCellFlags")).and_then(IbVal::as_u32).unwrap_or(0);
@@ -42,22 +38,26 @@ pub(crate) fn build_ibtool_node(st: &mut IbDecodeState<'_>, obj_i: usize, nid: N
         .and_then(|c| g.prop_val(c, "NSControlSize").or_else(|| g.prop_val(c, "NSControlSize2")))
         .or_else(|| g.prop_val(obj_i, "NSControlSize").or_else(|| g.prop_val(obj_i, "NSControlSize2")))
         .and_then(IbVal::as_u32);
-    let control_size = rattrs
-        .and_then(|m| m.get("ibSize"))
-        .map(String::as_str)
-        .unwrap_or_else(|| match ctrl_sz_code {
-            Some(0) => "regular",
-            Some(1) => "small",
-            Some(2) => "mini",
-            Some(3) => "large",
-            _ if ((cflags2 >> 26) & 0x07) == 1 || ((cflags >> 18) & 0x07) == 1 || pi_sz == 1 => "small",
-            _ if ((cflags2 >> 26) & 0x07) == 2 || ((cflags >> 18) & 0x07) == 2 || pi_sz == 2 => "mini",
-            _ => decode_cflags_control_size(cflags),
-        })
-        .to_string();
+    let control_size = match ctrl_sz_code {
+        Some(0) => "regular",
+        Some(1) => "small",
+        Some(2) => "mini",
+        Some(3) => "large",
+        _ if ((cflags2 >> 26) & 0x07) == 1 || ((cflags >> 18) & 0x07) == 1 || pi_sz == 1 => "small",
+        _ if ((cflags2 >> 26) & 0x07) == 2 || ((cflags >> 18) & 0x07) == 2 || pi_sz == 2 => "mini",
+        _ => decode_cflags_control_size(cflags),
+    }
+    .to_string();
 
-    let (kind, icon_name) = decode_ibtool_text_and_list_kind(g, obj_i, cell_idx, base_cls, effective_cls, &mut title, cflags, rattrs, st.mapper)
-        .unwrap_or_else(|| decode_ibtool_button_and_value_kind(g, obj_i, cell_idx, base_cls, effective_cls, &mut title, rattrs, st.mapper));
+    let (kind, icon_name) =
+        decode_ibtool_text_and_list_kind(g, obj_i, cell_idx, base_cls, effective_cls, &mut title, cflags, rattrs, st.mapper)
+            .unwrap_or_else(|| {
+                decode_ibtool_button_and_value_kind(g, obj_i, cell_idx, base_cls, effective_cls, &mut title, rattrs, st.mapper)
+            });
+    if matches!(kind, SceneNodeKind::RuleEditor) && frame[3] < 10.0 {
+        let row_h = g.prop_val(obj_i, "NSRowHeight").and_then(|v| g.resolve_f64(v)).unwrap_or(25.0) as f32;
+        frame[3] = row_h * 4.0 + 18.0;
+    }
 
     SceneNode {
         id: nid,
@@ -66,7 +66,7 @@ pub(crate) fn build_ibtool_node(st: &mut IbDecodeState<'_>, obj_i: usize, nid: N
         children: vec![],
         kind,
         title,
-        tooltip: rattrs.and_then(|m| m.get("ibTip")).cloned().unwrap_or_default(),
+        tooltip: g.prop_val(obj_i, "NSToolTip").and_then(|v| g.resolve_str(v)).unwrap_or_default(),
         control_size,
         nib_frame: frame,
         alignment_rect: frame,
@@ -94,7 +94,10 @@ fn decode_ibtool_text_and_list_kind(
     rattrs: Option<&BTreeMap<String, String>>,
     mapper: &CustomClassMapper,
 ) -> Option<(SceneNodeKind, Option<String>)> {
-    let explicit_icon = rattrs.and_then(|m| m.get("ibIcon")).cloned();
+    let explicit_icon = cell_idx
+        .and_then(|c| g.prop_val(c, "NSImage").or_else(|| g.prop_val(c, "NSNormalImage")))
+        .or_else(|| g.prop_val(obj_i, "NSImage"))
+        .and_then(|v| g.resolve_str(v));
     if effective_cls.contains("SteppingTextField") || mapper.is_stepping_number_field(effective_cls) {
         let fmt_idx = cell_idx.and_then(|c| g.prop_val(c, "NSFormatter")).and_then(IbVal::as_obj_ref);
         let attr_dict = fmt_idx.and_then(|f| g.prop_val(f, "NS.attributes")).and_then(IbVal::as_obj_ref);
@@ -171,9 +174,8 @@ fn decode_ibtool_text_and_list_kind(
         return Some((SceneNodeKind::ComboBox { options }, explicit_icon));
     }
     if base_cls.contains("SegmentedControl") {
-        let seg_arr = cell_idx
-            .and_then(|c| g.prop_val(c, "NSSegmentItems").or_else(|| g.prop_val(c, "NSSegmentImages")))
-            .and_then(IbVal::as_obj_ref);
+        let seg_arr =
+            cell_idx.and_then(|c| g.prop_val(c, "NSSegmentItems").or_else(|| g.prop_val(c, "NSSegmentImages"))).and_then(IbVal::as_obj_ref);
         let segments: Vec<String> = seg_arr
             .map(|a| g.resolve_array_refs(a))
             .unwrap_or_default()
@@ -205,7 +207,10 @@ fn decode_ibtool_button_and_value_kind(
     rattrs: Option<&BTreeMap<String, String>>,
     mapper: &CustomClassMapper,
 ) -> (SceneNodeKind, Option<String>) {
-    let explicit_icon = rattrs.and_then(|m| m.get("ibIcon")).cloned();
+    let explicit_icon = cell_idx
+        .and_then(|c| g.prop_val(c, "NSImage"))
+        .or_else(|| g.prop_val(obj_i, "NSImage"))
+        .and_then(|v| g.resolve_str(v));
     if base_cls.contains("Button") {
         if effective_cls.contains("InlineActionButton") || mapper.is_inline_button(effective_cls) {
             return (SceneNodeKind::InlineActionButton, explicit_icon);
@@ -214,11 +219,14 @@ fn decode_ibtool_button_and_value_kind(
         let btn_flags2 = cell_idx.and_then(|c| g.prop_val(c, "NSButtonFlags2")).and_then(IbVal::as_u32).unwrap_or(0);
         let bezel = cell_idx.and_then(|c| g.prop_val(c, "NSBezelStyle")).and_then(IbVal::as_u32).unwrap_or(btn_flags2 & 0x1F);
         let norm_img = cell_idx
-            .and_then(|c| g.prop_val(c, "NSNormalImage").or_else(|| g.prop_val(c, "NSOnImage")).or_else(|| g.prop_val(c, "NSAlternateImage")))
+            .and_then(|c| {
+                g.prop_val(c, "NSNormalImage").or_else(|| g.prop_val(c, "NSOnImage")).or_else(|| g.prop_val(c, "NSAlternateImage"))
+            })
             .and_then(|v| g.resolve_str(v))
             .unwrap_or_default();
-        let has_mixed =
-            cell_idx.and_then(|c| g.prop_val(c, "NSMixedImage")).is_some() || (cflags2 & 0x0100_0000) != 0 || (btn_flags2 & 0x1000_0000) != 0;
+        let has_mixed = cell_idx.and_then(|c| g.prop_val(c, "NSMixedImage")).is_some()
+            || (cflags2 & 0x0100_0000) != 0
+            || (btn_flags2 & 0x1000_0000) != 0;
         if bezel == 9 {
             if title.is_empty() {
                 *title = "?".into();
@@ -236,10 +244,7 @@ fn decode_ibtool_button_and_value_kind(
             return (SceneNodeKind::Checkbox, icon);
         }
         let key_equiv = cell_idx.and_then(|c| g.prop_val(c, "NSKeyEquivalent")).and_then(|v| g.resolve_str(v)).unwrap_or_default();
-        return (
-            SceneNodeKind::PushButton { is_default: key_equiv == "\r", is_cancel: key_equiv == "\u{1b}" },
-            explicit_icon,
-        );
+        return (SceneNodeKind::PushButton { is_default: key_equiv == "\r", is_cancel: key_equiv == "\u{1b}" }, explicit_icon);
     }
     if base_cls.contains("Slider") || base_cls.contains("LevelIndicator") || base_cls.contains("ProgressIndicator") {
         let min = cell_idx
@@ -255,7 +260,11 @@ fn decode_ibtool_button_and_value_kind(
                 if base_cls.contains("ProgressIndicator") {
                     1.0
                 } else if base_cls.contains("LevelIndicator") {
-                    if min < 0.0 { 0.0 } else { 5.0 }
+                    if min < 0.0 {
+                        0.0
+                    } else {
+                        5.0
+                    }
                 } else {
                     100.0
                 }
@@ -288,7 +297,10 @@ fn decode_ibtool_button_and_value_kind(
     }
     if base_cls.contains("DatePicker") {
         let dtype = cell_idx.and_then(|c| g.prop_val(c, "NSDatePickerType")).and_then(IbVal::as_u32).unwrap_or(0);
-        return (SceneNodeKind::DatePicker { clock_and_calendar: explicit_icon.as_deref() == Some("clockAndCalendar") || dtype != 0 }, None);
+        return (
+            SceneNodeKind::DatePicker { clock_and_calendar: explicit_icon.as_deref() == Some("clockAndCalendar") || dtype != 0 },
+            None,
+        );
     }
     if base_cls.contains("RuleEditor") {
         return (SceneNodeKind::RuleEditor, explicit_icon);

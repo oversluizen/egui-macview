@@ -5,6 +5,8 @@ use crate::scene::constraints::{CompiledConstraintSchedule, ConstraintAttr, Cons
 use crate::scene::ir::{ActionId, BindingId, MacSceneIR, NodeId, SceneCompileError, SceneNode, SceneNodeKind, VisibilityRule};
 use std::collections::BTreeMap;
 
+pub use crate::scene::StringsCatalog;
+
 /// Strips Cocoa controller prefixes (`arrangedObjects.`, `selection.`, `values.`) (`REQ-013-02C` §3.1.3).
 pub fn flatten_controller_key_path(raw: &str) -> String {
     for prefix in ["arrangedObjects.", "selection.", "values."] {
@@ -13,78 +15,6 @@ pub fn flatten_controller_key_path(raw: &str) -> String {
         }
     }
     raw.to_string()
-}
-
-/// Apple `<NibName>.strings` localization catalog (`"ObjectID.property" = "Localized";`).
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct StringsCatalog {
-    entries: BTreeMap<(String, String), String>,
-}
-
-impl StringsCatalog {
-    /// Parses an Apple `.strings` text file (`/* comments */` and `"ObjectID.prop" = "Value";` lines).
-    pub fn from_str(source: &str) -> Result<Self, SceneCompileError> {
-        let mut entries = BTreeMap::new();
-        for raw_line in source.lines() {
-            let line = raw_line.trim();
-            if line.is_empty() || line.starts_with("/*") || line.starts_with("//") {
-                continue;
-            }
-            let Some((lhs, rhs)) = line.split_once('=') else {
-                continue;
-            };
-            let key = unquote_strings_token(lhs.trim());
-            let val = unquote_strings_token(rhs.trim().trim_end_matches(';').trim());
-            if let Some((obj_id, prop)) = key.split_once('.') {
-                entries.insert((obj_id.to_string(), prop.to_string()), val);
-            }
-        }
-        Ok(Self { entries })
-    }
-
-    /// Parses either a binary/XML `plist` `.strings` file or a UTF-8 text `.strings` file.
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, SceneCompileError> {
-        if let Ok(plist::Value::Dictionary(dict)) = plist::from_bytes::<plist::Value>(bytes) {
-            let mut entries = BTreeMap::new();
-            for (k, v) in dict {
-                if let (Some((obj_id, prop)), Some(s)) = (k.split_once('.'), v.as_string()) {
-                    entries.insert((obj_id.to_string(), prop.to_string()), s.to_string());
-                }
-            }
-            return Ok(Self { entries });
-        }
-        let text = std::str::from_utf8(bytes).map_err(|e| SceneCompileError(format!("Invalid UTF-8 in .strings: {e}")))?;
-        Self::from_str(text)
-    }
-
-    /// Looks up a localized property for `(ib_object_id, property)`.
-    pub fn get(&self, ib_object_id: &str, property: &str) -> Option<&str> {
-        self.entries.get(&(ib_object_id.to_string(), property.to_string())).map(String::as_str)
-    }
-}
-
-fn unquote_strings_token(s: &str) -> String {
-    let trimmed = s.trim();
-    if trimmed.len() >= 2 && trimmed.starts_with('"') && trimmed.ends_with('"') {
-        trimmed[1..trimmed.len() - 1].replace("\\\"", "\"").replace("\\n", "\n")
-    } else {
-        trimmed.to_string()
-    }
-}
-
-impl MacSceneIR {
-    /// Applies a localized [`StringsCatalog`] to all matching nodes in $O(N)$ time and rebuilds [`MacSceneIR::rebuild_search_index`].
-    pub fn apply_strings_catalog(&mut self, catalog: &StringsCatalog) {
-        for node in &mut self.nodes {
-            if let Some(title) = catalog.get(&node.ib_object_id, "title") {
-                node.title = title.to_string();
-            }
-            if let Some(tip) = catalog.get(&node.ib_object_id, "ibShadowedToolTip") {
-                node.tooltip = tip.to_string();
-            }
-        }
-        self.rebuild_search_index();
-    }
 }
 
 /// Xcode Interface Builder XML `.xib` importer powered by `roxmltree` (`REQ-013-01` §2.3).
@@ -124,7 +54,8 @@ impl XibXmlFrontend {
             let tag = elem.tag_name().name();
             if tag == "view" && elem.attribute("key") == Some("contentView") {
                 if elem.parent().map(|p| p.has_tag_name("window")).unwrap_or(false) {
-                    let is_flipped = elem.attribute("flipped") == Some("YES") || find_runtime_attr(elem, "ibFlipped").as_deref() == Some("YES");
+                    let is_flipped =
+                        elem.attribute("flipped") == Some("YES") || find_runtime_attr(elem, "ibFlipped").as_deref() == Some("YES");
                     nodes[0].kind = SceneNodeKind::Container { is_flipped };
                     if let Some(w_title) = elem.parent().and_then(|p| p.attribute("title")) {
                         nodes[0].title = w_title.to_string();
@@ -153,7 +84,7 @@ impl XibXmlFrontend {
                 .and_then(|c| c.attribute("title"))
                 .or_else(|| elem.attribute("title"))
                 .map(str::to_string)
-                .or_else(|| find_runtime_attr(elem, "ibTitle"))
+                .or_else(|| find_runtime_attr(elem, "title"))
                 .unwrap_or_default();
             if matches!(kind, SceneNodeKind::HelpButton) && title.is_empty() {
                 title = "?".to_string();
@@ -161,10 +92,13 @@ impl XibXmlFrontend {
             let control_size = cell
                 .and_then(|c| c.attribute("controlSize"))
                 .or_else(|| elem.attribute("controlSize"))
-                .map(str::to_string)
-                .or_else(|| find_runtime_attr(elem, "ibSize"))
-                .unwrap_or_else(|| "regular".to_string());
-            let tooltip = elem.attribute("toolTip").unwrap_or("").to_string();
+                .unwrap_or("regular")
+                .to_string();
+            let tooltip = elem
+                .attribute("toolTip")
+                .or_else(|| cell.and_then(|c| c.attribute("toolTip")))
+                .unwrap_or("")
+                .to_string();
             let mask = parse_xib_autoresizing(elem);
             let enabled = elem.attribute("enabled") != Some("NO");
             let icon_meta = extract_xib_icon_meta(elem, cell, &kind);
@@ -208,6 +142,12 @@ impl XibXmlFrontend {
                     }
                 }
             }
+            let mut visibility = VisibilityRule::Always;
+            if let Some((tv_id, tab_index, tv_offset)) = find_enclosing_tab_item(elem, &ib_to_node, &nodes) {
+                visibility = VisibilityRule::WhenTabSelected { tab_view: tv_id, tab_index };
+                rect[0] += tv_offset[0];
+                rect[1] += tv_offset[1];
+            }
             let id = NodeId(next_id);
             next_id += 1;
             ib_to_node.insert(ib_id.clone(), id);
@@ -233,7 +173,7 @@ impl XibXmlFrontend {
                 action,
                 action_selector,
                 icon_name: icon_meta,
-                visibility: VisibilityRule::Always,
+                visibility,
                 labeled_by: None,
             });
         }
@@ -261,27 +201,56 @@ fn find_enclosing_parent_node(elem: roxmltree::Node<'_, '_>, ib_to_node: &BTreeM
     std::iter::successors(elem.parent(), |p| p.parent()).find_map(|p| p.attribute("id").and_then(|id_str| ib_to_node.get(id_str)).copied())
 }
 
+fn find_enclosing_tab_item(
+    elem: roxmltree::Node<'_, '_>,
+    ib_to_node: &BTreeMap<String, NodeId>,
+    nodes: &[SceneNode],
+) -> Option<(NodeId, usize, [f32; 2])> {
+    let tvi = std::iter::successors(elem.parent(), |p| p.parent()).find(|p| p.has_tag_name("tabViewItem"))?;
+    let tv = std::iter::successors(tvi.parent(), |p| p.parent()).find(|p| p.has_tag_name("tabView"))?;
+    let tv_id = tv.attribute("id").and_then(|id_str| ib_to_node.get(id_str)).copied()?;
+    let tab_index = tv.descendants().filter(|d| d.has_tag_name("tabViewItem")).position(|d| d == tvi).unwrap_or(0);
+    let tv_frame = nodes.iter().find(|n| n.id == tv_id).map(|n| n.nib_frame).unwrap_or([0.0; 4]);
+    let view_frame =
+        tvi.children().find(|c| c.has_tag_name("view")).and_then(find_child_rect).unwrap_or([0.0, 28.0, tv_frame[2], tv_frame[3]]);
+    Some((tv_id, tab_index, [tv_frame[0] + view_frame[0], tv_frame[1] + view_frame[1]]))
+}
+
 fn extract_xib_icon_meta(elem: roxmltree::Node<'_, '_>, cell: Option<roxmltree::Node<'_, '_>>, kind: &SceneNodeKind) -> Option<String> {
-    if let Some(ic) = find_runtime_attr(elem, "ibIcon") {
-        return Some(ic);
-    }
     if let Some(img) = cell.and_then(|c| c.attribute("image")).or_else(|| elem.attribute("image")) {
         return Some(img.to_string());
     }
     match kind {
         SceneNodeKind::Label => {
-            let mfont = cell.and_then(|c| c.children().find(|ch| ch.has_tag_name("font"))).and_then(|f| f.attribute("metaFont")).unwrap_or("");
-            let w_fallback = if mfont.contains("Semibold") { "semibold" } else if mfont.contains("Bold") { "bold" } else if mfont.contains("Medium") { "medium" } else { "regular" };
+            let mfont =
+                cell.and_then(|c| c.children().find(|ch| ch.has_tag_name("font"))).and_then(|f| f.attribute("metaFont")).unwrap_or("");
+            let w_fallback = if mfont.contains("Semibold") {
+                "semibold"
+            } else if mfont.contains("Bold") {
+                "bold"
+            } else if mfont.contains("Medium") {
+                "medium"
+            } else {
+                "regular"
+            };
             let w = elem.attribute("fontWeight").unwrap_or(w_fallback);
-            let cname = cell.and_then(|c| c.children().find(|ch| ch.has_tag_name("color"))).and_then(|cl| cl.attribute("name")).unwrap_or("");
-            let c_fallback = if cname.contains("secondary") { "secondary" } else if cname.contains("tertiary") { "tertiary" } else { "primary" };
+            let cname =
+                cell.and_then(|c| c.children().find(|ch| ch.has_tag_name("color"))).and_then(|cl| cl.attribute("name")).unwrap_or("");
+            let c_fallback = if cname.contains("secondary") {
+                "secondary"
+            } else if cname.contains("tertiary") {
+                "tertiary"
+            } else {
+                "primary"
+            };
             let c = elem.attribute("textColor").unwrap_or(c_fallback);
             (w != "regular" || c != "primary").then(|| format!("NSLabel:{w}:{c}"))
         }
         SceneNodeKind::Checkbox => {
             if elem.attribute("bezelStyle") == Some("disclosure") || cell.and_then(|c| c.attribute("bezelStyle")) == Some("disclosure") {
                 Some("NSDisclosureButton".into())
-            } else if elem.attribute("allowsMixedState") == Some("YES") || cell.and_then(|c| c.attribute("allowsMixedState")) == Some("YES") {
+            } else if elem.attribute("allowsMixedState") == Some("YES") || cell.and_then(|c| c.attribute("allowsMixedState")) == Some("YES")
+            {
                 Some("NSMixedCheckbox".into())
             } else {
                 None
@@ -314,9 +283,20 @@ fn classify_xib_element(elem: roxmltree::Node<'_, '_>, tag: &str) -> Option<Scen
         "textField" => {
             if elem.attribute("customClass").is_some_and(|c| c.contains("SteppingTextField") || c.contains("NumberField")) {
                 let nf = cell.and_then(|c| c.children().find(|ch| ch.has_tag_name("numberFormatter")));
-                let real_val = |k: &str| nf.and_then(|f| f.children().find(|r| r.has_tag_name("real") && r.attribute("key") == Some(k))).and_then(|r| r.attribute("value"));
-                let min = elem.attribute("minValue").or_else(|| nf.and_then(|f| f.attribute("minimum"))).or_else(|| real_val("minimum")).and_then(|s| s.parse::<f64>().ok());
-                let max = elem.attribute("maxValue").or_else(|| nf.and_then(|f| f.attribute("maximum"))).or_else(|| real_val("maximum")).and_then(|s| s.parse::<f64>().ok());
+                let real_val = |k: &str| {
+                    nf.and_then(|f| f.children().find(|r| r.has_tag_name("real") && r.attribute("key") == Some(k)))
+                        .and_then(|r| r.attribute("value"))
+                };
+                let min = elem
+                    .attribute("minValue")
+                    .or_else(|| nf.and_then(|f| f.attribute("minimum")))
+                    .or_else(|| real_val("minimum"))
+                    .and_then(|s| s.parse::<f64>().ok());
+                let max = elem
+                    .attribute("maxValue")
+                    .or_else(|| nf.and_then(|f| f.attribute("maximum")))
+                    .or_else(|| real_val("maximum"))
+                    .and_then(|s| s.parse::<f64>().ok());
                 let step = elem.attribute("step").and_then(|s| s.parse::<f64>().ok()).unwrap_or(1.0);
                 let shift_step = elem.attribute("shiftStep").and_then(|s| s.parse::<f64>().ok()).unwrap_or(10.0);
                 return Some(SceneNodeKind::NumberField { min, max, step, shift_step });
@@ -468,66 +448,44 @@ fn parse_xib_constraints(doc: &roxmltree::Document<'_>, ib_to_node: &BTreeMap<St
     for c in doc.descendants().filter(|d| d.has_tag_name("constraint")) {
         let first_item = c.attribute("firstItem").and_then(|id| ib_to_node.get(id).copied());
         let second_item = c.attribute("secondItem").and_then(|id| ib_to_node.get(id).copied());
-        let first_attr = parse_attr_name(c.attribute("firstAttribute").unwrap_or(""));
-        let second_attr = parse_attr_name(c.attribute("secondAttribute").unwrap_or(""));
+        let (first_attr, second_attr) = (parse_attr_name(c.attribute("firstAttribute").unwrap_or("")), parse_attr_name(c.attribute("secondAttribute").unwrap_or("")));
         let constant = c.attribute("constant").and_then(|s| s.parse::<f32>().ok()).unwrap_or(0.0);
         if first_item.is_some() && first_attr != ConstraintAttr::NotAnAttribute {
-            specs.push(LayoutConstraintSpec {
-                first_item,
-                first_attr,
-                relation: ConstraintRelation::Equal,
-                second_item,
-                second_attr,
-                multiplier: 1.0,
-                constant,
-                priority: 1000,
-            });
+            specs.push(LayoutConstraintSpec { first_item, first_attr, relation: ConstraintRelation::Equal, second_item, second_attr, multiplier: 1.0, constant, priority: 1000 });
         }
     }
     CompiledConstraintSchedule::compile(specs)
 }
 
 fn parse_attr_name(s: &str) -> ConstraintAttr {
-    match s {
-        "leading" => ConstraintAttr::Leading,
-        "left" => ConstraintAttr::Left,
-        "trailing" => ConstraintAttr::Trailing,
-        "right" => ConstraintAttr::Right,
-        "top" => ConstraintAttr::Top,
-        "bottom" => ConstraintAttr::Bottom,
-        "width" => ConstraintAttr::Width,
-        "height" => ConstraintAttr::Height,
-        "centerX" => ConstraintAttr::CenterX,
-        "centerY" => ConstraintAttr::CenterY,
-        "firstBaseline" => ConstraintAttr::FirstBaseline,
-        "baseline" | "lastBaseline" => ConstraintAttr::LastBaseline,
-        _ => ConstraintAttr::NotAnAttribute,
-    }
+    [
+        ("leading", ConstraintAttr::Leading),
+        ("left", ConstraintAttr::Left),
+        ("trailing", ConstraintAttr::Trailing),
+        ("right", ConstraintAttr::Right),
+        ("top", ConstraintAttr::Top),
+        ("bottom", ConstraintAttr::Bottom),
+        ("width", ConstraintAttr::Width),
+        ("height", ConstraintAttr::Height),
+        ("centerX", ConstraintAttr::CenterX),
+        ("centerY", ConstraintAttr::CenterY),
+        ("firstBaseline", ConstraintAttr::FirstBaseline),
+        ("baseline", ConstraintAttr::LastBaseline),
+        ("lastBaseline", ConstraintAttr::LastBaseline),
+    ]
+    .into_iter()
+    .find_map(|(k, v)| (k == s).then_some(v))
+    .unwrap_or(ConstraintAttr::NotAnAttribute)
 }
 
 fn find_child_rect(elem: roxmltree::Node<'_, '_>) -> Option<[f32; 4]> {
-    let r = elem
-        .children()
-        .find(|c| c.has_tag_name("rect") && c.attribute("key") == Some("frame"))
-        .or_else(|| elem.children().find(|c| c.has_tag_name("rect")))?;
-    Some([
-        r.attribute("x")?.parse().ok()?,
-        r.attribute("y")?.parse().ok()?,
-        r.attribute("width")?.parse().ok()?,
-        r.attribute("height")?.parse().ok()?,
-    ])
+    let r = elem.children().find(|c| c.has_tag_name("rect") && c.attribute("key") == Some("frame")).or_else(|| elem.children().find(|c| c.has_tag_name("rect")))?;
+    Some([r.attribute("x")?.parse().ok()?, r.attribute("y")?.parse().ok()?, r.attribute("width")?.parse().ok()?, r.attribute("height")?.parse().ok()?])
 }
 
 fn parse_xib_autoresizing(elem: roxmltree::Node<'_, '_>) -> u8 {
     let Some(am) = elem.children().find(|c| c.has_tag_name("autoresizingMask")) else { return 0 };
-    [
-        ("flexibleMinX", 0x01),
-        ("widthSizable", 0x02),
-        ("flexibleMaxX", 0x04),
-        ("flexibleMinY", 0x08),
-        ("heightSizable", 0x10),
-        ("flexibleMaxY", 0x20),
-    ]
-    .into_iter()
-    .fold(0u8, |acc, (k, bit)| if am.attribute(k) == Some("YES") { acc | bit } else { acc })
+    [("flexibleMinX", 0x01), ("widthSizable", 0x02), ("flexibleMaxX", 0x04), ("flexibleMinY", 0x08), ("heightSizable", 0x10), ("flexibleMaxY", 0x20)]
+        .into_iter()
+        .fold(0u8, |acc, (k, bit)| if am.attribute(k) == Some("YES") { acc | bit } else { acc })
 }

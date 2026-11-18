@@ -2,7 +2,7 @@
 
 use super::{CenterState, SYMBOLS_META};
 use crate::CardModel;
-use egui::{pos2, vec2, Align, Align2, Color32, CornerRadius, FontId, Layout, Rect, Sense, Stroke, StrokeKind, Ui, UiBuilder};
+use egui::{pos2, vec2, Align, Align2, CornerRadius, FontId, Layout, Rect, Sense, Stroke, StrokeKind, Ui, UiBuilder};
 use egui_macview::{theme::MacTheme, MacFixedView, MacRow, MacScrollView, MacToastManager};
 use std::cell::RefCell;
 
@@ -44,6 +44,11 @@ impl CenterState {
                             self.selected_symbol = *sym;
                             toasts.borrow_mut().info(format!("Selected {name} ({cp_hex})"));
                         }
+                        if resp.secondary_clicked() {
+                            self.selected_symbol = *sym;
+                            self.sym_menu_open = true;
+                            self.sym_menu_pos = resp.interact_pointer_pos().unwrap_or_else(|| rect.center());
+                        }
                         let p = grid_ui.painter_at(rect);
                         let bg = if is_selected {
                             self.symbol_tint.gamma_multiply(0.18)
@@ -83,6 +88,46 @@ impl CenterState {
                 });
             },
         );
+        let sym_items = [
+            egui_macview::NSMenuItem::action("Copy Symbol Name", "sym.copy_name"),
+            egui_macview::NSMenuItem::action("Copy Rust MacSymbol::...", "sym.copy_rust"),
+            egui_macview::NSMenuItem::action("Copy Unicode Hex", "sym.copy_hex"),
+            egui_macview::NSMenuItem::separator(),
+            egui_macview::NSMenuItem::action("Tint with System Blue", "sym.tint_blue"),
+            egui_macview::NSMenuItem::action("Tint with System Orange", "sym.tint_orange"),
+        ];
+        if let Some(act) =
+            egui_macview::MacContextMenu::new(&sym_items, &mut self.sym_menu_open, &mut self.sym_menu_pos, &mut self.sym_menu_selected)
+                .theme(theme)
+                .show(content_ui)
+        {
+            let (_, name, _, cp_hex) =
+                SYMBOLS_META.iter().copied().find(|(s, _, _, _)| *s == self.selected_symbol).unwrap_or(SYMBOLS_META[0]);
+            match act.as_str() {
+                "sym.copy_name" => {
+                    content_ui.ctx().copy_text(name.to_string());
+                    toasts.borrow_mut().success(format!("Copied symbol name: {name}"));
+                }
+                "sym.copy_rust" => {
+                    let snippet = format!("MacSymbol::{:?}", self.selected_symbol);
+                    content_ui.ctx().copy_text(snippet.clone());
+                    toasts.borrow_mut().success(format!("Copied {snippet}"));
+                }
+                "sym.copy_hex" => {
+                    content_ui.ctx().copy_text(cp_hex.to_string());
+                    toasts.borrow_mut().success(format!("Copied Unicode {cp_hex}"));
+                }
+                "sym.tint_blue" => {
+                    self.symbol_tint = theme.control_accent();
+                    toasts.borrow_mut().info("Applied System Blue tint");
+                }
+                "sym.tint_orange" => {
+                    self.symbol_tint = theme.system_orange();
+                    toasts.borrow_mut().info("Applied System Orange tint");
+                }
+                _ => {}
+            }
+        }
     }
 
     pub fn render_fixed_clipping_slot(&mut self, content_ui: &mut Ui, theme: &MacTheme, card: &CardModel, slot_rect: Rect) {
@@ -96,7 +141,7 @@ impl CenterState {
         if self.fixed_seg_idx == 1 {
             let clip_rect = slot_rect.shrink2(vec2(16.0, 12.0));
             let clipped_painter = content_ui.painter().with_clip_rect(clip_rect);
-            clipped_painter.rect_filled(clip_rect, CornerRadius::same(6), Color32::from_rgb(22, 24, 28));
+            clipped_painter.rect_filled(clip_rect, CornerRadius::same(6), theme.hud_background());
             let mut sx = clip_rect.min.x - 40.0;
             while sx < clip_rect.max.x + 40.0 {
                 clipped_painter.line_segment(
@@ -110,7 +155,7 @@ impl CenterState {
                 Align2::CENTER_CENTER,
                 "Overflow Unclipped — Content Extends Beyond Bounds",
                 FontId::proportional(11.0),
-                Color32::WHITE,
+                theme.hud_text(),
             );
         } else {
             let mut fixed_view = MacFixedView::new(content_ui, slot_rect);
@@ -172,18 +217,16 @@ impl CenterState {
         let rem_w = row.remaining_width().max(30.0);
         let (x2, y2, w2, h2) = row.allocate_cell(rem_w);
         for (x, y, w, h, col, txt) in [
-            (x0, y0, w0, h0, Color32::from_rgb(30, 80, 160), "76pt".to_string()),
-            (x1, y1, w1, h1, Color32::from_rgb(110, 50, 160), "96pt".to_string()),
-            (x2, y2, w2, h2, Color32::from_rgb(20, 140, 110), format!("Flex {:.0}pt", w2)),
+            (x0, y0, w0, h0, theme.control_accent(), "76pt".to_string()),
+            (x1, y1, w1, h1, theme.system_orange(), "96pt".to_string()),
+            (x2, y2, w2, h2, theme.system_green(), format!("Flex {:.0}pt", w2)),
         ] {
             let r = Rect::from_min_size(pos2(row_alloc_rect.min.x + x, y), vec2(w, h));
             rp.rect_filled(r, CornerRadius::same(4), col);
-            rp.text(r.center(), Align2::CENTER_CENTER, txt, FontId::proportional(10.0), Color32::WHITE);
+            rp.text(r.center(), Align2::CENTER_CENTER, txt, FontId::proportional(10.0), theme.on_accent_text());
         }
-        child_ui.add_space(4.0);
-        let font_name =
-            ["Inter Regular (OFL)", "Inter SemiBold (OFL)", "Hack Monospace (MIT)", "Ubuntu Light (UFL)"][self.typo_font_family.min(3)];
-        let weight_name = ["Regular", "Medium", "Semibold", "Bold", "Italic"][self.typo_font_weight.min(4)];
+        let font_name = self.scene_node_option(1, "s2-pop-font", self.typo_font_family.min(3));
+        let weight_name = self.scene_node_option(1, "s2-seg-wt", self.typo_font_weight.min(4));
         let pt_sz = self.typo_point_size.clamp(9.0, 22.0);
         let is_mono = self.typo_font_family == 2;
         let is_ubuntu = self.typo_font_family == 3;
@@ -217,7 +260,7 @@ impl CenterState {
             if self.typo_optical_kern { "ON" } else { "OFF" }
         );
         let mut fmt = theme.tracked_text_format(font_id.clone(), self.symbol_tint);
-        fmt.extra_letter_spacing += self.typo_tracking_em * pt_sz;
+        fmt.extra_letter_spacing += self.typo_tracking_em * pt_sz + if self.typo_optical_kern { -0.25 } else { 0.85 };
         fmt.italics = is_italic;
         let galley = sp.layout_job(egui::text::LayoutJob::single_section(sample_str, fmt));
         let txt_pos = pos2(spec_rect.min.x + 4.0, spec_rect.min.y + 2.0);
@@ -228,13 +271,14 @@ impl CenterState {
         let semi_id = theme.semibold_font_id(&child_ui, 11.0).0;
         let mut sx = spec_rect.min.x + 4.0;
         let sy = spec_rect.min.y + 22.0;
-        for (lbl, fid, bold_pass, ital) in [
-            ("Regular", FontId::proportional(11.0), false, false),
-            ("Semibold", semi_id.clone(), false, false),
-            ("Bold", semi_id, true, false),
-            ("Mono", FontId::monospace(11.0), false, false),
-            ("Italic", FontId::proportional(11.0), false, true),
+        for (w_idx, fid, bold_pass, ital) in [
+            (0usize, FontId::proportional(11.0), false, false),
+            (2usize, semi_id.clone(), false, false),
+            (3usize, semi_id, true, false),
+            (1usize, FontId::monospace(11.0), false, false),
+            (4usize, FontId::proportional(11.0), false, true),
         ] {
+            let lbl = self.scene_node_option(1, "s2-seg-wt", w_idx);
             let mut f = theme.tracked_text_format(fid, theme.label());
             f.italics = ital;
             let g = sp.layout_job(egui::text::LayoutJob::single_section(lbl.to_string(), f));
@@ -245,7 +289,6 @@ impl CenterState {
             }
             sx += w + 14.0;
         }
-        child_ui.add_space(2.0);
         MacScrollView::both("demo_nested_scroll")
             .theme(theme)
             .auto_hide(false)

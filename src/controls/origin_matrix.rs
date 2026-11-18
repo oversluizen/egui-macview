@@ -81,6 +81,25 @@ impl MacOriginAnchor {
         let c = if col > 2 { 2 } else { col };
         Self::from_index(r * 3 + c)
     }
+
+    /// Returns the local 2D anchor offset in `[-half_w..=half_w, -half_h..=half_h]` relative to the bounding-box center (`REQ-015-10`).
+    #[inline]
+    pub fn local_offset(self, half_w: f32, half_h: f32) -> Pos2 {
+        Pos2::new((self.col() as f32 - 1.0) * half_w, (self.row() as f32 - 1.0) * half_h)
+    }
+
+    /// Accumulates `delta_deg` into `accum_deg` and advances this anchor only when crossing full `detent_deg` steps (`REQ-015-10`).
+    pub fn step_by_detent(self, accum_deg: &mut f32, delta_deg: f32, detent_deg: f32) -> Self {
+        let step_threshold = detent_deg.abs().max(1.0);
+        *accum_deg += delta_deg;
+        let whole_steps = (*accum_deg / step_threshold).trunc() as isize;
+        if whole_steps == 0 {
+            return self;
+        }
+        *accum_deg -= (whole_steps as f32) * step_threshold;
+        let next_idx = (self.index() as isize + whole_steps).rem_euclid(9) as usize;
+        Self::ALL[next_idx]
+    }
 }
 
 enum OriginBinding<'a> {

@@ -325,24 +325,34 @@ impl<'a> Widget for MacColorWell<'a> {
                                 }
                             });
 
-                            // 2D Saturation (X) x Value (Y) Color Square (always vivid at top-right)
+                            // 2D Saturation (X) x Value (Y) Color Square (continuous GPU-interpolated Mesh)
                             let sq_w = picker_dim;
                             let sq_h = picker_dim * 0.5;
                             let (sq_rect, sq_resp) = inner_ui.allocate_exact_size(Vec2::new(sq_w, sq_h), Sense::click_and_drag());
-                            let grid_n = 16usize;
-                            let cell_w = sq_rect.width() / (grid_n as f32);
-                            let cell_h = sq_rect.height() / (grid_n as f32);
-                            for gy in 0..grid_n {
-                                let v = 1.0 - (gy as f32 + 0.5) / (grid_n as f32);
-                                for gx in 0..grid_n {
-                                    let s = (gx as f32 + 0.5) / (grid_n as f32);
-                                    let cell_r = Rect::from_min_size(
-                                        Pos2::new(sq_rect.min.x + (gx as f32) * cell_w, sq_rect.min.y + (gy as f32) * cell_h),
-                                        Vec2::new(cell_w + 0.5, cell_h + 0.5),
-                                    );
-                                    inner_ui.painter().rect_filled(cell_r, CornerRadius::ZERO, MacTheme::sv_square_color(hsva.h, s, v));
+                            let grid_n = 8usize;
+                            let stride = grid_n + 1;
+                            let mut sv_mesh = egui::epaint::Mesh::default();
+                            for gy in 0..=grid_n {
+                                let fy = (gy as f32) / (grid_n as f32);
+                                let v = 1.0 - fy;
+                                let y = sq_rect.min.y + fy * sq_rect.height();
+                                for gx in 0..=grid_n {
+                                    let s = (gx as f32) / (grid_n as f32);
+                                    let x = sq_rect.min.x + s * sq_rect.width();
+                                    sv_mesh.colored_vertex(Pos2::new(x, y), MacTheme::sv_square_color(hsva.h, s, v));
                                 }
                             }
+                            for gy in 0..grid_n {
+                                for gx in 0..grid_n {
+                                    let i0 = (gy * stride + gx) as u32;
+                                    let i1 = i0 + 1;
+                                    let i2 = i0 + (stride as u32);
+                                    let i3 = i2 + 1;
+                                    sv_mesh.add_triangle(i0, i1, i3);
+                                    sv_mesh.add_triangle(i0, i3, i2);
+                                }
+                            }
+                            inner_ui.painter().add(egui::Shape::mesh(sv_mesh));
                             inner_ui.painter().rect_stroke(
                                 sq_rect,
                                 CornerRadius::same(metrics.swatch_radius.points() as u8),
@@ -373,18 +383,23 @@ impl<'a> Widget for MacColorWell<'a> {
                                 Stroke::new(metrics.border_width.points() * 2.0, theme.on_accent_text()),
                             );
 
-                            // 1D Rainbow Hue Bar (auto-unlocks saturation on grey/black colors)
+                            // 1D Rainbow Hue Bar (continuous GPU-interpolated Mesh)
                             let (hue_rect, hue_resp) = inner_ui.allocate_exact_size(Vec2::new(sq_w, sw_sz), Sense::click_and_drag());
                             let hue_steps = 24usize;
-                            let seg_w = hue_rect.width() / (hue_steps as f32);
-                            for hi in 0..hue_steps {
-                                let h_t = (hi as f32 + 0.5) / (hue_steps as f32);
-                                let seg_r = Rect::from_min_size(
-                                    Pos2::new(hue_rect.min.x + (hi as f32) * seg_w, hue_rect.min.y),
-                                    Vec2::new(seg_w + 0.5, hue_rect.height()),
-                                );
-                                inner_ui.painter().rect_filled(seg_r, CornerRadius::ZERO, MacTheme::hue_bar_color(h_t));
+                            let mut hue_mesh = egui::epaint::Mesh::default();
+                            for hi in 0..=hue_steps {
+                                let h_t = (hi as f32) / (hue_steps as f32);
+                                let x = hue_rect.min.x + h_t * hue_rect.width();
+                                let col = MacTheme::hue_bar_color(h_t);
+                                hue_mesh.colored_vertex(Pos2::new(x, hue_rect.min.y), col);
+                                hue_mesh.colored_vertex(Pos2::new(x, hue_rect.max.y), col);
                             }
+                            for hi in 0..hue_steps {
+                                let b = (hi * 2) as u32;
+                                hue_mesh.add_triangle(b, b + 2, b + 3);
+                                hue_mesh.add_triangle(b, b + 3, b + 1);
+                            }
+                            inner_ui.painter().add(egui::Shape::mesh(hue_mesh));
                             inner_ui.painter().rect_stroke(
                                 hue_rect,
                                 CornerRadius::same(metrics.swatch_radius.points() as u8),

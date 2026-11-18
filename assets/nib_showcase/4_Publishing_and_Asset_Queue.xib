@@ -221,7 +221,7 @@
                             <binding destination="-2" name="value" keyPath="values.assetRating" id="b-s4-lvl-rate"/>
                         </connections>
                     </levelIndicator>
-                    <button identifier="s4-help" verticalHuggingPriority="750" id="s4-help">
+                    <button identifier="s4-help" verticalHuggingPriority="750" toolTip="AppKit Finder &amp; Publishing Help: Double-click .nib/.xib files to open the NIB Studio, right-click rows for context actions, or enqueue export jobs." id="s4-help">
                         <rect key="frame" x="28" y="26" width="22" height="22"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <buttonCell key="cell" type="help" title="?" bezelStyle="helpButton" inset="2" id="cell-s4-help">

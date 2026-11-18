@@ -100,6 +100,7 @@ impl<'a> MacCanvasFooter<'a> {
         if zoom_area.width() >= zoom_cluster_width - border_w {
             let mut zoom_ui =
                 ui.new_child(UiBuilder::new().id_salt("footer_zoom_ui").max_rect(zoom_area).layout(Layout::right_to_left(Align::Center)));
+            zoom_ui.spacing_mut().item_spacing.x = 0.0;
 
             for (z_idx, &(preset, label)) in zoom_presets.iter().enumerate() {
                 let (btn_rect, resp) = zoom_ui.allocate_exact_size(Vec2::new(preset_btn_width, preset_btn_height), Sense::click());

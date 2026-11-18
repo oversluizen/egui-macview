@@ -84,7 +84,6 @@ impl CenterState {
                         .prev_focus(hud_r_id)
                         .next_focus(hud_h_id)
                         .show(row1_ui);
-                    row1_ui.add_space(4.0);
                     row1_ui.label(egui::RichText::new("H:").size(font_pt).color(label_col));
                     MacInputCell::with_id(hud_h_id, &mut card.height)
                         .theme(theme)
@@ -105,7 +104,6 @@ impl CenterState {
                         .prev_focus(hud_h_id)
                         .next_focus(hud_w_id)
                         .show(row2_ui);
-                    row2_ui.add_space(4.0);
                     row2_ui.label(egui::RichText::new("θ:").size(font_pt).color(label_col));
                     MacSlider::new(&mut card.rotation_deg, 0.0..=360.0).theme(theme).width(55.0).show(row2_ui);
                 },
@@ -117,7 +115,6 @@ impl CenterState {
             let pop_rect = Rect::from_min_size(pos2(canvas_rect.center().x - 160.0, canvas_rect.max.y - 104.0), vec2(320.0, 96.0));
             let _ = content_ui.interact(pop_rect, content_ui.scope_id().with("state1_spring_popover_anchor"), Sense::hover());
             MacPopover::new().theme(theme).arrow_edge(MacPopoverArrowEdge::Top).show(content_ui, pop_rect, |pop_ui| {
-                pop_ui.add_space(6.0);
                 pop_ui.label(
                     egui::RichText::new(format!(
                         "CASpring Harmonic Oscillator (T0={:.2}s, zeta={:.2})",
@@ -148,7 +145,9 @@ impl CenterState {
     ) {
         let set_num = |st: &mut super::nib_showcase_builders::ShowcaseSceneDataStore, b: egui_macview::scene::BindingId, v: f64| {
             st.floats.insert(b, v);
-            st.strings.insert(b, format!("{v:.0}"));
+            if sync_strings || !st.strings.contains_key(&b) {
+                st.strings.insert(b, super::nib_showcase_builders::format_nib_num(v));
+            }
         };
         match norm {
             "showGrid" => {
@@ -290,7 +289,9 @@ impl CenterState {
                 store.strings.insert(bid, self.asset_tokens[idx].join(", "));
             }
             "publishStatusText" => {
-                store.strings.insert(bid, format!("{:.0}% Ready", self.publish_progress * 100.0));
+                let ver_tag = if self.verify_checksums { "SHA✓" } else { "Raw" };
+                let open_tag = if self.open_after_export { " • Reveal" } else { "" };
+                store.strings.insert(bid, format!("{:.0}% {ver_tag}{open_tag}", self.publish_progress * 100.0));
             }
             _ => {}
         }
@@ -350,16 +351,10 @@ impl CenterState {
                 self.matrix_slider = store.get_f64(bid).clamp(0.0, 100.0) as f32;
             }
             "accentIndex" => {
-                let idx = store.get_i64(bid).clamp(0, 5) as usize;
+                let idx = store.get_i64(bid).max(0) as usize;
                 self.accent_index = idx;
-                let col = [
-                    egui::Color32::from_rgb(0, 122, 255),
-                    egui::Color32::from_rgb(175, 82, 222),
-                    egui::Color32::from_rgb(255, 45, 85),
-                    egui::Color32::from_rgb(255, 149, 0),
-                    egui::Color32::from_rgb(52, 199, 89),
-                    egui::Color32::from_rgb(142, 142, 147),
-                ][idx];
+                let palette = MacTheme::default().tag_label_palette();
+                let col = palette[idx % palette.len()];
                 let mut c = card_cell.borrow_mut();
                 c.fill_color = col;
                 c.alpha_color = col.gamma_multiply(0.75);
@@ -372,6 +367,9 @@ impl CenterState {
             }
             "highContrast" => {
                 self.high_contrast = store.get_bool(bid);
+                if self.high_contrast {
+                    self.wcag_fg = egui_macview::ensure_wcag_contrast(self.wcag_fg, self.wcag_bg, 7.0);
+                }
             }
             "reduceTransparency" => {
                 self.reduce_transparency = store.get_bool(bid);
@@ -407,12 +405,18 @@ impl CenterState {
                 self.bus_mode = store.get_i64(bid).clamp(0, 2) as usize;
             }
             "codecPreset" => {
-                let next = store.get_i64(bid).clamp(0, 5) as usize;
+                let next = store.get_i64(bid).max(0) as usize;
                 if next != self.codec_preset {
                     self.codec_preset = next;
                     self.media_playing = true;
-                    self.audio_track = super::audio_media::AudioTrack::preset_track(next);
+                    let title = store.get_options(bid).get(next).cloned().unwrap_or_else(|| format!("Stream #{}", next + 1));
+                    self.audio_track = super::audio_media::AudioTrack::from_stream_descriptor(&title, next);
                     self.media_waveform = self.audio_track.waveform_peaks.clone();
+                    if self.media_sound_output {
+                        let wav =
+                            self.audio_track.to_wav_bytes_mixed(self.media_playhead, self.media_out_point, self.media_gain, self.media_pan);
+                        super::audio_media::NativeAudioOutput::play_wav(&wav);
+                    }
                 }
             }
             "pickerDay" => {

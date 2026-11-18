@@ -50,6 +50,20 @@ pub trait MacSceneDataSource {
     fn resolve_control_size(&self, _id: NodeId, _ib_object_id: &str, default_size: MacControlSize) -> MacControlSize {
         default_size
     }
+    /// Resolves whether a level indicator node renders discrete segments (`true`) or a continuous bar (`false`).
+    fn resolve_level_discrete(&self, _id: NodeId, _ib_object_id: &str, default_discrete: bool) -> bool {
+        default_discrete
+    }
+    /// Resolves whether a level indicator node applies warning/critical color thresholds (`true`) or uniform color (`false`).
+    fn resolve_level_thresholds(&self, _id: NodeId, _ib_object_id: &str, default_thresholds: bool) -> bool {
+        default_thresholds
+    }
+    /// Returns the criteria slices for an `NSRuleEditor` node (`row_column -> options`).
+    fn get_rule_criteria(&self, _id: NodeId, _ib_object_id: &str) -> &[&[&str]] {
+        &[]
+    }
+    /// Renders the body of an active `<tabViewItem>` inside an `NSTabView` node.
+    fn render_tab_item(&mut self, _ui: &mut Ui, _theme: &MacTheme, _id: NodeId, _ib_object_id: &str, _tab_idx: usize, _rect: Rect) {}
 }
 
 pub(crate) fn solve_scene_layout(
@@ -82,9 +96,14 @@ pub(crate) fn solve_scene_layout(
             }
         }
         LayoutPolicy::AdaptiveSemanticReflow => {
-            let is_horizontal_strip = scene.design_size[1] <= 48.0;
+            let tokens = crate::tokens::MacDesignTokens::default_shared();
+            let tb = &tokens.macview.metrics.toolbar;
+            let sv = crate::tokens::StackViewMetrics::default();
+            let strip_h = tb.height_unified.points();
+            let is_horizontal_strip = scene.design_size[1] <= strip_h;
             if is_horizontal_strip {
-                let mut cursor_x = 12.0_f32;
+                let mut cursor_x = tb.edge_padding.points();
+                let item_gap = sv.default_spacing.points();
                 for node in &scene.nodes {
                     if matches!(node.kind, SceneNodeKind::Container { .. }) {
                         continue;
@@ -94,27 +113,68 @@ pub(crate) fn solve_scene_layout(
                     }
                     let [_, y, w, h] = node.alignment_rect;
                     out.insert(node.id, Rect::from_min_size(pos2(cursor_x, y), vec2(w, h)));
-                    cursor_x += w + 8.0;
+                    cursor_x += w + item_gap;
                 }
             } else {
-                let mut cursor_y = 16.0_f32;
-                for node in &scene.nodes {
-                    if matches!(node.kind, SceneNodeKind::Container { .. } | SceneNodeKind::Separator | SceneNodeKind::BoxContainer) {
-                        continue;
+                let sv = crate::tokens::StackViewMetrics::default();
+                let pad_x = sv.edge_padding.points() * 2.0;
+                let row_gap_x = sv.default_spacing.points();
+                let row_gap_y = sv.default_spacing.points() + 2.0;
+                let def_row_h = sv.default_item_height.points();
+                let col_align_x = crate::tokens::DatePickerMetrics::default().calendar_width.points();
+                let canvas_skip_h = crate::tokens::DatePickerMetrics::default().clock_size.points();
+                let baseline_tol = sv.default_spacing.points() - 2.0;
+                let max_x = (viewport_size.x - pad_x).max(col_align_x);
+                let mut visible_nodes: Vec<&SceneNode> = scene
+                    .nodes
+                    .iter()
+                    .filter(|node| {
+                        !matches!(node.kind, SceneNodeKind::Container { .. } | SceneNodeKind::Separator | SceneNodeKind::BoxContainer)
+                            && !(matches!(node.kind, SceneNodeKind::CustomCanvasSlot { .. }) && node.alignment_rect[3] >= canvas_skip_h)
+                            && node.visibility.is_visible(workspace_flags)
+                            && filter_mask.contains(node.id)
+                    })
+                    .collect();
+                visible_nodes.sort_by(|a, b| {
+                    let ya = a.alignment_rect[1];
+                    let yb = b.alignment_rect[1];
+                    if (ya - yb).abs() <= baseline_tol {
+                        a.alignment_rect[0].partial_cmp(&b.alignment_rect[0]).unwrap_or(std::cmp::Ordering::Equal)
+                    } else {
+                        ya.partial_cmp(&yb).unwrap_or(std::cmp::Ordering::Equal)
                     }
-                    if !node.visibility.is_visible(workspace_flags) || !filter_mask.contains(node.id) {
-                        continue;
+                });
+
+                let mut cursor_y = pad_x;
+                let mut idx = 0usize;
+                while idx < visible_nodes.len() {
+                    let row_anchor_y = visible_nodes[idx].alignment_rect[1];
+                    let mut row_end = idx + 1;
+                    while row_end < visible_nodes.len() && (visible_nodes[row_end].alignment_rect[1] - row_anchor_y).abs() <= baseline_tol {
+                        row_end += 1;
                     }
-                    let [mut x, _, w, h] = node.alignment_rect;
-                    if !matches!(node.kind, SceneNodeKind::Label) && x < 16.0 {
-                        x = 16.0;
+                    let row = &visible_nodes[idx..row_end];
+                    let row_h = row.iter().map(|n| n.alignment_rect[3]).fold(def_row_h, f32::max);
+                    let mut row_x = pad_x;
+                    for (col_i, node) in row.iter().enumerate() {
+                        let [_, _, w, h] = node.alignment_rect;
+                        if col_i == 1
+                            && matches!(row[0].kind, SceneNodeKind::Label)
+                            && !matches!(node.kind, SceneNodeKind::Label)
+                            && row_x < col_align_x
+                        {
+                            row_x = col_align_x;
+                        }
+                        if row_x > pad_x && row_x + w > max_x {
+                            cursor_y += row_h + row_gap_x;
+                            row_x = pad_x;
+                        }
+                        let y_aligned = cursor_y + (row_h - h).max(0.0) * 0.5;
+                        out.insert(node.id, Rect::from_min_size(pos2(row_x, y_aligned), vec2(w, h)));
+                        row_x += w + row_gap_x;
                     }
-                    out.insert(node.id, Rect::from_min_size(pos2(x, cursor_y), vec2(w, h)));
-                    let is_paired_label =
-                        matches!(node.kind, SceneNodeKind::Label) && scene.labeled_pairs.iter().any(|p| p.label_node == node.id);
-                    if !is_paired_label {
-                        cursor_y += h + 10.0;
-                    }
+                    cursor_y += row_h + row_gap_y;
+                    idx = row_end;
                 }
             }
         }
@@ -135,21 +195,29 @@ impl MacSceneIR {
         search_query: &str,
     ) {
         let origin = ui.cursor().min.to_vec2();
-        let avail_w = ui.available_width();
-        let viewport = vec2(self.design_size[0].max(320.0), self.design_size[1].max(160.0));
-        let scale_x = if policy == LayoutPolicy::ExactAppleNib
-            && avail_w.is_finite()
-            && (200.0..2400.0).contains(&avail_w)
-            && self.design_size[0] >= 300.0
-            && avail_w > viewport.x + 4.0
-        {
-            (avail_w / viewport.x).clamp(1.0, 1.85)
-        } else {
-            1.0
+        let pm = theme.popover_metrics();
+        let min_vp_w = pm.full_popover_width.points();
+        let min_vp_h = pm.compact_panel_width.points();
+        let viewport = match policy {
+            LayoutPolicy::ExactAppleNib => vec2(self.design_size[0].max(1.0), self.design_size[1].max(1.0)),
+            LayoutPolicy::AdaptiveSemanticReflow => vec2(self.design_size[0].max(min_vp_w), self.design_size[1].max(min_vp_h)),
         };
+        let scale_x = 1.0;
         let solved = self.solve_layout(viewport, policy, workspace_flags, search_query);
 
         for node in &self.nodes {
+            if let crate::scene::ir::VisibilityRule::WhenTabSelected { tab_view, tab_index } = node.visibility {
+                let active_tab = self
+                    .nodes
+                    .iter()
+                    .find(|n| n.id == tab_view)
+                    .and_then(|tv| tv.value_binding)
+                    .map(|b| data_source.get_i64(b).max(0) as usize)
+                    .unwrap_or_else(|| ui.data(|d| d.get_temp::<usize>(ui.scope_id().with(("nib_tv_sel", tab_view.0)))).unwrap_or(0));
+                if active_tab != tab_index {
+                    continue;
+                }
+            }
             let Some(&local_rect) = solved.get(&node.id) else {
                 continue;
             };
@@ -245,7 +313,9 @@ impl MacSceneIR {
                             .enabled(enabled)
                             .fixed_rect(rect);
                         if let SceneNodeKind::NumberField { min, max, step, .. } = &node.kind {
-                            cell = cell.numeric(min.unwrap_or(-100_000.0)..=max.unwrap_or(100_000.0), (*step).max(0.1));
+                            let bound = f64::from(u16::MAX);
+                            let min_step = f64::from(theme.slider().key_step_fraction.points());
+                            cell = cell.numeric(min.unwrap_or(-bound)..=max.unwrap_or(bound), (*step).max(min_step));
                         }
                         if cell.show(ui).changed() {
                             if let Some(b) = node.value_binding {
@@ -361,7 +431,14 @@ impl MacSceneIR {
     }
 }
 
-fn render_token_field_node(ui: &mut Ui, theme: &MacTheme, data_source: &mut dyn MacSceneDataSource, node: &SceneNode, rect: Rect, enabled: bool) {
+fn render_token_field_node(
+    ui: &mut Ui,
+    theme: &MacTheme,
+    data_source: &mut dyn MacSceneDataSource,
+    node: &SceneNode,
+    rect: Rect,
+    enabled: bool,
+) {
     let raw = node.value_binding.map(|b| data_source.get_str(b).to_string()).unwrap_or_else(|| node.title.clone());
     let mut tokens: Vec<String> = raw.split(',').map(str::trim).filter(|s| !s.is_empty()).map(str::to_string).collect();
     let prev = tokens.clone();

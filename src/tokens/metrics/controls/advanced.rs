@@ -178,6 +178,12 @@ pub struct RuleEditorMetrics {
     pub add_remove_button_size: DimensionValue,
     /// Spacing between rule clauses (`8.0 pt`).
     pub row_horizontal_spacing: DimensionValue,
+    /// Visual circular badge diameter (`16.0 pt`).
+    pub badge_diameter: DimensionValue,
+    /// Half-span of the interior `+` / `−` crosshair (`3.2 pt`).
+    pub glyph_half_span: DimensionValue,
+    /// Stroke width of the interior `+` / `−` crosshair (`1.25 pt`).
+    pub glyph_stroke_width: DimensionValue,
 }
 
 impl Default for RuleEditorMetrics {

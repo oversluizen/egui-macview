@@ -384,14 +384,12 @@ impl GalleryApp {
         let mut bar_ui = work_ui.new_child(
             egui::UiBuilder::new().id_salt("mobile_top_switcher_bar").max_rect(bar_rect).layout(Layout::left_to_right(Align::Center)),
         );
-        bar_ui.add_space(6.0);
         let mut next_pane = self.mobile_pane_idx;
         MacSegmentedControl::new(&["Canvas", "Inspector", "Nav"], self.mobile_pane_idx)
             .theme(theme)
             .height(24.0)
             .show(&mut bar_ui, |idx| next_pane = idx);
         self.mobile_pane_idx = next_pane;
-        bar_ui.add_space(6.0);
         for (i, scr) in GalleryScreen::ALL.iter().copied().enumerate() {
             if bar_ui.add(MacButtonCell::new(&format!("S{}", i + 1)).theme(theme).selected(self.active_screen == scr)).clicked() {
                 (self.active_screen, self.sidebar.active_screen, self.sidebar.selected_node, self.mobile_pane_idx) =

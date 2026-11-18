@@ -223,13 +223,39 @@ pub fn check_magic_numbers_in_source(file_label: &str, source: &str) -> Vec<Stri
 pub fn check_hardcoded_colors_in_source(file_label: &str, source: &str) -> Vec<String> {
     let mut violations = Vec::new();
     let stripped = strip_comments_and_strings(source);
-    let forbidden_calls =
-        ["Color32::from_rgb(", "Color32::from_rgba", "Color32::from_black_alpha(", "Color32::WHITE", "from_hex", "[u8; 3]", "rgb_color32("];
+    let forbidden_calls = [
+        "Color32::from_rgb(",
+        "Color32::from_rgba",
+        "Color32::from_black_alpha(",
+        "Color32::from_gray(",
+        "Color32::WHITE",
+        "Color32::BLACK",
+        "Color32::RED",
+        "Color32::GREEN",
+        "Color32::BLUE",
+        "Color32::YELLOW",
+        "Color32::GRAY",
+        "Color32::LIGHT_GRAY",
+        "Color32::DARK_GRAY",
+        "from_hex",
+        "[u8; 3]",
+        "rgb_color32(",
+    ];
+    let is_example = file_label.starts_with("examples/");
     for (idx, line) in stripped.lines().enumerate() {
         for call in &forbidden_calls {
             if line.contains(call) {
                 violations.push(format!("{file_label}:{} -> `{call}`", idx + 1));
             }
+        }
+        if let Some(pos) = line.find(".add_space(") {
+            let after = &line[pos + ".add_space(".len()..];
+            if is_example || !extract_float_literals(after).is_empty() {
+                violations.push(format!("{file_label}:{} -> forbidden hardcoded `ui.add_space(...)`", idx + 1));
+            }
+        }
+        if line.contains("TextShape::new(") && line.contains("Color32::TRANSPARENT") {
+            violations.push(format!("{file_label}:{} -> forbidden ghost `TextShape::new(..., Color32::TRANSPARENT)`", idx + 1));
         }
     }
     for (idx, raw_line) in source.lines().enumerate() {
@@ -255,9 +281,11 @@ pub fn check_token_arithmetic_cheating(file_label: &str, source: &str) -> Vec<St
     let is_segmented = normalized_label.contains("src/controls/segmented");
     for (idx, line) in stripped.lines().enumerate() {
         let compact: String = line.chars().filter(|c| !c.is_whitespace()).collect();
-        for bad_var_math in ["indicator_inset*", "*indicator_inset", "border_width*2.0+border_width", "+border_width;"] {
+        for bad_var_math in
+            ["indicator_inset*", "*indicator_inset", "border_width*2.0+border_width", "+border_width;", "-2.0-2.0", "1.0+0.5", "*0.5-0.5"]
+        {
             if compact.contains(bad_var_math) {
-                violations.push(format!("{file_label}:{} -> forbidden token variable arithmetic `{bad_var_math}`", idx + 1));
+                violations.push(format!("{file_label}:{} -> forbidden token/literal arithmetic `{bad_var_math}`", idx + 1));
             }
         }
         if is_segmented && (compact.contains("border_width*") || compact.contains("*border_width") || compact.contains("convex_polygon(")) {

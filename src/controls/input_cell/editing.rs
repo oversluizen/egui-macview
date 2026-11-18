@@ -30,9 +30,29 @@ fn format_stepped_number(reference: &str, fallback_ref: &str, step: f64, val: f6
 }
 
 pub(super) fn show_input_cell(cell: MacInputCell<'_>, ui: &mut Ui) -> Response {
-    let resolved_size = cell.resolved_control_size();
+    let put_rect = (ui.layout().main_justify && ui.layout().cross_justify).then(|| ui.max_rect());
+    let effective_fixed = cell.fixed_rect.or(put_rect);
     let theme = MacTheme::resolve(cell.theme, ui.ctx());
     let tf_tokens = &theme.control_metrics().text_field;
+    let max_r = ui.max_rect();
+    let candidate_h = effective_fixed
+        .map(|r| r.height())
+        .or(cell.height)
+        .or_else(|| (max_r.height().is_finite() && max_r.height() < tf_tokens.auto_size_regular_min_height.points()).then(|| max_r.height()));
+    let mut resolved_size = cell.resolved_control_size();
+    if let Some(h) = candidate_h {
+        if h < tf_tokens.auto_size_regular_min_height.points() && resolved_size == MacControlSize::Regular {
+            resolved_size = if !cell.explicit_control_size && h < tf_tokens.auto_size_small_min_height.points() {
+                if h >= tf_tokens.auto_size_compact_min_height.points() {
+                    MacControlSize::CompactInfobox
+                } else {
+                    MacControlSize::Mini
+                }
+            } else {
+                MacControlSize::Small
+            };
+        }
+    }
     let metrics = match resolved_size {
         MacControlSize::Regular => &tf_tokens.regular,
         MacControlSize::Small => &tf_tokens.small,
@@ -41,14 +61,25 @@ pub(super) fn show_input_cell(cell: MacInputCell<'_>, ui: &mut Ui) -> Response {
         MacControlSize::CompactInfobox => &tf_tokens.compact_infobox,
     };
 
-    let height = cell.fixed_rect.map(|r| r.height()).or(cell.height).unwrap_or_else(|| metrics.height.points());
-    let width = cell.fixed_rect.map(|r| r.width()).or(cell.width).unwrap_or_else(|| metrics.default_width.points());
-    let font_size = cell.font_size.unwrap_or_else(|| metrics.font_size.points());
+    let height = candidate_h.unwrap_or_else(|| metrics.height.points());
+    let compact_w_limit = tf_tokens.compact_infobox.default_width.points();
+    let width = effective_fixed
+        .map(|r| r.width())
+        .or(cell.width)
+        .or_else(|| (max_r.width().is_finite() && max_r.width() <= compact_w_limit).then(|| max_r.width()))
+        .unwrap_or_else(|| metrics.default_width.points());
+    let font_size = cell.font_size.unwrap_or_else(|| {
+        if height <= tf_tokens.mini.height.points() + 0.5 && resolved_size != MacControlSize::Mini {
+            metrics.font_size.points() - 0.5
+        } else {
+            metrics.font_size.points()
+        }
+    });
     let corner_radius = cell.corner_radius.unwrap_or_else(|| metrics.corner_radius.points());
     let enabled = cell.enabled && ui.is_enabled();
     let sense = if enabled { egui::Sense::click_and_drag() } else { egui::Sense::hover() };
     let ppp = ui.ctx().pixels_per_point();
-    let (rect, mut response) = if let Some(fixed) = cell.fixed_rect {
+    let (rect, mut response) = if let Some(fixed) = effective_fixed {
         let snapped = subpixel_snap_rect(fixed, ppp);
         (snapped, ui.interact(snapped, cell.id.with("fixed_hit"), sense))
     } else {
@@ -187,7 +218,15 @@ pub(super) fn show_input_cell(cell: MacInputCell<'_>, ui: &mut Ui) -> Response {
         Stroke::new(1.0, theme.input_top_inset_shadow().gamma_multiply(alpha_factor)),
     );
 
-    let shrink_pad = metrics.padding_horizontal.points();
+    let shrink_pad = if effective_fixed.is_some()
+        || height < tf_tokens.auto_size_regular_min_height.points()
+        || width <= compact_w_limit
+        || matches!(resolved_size, MacControlSize::Small | MacControlSize::Mini | MacControlSize::CompactInfobox)
+    {
+        tf_tokens.regular.corner_radius.points()
+    } else {
+        metrics.padding_horizontal.points()
+    };
     let inner_rect = rect.shrink2(Vec2::new(shrink_pad, 0.0));
     let mut child_ui = ui.new_child(
         egui::UiBuilder::new()
@@ -210,14 +249,16 @@ pub(super) fn show_input_cell(cell: MacInputCell<'_>, ui: &mut Ui) -> Response {
         let display_str = if cell.value.is_empty() { cell.placeholder.unwrap_or("") } else { cell.value.as_str() };
         if !display_str.is_empty() {
             let draw_color = if cell.value.is_empty() { hint_color } else { text_color };
-            let galley = theme.layout_tracked_galley(ui, display_str, font_id.clone(), draw_color, inner_rect.width().max(0.0));
+            let galley = theme.layout_tracked_galley(ui, display_str, font_id.clone(), draw_color, f32::INFINITY);
             let lm = theme.label_metrics();
             let ascender = match resolved_size {
                 MacControlSize::Regular | MacControlSize::Large => lm.regular_ascender.points(),
                 MacControlSize::Small | MacControlSize::CompactInfobox => lm.small_ascender.points(),
                 MacControlSize::Mini => lm.mini_ascender.points(),
             };
-            let text_y = theme.baseline_text_y(rect, metrics.first_baseline_offset_from_top.points(), ascender, ppp);
+            let eff_baseline_from_top =
+                metrics.first_baseline_offset_from_top.points() - (metrics.height.points() - rect.height()).max(0.0) * 0.5;
+            let text_y = theme.baseline_text_y(rect, eff_baseline_from_top, ascender, ppp);
             let text_x = match cell.text_align {
                 Align::Max => (inner_rect.right() - galley.size().x).max(inner_rect.left()),
                 Align::Center => inner_rect.center().x - galley.size().x * 0.5,

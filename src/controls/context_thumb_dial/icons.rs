@@ -16,23 +16,56 @@ pub(crate) struct WedgeGeometry {
     pub(crate) end_deg: f32,
 }
 
+fn filleted_radii(i: usize, steps: usize, r_in: f32, r_out: f32, fillet_pt: f32) -> (f32, f32) {
+    let corner_steps = 4usize;
+    let u = if i < corner_steps {
+        (i as f32) / (corner_steps as f32)
+    } else if i > steps.saturating_sub(corner_steps) {
+        ((steps - i) as f32) / (corner_steps as f32)
+    } else {
+        1.0
+    };
+    if u >= 1.0 {
+        return (r_in, r_out);
+    }
+    let du = 1.0 - u;
+    let circle_prof = 1.0 - (1.0 - du * du).max(0.0).sqrt();
+    let inset = fillet_pt * circle_prof;
+    let r_i = r_in + inset;
+    let r_o = (r_out - inset).max(r_i + 1.0);
+    (r_i, r_o)
+}
+
 fn fill_annular_strip(
     painter: &Painter,
     center: Pos2,
     (r_in, r_out): (f32, f32),
     (start_deg, end_deg): (f32, f32),
-    color: Color32,
+    (col_in, col_out): (Color32, Color32),
+    light_vec: Vec2,
     m: &ThumbDialMetrics,
 ) {
     let steps = 32usize;
     let sweep = end_deg - start_deg;
+    let fillet_pt = m.ring_gap.points();
+    let mid_deg = (start_deg + end_deg) * 0.5;
+    let mid_rad = super::render::deg_to_rad(mid_deg, m);
+    let sec_dir = Vec2::new(mid_rad.cos(), mid_rad.sin());
+    let dir_boost = (sec_dir.x * light_vec.x + sec_dir.y * light_vec.y).max(0.0);
     let mut mesh = egui::epaint::Mesh::default();
     mesh.vertices.reserve((steps + 1) * 2);
     mesh.indices.reserve(steps * 6);
     for i in 0..=steps {
         let a = start_deg + sweep * (i as f32 / steps as f32);
-        mesh.colored_vertex(polar_pos(center, r_in, a, m), color);
-        mesh.colored_vertex(polar_pos(center, r_out, a, m), color);
+        let a_rad = super::render::deg_to_rad(a, m);
+        let n_dir = Vec2::new(a_rad.cos(), a_rad.sin());
+        let spec = (n_dir.x * light_vec.x + n_dir.y * light_vec.y).max(0.0);
+        let boost = (dir_boost + spec) * 0.5;
+        let (ri, ro) = filleted_radii(i, steps, r_in, r_out, fillet_pt);
+        let p_in = polar_pos(center, ri, a, m);
+        let p_out = polar_pos(center, ro, a, m);
+        mesh.colored_vertex(p_in, brighten_color(col_in, boost * m.active_fill_opacity.points()));
+        mesh.colored_vertex(p_out, brighten_color(col_out, boost * m.glass_specular_alpha.points()));
     }
     for i in 0..steps {
         let base = (i * 2) as u32;
@@ -42,28 +75,51 @@ fn fill_annular_strip(
     painter.add(Shape::mesh(mesh));
 }
 
+fn brighten_color(c: Color32, gain: f32) -> Color32 {
+    let mut hsva = egui::epaint::Hsva::from(c);
+    let g_clamped = gain.clamp(0.0, 1.0);
+    hsva.v = (hsva.v + (1.0 - hsva.v) * g_clamped).clamp(0.0, 1.0);
+    hsva.s = (hsva.s * (1.0 - g_clamped * 0.5)).clamp(0.0, 1.0);
+    Color32::from(hsva)
+}
+
 pub(crate) fn paint_annular_wedge(painter: &Painter, geom: WedgeGeometry, fill: Color32, stroke: Stroke, m: &ThumbDialMetrics) {
+    paint_annular_wedge_lit(painter, geom, fill, stroke, Vec2::ZERO, m);
+}
+
+pub(crate) fn paint_annular_wedge_lit(
+    painter: &Painter,
+    geom: WedgeGeometry,
+    fill: Color32,
+    stroke: Stroke,
+    light_vec: Vec2,
+    m: &ThumbDialMetrics,
+) {
     let steps = 32usize;
     let sweep = geom.end_deg - geom.start_deg;
     let r_mid = (geom.r_in + geom.r_out) * 0.5;
     let r_top = (r_mid + geom.r_out) * 0.5;
     let sheen = stroke.color.gamma_multiply(m.hover_fill_opacity.points());
     let dome_hi = stroke.color.gamma_multiply(m.hover_fill_opacity.points() * 0.5);
-    fill_annular_strip(painter, geom.center, (geom.r_in, geom.r_out), (geom.start_deg, geom.end_deg), fill, m);
-    fill_annular_strip(painter, geom.center, (r_mid, geom.r_out), (geom.start_deg, geom.end_deg), dome_hi, m);
-    fill_annular_strip(painter, geom.center, (r_top, geom.r_out), (geom.start_deg, geom.end_deg), sheen, m);
+    let deep_fill = fill.gamma_multiply(m.glass_fill_alpha.points());
+    let fillet_pt = m.ring_gap.points();
+    fill_annular_strip(painter, geom.center, (geom.r_in, geom.r_out), (geom.start_deg, geom.end_deg), (deep_fill, fill), light_vec, m);
+    fill_annular_strip(painter, geom.center, (r_mid, geom.r_out), (geom.start_deg, geom.end_deg), (fill, dome_hi), light_vec, m);
+    fill_annular_strip(painter, geom.center, (r_top, geom.r_out), (geom.start_deg, geom.end_deg), (dome_hi, sheen), light_vec, m);
     if stroke.width > 0.0 {
         let mut ring_pts = Vec::with_capacity((steps + 1) * 2);
         let mut outer_arc = Vec::with_capacity(steps + 1);
         for i in 0..=steps {
             let a = geom.start_deg + sweep * (i as f32 / steps as f32);
-            let pt_out = polar_pos(geom.center, geom.r_out, a, m);
+            let (_, ro) = filleted_radii(i, steps, geom.r_in, geom.r_out, fillet_pt);
+            let pt_out = polar_pos(geom.center, ro, a, m);
             ring_pts.push(pt_out);
             outer_arc.push(pt_out);
         }
         for i in (0..=steps).rev() {
             let a = geom.start_deg + sweep * (i as f32 / steps as f32);
-            ring_pts.push(polar_pos(geom.center, geom.r_in, a, m));
+            let (ri, _) = filleted_radii(i, steps, geom.r_in, geom.r_out, fillet_pt);
+            ring_pts.push(polar_pos(geom.center, ri, a, m));
         }
         painter.add(Shape::closed_line(ring_pts, stroke));
         painter.add(Shape::line(outer_arc, Stroke::new(m.active_stroke_width.points(), stroke.color)));

@@ -62,6 +62,11 @@ impl InspectorState {
             ),
             ExpandedProTab::CodeSnippet => generate_rust_snippet(active_screen, &card, &snippet_ctx),
         };
+        let scale_b = self.nib_store.resolve_or_create_binding("scalePercent");
+        self.nib_store.floats.insert(scale_b, card.scale_pct as f64);
+        if !ui.ctx().egui_wants_keyboard_input() {
+            self.nib_store.strings.insert(scale_b, format!("{:.0}", card.scale_pct));
+        }
         let hdr_b = self.nib_store.resolve_or_create_binding("inspectorMatrixHeader");
         self.nib_store.strings.insert(hdr_b, format!("Matrix [{a:+.2}, {b:+.2}; {c:+.2}, {d:+.2}] ({:?})", self.expanded_tab));
         let body_b = self.nib_store.resolve_or_create_binding("inspectorSnippetBody");

@@ -386,7 +386,7 @@
                             <binding destination="-2" name="selectedIndex" keyPath="values.codecPreset" id="b-s5-pop-codec"/>
                         </connections>
                     </popUpButton>
-                    <button identifier="s5-help" verticalHuggingPriority="750" id="s5-help">
+                    <button identifier="s5-help" verticalHuggingPriority="750" toolTip="AVKit Media &amp; Mastering Help: Use the QuickTime Floating HUD or rotary knobs to control Gain, Pan, Zoom, Speed, In/Out trim points, and Stereo VU ballistics." id="s5-help">
                         <rect key="frame" x="364" y="14" width="22" height="22"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <buttonCell key="cell" type="help" title="?" bezelStyle="helpButton" inset="2" id="cell-s5-help">

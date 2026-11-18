@@ -22,6 +22,7 @@
 | `0.2.0` | 2026-11-06 | Architecture Team | Prototyping Milestone: NSUndoManager Bounded Ringbuffer, Clamped Context Menus, and Animated Toast Notifications |
 | `0.4.0` | 2026-11-07 | Architecture Team | Milestone 0.4.0 Release: Transactional state integrity, boundary-clamped context menus, and CASpring micro-feedback |
 | `0.4.1` | 2026-11-08 | Architecture Team | Consolidation Hardening: Disambiguated Document ID (`SPEC-008B`), tokenized `MacContextMenu` & `MacToast`, and dynamic context menu width auto-sizing |
+| `0.8.1` | 2026-11-17 | Architecture Team | Contextual right-click `MacContextMenu` workflows across Gallery surfaces (Vector Artboard, Cupertino Symbol Grid, Finder Asset Table, and `MacTableActionBar` gear menu) and anchored `MacPopover` HIG documentation cards triggered by every `?` (`MacHelpButton`) |
 
 ---
 
@@ -95,9 +96,12 @@ Where:
 - $W_{\text{menu}}, H_{\text{menu}}$ are the menu dimensions.
 - $R$ is the enclosing viewport / window rectangle.
 
-### 3.2 Dismissal & Selection
+### 3.2 Dismissal, Selection & Gallery Contextual Workflows (`REQ-008-06`)
 - Left-clicking any enabled item executes the item action and dismisses the context menu.
 - Clicking outside the context menu bounds or pressing `Escape` dismisses the context menu without action.
+- **Gallery Contextual Menu & Help Popover Coverage:**
+  1. Right-clicking (`secondary_clicked()`) on the Demo 1 Vector Artboard, Demo 2 Cupertino Symbol Grid cells, or Demo 4 Finder Asset Table rows, or left-clicking the trailing `[⚙▾]` action button of `MacTableActionBar` in Demo 6, SHALL open a viewport-clamped `MacContextMenu` with domain-appropriate actions (e.g., Reset Transform, Snap Origin, Copy Rust Snippet, Open in NIB Studio, Add/Duplicate/Clear Grid Items).
+  2. Clicking any `?` (`MacHelpButton`) across States 1–6 or the Right Inspector SHALL open an anchored `MacPopover` card displaying structured macOS HIG guidelines and keyboard shortcuts for that studio pane.
 
 ---
 

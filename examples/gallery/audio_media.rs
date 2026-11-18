@@ -50,67 +50,31 @@ impl AudioTrack {
         Self { name: name.to_string(), duration_secs: synth_duration, sample_rate, samples_mono: samples, waveform_peaks: peaks }
     }
 
-    /// Generates a preset-specific classical or studio soundtrack (`0..=5`) for AVKit Media Studio.
-    pub fn preset_track(preset: usize) -> Self {
-        if preset < 4 {
-            let names = [
-                "BigBuckBunny_1080p.mp4",
-                "Sintel_4K_Proxy.mp4",
-                "TearsOfSteel_VFX.mp4",
-                "ForBiggerBlazes_60fps.mp4",
-            ];
-            return Self::procedural_studio_track(names[preset.min(3)], 30.0);
-        }
+    /// Synthesizes a parametric stereo harmonic audio track from a `.xib` stream descriptor title and seed.
+    pub fn from_stream_descriptor(title: &str, seed: usize) -> Self {
         let sample_rate = 22050u32;
         let duration_secs = 30.0f64;
         let total_samples = (duration_secs * sample_rate as f64).round() as usize;
         let mut samples = Vec::with_capacity(total_samples);
         let tau = std::f64::consts::TAU;
-        // Notes in Hz: Bach Brandenburg No. 3 in G Major (preset 4) vs Debussy Clair de Lune in Db Major (preset 5)
-        let bach_melody: [f64; 16] = [
-            392.00, 369.99, 392.00, 293.66, 493.88, 440.00, 493.88, 392.00,
-            587.33, 523.25, 493.88, 440.00, 392.00, 369.99, 329.63, 293.66,
-        ];
-        let bach_bass: [f64; 16] = [
-            196.00, 196.00, 146.83, 146.83, 246.94, 220.00, 196.00, 146.83,
-            293.66, 261.63, 246.94, 220.00, 196.00, 146.83, 164.81, 146.83,
-        ];
-        let debussy_melody: [f64; 16] = [
-            698.46, 622.25, 554.37, 466.16, 554.37, 466.16, 415.30, 369.99,
-            466.16, 415.30, 369.99, 311.13, 369.99, 415.30, 554.37, 622.25,
-        ];
-        let debussy_bass: [f64; 16] = [
-            138.59, 207.65, 277.18, 207.65, 184.99, 277.18, 207.65, 138.59,
-            155.56, 233.08, 311.13, 233.08, 138.59, 207.65, 277.18, 349.23,
-        ];
+        // Derive base frequency and harmonic progression mathematically from seed & title hash
+        let root_hz = 220.0 * (2.0_f64).powf(((seed % 7) as f64 * 2.0) / 12.0);
+        let ratios: [f64; 8] = [1.0, 1.125, 1.25, 1.333, 1.5, 1.667, 1.875, 2.0];
+        let tempo = 2.0 + (seed % 5) as f64 * 0.65;
         for i in 0..total_samples {
             let t = i as f64 / sample_rate as f64;
-            let sample = if preset == 4 {
-                let step = (t * 4.5).floor() as usize % 16;
-                let phase = (t * 4.5).fract();
-                let env = (-phase * 3.2).exp() * (1.0 - (-phase * 45.0).exp());
-                let f1 = bach_melody[step];
-                let fb = bach_bass[step];
-                let v1 = ((t * f1 * tau).sin() * 0.32 + (t * f1 * 2.0 * tau).sin() * 0.14 + (t * f1 * 3.0 * tau).sin() * 0.06) * env;
-                let vb = ((t * fb * tau).sin() * 0.24 + (t * fb * 2.0 * tau).sin() * 0.10) * (-phase * 2.0).exp();
-                (v1 + vb).clamp(-1.0, 1.0)
-            } else {
-                let step = (t * 1.4).floor() as usize % 16;
-                let phase = (t * 1.4).fract();
-                let env = (-phase * 1.8).exp() * (1.0 - (-phase * 30.0).exp());
-                let arp_step = (t * 4.2).floor() as usize % 16;
-                let arp_phase = (t * 4.2).fract();
-                let f1 = debussy_melody[step];
-                let fb = debussy_bass[arp_step];
-                let v1 = ((t * f1 * tau).sin() * 0.34 + (t * f1 * 2.0 * tau).sin() * 0.08) * env;
-                let vb = ((t * fb * tau).sin() * 0.22 + (t * fb * 1.5 * tau).sin() * 0.07) * (-arp_phase * 2.5).exp();
-                (v1 + vb).clamp(-1.0, 1.0)
-            };
-            samples.push(sample as f32);
+            let step = (t * tempo).floor() as usize;
+            let phase = (t * tempo).fract();
+            let degree = (step.wrapping_mul(seed + 3).wrapping_add(step / 2)) % ratios.len();
+            let f1 = root_hz * ratios[degree];
+            let fb = root_hz * 0.5 * ratios[(step / 4) % 4];
+            let env = (-phase * (1.8 + (seed % 4) as f64 * 0.35)).exp() * (1.0 - (-phase * 40.0).exp());
+            let v1 = ((t * f1 * tau).sin() * 0.32 + (t * f1 * 2.0 * tau).sin() * 0.12 + (t * f1 * 3.0 * tau).sin() * 0.05) * env;
+            let vb = ((t * fb * tau).sin() * 0.24 + (t * fb * 1.5 * tau).sin() * 0.08) * (-phase * 2.0).exp();
+            samples.push((v1 + vb).clamp(-1.0, 1.0) as f32);
         }
-        let name = if preset == 4 { "JS_Bach_Brandenburg_No3.ogg" } else { "Claude_Debussy_Clair_de_Lune.ogg" };
         let peaks = compute_waveform_peaks(&samples, 96);
-        Self { name: name.to_string(), duration_secs, sample_rate, samples_mono: samples, waveform_peaks: peaks }
+        Self { name: title.to_string(), duration_secs, sample_rate, samples_mono: samples, waveform_peaks: peaks }
     }
 
     /// Parses a standard RIFF/WAVE PCM audio file buffer from disk or drag-and-drop.
@@ -296,12 +260,6 @@ impl AudioTrack {
         }
         out
     }
-
-    /// Encodes a portion of the track to standard 16-bit PCM WAV for native OS playback at unity mix.
-    #[allow(dead_code)]
-    pub fn to_wav_bytes(&self, start_secs: f64, end_secs: f64) -> Vec<u8> {
-        self.to_wav_bytes_mixed(start_secs, end_secs, 1.0, 0.0)
-    }
 }
 
 fn compute_waveform_peaks(samples: &[f32], bins: usize) -> Vec<f32> {
@@ -321,21 +279,87 @@ fn compute_waveform_peaks(samples: &[f32], bins: usize) -> Vec<f32> {
     peaks
 }
 
-/// Safe zero-dependency audio buffer sink (`-D unsafe_code` compliant).
+/// Safe zero-dependency audio buffer sink (`-D unsafe_code` compliant) with live OS playback in gallery mode.
 pub struct NativeAudioOutput;
 
 static PLAYING_BUFFER: std::sync::Mutex<Option<Vec<u8>>> = std::sync::Mutex::new(None);
+#[cfg(not(target_arch = "wasm32"))]
+static OS_AUDIO_ENABLED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+#[cfg(not(target_arch = "wasm32"))]
+static AUDIO_SEQ: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+#[cfg(not(target_arch = "wasm32"))]
+static AUDIO_CHILD: std::sync::Mutex<Option<std::process::Child>> = std::sync::Mutex::new(None);
 
 impl NativeAudioOutput {
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn enable_os_audio(enabled: bool) {
+        OS_AUDIO_ENABLED.store(enabled, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    pub fn is_playing() -> bool {
+        #[cfg(not(target_arch = "wasm32"))]
+        if OS_AUDIO_ENABLED.load(std::sync::atomic::Ordering::Relaxed) {
+            if let Ok(mut cg) = AUDIO_CHILD.lock() {
+                if let Some(ref mut child) = *cg {
+                    return child.try_wait().ok().flatten().is_none();
+                }
+            }
+            return false;
+        }
+        PLAYING_BUFFER.lock().map(|g| g.is_some()).unwrap_or(false)
+    }
+
     pub fn play_wav(wav_bytes: &[u8]) {
         if let Ok(mut guard) = PLAYING_BUFFER.lock() {
             *guard = Some(wav_bytes.to_vec());
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        if OS_AUDIO_ENABLED.load(std::sync::atomic::Ordering::Relaxed) && wav_bytes.len() > 4096 {
+            Self::stop_os_child();
+            let seq = AUDIO_SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed) % 2;
+            let wav_path = std::env::temp_dir().join(format!("egui_macview_avkit_stream_{seq}.wav"));
+            if std::fs::write(&wav_path, wav_bytes).is_ok() {
+                #[cfg(target_os = "windows")]
+                {
+                    use std::os::windows::process::CommandExt;
+                    let ps_cmd = format!("$p = New-Object System.Media.SoundPlayer '{}'; $p.PlaySync()", wav_path.display());
+                    if let Ok(child) = std::process::Command::new("powershell")
+                        .args(["-NoProfile", "-NonInteractive", "-Command", &ps_cmd])
+                        .creation_flags(0x0800_0000)
+                        .spawn()
+                    {
+                        if let Ok(mut cg) = AUDIO_CHILD.lock() {
+                            *cg = Some(child);
+                        }
+                    }
+                }
+                #[cfg(target_os = "macos")]
+                {
+                    if let Ok(child) = std::process::Command::new("afplay").arg(&wav_path).spawn() {
+                        if let Ok(mut cg) = AUDIO_CHILD.lock() {
+                            *cg = Some(child);
+                        }
+                    }
+                }
+            }
         }
     }
 
     pub fn stop() {
         if let Ok(mut guard) = PLAYING_BUFFER.lock() {
             *guard = None;
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        Self::stop_os_child();
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fn stop_os_child() {
+        if let Ok(mut cg) = AUDIO_CHILD.lock() {
+            if let Some(mut child) = cg.take() {
+                let _ = child.kill();
+                let _ = child.wait();
+            }
         }
     }
 }

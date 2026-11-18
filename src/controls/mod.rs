@@ -20,6 +20,7 @@ pub mod image_view;
 pub mod input_cell;
 pub mod label;
 pub mod level_indicator;
+pub mod liquid_glass;
 pub mod origin_matrix;
 pub mod outline_view;
 pub mod path_control;
@@ -63,6 +64,9 @@ pub use image_view::{MacImageFrameStyle, MacImageScaling, MacImageView};
 pub use input_cell::{MacControlSize, MacInputCell};
 pub use label::{MacFontWeight, MacLabel, MacLabelColor};
 pub use level_indicator::{calculate_pan_weights, MacLevelIndicator, MacLevelIndicatorStyle, MacLevelOrientation};
+pub use liquid_glass::{
+    build_liquid_glass_backdrop_image, dome_surface_normal_3d, refract_point_through_glass, sdf_rounded_capsule, sdf_smooth_union,
+};
 pub use origin_matrix::{MacOriginAnchor, MacOriginMatrix};
 pub use outline_view::{MacOutlineRow, MacOutlineRowResponse, MacOutlineTree, MacOutlineView};
 pub use path_control::{MacPathComponent, MacPathControl, MacPathControlResponse};

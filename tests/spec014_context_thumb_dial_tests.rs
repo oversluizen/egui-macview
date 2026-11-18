@@ -23,11 +23,8 @@ fn run_frame(ctx: &Context, input: RawInput, f: impl FnMut(&mut egui::Ui)) {
 }
 
 fn pointer_frame(pos: Pos2, pressed: Option<bool>, time: f64) -> RawInput {
-    let mut input = RawInput {
-        screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(800.0, 600.0))),
-        time: Some(time),
-        ..Default::default()
-    };
+    let mut input =
+        RawInput { screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(800.0, 600.0))), time: Some(time), ..Default::default() };
     input.events.push(Event::PointerMoved(pos));
     if let Some(is_down) = pressed {
         input.events.push(Event::PointerButton { pos, button: PointerButton::Primary, pressed: is_down, modifiers: egui::Modifiers::NONE });
@@ -223,11 +220,7 @@ fn tc_014_04_bottom_undo_redo_arc_and_outer_rotary_jog_ring() {
     // Click Undo
     let mut undo_fired = false;
     run_frame(&ctx, pointer_frame(undo_center, Some(true), 1.00), |ui| {
-        MacContextThumbDial::new("dial_undo_rotary", &mut latched, &mut rotary_val)
-            .can_undo(true)
-            .can_redo(true)
-            .theme(&theme)
-            .show(ui);
+        MacContextThumbDial::new("dial_undo_rotary", &mut latched, &mut rotary_val).can_undo(true).can_redo(true).theme(&theme).show(ui);
     });
     run_frame(&ctx, pointer_frame(undo_center, Some(false), 1.04), |ui| {
         let resp = MacContextThumbDial::new("dial_undo_rotary", &mut latched, &mut rotary_val)
@@ -242,11 +235,7 @@ fn tc_014_04_bottom_undo_redo_arc_and_outer_rotary_jog_ring() {
     // Click Redo
     let mut redo_fired = false;
     run_frame(&ctx, pointer_frame(redo_center, Some(true), 2.00), |ui| {
-        MacContextThumbDial::new("dial_undo_rotary", &mut latched, &mut rotary_val)
-            .can_undo(true)
-            .can_redo(true)
-            .theme(&theme)
-            .show(ui);
+        MacContextThumbDial::new("dial_undo_rotary", &mut latched, &mut rotary_val).can_undo(true).can_redo(true).theme(&theme).show(ui);
     });
     run_frame(&ctx, pointer_frame(redo_center, Some(false), 2.04), |ui| {
         let resp = MacContextThumbDial::new("dial_undo_rotary", &mut latched, &mut rotary_val)
@@ -260,21 +249,15 @@ fn tc_014_04_bottom_undo_redo_arc_and_outer_rotary_jog_ring() {
 
     // Scrub outer rotary ring from top (12 o'clock) to right (3 o'clock = +90 deg)
     run_frame(&ctx, pointer_frame(ring_top, Some(true), 3.00), |ui| {
-        MacContextThumbDial::new("dial_undo_rotary", &mut latched, &mut rotary_val)
-            .theme(&theme)
-            .show(ui);
+        MacContextThumbDial::new("dial_undo_rotary", &mut latched, &mut rotary_val).theme(&theme).show(ui);
     });
     let mut ticks = 0.0f32;
     run_frame(&ctx, pointer_frame(ring_right, None, 3.10), |ui| {
-        let resp = MacContextThumbDial::new("dial_undo_rotary", &mut latched, &mut rotary_val)
-            .theme(&theme)
-            .show(ui);
+        let resp = MacContextThumbDial::new("dial_undo_rotary", &mut latched, &mut rotary_val).theme(&theme).show(ui);
         ticks = resp.rotary_delta_ticks;
     });
     run_frame(&ctx, pointer_frame(ring_right, Some(false), 3.15), |ui| {
-        MacContextThumbDial::new("dial_undo_rotary", &mut latched, &mut rotary_val)
-            .theme(&theme)
-            .show(ui);
+        MacContextThumbDial::new("dial_undo_rotary", &mut latched, &mut rotary_val).theme(&theme).show(ui);
     });
     assert!(ticks > 0.0, "Clockwise drag on outer rotary ring must yield positive rotary_delta_ticks (got {ticks})");
     assert!(rotary_val > 0.25, "Clockwise drag on outer rotary ring must increase rotary_value (got {rotary_val})");
@@ -401,7 +384,10 @@ fn tc_014_07_edge_thumbwheel_free_spin_flywheel_and_touch_to_brake() {
     run_frame(&ctx, pointer_frame(Pos2::ZERO, None, 1.10), |ui| {
         MacEdgeThumbwheel::new("edge_wheel_test", &mut val, 0.0..=200.0).theme(&theme).show(ui);
     });
-    assert!(val > val_at_release, "Free-spinning flywheel must continue advancing value after finger release (release={val_at_release}, coast={val})");
+    assert!(
+        val > val_at_release,
+        "Free-spinning flywheel must continue advancing value after finger release (release={val_at_release}, coast={val})"
+    );
 
     // Touch-to-Brake: pressing on the spinning wheel immediately stops free-spin!
     let mut spinning_after_brake = true;
@@ -461,10 +447,7 @@ fn tc_014_08_standalone_interchangeable_widgets_and_calculated_apple_glass_accen
             .scale(0.76)
             .theme(&dark_theme)
             .show(ui);
-        assert_eq!(
-            d_resp.effective_glass_accent,
-            dark_theme.resolve_glass_accent_on(Some(custom_violet), dark_surface)
-        );
+        assert_eq!(d_resp.effective_glass_accent, dark_theme.resolve_glass_accent_on(Some(custom_violet), dark_surface));
         dial_size = d_resp.response.rect.size();
 
         let j_resp = MacFreeJoystickBowl::new("standalone_joystick_bowl")
@@ -495,22 +478,18 @@ fn tc_014_08_standalone_interchangeable_widgets_and_calculated_apple_glass_accen
     let mut standalone_nudge = Vec2::ZERO;
     let mut marble_pos = Pos2::ZERO;
     run_frame(&ctx, pointer_frame(drag_pt, Some(true), 1.00), |ui| {
-        let j_resp = MacFreeJoystickBowl::new("standalone_joystick_bowl")
-            .glass_accent(custom_violet)
-            .scale(0.76)
-            .theme(&dark_theme)
-            .show(ui);
+        let j_resp =
+            MacFreeJoystickBowl::new("standalone_joystick_bowl").glass_accent(custom_violet).scale(0.76).theme(&dark_theme).show(ui);
         standalone_nudge = j_resp.nudge_delta;
         marble_pos = j_resp.marble_center;
     });
     run_frame(&ctx, pointer_frame(drag_pt, Some(false), 1.05), |ui| {
-        MacFreeJoystickBowl::new("standalone_joystick_bowl")
-            .glass_accent(custom_violet)
-            .scale(0.76)
-            .theme(&dark_theme)
-            .show(ui);
+        MacFreeJoystickBowl::new("standalone_joystick_bowl").glass_accent(custom_violet).scale(0.76).theme(&dark_theme).show(ui);
     });
-    assert!(standalone_nudge.x > 0.0 && standalone_nudge.y < 0.0, "Standalone MacFreeJoystickBowl upper-right drag must emit (+x, -y) nudge_delta");
+    assert!(
+        standalone_nudge.x > 0.0 && standalone_nudge.y < 0.0,
+        "Standalone MacFreeJoystickBowl upper-right drag must emit (+x, -y) nudge_delta"
+    );
     assert!((marble_pos - joy_center).length() > 10.0, "3D glass marble must displace toward pointer during drag");
 
     // Click Undo on standalone MacFreeJoystickBowl

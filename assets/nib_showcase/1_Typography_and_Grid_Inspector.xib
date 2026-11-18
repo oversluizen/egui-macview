@@ -268,7 +268,7 @@
                             <binding destination="-2" name="selectedIndex" keyPath="values.fontWeight" id="b-s2-seg-wt"/>
                         </connections>
                     </segmentedControl>
-                    <button identifier="s2-help" verticalHuggingPriority="750" id="s2-help">
+                    <button identifier="s2-help" verticalHuggingPriority="750" toolTip="AppKit Typography &amp; Symbols Help: Inspect 32+ Cupertino vector glyphs, test Kerning/Tracking metrics, and compare clipped vs unclipped views." id="s2-help">
                         <rect key="frame" x="444" y="64" width="22" height="22"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <buttonCell key="cell" type="help" title="?" bezelStyle="helpButton" inset="2" id="cell-s2-help">

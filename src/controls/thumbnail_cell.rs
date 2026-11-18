@@ -40,6 +40,7 @@ pub struct MacThumbnailCell<'a> {
     size: Option<Vec2>,
     corner_radius: Option<f32>,
     border_width: Option<f32>,
+    footer_height: Option<f32>,
     drawer: Option<ThumbnailDrawer<'a>>,
 }
 
@@ -85,6 +86,13 @@ impl<'a> MacThumbnailCell<'a> {
         self
     }
 
+    /// Reserves a bottom footer bar of `height` points (e.g. `16.0pt` for a glyph name/Unicode footer)
+    /// excluded from the clipped preview drawing area (`REQ-013-08.3`).
+    pub fn footer_height(mut self, height: f32) -> Self {
+        self.footer_height = Some(height.max(0.0));
+        self
+    }
+
     /// Custom drawing callback inside the cell canvas rect.
     pub fn custom_draw(mut self, drawer: impl FnOnce(&Painter, Rect) + 'a) -> Self {
         self.drawer = Some(Box::new(drawer));
@@ -120,8 +128,12 @@ impl<'a> MacThumbnailCell<'a> {
         painter.rect(rect, CornerRadius::same(corner_radius as u8), bg_color, border_stroke, StrokeKind::Inside);
 
         if let Some(drawer) = self.drawer {
-            let inner_rect = rect.shrink(border_width);
-            drawer(painter, inner_rect);
+            let mut inner_rect = rect.shrink(border_width);
+            if let Some(fh) = self.footer_height {
+                inner_rect.max.y = (rect.max.y - border_width - fh).max(inner_rect.min.y);
+            }
+            let clipped_painter = painter.with_clip_rect(inner_rect);
+            drawer(&clipped_painter, inner_rect);
         }
     }
 }

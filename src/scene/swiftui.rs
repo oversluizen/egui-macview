@@ -230,7 +230,13 @@ fn classify_swiftui_control(
     next_action: &mut u32,
 ) -> (SceneNodeKind, Option<ActionId>, Option<String>, Option<String>) {
     if inner_stmt.starts_with("Toggle(") {
-        let kind = if inner_stmt.contains(".toggleStyle(.switch)") { SceneNodeKind::Switch } else { SceneNodeKind::Checkbox };
+        let kind = if inner_stmt.contains(".toggleStyle(.switch)") {
+            SceneNodeKind::Switch
+        } else if inner_stmt.contains(".toggleStyle(.radioGroup)") {
+            SceneNodeKind::RadioButton
+        } else {
+            SceneNodeKind::Checkbox
+        };
         (kind, None, None, None)
     } else if inner_stmt.starts_with("TextField(") {
         let kind = if inner_stmt.contains("format: .number") {
@@ -269,6 +275,31 @@ fn classify_swiftui_control(
         (SceneNodeKind::TextView { monospace: false, line_numbers: false }, None, None, None)
     } else if inner_stmt.starts_with("OriginPointPicker(") {
         (SceneNodeKind::OriginMatrix, None, None, None)
+    } else if inner_stmt.starts_with("ColorPicker(") {
+        (SceneNodeKind::ColorWell, None, None, None)
+    } else if inner_stmt.starts_with("DatePicker(") {
+        (SceneNodeKind::DatePicker { clock_and_calendar: inner_stmt.contains(".datePickerStyle(.graphical)") }, None, None, None)
+    } else if inner_stmt.starts_with("TabView(") {
+        (SceneNodeKind::TabView { tabs: vec![] }, None, None, None)
+    } else if inner_stmt.starts_with("DisclosureGroup(") {
+        (SceneNodeKind::DisclosureGroup { trailing_add_button: inner_stmt.contains(".trailingAddButton(true)") }, None, None, None)
+    } else if inner_stmt.starts_with("SearchField(") {
+        (SceneNodeKind::SearchField, None, None, None)
+    } else if inner_stmt.starts_with("ComboBox(") {
+        (SceneNodeKind::ComboBox { options: vec![] }, None, None, None)
+    } else if inner_stmt.starts_with("RuleEditor(") {
+        (SceneNodeKind::RuleEditor, None, None, None)
+    } else if inner_stmt.starts_with("Table(") {
+        (SceneNodeKind::TableView { columns: vec![] }, None, None, None)
+    } else if inner_stmt.starts_with("TagColorPicker(") {
+        (SceneNodeKind::TagColorPicker, None, None, None)
+    } else if inner_stmt.starts_with("TableActionBar(") {
+        (SceneNodeKind::TableActionBar, None, None, None)
+    } else if inner_stmt.starts_with("ProgressView(") {
+        let icon = if inner_stmt.contains(".progressViewStyle(.circular)") { "NSProgressSpinning" } else { "NSProgressBar" };
+        (SceneNodeKind::Slider { min: 0.0, max: 100.0, tick_marks: 0 }, None, None, Some(icon.into()))
+    } else if inner_stmt.starts_with("Gauge(") {
+        (SceneNodeKind::Slider { min: 0.0, max: 10.0, tick_marks: 0 }, None, None, Some("NSLevelIndicator".into()))
     } else {
         (SceneNodeKind::Label, None, None, None)
     }
@@ -284,6 +315,18 @@ fn is_control_statement(s: &str) -> bool {
         || s.starts_with("Image(")
         || s.starts_with("TextEditor(")
         || s.starts_with("OriginPointPicker(")
+        || s.starts_with("ColorPicker(")
+        || s.starts_with("DatePicker(")
+        || s.starts_with("TabView(")
+        || s.starts_with("DisclosureGroup(")
+        || s.starts_with("SearchField(")
+        || s.starts_with("ComboBox(")
+        || s.starts_with("RuleEditor(")
+        || s.starts_with("Table(")
+        || s.starts_with("TagColorPicker(")
+        || s.starts_with("TableActionBar(")
+        || s.starts_with("ProgressView(")
+        || s.starts_with("Gauge(")
         || s.starts_with("Text(")
 }
 

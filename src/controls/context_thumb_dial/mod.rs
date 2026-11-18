@@ -314,6 +314,7 @@ pub struct MacContextThumbDialState {
     pub(super) active_sector: Option<MacThumbSector>,
     pub(super) latched_sector: Option<MacThumbSector>,
     pub(super) last_rotary_angle_deg: Option<f32>,
+    pub(super) rotary_detent_accum_deg: f32,
     pub(super) joystick_offset: Vec2,
     pub(super) stored_layer: MacThumbDialLayer,
     pub(super) tooltip_text: String,
@@ -334,6 +335,14 @@ impl MacContextThumbDialState {
         match self.tooltip_triggered_at {
             Some(t0) if !self.tooltip_text.is_empty() => MacTheme::transient_hud_tooltip_opacity((now - t0) as f32),
             _ => 0.0,
+        }
+    }
+
+    /// Returns the optimal next repaint delay in seconds for the transient HUD tooltip at `now` (`REQ-015-11`).
+    pub fn tooltip_repaint_delay_at(&self, now: f64) -> Option<f32> {
+        match self.tooltip_triggered_at {
+            Some(t0) if !self.tooltip_text.is_empty() => MacTheme::transient_hud_tooltip_repaint_delay((now - t0) as f32),
+            _ => None,
         }
     }
 

@@ -26,11 +26,23 @@ pub(crate) enum IbVal {
 }
 
 impl IbVal {
+    pub(crate) fn as_str(&self) -> Option<&str> {
+        let Self::Bytes(b) = self else { return None };
+        std::str::from_utf8(b.strip_suffix(&[0]).unwrap_or(b.as_slice())).ok()
+    }
     pub(crate) fn as_u32(&self) -> Option<u32> {
-        if let Self::Int(v) = self { Some(*v as u32) } else { None }
+        if let Self::Int(v) = self {
+            Some(*v as u32)
+        } else {
+            None
+        }
     }
     pub(crate) fn as_obj_ref(&self) -> Option<usize> {
-        if let Self::ObjRef(idx) = self { Some(*idx) } else { None }
+        if let Self::ObjRef(idx) = self {
+            Some(*idx)
+        } else {
+            None
+        }
     }
     pub(crate) fn as_nsrect(&self) -> Option<[f32; 4]> {
         let Self::Bytes(b) = self else { return None };
@@ -118,10 +130,7 @@ impl IbNibGraph {
     }
 
     pub fn prop_val(&self, obj_idx: usize, key_name: &str) -> Option<&IbVal> {
-        self.obj_props(obj_idx)
-            .iter()
-            .find(|(k_idx, _)| self.keys.get(*k_idx).map(String::as_str) == Some(key_name))
-            .map(|(_, val)| val)
+        self.obj_props(obj_idx).iter().find(|(k_idx, _)| self.keys.get(*k_idx).map(String::as_str) == Some(key_name)).map(|(_, val)| val)
     }
 
     pub fn resolve_str(&self, val: &IbVal) -> Option<String> {
@@ -263,8 +272,10 @@ pub(crate) fn decode_ibtool_nib_archive(graph: &IbNibGraph, mapper: &CustomClass
     for obj_i in 0..graph.objects.len() {
         if graph.obj_class(obj_i) == "NSIBUserDefinedRuntimeAttributesConnector" {
             let Some(target) = graph.prop_val(obj_i, "NSObject").and_then(IbVal::as_obj_ref) else { continue };
-            let k_refs = graph.prop_val(obj_i, "NSKeyPaths").and_then(IbVal::as_obj_ref).map(|a| graph.resolve_array_refs(a)).unwrap_or_default();
-            let v_refs = graph.prop_val(obj_i, "NSValues").and_then(IbVal::as_obj_ref).map(|a| graph.resolve_array_refs(a)).unwrap_or_default();
+            let k_refs =
+                graph.prop_val(obj_i, "NSKeyPaths").and_then(IbVal::as_obj_ref).map(|a| graph.resolve_array_refs(a)).unwrap_or_default();
+            let v_refs =
+                graph.prop_val(obj_i, "NSValues").and_then(IbVal::as_obj_ref).map(|a| graph.resolve_array_refs(a)).unwrap_or_default();
             let entry = runtime_attrs.entry(target).or_default();
             for (kr, vr) in k_refs.into_iter().zip(v_refs) {
                 if let (Some(k), Some(v)) = (graph.resolve_str(&IbVal::ObjRef(kr)), graph.resolve_str(&IbVal::ObjRef(vr))) {
@@ -279,16 +290,16 @@ pub(crate) fn decode_ibtool_nib_archive(graph: &IbNibGraph, mapper: &CustomClass
         .and_then(|w| graph.prop_val(w, "NSWindowView").and_then(IbVal::as_obj_ref))
         .or_else(|| (0..graph.objects.len()).find(|&i| graph.obj_class(i) == "NSView" && graph.prop_val(i, "NSSuperview").is_none()))
         .unwrap_or(0);
-    let win_title = win_idx
-        .and_then(|w| graph.prop_val(w, "NSWindowTitle").and_then(|v| graph.resolve_str(v)))
-        .unwrap_or_else(|| "Window".to_string());
+    let win_title =
+        win_idx.and_then(|w| graph.prop_val(w, "NSWindowTitle").and_then(|v| graph.resolve_str(v))).unwrap_or_else(|| "Window".to_string());
     let root_ib_id = ["NSReuseIdentifierKey", "NSUserInterfaceItemIdentifier", "NSIdentifier", "NSID"]
         .into_iter()
         .find_map(|k| graph.prop_val(root_view_idx, k).and_then(|v| graph.resolve_str(v)))
         .or_else(|| {
-            graph.obj_props(root_view_idx).iter().find_map(|(_, v)| {
-                graph.resolve_str(v).filter(|s| !s.is_empty() && !s.starts_with('{') && !s.starts_with("NS"))
-            })
+            graph
+                .obj_props(root_view_idx)
+                .iter()
+                .find_map(|(_, v)| graph.resolve_str(v).filter(|s| !s.is_empty() && !s.starts_with('{') && !s.starts_with("NS")))
         })
         .unwrap_or_else(|| "root-view".to_string());
     let root_rect = graph.resolve_rect(root_view_idx).unwrap_or([0.0, 0.0, 480.0, 320.0]);
@@ -365,6 +376,18 @@ fn collect_ibtool_subviews(st: &mut IbDecodeState<'_>, parent_view_obj: usize, p
 fn wire_ibtool_connectors(st: &mut IbDecodeState<'_>) {
     for obj_i in 0..st.graph.objects.len() {
         let cls = st.graph.obj_class(obj_i);
+        if cls == "NSIBHelpConnector" {
+            let dst_obj =
+                st.graph.prop_val(obj_i, "NSDestination").or_else(|| st.graph.prop_val(obj_i, "NSObject")).and_then(IbVal::as_obj_ref);
+            if let Some(&n_idx) = dst_obj.and_then(|o| st.obj_to_node_idx.get(&o)) {
+                if st.nodes[n_idx].tooltip.is_empty() {
+                    if let Some(tip) = st.graph.prop_val(obj_i, "NSMarker").and_then(|v| st.graph.resolve_str(v)) {
+                        st.nodes[n_idx].tooltip = tip;
+                    }
+                }
+            }
+            continue;
+        }
         if cls != "NSNibControlConnector" && cls != "NSNibBindingConnector" {
             continue;
         }

@@ -183,6 +183,10 @@ pub struct PlayerViewMetrics {
     pub inline_play_button_width: DimensionValue,
     /// Inline control bar play button horizontal inset (`8.0 pt`).
     pub inline_play_button_inset: DimensionValue,
+    /// Discrete playback rate 1.25x (`1.25`).
+    pub rate_125: DimensionValue,
+    /// Discrete playback rate 1.50x (`1.50`).
+    pub rate_150: DimensionValue,
 }
 
 impl Default for PlayerViewMetrics {

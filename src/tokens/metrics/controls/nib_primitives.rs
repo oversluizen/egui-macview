@@ -155,6 +155,8 @@ pub struct InlineActionButtonMetrics {
     pub border_width: DimensionValue,
     /// Vector icon stroke width (`1.3pt`).
     pub icon_stroke_width: DimensionValue,
+    /// Half-span of analytical `+` / `−` crosshair (`3.2pt`).
+    pub glyph_half_span: DimensionValue,
 }
 
 impl Default for InlineActionButtonMetrics {

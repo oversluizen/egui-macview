@@ -266,7 +266,9 @@ impl<'a> MacPlayerView<'a> {
 
     /// Standard AVKit discrete playback rates `[0.5, 1.0, 1.25, 1.5, 2.0]`.
     pub fn playback_rates(&self) -> [f32; 5] {
-        [0.5, 1.0, 1.0 + 0.5 * 0.5, 1.0 + 0.5, 2.0]
+        let theme_cow = MacTheme::resolve_or_default(self.theme);
+        let m = theme_cow.player_view();
+        [0.5, 1.0, m.rate_125.points(), m.rate_150.points(), 2.0]
     }
 
     /// Phase 1: Pure geometry calculation producing layout and hit rectangles.

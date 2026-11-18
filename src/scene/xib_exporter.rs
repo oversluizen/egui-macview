@@ -26,7 +26,9 @@ pub fn scene_to_xcode16_xib_xml(scene: &MacSceneIR) -> String {
     out.push_str(&format!(
         "        <window title=\"{win_title}\" allowsToolTipsWhenApplicationIsInactive=\"NO\" autorecalculatesKeyViewLoop=\"NO\" releasedWhenClosed=\"NO\" animationBehavior=\"default\" id=\"win-{root_id}\">\n"
     ));
-    out.push_str("            <windowStyleMask key=\"styleMask\" titled=\"YES\" closable=\"YES\" miniaturizable=\"YES\" resizable=\"YES\"/>\n");
+    out.push_str(
+        "            <windowStyleMask key=\"styleMask\" titled=\"YES\" closable=\"YES\" miniaturizable=\"YES\" resizable=\"YES\"/>\n",
+    );
     out.push_str(&format!("            <rect key=\"contentRect\" x=\"196\" y=\"240\" width=\"{w:.0}\" height=\"{h:.0}\"/>\n"));
     out.push_str("            <rect key=\"screenRect\" x=\"0.0\" y=\"0.0\" width=\"1680\" height=\"1027\"/>\n");
     emit_root_view_xml(scene, &root_id, [w, h], false, "            ", &mut out);
@@ -37,14 +39,7 @@ pub fn scene_to_xcode16_xib_xml(scene: &MacSceneIR) -> String {
 }
 
 /// Emits a `<view>` element (used for both `<view key="contentView">` in `.xib` and `<view key="view">` in `.storyboard`).
-pub(crate) fn emit_root_view_xml(
-    scene: &MacSceneIR,
-    view_id: &str,
-    [w, h]: [f32; 2],
-    is_flipped: bool,
-    indent: &str,
-    out: &mut String,
-) {
+pub(crate) fn emit_root_view_xml(scene: &MacSceneIR, view_id: &str, [w, h]: [f32; 2], is_flipped: bool, indent: &str, out: &mut String) {
     let view_key = if indent.len() <= 12 { "contentView" } else { "view" };
     out.push_str(&format!("{indent}<view key=\"{view_key}\" identifier=\"{view_id}\" id=\"{view_id}\">\n"));
     out.push_str(&format!("{indent}    <rect key=\"frame\" x=\"0.0\" y=\"0.0\" width=\"{w:.0}\" height=\"{h:.0}\"/>\n"));
@@ -61,9 +56,7 @@ pub(crate) fn emit_root_view_xml(
     }
     if is_flipped {
         out.push_str(&format!("{indent}    <userDefinedRuntimeAttributes>\n"));
-        out.push_str(&format!(
-            "{indent}        <userDefinedRuntimeAttribute type=\"string\" keyPath=\"ibFlipped\" value=\"YES\"/>\n"
-        ));
+        out.push_str(&format!("{indent}        <userDefinedRuntimeAttribute type=\"string\" keyPath=\"ibFlipped\" value=\"YES\"/>\n"));
         out.push_str(&format!("{indent}    </userDefinedRuntimeAttributes>\n"));
     }
     out.push_str(&format!("{indent}</view>\n"));
@@ -205,12 +198,36 @@ fn emit_xib_node(scene: &MacSceneIR, node: &SceneNode, indent: &str, out: &mut S
             emit_connections_and_inspectables(node, &id, &inspectables, &format!("{indent}    "), out);
             out.push_str(&format!("{indent}</button>\n"));
         }
-        SceneNodeKind::Checkbox | SceneNodeKind::RadioButton | SceneNodeKind::Switch | SceneNodeKind::HelpButton | SceneNodeKind::InlineActionButton => {
-            let ctx = XibNodeCtx { id: &id, title: &title, cs_attr: &cs_attr, en_attr, tip_attr: &tip_attr, rect_line: &rect_line, mask_line: &mask_line, inspectables: &inspectables, indent };
+        SceneNodeKind::Checkbox
+        | SceneNodeKind::RadioButton
+        | SceneNodeKind::Switch
+        | SceneNodeKind::HelpButton
+        | SceneNodeKind::InlineActionButton => {
+            let ctx = XibNodeCtx {
+                id: &id,
+                title: &title,
+                cs_attr: &cs_attr,
+                en_attr,
+                tip_attr: &tip_attr,
+                rect_line: &rect_line,
+                mask_line: &mask_line,
+                inspectables: &inspectables,
+                indent,
+            };
             emit_button_variant_xml(node, &ctx, out);
         }
         _ => {
-            let ctx = XibNodeCtx { id: &id, title: &title, cs_attr: &cs_attr, en_attr, tip_attr: &tip_attr, rect_line: &rect_line, mask_line: &mask_line, inspectables: &inspectables, indent };
+            let ctx = XibNodeCtx {
+                id: &id,
+                title: &title,
+                cs_attr: &cs_attr,
+                en_attr,
+                tip_attr: &tip_attr,
+                rect_line: &rect_line,
+                mask_line: &mask_line,
+                inspectables: &inspectables,
+                indent,
+            };
             emit_complex_widget_xml(node, &ctx, out);
         }
     }
@@ -270,10 +287,7 @@ fn emit_complex_widget_xml(node: &SceneNode, ctx: &XibNodeCtx<'_>, out: &mut Str
             out.push_str(&format!("{indent}        <menu key=\"menu\" id=\"menu-{id}\">\n{indent}            <items>\n"));
             for (i, opt) in options.iter().enumerate() {
                 let st = if i == 0 { " state=\"on\"" } else { "" };
-                out.push_str(&format!(
-                    "{indent}                <menuItem title=\"{}\"{st} id=\"mi-{id}-{i}\"/>\n",
-                    escape_xml(opt)
-                ));
+                out.push_str(&format!("{indent}                <menuItem title=\"{}\"{st} id=\"mi-{id}-{i}\"/>\n", escape_xml(opt)));
             }
             out.push_str(&format!("{indent}            </items>\n{indent}        </menu>\n{indent}    </popUpButtonCell>\n"));
             emit_connections_and_inspectables(node, id, inspectables, &format!("{indent}    "), out);
@@ -407,9 +421,7 @@ fn emit_complex_widget_xml(node: &SceneNode, ctx: &XibNodeCtx<'_>, out: &mut Str
             out.push_str(&format!(
                 "{indent}<textView identifier=\"{id}\" importsGraphics=\"NO\" richText=\"NO\" verticallyResizable=\"YES\"{tip_attr} id=\"{id}\">\n{rect_line}{mask_line}"
             ));
-            out.push_str(&format!(
-                "{indent}    <color key=\"textColor\" name=\"textColor\" catalog=\"System\" colorSpace=\"catalog\"/>\n"
-            ));
+            out.push_str(&format!("{indent}    <color key=\"textColor\" name=\"textColor\" catalog=\"System\" colorSpace=\"catalog\"/>\n"));
             out.push_str(&format!(
                 "{indent}    <color key=\"backgroundColor\" name=\"textBackgroundColor\" catalog=\"System\" colorSpace=\"catalog\"/>\n"
             ));
@@ -425,7 +437,9 @@ fn emit_complex_widget_xml(node: &SceneNode, ctx: &XibNodeCtx<'_>, out: &mut Str
             out.push_str(&format!("{indent}    <clipView key=\"contentView\" id=\"clip-{id}\">\n"));
             out.push_str(&format!("{indent}        <rect key=\"frame\" x=\"1\" y=\"1\" width=\"{w:.0}\" height=\"{h:.0}\"/>\n"));
             out.push_str(&format!("{indent}        <autoresizingMask key=\"autoresizingMask\" widthSizable=\"YES\" heightSizable=\"YES\"/>\n{indent}        <subviews>\n"));
-            out.push_str(&format!("{indent}            <tableView verticalHuggingPriority=\"750\" id=\"tbl-{id}\">\n{indent}                <tableColumns>\n"));
+            out.push_str(&format!(
+                "{indent}            <tableView verticalHuggingPriority=\"750\" id=\"tbl-{id}\">\n{indent}                <tableColumns>\n"
+            ));
             for (ci, (col_title, col_w)) in columns.iter().enumerate() {
                 out.push_str(&format!(
                     "{indent}                    <tableColumn identifier=\"col-{ci}\" width=\"{col_w:.0}\" id=\"tc-{id}-{ci}\">\n"
@@ -459,13 +473,7 @@ fn emit_complex_widget_xml(node: &SceneNode, ctx: &XibNodeCtx<'_>, out: &mut Str
     }
 }
 
-fn emit_connections_and_inspectables(
-    node: &SceneNode,
-    id: &str,
-    inspectables: &[(String, String)],
-    indent: &str,
-    out: &mut String,
-) {
+fn emit_connections_and_inspectables(node: &SceneNode, id: &str, inspectables: &[(String, String)], indent: &str, out: &mut String) {
     if node.binding_path.is_some() || node.action_selector.is_some() {
         out.push_str(&format!("{indent}<connections>\n"));
         if let Some(ref kp) = node.binding_path {
@@ -499,14 +507,11 @@ fn emit_connections_and_inspectables(
     }
 }
 
-fn build_inspectable_attrs(node: &SceneNode, [x, y, w, h]: [f32; 4]) -> Vec<(String, String)> {
+fn build_inspectable_attrs(node: &SceneNode, _rect: [f32; 4]) -> Vec<(String, String)> {
     let mut attrs = Vec::new();
-    if matches!(node.kind, SceneNodeKind::RuleEditor) {
-        attrs.push(("ibDesignFrame".into(), format!("{{{{{x:.0}, {y:.0}}}, {{{w:.0}, {h:.0}}}}}")));
-    }
     if let SceneNodeKind::DisclosureGroup { trailing_add_button } = node.kind {
         if !node.title.is_empty() {
-            attrs.push(("ibTitle".into(), node.title.clone()));
+            attrs.push(("title".into(), node.title.clone()));
         }
         if trailing_add_button {
             attrs.push(("trailingAddButton".into(), "YES".into()));
@@ -519,16 +524,6 @@ fn build_inspectable_attrs(node: &SceneNode, [x, y, w, h]: [f32; 4]) -> Vec<(Str
         if line_numbers {
             attrs.push(("lineNumbers".into(), "YES".into()));
         }
-    }
-    if let Some(ref icon) = node.icon_name {
-        if matches!(icon.as_str(), "NSAccentBadge" | "NSColorWellAlpha") {
-            attrs.push(("ibIcon".into(), icon.clone()));
-        }
-    }
-    if matches!(node.kind, SceneNodeKind::OriginMatrix | SceneNodeKind::TagColorPicker | SceneNodeKind::TableActionBar | SceneNodeKind::DisclosureGroup { .. } | SceneNodeKind::CustomCanvasSlot { .. })
-        && (node.control_size == "small" || node.control_size == "mini")
-    {
-        attrs.push(("ibSize".into(), node.control_size.clone()));
     }
     attrs
 }

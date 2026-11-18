@@ -213,7 +213,6 @@ impl CenterState {
                     toasts.borrow_mut().info("Loaded current working directory");
                 }
             });
-            content_ui.add_space(8.0);
         }
 
         // 2. MacTableView (NSTableView + NSTableHeaderView)
@@ -325,6 +324,69 @@ impl CenterState {
                 if let Some(path) = dir_path {
                     let _ = self.nib_studio.load_nib_or_xib_file(&path, toasts);
                 }
+            }
+        }
+
+        if content_ui.input(|i| i.pointer.secondary_clicked()) {
+            if let Some(pos) = content_ui.input(|i| i.pointer.interact_pos()) {
+                if slot_rect.contains(pos) {
+                    self.finder_menu_open = true;
+                    self.finder_menu_pos = pos;
+                }
+            }
+        }
+        let finder_items = [
+            egui_macview::NSMenuItem::action("Open Selected in NIB Studio", "finder.open_nib"),
+            egui_macview::NSMenuItem::action("Duplicate Asset in Queue", "finder.duplicate"),
+            egui_macview::NSMenuItem::action("Set Rating to 5 ★", "finder.rate5"),
+            egui_macview::NSMenuItem::separator(),
+            egui_macview::NSMenuItem::action("Copy Asset Name", "finder.copy_name"),
+        ];
+        if let Some(act) = egui_macview::MacContextMenu::new(
+            &finder_items,
+            &mut self.finder_menu_open,
+            &mut self.finder_menu_pos,
+            &mut self.finder_menu_selected,
+        )
+        .theme(theme)
+        .show(content_ui)
+        {
+            let sel_idx = self.selected_table_rows.iter().next().copied().unwrap_or(0);
+            let sel_row = self.finder_cached_rows.get(sel_idx).cloned();
+            match act.as_str() {
+                "finder.open_nib" => {
+                    let base = self.finder_current_dir.clone().unwrap_or_else(super::nib_showcase_builders::resolve_showcase_nib_dir);
+                    let file_path =
+                        sel_row.and_then(|r| r.dir_path).unwrap_or_else(|| base.join(super::nib_showcase_builders::SHOWCASE_NIB_FILES[0]));
+                    let _ = self.nib_studio.load_nib_or_xib_file(&file_path, toasts);
+                }
+                "finder.duplicate" => {
+                    if let Some(row) = sel_row {
+                        self.finder_custom_entries.push(FinderCustomEntry {
+                            name: format!("Copy_of_{}", row.name),
+                            path: row.dir_path.unwrap_or_else(|| PathBuf::from(&self.export_path)),
+                            is_dir: false,
+                            size_mb: row.size_mb.max(4),
+                            codec: row.codec,
+                            duration: row.duration,
+                            rating: row.rating,
+                            tags: row.tags,
+                        });
+                        toasts.borrow_mut().success("Duplicated asset in Finder table");
+                    }
+                }
+                "finder.rate5" => {
+                    self.asset_ratings[sel_idx.min(5)] = 5;
+                    self.finder_cache_key = None;
+                    toasts.borrow_mut().info("Set selected asset rating to 5 ★");
+                }
+                "finder.copy_name" => {
+                    if let Some(row) = sel_row {
+                        content_ui.ctx().copy_text(row.name.clone());
+                        toasts.borrow_mut().success(format!("Copied: {}", row.name));
+                    }
+                }
+                _ => {}
             }
         }
     }

@@ -55,6 +55,9 @@ impl GalleryApp {
         let Some((dir, cursor)) = detect_frameless_resize_dir(self.window_controls_style, self.is_maximized, pos, full_rect, theme) else {
             return false;
         };
+        if matches!(dir, ResizeDirection::South) && (full_rect.max.y - pos.y) > 2.5 {
+            return false;
+        }
         ui.ctx().set_cursor_icon(cursor);
         if ui.input(|i| i.pointer.button_pressed(PointerButton::Primary)) {
             ui.ctx().send_viewport_cmd(ViewportCommand::BeginResize(dir));
@@ -92,7 +95,10 @@ impl GalleryApp {
             "screen.vector" => self.active_screen = GalleryScreen::VectorAssets,
             "screen.tokens" => self.active_screen = GalleryScreen::DesignTokensWcag,
             "screen.finder" | "screen.layout" => self.active_screen = GalleryScreen::FinderDataBrowser,
-            "screen.avkit" => self.active_screen = GalleryScreen::AvKitMediaStudio,
+            "screen.avkit" => {
+                self.active_screen = GalleryScreen::AvKitMediaStudio;
+                self.center.media_playing = true;
+            }
             "screen.advanced" => self.active_screen = GalleryScreen::AdvancedControls,
             "theme.aqua" => self.appearance = MacAppearance::Aqua,
             "theme.anthracite" => self.appearance = MacAppearance::Anthracite,
@@ -104,17 +110,17 @@ impl GalleryApp {
                 self.toasts.borrow_mut().info("Transform reset");
             }
             "view.zoom_in" => {
-                let mut c = self.card.borrow_mut();
-                c.scale_pct = (c.scale_pct + 25.0).clamp(25.0, 200.0);
-                self.toasts.borrow_mut().info(format!("Zoom: {:.0}%", c.scale_pct));
+                let next_pct = (self.card.borrow().scale_pct + 25.0).clamp(25.0, 200.0);
+                self.center.apply_footer_zoom_preset(next_pct / 100.0, &self.card, self.active_screen);
+                self.toasts.borrow_mut().info(format!("Zoom: {next_pct:.0}%"));
             }
             "view.zoom_out" => {
-                let mut c = self.card.borrow_mut();
-                c.scale_pct = (c.scale_pct - 25.0).clamp(25.0, 200.0);
-                self.toasts.borrow_mut().info(format!("Zoom: {:.0}%", c.scale_pct));
+                let next_pct = (self.card.borrow().scale_pct - 25.0).clamp(25.0, 200.0);
+                self.center.apply_footer_zoom_preset(next_pct / 100.0, &self.card, self.active_screen);
+                self.toasts.borrow_mut().info(format!("Zoom: {next_pct:.0}%"));
             }
             "view.zoom_reset" => {
-                self.card.borrow_mut().scale_pct = 100.0;
+                self.center.apply_footer_zoom_preset(1.0, &self.card, self.active_screen);
                 self.toasts.borrow_mut().info("Zoom: 100%");
             }
             "view.toggle_inspector" => {
@@ -244,7 +250,14 @@ impl GalleryApp {
             });
 
         (self.appearance, self.window_controls_style, self.inspector_mode) = (next_appearance, next_style, next_mode);
-        self.active_screen = GalleryScreen::ALL[next_screen_idx.min(GalleryScreen::ALL.len() - 1)];
+        let next_scr = GalleryScreen::ALL[next_screen_idx.min(GalleryScreen::ALL.len() - 1)];
+        if next_scr != self.active_screen {
+            self.active_screen = next_scr;
+            self.center.media_playing = next_scr == GalleryScreen::AvKitMediaStudio;
+            if !self.center.media_playing {
+                super::audio_media::NativeAudioOutput::stop();
+            }
+        }
         (self.sidebar.active_screen, self.is_maximized) = (self.active_screen, is_max);
 
         if self.last_window_controls_style != Some(self.window_controls_style) {

@@ -4,10 +4,6 @@
 #[path = "../examples/macview_gallery.rs"]
 mod gallery_app;
 
-#[allow(dead_code)]
-#[path = "../examples/studio_controls_v05.rs"]
-mod studio_app;
-
 use egui::{Context, Event, Pos2, RawInput};
 use egui_macview::{
     theme::{MacAppearance, MacTheme},
@@ -16,7 +12,6 @@ use egui_macview::{
 pub(crate) use gallery_app::{format_tracked_small_caps, CardModel, ExpandedProTab, GalleryApp, GalleryScreen, InspectorMode};
 use std::collections::BTreeSet;
 use std::time::{Duration, Instant};
-use studio_app::StudioApp;
 
 static HYGIENE_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
@@ -136,18 +131,14 @@ fn test_full_gallery_cpu_hygiene_all_states_and_frame_pacing() {
 #[test]
 fn test_cold_start_zero_idle_repaint_and_state_invariants_smoke() {
     let _guard = HYGIENE_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
-    // Warm lazy global token catalog & egui font atlas once before measuring GalleryApp / StudioApp cold-start + Frame 1
     let screen_rect = Some(egui::Rect::from_min_size(Pos2::ZERO, egui::vec2(1160.0, 740.0)));
     let gallery_ctx = Context::default();
-    let studio_ctx = Context::default();
     let theme = MacTheme::new(MacAppearance::DarkAqua);
     theme.apply_to_egui(&gallery_ctx);
-    theme.apply_to_egui(&studio_ctx);
     gallery_ctx.run_ui(RawInput { screen_rect, ..Default::default() }, |ui| GalleryApp::new().render_ui(ui)).textures_delta.clear();
-    studio_ctx.run_ui(RawInput { screen_rect, ..Default::default() }, |ui| StudioApp::default().render_ui(ui)).textures_delta.clear();
 
     // 1. Cold-Start + First Frame < 500ms & Zero Idle Repaint Leak after 2 rest frames
-    //    across all 5 GalleryScreen states in Aqua & DarkAqua + StudioApp (v0.5.0)
+    //    across all 6 GalleryScreen states in Aqua & DarkAqua
     let t0 = Instant::now();
     let mut gallery = GalleryApp::new();
     let mut out_first = gallery_ctx.run_ui(RawInput { time: Some(0.0), screen_rect, ..Default::default() }, |ui| gallery.render_ui(ui));
@@ -158,31 +149,7 @@ fn test_cold_start_zero_idle_repaint_and_state_invariants_smoke() {
         "GalleryApp cold-start + first frame must be < 500ms, took {gallery_cold_start:?}"
     );
 
-    let t1 = Instant::now();
-    let mut studio = StudioApp::default();
-    let mut studio_first = studio_ctx.run_ui(RawInput { time: Some(0.0), screen_rect, ..Default::default() }, |ui| studio.render_ui(ui));
-    studio_first.textures_delta.clear();
-    let studio_cold_start = t1.elapsed();
-    assert!(
-        studio_cold_start < Duration::from_millis(500),
-        "StudioApp cold-start + first frame must be < 500ms, took {studio_cold_start:?}"
-    );
-
-    // Check StudioApp zero idle repaint leak after 2 rest frames (when indeterminate == false)
-    for appearance in [MacAppearance::Aqua, MacAppearance::DarkAqua] {
-        studio.appearance = appearance;
-        studio.indeterminate = false;
-        let mut last_delay = Duration::ZERO;
-        for frame_idx in 1..=3 {
-            let mut out = studio_ctx
-                .run_ui(RawInput { time: Some(frame_idx as f64 * 0.5), screen_rect, ..Default::default() }, |ui| studio.render_ui(ui));
-            out.textures_delta.clear();
-            last_delay = out.viewport_output[&egui::ViewportId::ROOT].repaint_delay;
-        }
-        assert!(last_delay > Duration::ZERO, "StudioApp ({appearance:?}) must have repaint_delay > Duration::ZERO after 2 rest frames");
-    }
-
-    // Check GalleryApp all 5 screens in both Aqua and DarkAqua after 2 rest frames
+    // Check GalleryApp all 6 screens in both Aqua and DarkAqua after 2 rest frames
     let mut sim_time = 1.0;
     for appearance in [MacAppearance::Aqua, MacAppearance::DarkAqua] {
         gallery.appearance = appearance;
@@ -205,7 +172,7 @@ fn test_cold_start_zero_idle_repaint_and_state_invariants_smoke() {
 
     // 2. MacTrimScrubber Invariant: 0.0 <= in_point <= out_point <= duration
     for (dur, mut in_pt, mut out_pt, mut head) in [(120.0, 95.0, 20.0, -15.0), (60.0, -50.0, 999.0, 500.0), (0.0, 10.0, 5.0, 20.0)] {
-        let mut out = studio_ctx.run_ui(RawInput::default(), |ui| {
+        let mut out = gallery_ctx.run_ui(RawInput::default(), |ui| {
             MacTrimScrubber::new("inv_trim", dur, &mut in_pt, &mut out_pt, &mut head).theme(&theme).show(ui);
         });
         out.textures_delta.clear();
@@ -223,7 +190,7 @@ fn test_cold_start_zero_idle_repaint_and_state_invariants_smoke() {
     // 3. MacTableView Invariant: valid selected_rows after table filtering (row_count reduction)
     let cols = [MacTableColumn::new("Asset", 160.0)];
     let mut selected_rows = BTreeSet::from([0usize, 2, 3]);
-    let mut out_tbl1 = studio_ctx.run_ui(RawInput::default(), |ui| {
+    let mut out_tbl1 = gallery_ctx.run_ui(RawInput::default(), |ui| {
         MacTableView::new("filter_inv_tbl", &cols, 4, &mut selected_rows).theme(&theme).show(ui, |cell_ui, r, _| {
             cell_ui.label(format!("Row {r}"));
         });
@@ -232,7 +199,7 @@ fn test_cold_start_zero_idle_repaint_and_state_invariants_smoke() {
     assert_eq!(selected_rows, BTreeSet::from([0, 2, 3]));
 
     // Filter reduces row_count from 4 to 2 -> out-of-bounds indices (2, 3) must be pruned!
-    let mut out_tbl2 = studio_ctx.run_ui(RawInput::default(), |ui| {
+    let mut out_tbl2 = gallery_ctx.run_ui(RawInput::default(), |ui| {
         MacTableView::new("filter_inv_tbl", &cols, 2, &mut selected_rows).theme(&theme).show(ui, |cell_ui, r, _| {
             cell_ui.label(format!("Row {r}"));
         });
@@ -244,7 +211,7 @@ fn test_cold_start_zero_idle_repaint_and_state_invariants_smoke() {
     );
 
     // Filter reduces row_count to 0 -> selected_rows must be empty
-    let mut out_tbl3 = studio_ctx.run_ui(RawInput::default(), |ui| {
+    let mut out_tbl3 = gallery_ctx.run_ui(RawInput::default(), |ui| {
         MacTableView::new("filter_inv_tbl", &cols, 0, &mut selected_rows).theme(&theme).show(ui, |cell_ui, r, _| {
             cell_ui.label(format!("Row {r}"));
         });
@@ -548,9 +515,9 @@ fn run_req013_02s_suite() {
         .expect("s5-pop-codec")
         .alignment_rect[2];
     assert!(s5_w >= 228.0, "REQ-013-02S.5: s5-pop-codec width ({s5_w}) must be >= 228pt so stream titles never clip");
-    let rw_src = std::fs::read_to_string("src/scene/runtime_widgets.rs").expect("read runtime_widgets.rs");
+    let rw_src = std::fs::read_to_string("assets/nib_showcase/2_Theme_and_Appearance_Studio.xib").expect("read 2_Theme_and_Appearance_Studio.xib");
     assert!(
-        rw_src.contains("\"AVPlayer HUD\"") && rw_src.contains("\"Collection Grid\"") && rw_src.contains("\"Clock & Calendar\""),
-        "REQ-013-02S.5: render_tab_view_node must use concise non-overlapping tab labels"
+        rw_src.contains("\"AVPlayer HUD\"") && rw_src.contains("\"Collection Grid\"") && rw_src.contains("\"Clock &amp; Calendar\""),
+        "REQ-013-02S.5: s6-tabs in 2_Theme_and_Appearance_Studio.xib must use concise non-overlapping tab labels"
     );
 }

@@ -151,7 +151,8 @@ impl<'a> MacStackUi<'a> {
     }
 
     fn draw_separator(&mut self) {
-        self.ui.add_space(self.spacing * 0.5);
+        let half_spacing = self.spacing * 0.5;
+        self.ui.add_space(half_spacing);
         let scale = self.ui.pixels_per_point();
         let th = self.separator_thickness;
         let color = self.theme.separator();
@@ -179,7 +180,7 @@ impl<'a> MacStackUi<'a> {
                 self.ui.painter().line_segment([Pos2::new(x, rect.top()), Pos2::new(x, rect.bottom())], Stroke::new(th, color));
             }
         }
-        self.ui.add_space(self.spacing * 0.5);
+        self.ui.add_space(half_spacing);
     }
 }
 

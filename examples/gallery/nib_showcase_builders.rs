@@ -64,10 +64,11 @@ impl ShowcaseSceneDataStore {
                 SceneNodeKind::Checkbox | SceneNodeKind::Switch => {
                     self.bools.entry(bid).or_insert(true);
                 }
-                SceneNodeKind::NumberField { .. } => {
-                    let parsed = node.title.trim().parse::<f64>().unwrap_or(100.0);
-                    self.floats.entry(bid).or_insert(parsed);
-                    self.strings.entry(bid).or_insert_with(|| format!("{parsed:.0}"));
+                SceneNodeKind::NumberField { min, max, .. } => {
+                    let default_v = min.zip(*max).map(|(a, b)| (a + b) * 0.5).unwrap_or(100.0);
+                    let parsed = node.title.trim().parse::<f64>().ok().or_else(|| self.floats.get(&bid).copied()).unwrap_or(default_v);
+                    let v = *self.floats.entry(bid).or_insert(parsed);
+                    self.strings.insert(bid, format_nib_num(v));
                 }
                 SceneNodeKind::Slider { min, max, .. } => {
                     let parsed = node.title.trim().parse::<f64>().unwrap_or((*min + *max) * 0.5);
@@ -120,7 +121,7 @@ impl ShowcaseSceneDataStore {
         let norm = path.strip_prefix("values.").unwrap_or(path).to_string();
         let bid = self.resolve_or_create_binding(&norm);
         self.floats.insert(bid, val);
-        self.strings.insert(bid, format!("{val:.0}"));
+        self.strings.insert(bid, format_nib_num(val));
         if !self.dirty_paths.contains(&norm) {
             self.dirty_paths.push(norm);
         }
@@ -155,7 +156,7 @@ impl MacSceneDataSource for ShowcaseSceneDataStore {
     }
     fn set_f64(&mut self, id: BindingId, val: f64) {
         let prev = self.floats.insert(id, val);
-        self.strings.insert(id, format!("{val:.0}"));
+        self.strings.insert(id, format_nib_num(val));
         if prev.map(|p| (p - val).abs() > 1e-4).unwrap_or(true) {
             self.mark_dirty_id(id);
         }
@@ -185,7 +186,7 @@ impl MacSceneDataSource for ShowcaseSceneDataStore {
     }
     fn get_color(&self, id: BindingId) -> Option<egui::Color32> {
         let [r, g, b, a] = self.colors.get(&id).copied().unwrap_or([0, 122, 255, 255]);
-        Some(egui::Color32::from_rgba_unmultiplied(r, g, b, a))
+        Some(egui::Rgba::from_srgba_unmultiplied(r, g, b, a).into())
     }
     fn set_color(&mut self, id: BindingId, col: egui::Color32) {
         let rgba = col.to_srgba_unmultiplied();
@@ -199,6 +200,15 @@ impl MacSceneDataSource for ShowcaseSceneDataStore {
         self.pending_actions.push(name);
     }
     fn render_custom_slot(&mut self, _ui: &mut Ui, _theme: &MacTheme, _cls: &str, _rect: Rect) {}
+}
+
+/// Formats a numeric `.xib` binding value cleanly (preserving decimals for small ranges like `0.0..=2.0`).
+pub fn format_nib_num(val: f64) -> String {
+    if val.abs() <= 10.0 && (val.fract()).abs() > 1e-3 {
+        format!("{val:.2}")
+    } else {
+        format!("{val:.0}")
+    }
 }
 
 /// Parses an Xcode `.xib` XML string into [`MacSceneIR`], normalizing AppKit coordinates via `isFlipped`.
@@ -244,8 +254,8 @@ pub fn compile_right_inspector_scene() -> MacSceneIR {
 }
 
 /// Returns the compiled [`MacSceneIR`] and seeded [`ShowcaseSceneDataStore`] for each of the 6 Gallery screens (`0..=5`).
-pub fn compile_gallery_screen_scenes() -> Vec<(MacSceneIR, ShowcaseSceneDataStore)> {
-    static SCREEN_SCENES: std::sync::OnceLock<Vec<(MacSceneIR, ShowcaseSceneDataStore)>> = std::sync::OnceLock::new();
+pub fn compile_gallery_screen_scenes() -> Vec<(std::sync::Arc<MacSceneIR>, ShowcaseSceneDataStore)> {
+    static SCREEN_SCENES: std::sync::OnceLock<Vec<(std::sync::Arc<MacSceneIR>, ShowcaseSceneDataStore)>> = std::sync::OnceLock::new();
     SCREEN_SCENES
         .get_or_init(|| {
             [
@@ -258,7 +268,7 @@ pub fn compile_gallery_screen_scenes() -> Vec<(MacSceneIR, ShowcaseSceneDataStor
             ]
             .into_iter()
             .map(|(nib, xml)| {
-                let scene = compile_nib_scene(nib, xml);
+                let scene = std::sync::Arc::new(compile_nib_scene(nib, xml));
                 let mut store = ShowcaseSceneDataStore::default();
                 store.seed_from_scene(&scene);
                 (scene, store)
@@ -270,9 +280,33 @@ pub fn compile_gallery_screen_scenes() -> Vec<(MacSceneIR, ShowcaseSceneDataStor
 
 struct CenterSceneBridge<'a, 'b> {
     center: &'a mut super::CenterState,
+    scene: &'a MacSceneIR,
+    screen: super::GalleryScreen,
     store: &'a mut ShowcaseSceneDataStore,
     args: &'a super::center_state::CenterRenderArgs<'b>,
     toasts: &'a std::cell::RefCell<egui_macview::MacToastManager>,
+}
+
+const STUDIO_RULE_CRITERIA: &[&[&str]] = &[
+    &["Name", "Kind", "Created Date", "File Size"],
+    &["contains", "is exactly", "begins with", "ends with"],
+    &["ProRes", "MOV", "HEVC", "PNG"],
+];
+
+impl CenterSceneBridge<'_, '_> {
+    fn is_in_binding_rows(&self, id: NodeId, row_bindings: &[&str]) -> bool {
+        self.scene.field_rows().iter().any(|row| {
+            row.nodes.contains(&id)
+                && row.nodes.iter().any(|&rid| {
+                    self.scene
+                        .nodes()
+                        .iter()
+                        .find(|n| n.id == rid)
+                        .and_then(|n| n.binding_path.as_deref())
+                        .is_some_and(|bp| row_bindings.contains(&bp))
+                })
+        })
+    }
 }
 
 impl MacSceneDataSource for CenterSceneBridge<'_, '_> {
@@ -325,25 +359,45 @@ impl MacSceneDataSource for CenterSceneBridge<'_, '_> {
         }
         self.store.on_action(action, sender);
     }
-    fn is_node_enabled(&self, _id: NodeId, ib_object_id: &str, default_enabled: bool) -> bool {
-        if ib_object_id.starts_with("s6-en-") {
+    fn is_node_enabled(&self, id: NodeId, _ib_object_id: &str, default_enabled: bool) -> bool {
+        if self.screen == super::GalleryScreen::AdvancedControls && self.is_in_binding_rows(id, &["nibWidthExpr", "nibCheckRegular"]) {
             self.center.nib_inspector_enabled && default_enabled
-        } else if ib_object_id.starts_with("s3-mat-") {
+        } else if self.screen == super::GalleryScreen::DesignTokensWcag && self.is_in_binding_rows(id, &["matrixInput"]) {
             self.center.showcase_controls_enabled && default_enabled
         } else {
             default_enabled
         }
     }
-    fn resolve_control_size(&self, _id: NodeId, ib_object_id: &str, default_size: MacControlSize) -> MacControlSize {
-        if ib_object_id.starts_with("s3-mat-") {
+    fn resolve_control_size(&self, id: NodeId, _ib_object_id: &str, default_size: MacControlSize) -> MacControlSize {
+        let Some(node) = self.scene.nodes().iter().find(|n| n.id == id) else {
+            return default_size;
+        };
+        if self.screen == super::GalleryScreen::DesignTokensWcag && self.is_in_binding_rows(id, &["matrixInput"]) {
             match self.center.showcase_control_size_idx {
                 1 => MacControlSize::Small,
                 2 => MacControlSize::Mini,
                 _ => MacControlSize::Regular,
             }
+        } else if self.screen == super::GalleryScreen::AdvancedControls
+            && self.is_in_binding_rows(id, &["nibWidthExpr", "nibCheckRegular"])
+            && matches!(node.kind, SceneNodeKind::TextField | SceneNodeKind::PopUpButton { .. } | SceneNodeKind::ComboBox { .. })
+        {
+            self.center.resolved_state6_control_size()
         } else {
             default_size
         }
+    }
+    fn resolve_level_discrete(&self, _id: NodeId, _ib_object_id: &str, _default_discrete: bool) -> bool {
+        self.center.media_discrete_vu
+    }
+    fn resolve_level_thresholds(&self, _id: NodeId, _ib_object_id: &str, _default_thresholds: bool) -> bool {
+        self.center.media_threshold_vu
+    }
+    fn get_rule_criteria(&self, _id: NodeId, _ib_object_id: &str) -> &[&[&str]] {
+        STUDIO_RULE_CRITERIA
+    }
+    fn render_tab_item(&mut self, ui: &mut Ui, theme: &MacTheme, _id: NodeId, _ib_object_id: &str, tab_idx: usize, rect: Rect) {
+        self.center.render_state6_tab_item(ui, theme, tab_idx, rect);
     }
     fn render_custom_slot(&mut self, ui: &mut Ui, theme: &MacTheme, slot_class: &str, rect: Rect) {
         let mut card = self.args.card_cell.borrow_mut();
@@ -361,6 +415,23 @@ impl MacSceneDataSource for CenterSceneBridge<'_, '_> {
 }
 
 impl super::CenterState {
+    /// Queries an option or segment label directly from the compiled `.xib`/`.nib` `MacSceneIR` (`REQ-013-07.3`).
+    pub fn scene_node_option(&self, screen_idx: usize, ib_id: &str, opt_idx: usize) -> &str {
+        self.screen_nib_scenes
+            .get(screen_idx)
+            .and_then(|(sc, _)| sc.nodes().iter().find(|n| n.ib_object_id == ib_id))
+            .and_then(|n| match &n.kind {
+                SceneNodeKind::PopUpButton { options } | SceneNodeKind::ComboBox { options } => {
+                    options.get(opt_idx).or_else(|| options.first()).map(String::as_str)
+                }
+                SceneNodeKind::SegmentedControl { segments } => {
+                    segments.get(opt_idx).or_else(|| segments.first()).map(String::as_str)
+                }
+                _ => None,
+            })
+            .unwrap_or("")
+    }
+
     /// Renders the active screen's compiled `.xib` / `.nib` scene via [`MacSceneIR::show`] (`REQ-013-02L`, `REQ-013-02P`).
     pub fn render_active_screen_nib(
         &mut self,
@@ -375,9 +446,9 @@ impl super::CenterState {
         let Some((scene_ref, store_ref)) = self.screen_nib_scenes.get_mut(idx) else {
             return;
         };
-        let scene = scene_ref.clone();
+        let scene = std::sync::Arc::clone(scene_ref);
         let mut store = std::mem::take(store_ref);
-        let mut bridge = CenterSceneBridge { center: self, store: &mut store, args: &args, toasts };
+        let mut bridge = CenterSceneBridge { center: self, scene: &scene, screen, store: &mut store, args: &args, toasts };
         scene.show(ui, theme, &mut bridge, egui_macview::scene::LayoutPolicy::ExactAppleNib, 0, &search_q);
         if let Some((_, dst_store)) = self.screen_nib_scenes.get_mut(idx) {
             *dst_store = store;

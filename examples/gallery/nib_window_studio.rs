@@ -141,7 +141,6 @@ impl NibShowcaseWindowState {
                 .height(22.0)
                 .show(bar, |idx| next_pol = idx);
             self.policy_idx = next_pol;
-            bar.add_space(6.0);
             MacSearchField::new(&mut self.scene_search_query).theme(theme).placeholder("Filter NIB controls...").width(210.0).show(bar);
             if bar.add(MacButtonCell::new("Copy SwiftUI").theme(theme).selected(true)).clicked() {
                 bar.ctx().copy_text(self.swiftui_source.clone());
@@ -151,7 +150,6 @@ impl NibShowcaseWindowState {
                 self.open = false;
             }
         });
-        ui.add_space(4.0);
         ui.label(
             egui::RichText::new(format!(
                 "Active NIB: {}  |  Nodes: {}  |  Paired Labels: {}  |  SwiftUI Round-Trip: {}  |  Live Sync: ACTIVE ({})",
@@ -163,7 +161,6 @@ impl NibShowcaseWindowState {
             ))
             .size(11.0),
         );
-        ui.add_space(6.0);
 
         let (top_y, max_r) = (ui.cursor().min.y, ui.max_rect());
         let (total_w, pane_h) = (max_r.width().max(680.0), (max_r.bottom() - top_y).max(320.0));
@@ -233,17 +230,26 @@ impl CenterState {
     pub fn sync_all_nib_stores(&mut self, sync: &mut NibViewportSync<'_>, toasts: &RefCell<MacToastManager>, sync_strings: bool) {
         let mut screen_stores: Vec<ShowcaseSceneDataStore> = self.screen_nib_scenes.iter_mut().map(|(_, s)| std::mem::take(s)).collect();
         for store in &mut screen_stores {
-            self.flush_store_dirty_to_gallery(store, sync, toasts);
+            if !store.dirty_paths.is_empty() || !store.pending_actions.is_empty() {
+                self.flush_store_dirty_to_gallery(store, sync, toasts);
+            }
         }
         let mut insp_store = std::mem::take(&mut sync.inspector.nib_store);
-        self.flush_store_dirty_to_gallery(&mut insp_store, sync, toasts);
+        if !insp_store.dirty_paths.is_empty() || !insp_store.pending_actions.is_empty() {
+            self.flush_store_dirty_to_gallery(&mut insp_store, sync, toasts);
+        }
         let mut studio_store = std::mem::take(&mut self.nib_studio.store);
-        self.flush_store_dirty_to_gallery(&mut studio_store, sync, toasts);
-        for store in &mut screen_stores {
-            self.pull_store_live_from_gallery(store, sync, sync_strings);
+        if !studio_store.dirty_paths.is_empty() || !studio_store.pending_actions.is_empty() {
+            self.flush_store_dirty_to_gallery(&mut studio_store, sync, toasts);
+        }
+        let active_idx = (*sync.active_screen as usize).min(screen_stores.len().saturating_sub(1));
+        if let Some(active_store) = screen_stores.get_mut(active_idx) {
+            self.pull_store_live_from_gallery(active_store, sync, sync_strings);
         }
         self.pull_store_live_from_gallery(&mut insp_store, sync, sync_strings);
-        self.pull_store_live_from_gallery(&mut studio_store, sync, sync_strings && !self.nib_studio.viewport_editing_text);
+        if self.nib_studio.open {
+            self.pull_store_live_from_gallery(&mut studio_store, sync, sync_strings && !self.nib_studio.viewport_editing_text);
+        }
         for ((_, dst), src) in self.screen_nib_scenes.iter_mut().zip(screen_stores) {
             *dst = src;
         }

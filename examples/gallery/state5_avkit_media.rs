@@ -11,12 +11,19 @@ impl CenterState {
         let content_ui = &mut content_ui;
         let now = content_ui.input(|i| i.time);
         let window_active = egui_macview::is_window_active(content_ui.ctx());
+        let can_advance = window_active || cfg!(target_arch = "wasm32");
 
-        if self.media_playing {
-            if window_active && !self.media_was_window_active && self.media_sound_output {
+        if self.media_playing && can_advance {
+            if self.media_sound_output
+                && (!self.media_was_window_active || (!NativeAudioOutput::is_playing() && now - self.media_last_audio_restart >= 0.25))
+            {
                 let wav = self.audio_track.to_wav_bytes_mixed(self.media_playhead, self.media_out_point, self.media_gain, self.media_pan);
                 NativeAudioOutput::play_wav(&wav);
+                self.media_last_audio_restart = now;
+            } else if !self.media_sound_output && NativeAudioOutput::is_playing() {
+                NativeAudioOutput::stop();
             }
+            self.media_was_window_active = true;
 
             content_ui.ctx().request_repaint_after(std::time::Duration::from_millis(16));
             let dt = self.media_last_time.map(|prev| (now - prev).clamp(0.0, 0.25)).unwrap_or(1.0 / 60.0);
@@ -33,7 +40,7 @@ impl CenterState {
                     self.media_playhead = self.media_playhead.max(self.media_in_point);
                     self.audio_peak_l = 0.0;
                     self.audio_peak_r = 0.0;
-                    if window_active && self.media_sound_output {
+                    if self.media_sound_output {
                         let wav =
                             self.audio_track.to_wav_bytes_mixed(self.media_playhead, self.media_out_point, self.media_gain, self.media_pan);
                         NativeAudioOutput::play_wav(&wav);
@@ -46,9 +53,12 @@ impl CenterState {
             }
             self.media_last_time = Some(now);
         } else {
+            if self.media_was_window_active {
+                NativeAudioOutput::stop();
+            }
+            self.media_was_window_active = false;
             self.media_last_time = Some(now);
         }
-        self.media_was_window_active = window_active;
 
         let (lvl_l, lvl_r, pk_l, pk_r) = if self.media_playing {
             self.audio_track.compute_stereo_levels_at(self.media_playhead, self.media_gain, self.media_pan)
@@ -104,7 +114,6 @@ impl CenterState {
 
         let v_rect = render_procedural_video_viewport(content_ui, theme, self);
         self.last_video_viewport_rect = v_rect.intersect(content_ui.clip_rect());
-        content_ui.add_space(6.0);
 
         let zones = [MacTimelineZone::new(4.0, 12.0, "Scene 1: Dialogue"), MacTimelineZone::new(15.0, 24.0, "Scene 2: SFX Peak")];
         let scrubber_w = slot_rect.width().max(320.0);

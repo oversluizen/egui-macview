@@ -22,17 +22,21 @@ impl CenterState {
             .size(11.0)
             .strong(),
         );
-        eval_ui.add_space(4.0);
         let (sample_rect, _) = eval_ui.allocate_exact_size(vec2(slot_rect.width(), 30.0), Sense::hover());
         let sp = eval_ui.painter_at(sample_rect);
+        let sample_bg = if self.reduce_transparency {
+            self.wcag_bg.to_opaque()
+        } else {
+            self.wcag_bg.gamma_multiply((self.matrix_slider / 100.0).clamp(0.45, 1.0))
+        };
         sp.rect(
             sample_rect,
             CornerRadius::same(5),
-            self.wcag_bg,
+            sample_bg,
             Stroke::new(if self.high_contrast { 2.0 } else { 1.0 }, theme.separator()),
             StrokeKind::Inside,
         );
-        let codec_lbl = ["Apple ProRes", "H.264", "HEVC"][self.showcase_popup_idx.min(2)];
+        let codec_lbl = self.scene_node_option(2, "s3-mat-pop", self.showcase_popup_idx.min(2));
         sp.text(
             sample_rect.center(),
             Align2::CENTER_CENTER,
@@ -45,19 +49,21 @@ impl CenterState {
             FontId::proportional(11.5),
             self.wcag_fg,
         );
-        eval_ui.add_space(6.0);
         let q = self.search_query.trim().to_lowercase();
+        let btn_h = theme.button().regular.height.points();
+        let tf_h = theme.text_field().regular.height.points();
+        let th_h = theme.table_view().header_height.points();
         for (k, v) in [
-            ("button.regular.height", "22.0 pt — Standard push button"),
-            ("text_field.regular.height", "22.0 pt — Standard NSTextField"),
-            ("table_view.header_height", "28.0 pt — NSTableHeaderView height"),
+            ("button.regular.height", format!("{btn_h:.1} pt — Standard push button")),
+            ("text_field.regular.height", format!("{tf_h:.1} pt — Standard NSTextField")),
+            ("table_view.header_height", format!("{th_h:.1} pt — NSTableHeaderView height")),
         ] {
             if !q.is_empty() && !k.to_lowercase().contains(&q) && !v.to_lowercase().contains(&q) {
                 continue;
             }
             eval_ui.horizontal(|h| {
                 h.label(egui::RichText::new(k).size(10.5).monospace().color(theme.control_accent()));
-                h.label(egui::RichText::new(v).size(10.0).color(theme.secondary_label()));
+                h.label(egui::RichText::new(&v).size(10.0).color(theme.secondary_label()));
             });
         }
     }

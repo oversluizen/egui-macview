@@ -126,17 +126,16 @@ impl<'a> MacInputCell<'a> {
         self
     }
 
-    /// Returns the resolved [`MacControlSize`] for this cell (accounting for `.fixed_rect(rect)` auto-detection).
+    /// Returns the resolved [`MacControlSize`] for this cell (accounting for `.fixed_rect(rect)` and `.height(h)` auto-detection).
     pub fn resolved_control_size(&self) -> MacControlSize {
         if self.explicit_control_size {
             return self.control_size;
         }
-        let Some(rect) = self.fixed_rect else {
+        let Some(h) = self.fixed_rect.map(|r| r.height()).or(self.height) else {
             return self.control_size;
         };
         let theme_cow = MacTheme::resolve_or_default(self.theme);
         let tf = theme_cow.text_field();
-        let h = rect.height();
         if h >= tf.auto_size_regular_min_height.points() {
             MacControlSize::Regular
         } else if h >= tf.auto_size_small_min_height.points() {
@@ -205,5 +204,11 @@ impl<'a> MacInputCell<'a> {
     /// Renders the input cell into `ui` and handles keyboard/focus interaction.
     pub fn show(self, ui: &mut Ui) -> Response {
         editing::show_input_cell(self, ui)
+    }
+}
+
+impl<'a> egui::Widget for MacInputCell<'a> {
+    fn ui(self, ui: &mut Ui) -> Response {
+        self.show(ui)
     }
 }

@@ -263,17 +263,7 @@ impl NibArchiveFrontend {
         let cls_off = val_off + vals_sec.len() as u32;
 
         let mut out = Vec::from(&b"NIBArchive\x01\x00\x00\x00"[..]);
-        for u in [
-            0u32,
-            objs.len() as u32,
-            obj_off,
-            key_names.len() as u32,
-            key_off,
-            val_count,
-            val_off,
-            cls_names.len() as u32,
-            cls_off,
-        ] {
+        for u in [0u32, objs.len() as u32, obj_off, key_names.len() as u32, key_off, val_count, val_off, cls_names.len() as u32, cls_off] {
             out.extend_from_slice(&u.to_le_bytes());
         }
         out.resize(52, 0);

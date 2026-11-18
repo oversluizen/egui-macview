@@ -21,12 +21,7 @@ fn with_rt<R>(f: impl FnOnce(&mut WasmRt) -> R) -> Option<R> {
     let mtx = RT.get_or_init(|| {
         let session = MobileWebSession::new();
         let last_atlas = session.encode_atlas();
-        Mutex::new(WasmRt {
-            session,
-            cmd_log: String::new(),
-            last_frame: Vec::new(),
-            last_atlas,
-        })
+        Mutex::new(WasmRt { session, cmd_log: String::new(), last_frame: Vec::new(), last_atlas })
     });
     mtx.lock().ok().map(|mut g| f(&mut g))
 }

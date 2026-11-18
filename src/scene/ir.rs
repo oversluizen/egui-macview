@@ -46,6 +46,13 @@ pub enum VisibilityRule {
     WhenWorkspaceFlagsContain(u64),
     /// Node is visible only when a boolean binding evaluates to `true`.
     WhenFlagTrue(BindingId),
+    /// Node is visible only when its parent `TabView` (`tab_view`) has `active_tab == tab_index`.
+    WhenTabSelected {
+        /// Enclosing `TabView` node ID.
+        tab_view: NodeId,
+        /// Zero-based `<tabViewItem>` index.
+        tab_index: usize,
+    },
 }
 
 impl VisibilityRule {
@@ -53,7 +60,7 @@ impl VisibilityRule {
     #[inline]
     pub const fn is_visible(&self, workspace_flags: u64) -> bool {
         match self {
-            Self::Always | Self::WhenFlagTrue(_) => true,
+            Self::Always | Self::WhenFlagTrue(_) | Self::WhenTabSelected { .. } => true,
             Self::WhenWorkspaceFlagsContain(mask) => (workspace_flags & *mask) != 0,
         }
     }
@@ -329,9 +336,20 @@ impl MacSceneIR {
         &self.nodes
     }
 
+    /// Solves the 1:1 Apple `.nib` layout at the scene's exact `design_size` (`LayoutPolicy::ExactAppleNib`, `REQ-013-08.1`).
+    pub fn solve_exact_nib_layout(&self) -> BTreeMap<NodeId, egui::Rect> {
+        let vp = egui::vec2(self.design_size[0].max(1.0), self.design_size[1].max(1.0));
+        self.solve_layout(vp, LayoutPolicy::ExactAppleNib, u64::MAX, "")
+    }
+
     /// Returns the inferred `LabeledFieldPair` relationships.
     pub fn labeled_pairs(&self) -> &[LabeledFieldPair] {
         &self.labeled_pairs
+    }
+
+    /// Returns the inferred `FieldRowGroup` horizontal rows.
+    pub fn field_rows(&self) -> &[FieldRowGroup] {
+        &self.field_rows
     }
 
     /// Returns the inferred `SemanticSectionGroup` blocks.
@@ -459,7 +477,8 @@ impl MacSceneIR {
     pub fn insert_node(&mut self, parent: NodeId, mut node: SceneNode) -> NodeId {
         let root_flipped = self.nodes.first().is_some_and(|n| matches!(n.kind, SceneNodeKind::Container { is_flipped: true }));
         node.parent = Some(parent);
-        node.alignment_rect = normalize_nib_alignment_rect(&node.kind, node.mac_control_size(), node.nib_frame, self.design_size[1], root_flipped);
+        node.alignment_rect =
+            normalize_nib_alignment_rect(&node.kind, node.mac_control_size(), node.nib_frame, self.design_size[1], root_flipped);
         let id = node.id;
         if let Some(p) = self.nodes.iter_mut().find(|n| n.id == parent) {
             p.children.push(id);

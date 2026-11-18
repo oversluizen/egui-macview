@@ -152,9 +152,17 @@ pub(super) fn render_segmented(control: MacSegmentedControl<'_>, ui: &mut Ui, mu
                 pill_rect,
                 CornerRadius::same(indicator_radius as u8),
                 pill_bg.gamma_multiply(alpha_factor),
-                Stroke::new(border_width, theme.separator().gamma_multiply(alpha_factor)),
+                Stroke::new(border_width, theme.box_border().gamma_multiply(alpha_factor)),
                 StrokeKind::Inside,
             );
+            let rim_x0 = pill_rect.min.x + indicator_radius;
+            let rim_x1 = pill_rect.max.x - indicator_radius;
+            if rim_x1 > rim_x0 {
+                painter.line_segment(
+                    [Pos2::new(rim_x0, pill_rect.min.y), Pos2::new(rim_x1, pill_rect.min.y)],
+                    Stroke::new(border_width, theme.on_accent_text().gamma_multiply(0.5 * alpha_factor)),
+                );
+            }
             alpha_composite(pill_bg, surface_bg)
         }
     };
