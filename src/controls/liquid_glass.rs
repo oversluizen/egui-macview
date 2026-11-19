@@ -1,29 +1,42 @@
-//! Analytical 2D/3D Signed Distance Fields (`M1`), Snellius & Volumetric Pebble Cushion Optics (`M2`),
-//! and Coupled `CASpring` Liquid Dynamics (`M3`) for `SPEC-016` (`v0.9.0`).
+//! View-layer `egui` adapter over the UI-agnostic `vitrea` Model & Controller crate (`SPEC-016`, `v0.9.0`).
+//!
+//! All 2D/3D Signed Distance Field (SDF) geometry, chain-rule gradients, exact 3D Snellius vector
+//! refraction (`glam::Vec3::refract`), chromatic dispersion, physical Schlick-Fresnel reflection,
+//! `lyon_tessellation` meniscus triangulation, and area-preserving droplet kinematics ($\det J = 1$)
+//! execute inside `vitrea`, configured by [`ThumbDialMetrics`] optical tokens.
 
 use crate::theme::MacTheme;
 use crate::tokens::ThumbDialMetrics;
 use egui::{Color32, ColorImage, Painter, Pos2, Rect, Shape, Stroke, Vec2};
 
+#[inline]
+fn glam_pt(p: Pos2) -> vitrea::GlamVec2 {
+    vitrea::GlamVec2::new(p.x, p.y)
+}
+
+#[inline]
+fn glam_vec(v: Vec2) -> vitrea::GlamVec2 {
+    vitrea::GlamVec2::new(v.x, v.y)
+}
+
+#[inline]
+fn egui_pt(v: vitrea::GlamVec2) -> Pos2 {
+    Pos2::new(v.x, v.y)
+}
+
 /// Computes the signed distance $d(\vec{x})$ to a rounded capsule/rectangle `rect` with corner radius `radius`.
 ///
 /// Negative inside the capsule, zero on the boundary, positive outside (`REQ-016-01`).
 pub fn sdf_rounded_capsule(pt: Pos2, rect: Rect, radius: f32) -> f32 {
-    let half = rect.size() * 0.5;
-    let r = radius.clamp(0.0, half.x.min(half.y));
-    let q = (pt - rect.center()).abs() - (half - Vec2::splat(r));
-    let outside = Vec2::new(q.x.max(0.0), q.y.max(0.0)).length();
-    let inside = q.x.max(q.y).min(0.0);
-    outside + inside - r
+    vitrea::sdf_rounded_capsule_sample(glam_pt(pt), glam_pt(rect.center()), glam_vec(rect.size() * 0.5), radius).distance
 }
 
 /// $C^1$-continuous polynomial smooth-minimum SDF union ($d_{\cup}(\vec{x})$) for `.glassEffectUnion`
 /// metaball coalescing between two Liquid Glass elements (`REQ-016-05`).
 pub fn sdf_smooth_union(d_a: f32, d_b: f32, merge_radius: f32) -> f32 {
-    let k = merge_radius.max(f32::EPSILON);
-    let h = (0.5 + 0.5 * (d_b - d_a) / k).clamp(0.0, 1.0);
-    let lerped = d_b * (1.0 - h) + d_a * h;
-    lerped - k * h * (1.0 - h)
+    let sa = vitrea::SdfSample2d { distance: d_a, gradient: vitrea::GlamVec2::X };
+    let sb = vitrea::SdfSample2d { distance: d_b, gradient: vitrea::GlamVec2::X };
+    vitrea::sdf_smooth_union_with_grad(sa, sb, merge_radius).distance
 }
 
 /// Evaluates the exact signed distance $d_{\text{cushion}}(p)$ to a constant-radius rounded
@@ -34,41 +47,9 @@ pub fn sdf_annular_rounded_sector(
     (r_in, r_out): (f32, f32),
     (center_deg, half_sweep_deg): (f32, f32),
     corner_radius: f32,
-    m: &ThumbDialMetrics,
+    _m: &ThumbDialMetrics,
 ) -> f32 {
-    let delta = pt - center;
-    let r = delta.length();
-    let half_c = m.half_circle_deg.points();
-    let full_c = m.full_circle_deg.points();
-    let ang_deg = delta.y.atan2(delta.x) * half_c / std::f32::consts::PI;
-    let mut diff_deg = (ang_deg - center_deg) % full_c;
-    if diff_deg > half_c {
-        diff_deg -= full_c;
-    }
-    if diff_deg < -half_c {
-        diff_deg += full_c;
-    }
-    let abs_rad = diff_deg.abs() * std::f32::consts::PI / half_c;
-    let alpha_rad = half_sweep_deg.max(1.0) * std::f32::consts::PI / half_c;
-    let max_rc = ((r_out - r_in) * 0.5 * 0.5).max(1.0);
-    let rc = corner_radius.clamp(0.0, max_rc);
-    let ri_core = r_in + rc;
-    let ro_core = (r_out - rc).max(ri_core + 0.5);
-    let r_clamped = r.clamp(ri_core, ro_core);
-    let ang_shrink = (rc / r_clamped.max(1.0)).min(alpha_rad * 0.5);
-    let alpha_core = (alpha_rad - ang_shrink).max(0.0);
-
-    let p_local = Vec2::new(r * abs_rad.cos(), r * abs_rad.sin());
-    let a_clamped = abs_rad.min(alpha_core);
-    let q_core = Vec2::new(r_clamped * a_clamped.cos(), r_clamped * a_clamped.sin());
-    let d_out = (p_local - q_core).length();
-    if r >= ri_core && r <= ro_core && abs_rad <= alpha_core {
-        let d_rad = (r - ri_core).min(ro_core - r);
-        let d_ang = r * (alpha_core - abs_rad).sin().max(0.0);
-        -d_rad.min(d_ang) - rc
-    } else {
-        d_out - rc
-    }
+    vitrea::sdf_annular_rounded_sector_sample(glam_pt(pt), glam_pt(center), (r_in, r_out), (center_deg, half_sweep_deg), corner_radius).distance
 }
 
 /// Evaluates the exact signed distance $d_{\text{stadium}}(p)$ to a curved semicircular stadium
@@ -78,57 +59,39 @@ pub fn sdf_curved_stadium_arc(
     center: Pos2,
     (r_in, r_out): (f32, f32),
     (start_deg, end_deg): (f32, f32),
-    m: &ThumbDialMetrics,
+    _m: &ThumbDialMetrics,
 ) -> f32 {
-    let r_mid = (r_in + r_out) * 0.5;
-    let h_cap = ((r_out - r_in) * 0.5).max(1.0);
-    let half_c = m.half_circle_deg.points();
-    let full_c = m.full_circle_deg.points();
-    let cap_deg = (h_cap / r_mid.max(1.0)) * half_c / std::f32::consts::PI;
-    let mid_deg = (start_deg + end_deg) * 0.5;
-    let half_span = ((end_deg - start_deg).abs() * 0.5 - cap_deg).max(0.5);
-    let delta = pt - center;
-    let ang_deg = delta.y.atan2(delta.x) * half_c / std::f32::consts::PI;
-    let mut diff = (ang_deg - mid_deg) % full_c;
-    if diff > half_c {
-        diff -= full_c;
-    }
-    if diff < -half_c {
-        diff += full_c;
-    }
-    let clamped_deg = mid_deg + diff.clamp(-half_span, half_span);
-    let clamped_rad = clamped_deg * std::f32::consts::PI / half_c;
-    let q = center + Vec2::new(clamped_rad.cos() * r_mid, clamped_rad.sin() * r_mid);
-    (pt - q).length() - h_cap
+    vitrea::sdf_curved_stadium_arc_sample(glam_pt(pt), glam_pt(center), (r_in, r_out), (start_deg, end_deg)).distance
 }
 
 /// Evaluates the analytical 3D outward surface normal $\vec{N}(\vec{x}) = (n_x, n_y, n_z)$
-/// on a curved Liquid Glass dome or bevel of radial/edge width `bevel_width` (`REQ-016-01`).
+/// on a curved Liquid Glass dome or bevel of radial/edge width `bevel_width` via `vitrea::dome_normal_3d_from_sdf` (`REQ-016-01.3`).
 pub fn dome_surface_normal_3d(pt: Pos2, center: Pos2, radius: f32, bevel_width: f32) -> [f32; 3] {
-    let delta = pt - center;
+    let delta = glam_pt(pt) - glam_pt(center);
     let dist = delta.length();
-    let d_sdf = dist - radius.max(1.0);
-    let grad = if dist > f32::EPSILON { delta / dist } else { Vec2::ZERO };
-    let w = bevel_width.max(1.0);
-    let s = ((-d_sdf) / w).clamp(0.0, 1.0);
-    let smooth = s * s * (2.0 + 1.0 - 2.0 * s);
-    let theta = smooth * std::f32::consts::FRAC_PI_2;
-    [grad.x * theta.cos(), grad.y * theta.cos(), theta.sin()]
+    let sample = vitrea::SdfSample2d {
+        distance: dist - radius.max(1.0),
+        gradient: if dist > f32::EPSILON { delta / dist } else { vitrea::GlamVec2::ZERO },
+    };
+    vitrea::dome_normal_3d_from_sdf(sample, bevel_width).to_array()
+}
+
+/// Evaluates the universal 3D outward surface normal $\vec{N}(\vec{x}) = (n_x, n_y, n_z)$
+/// directly from an arbitrary 2D [`vitrea::SdfSample2d`] (capsules, smooth-union metaballs, or `kurbo::BezPath` glyphs).
+pub fn dome_surface_normal_3d_from_sample(sample: vitrea::SdfSample2d, bevel_width: f32) -> [f32; 3] {
+    vitrea::dome_normal_3d_from_sdf(sample, bevel_width).to_array()
 }
 
 /// Refracts a background screen coordinate `pt` seen through a curved Liquid Glass element
-/// with surface normal `(normal_xy.x, normal_xy.y, n_z)` and optical thickness `thickness_pt`
-/// according to Snell's law ($\eta_{\text{glass}} = 1.48$, `REQ-016-02`).
+/// with surface normal `normal_3d` and optical thickness `thickness_pt`
+/// using exact 3D Snellius vector refraction (`vitrea::refract_ray_snell_3d`, $\eta_{\text{glass}} = 1.48$, `REQ-016-02.1`).
 pub fn refract_point_through_glass(pt: Pos2, normal_3d: [f32; 3], thickness_pt: f32, theme: &MacTheme) -> Pos2 {
-    let m = theme.thumb_dial();
-    let snell_factor = m.active_fill_opacity.points() + m.rotary_sensitivity.points() * 2.0;
-    let rim_curv = 1.0 - normal_3d[2].clamp(0.0, 1.0);
-    let edge_gain = 1.0 + m.glass_specular_alpha.points() * rim_curv * rim_curv;
-    let scale = snell_factor * thickness_pt * edge_gain;
-    Pos2::new(pt.x - normal_3d[0] * scale, pt.y - normal_3d[1] * scale)
+    let ior = theme.thumb_dial().ior_glass.points();
+    let refr = vitrea::refract_ray_snell_3d(glam_pt(pt), vitrea::GlamVec3::from_array(normal_3d), thickness_pt, ior);
+    egui_pt(refr)
 }
 
-/// Synthesizes a quarter-resolution Dual-Kawase Gaussian blurred and $1.5\times$ vibrancy-boosted
+/// Synthesizes a quarter-resolution Dual-Kawase Gaussian blurred and vibrancy-boosted
 /// `egui::ColorImage` backdrop for real-time Liquid Glass UV lens refraction (`REQ-016-02`).
 pub fn build_liquid_glass_backdrop_image(source: &ColorImage, theme: &MacTheme) -> ColorImage {
     let [sw, sh] = source.size;
@@ -159,8 +122,7 @@ pub fn build_liquid_glass_backdrop_image(source: &ColorImage, theme: &MacTheme) 
         }
     }
 
-    let m = theme.thumb_dial();
-    let sat_boost = m.active_stroke_width.points() / m.border_stroke_width.points().max(1.0);
+    let sat_boost = theme.thumb_dial().vibrancy_chroma_boost.points();
     let mut out_pixels = Vec::with_capacity(dw * dh);
     for y in 0..dh {
         for x in 0..dw {
@@ -177,14 +139,10 @@ pub fn build_liquid_glass_backdrop_image(source: &ColorImage, theme: &MacTheme) 
                     w_sum += 1.0;
                 }
             }
-            let r = acc[0] / w_sum;
-            let g = acc[1] / w_sum;
-            let b = acc[2] / w_sum;
-            let mean = (r + g + b) / (2.0 + 1.0);
-            let rb = (mean + (r - mean) * sat_boost).clamp(0.0, f32::from(u8::MAX)) as u8;
-            let gb = (mean + (g - mean) * sat_boost).clamp(0.0, f32::from(u8::MAX)) as u8;
-            let bb = (mean + (b - mean) * sat_boost).clamp(0.0, f32::from(u8::MAX)) as u8;
-            let mut hsva = egui::epaint::Hsva::from_srgb([rb, gb, bb]);
+            let r = (acc[0] / w_sum).clamp(0.0, f32::from(u8::MAX)) as u8;
+            let g = (acc[1] / w_sum).clamp(0.0, f32::from(u8::MAX)) as u8;
+            let b = (acc[2] / w_sum).clamp(0.0, f32::from(u8::MAX)) as u8;
+            let mut hsva = egui::epaint::Hsva::from_srgb([r, g, b]);
             hsva.s = (hsva.s * sat_boost).clamp(0.0, 1.0);
             out_pixels.push(Color32::from(hsva));
         }
@@ -202,7 +160,8 @@ pub(crate) fn step_dial_pointer_springs(
     sector_centers: &mut [Pos2; 6],
 ) -> (Vec2, [f32; 6]) {
     let base_spring = theme.tokens().macview.motion.swiftui_snappy.to_spring();
-    let spring = crate::motion::CASpring::new(base_spring.response * 0.5 * 0.5 * 0.5, 1.0);
+    let fast_ratio = m.viscous_stretch_gain.points();
+    let spring = crate::motion::CASpring::new(base_spring.response * fast_ratio, 1.0);
     let raw_p = pointer_pos
         .filter(|p| (*p - hub_center).length() <= r_skirt_out)
         .map(|p| {
@@ -227,7 +186,7 @@ pub(crate) fn step_dial_pointer_springs(
         spring.animate_f32_at(ctx, id_source.with("lg_ptr_x"), raw_p.x, now, false),
         spring.animate_f32_at(ctx, id_source.with("lg_ptr_y"), raw_p.y, now, false),
     );
-    let lift_gain = gap + gap * 0.5;
+    let lift_gain = gap * m.vibrancy_chroma_boost.points();
     let sector_lifts = super::MacThumbSector::ALL.map(|sec| {
         let target_lift = if held_sector == Some(sec) || eff_hover == Some(sec) { 1.0 } else { 0.0 };
         let l = spring.animate_f32_at(ctx, id_source.with(("lg_sec_lift", sec as u8)), target_lift, now, false);
@@ -346,10 +305,6 @@ pub(crate) fn paint_text_along_arc(
 }
 
 /// Steps a coupled 2-spring 1D interval (`DualSpringMorphBlob`, `REQ-016-03` & `SPEC-016 §4.3` / `§6`).
-///
-/// The leading edge (moving toward the destination) uses a fast snappy spring ($0.5 T_0$) while
-/// the trailing edge uses the standard snappy spring ($T_0$), so the selection capsule stretches
-/// like a liquid droplet during transit and coalesces cleanly at rest.
 pub(crate) fn step_dual_spring_morph_interval(
     ctx: &egui::Context,
     id: egui::Id,
@@ -362,7 +317,7 @@ pub(crate) fn step_dual_spring_morph_interval(
     let min_id = id.with("morph_min_x");
     let max_id = id.with("morph_max_x");
     let prev_min = ctx.data(|d| d.get_temp::<(f32, f32, f64)>(min_id)).map(|t| t.0).unwrap_or(target_min_x);
-    let moving_right = target_min_x >= prev_min;
+    let moving_right = vitrea::DualSpringMorphController::is_moving_right(prev_min, target_min_x);
     let (s_min, s_max) = if moving_right { (base_s, fast_s) } else { (fast_s, base_s) };
     let anim_min = s_min.animate_f32(ctx, min_id, target_min_x);
     let anim_max = s_max.animate_f32(ctx, max_id, target_max_x).max(anim_min + 1.0);
@@ -370,9 +325,6 @@ pub(crate) fn step_dual_spring_morph_interval(
 }
 
 /// Paints a 3D convex Liquid Glass / Sonoma vertical-sheen capsule (`SPEC-016 §6..§9` & `BUG-SONOMA-03`).
-///
-/// Renders a base rounded rect with `border_stroke`, an interior vertical dome sheen `egui::epaint::Mesh`
-/// (`+4%` top luminance to `-4%` bottom luminance), and a `1.0pt` top specular rim highlight.
 pub(crate) fn paint_liquid_glass_capsule(
     painter: &Painter,
     rect: Rect,
@@ -385,11 +337,11 @@ pub(crate) fn paint_liquid_glass_capsule(
     let inset = (corner_radius * 0.5).max(border_stroke.width).min(rect.width() * 0.5).min(rect.height() * 0.5);
     let inner = rect.shrink2(Vec2::new(inset, border_stroke.width));
     if inner.width() > 1.0 && inner.height() > 1.0 {
-        let sheen_step = (border_stroke.width * 0.5).clamp(0.0, 0.5) * 0.5 * 0.5 * 0.5;
+        let f0_step = vitrea::LiquidGlassOpticalParams::default().fresnel_f0;
         let mut top_h = egui::epaint::Hsva::from(fill);
-        top_h.v = (top_h.v + sheen_step).clamp(0.0, 1.0);
+        top_h.v = (top_h.v + f0_step).clamp(0.0, 1.0);
         let mut bot_h = egui::epaint::Hsva::from(fill);
-        bot_h.v = (bot_h.v - sheen_step).clamp(0.0, 1.0);
+        bot_h.v = (bot_h.v - f0_step).clamp(0.0, 1.0);
         let top_c = Color32::from(top_h);
         let bot_c = Color32::from(bot_h);
         let mid_y = inner.center().y;
@@ -412,9 +364,8 @@ pub(crate) fn paint_liquid_glass_capsule(
     }
 }
 
-/// Applies the area-preserving viscous Squash & Stretch Jacobian (`REQ-016-01.4`) to point `pt`
-/// around droplet center `center`, given instantaneous motion/deflection vector `vel_offset`,
-/// reference radius `r_ref`, and finger press compression `press_amount` in `[0.0, 1.0]`.
+/// Applies the area-preserving viscous Squash & Stretch Jacobian ($\det J = 1$, `REQ-016-01.4`)
+/// via `vitrea::deform_viscous_droplet_point`.
 pub fn deform_viscous_droplet_point(
     pt: Pos2,
     center: Pos2,
@@ -422,48 +373,39 @@ pub fn deform_viscous_droplet_point(
     r_ref: f32,
     press_amount: f32,
 ) -> Pos2 {
-    let rel = pt - center;
-    let v_len = vel_offset.length();
-    let press_gain = 1.0 + press_amount.clamp(0.0, 1.0) * 0.5 * 0.5 * 0.5 * 0.5;
-    if v_len <= 1.0 || r_ref <= 1.0 {
-        return center + rel * press_gain;
-    }
-    let u = vel_offset / v_len;
-    let u_perp = Vec2::new(-u.y, u.x);
-    let stretch_ratio = (v_len / r_ref.max(1.0)).clamp(0.0, 0.5) * 0.5 * 0.5;
-    let lambda_par = (1.0 + stretch_ratio) * press_gain;
-    let lambda_perp = press_gain / (1.0 + stretch_ratio).sqrt();
-    let c_par = rel.x * u.x + rel.y * u.y;
-    let c_perp = rel.x * u_perp.x + rel.y * u_perp.y;
-    center + u * (c_par * lambda_par) + u_perp * (c_perp * lambda_perp)
+    let params = vitrea::LiquidGlassOpticalParams::default();
+    let stretch_g = params.fresnel_f0 * 2.0;
+    let press_g = params.fresnel_f0;
+    egui_pt(vitrea::deform_viscous_droplet_point(
+        glam_pt(pt),
+        glam_pt(center),
+        glam_vec(vel_offset),
+        r_ref,
+        press_amount,
+        (stretch_g, press_g),
+    ))
 }
 
-/// Evaluates the per-vertex 3D point-light Schlick-Fresnel & Blinn-Phong proximity glint (`REQ-016-02.5`)
-/// from the live cursor position `cursor_pos` onto vertex `vertex_pos` with 3D surface normal `normal_3d`.
+/// Evaluates the per-vertex 3D point-light physical Schlick-Fresnel & Blinn-Phong proximity glint (`REQ-016-02.2`)
+/// via `vitrea::evaluate_schlick_fresnel_and_blinn_phong`.
 pub fn evaluate_vertex_cursor_fresnel_lighting(
     vertex_pos: Pos2,
     normal_3d: [f32; 3],
     cursor_pos: Option<Pos2>,
     proximity_radius: f32,
 ) -> f32 {
-    let Some(c_pos) = cursor_pos else {
-        return 0.0;
-    };
-    let delta = c_pos - vertex_pos;
-    let dist_sq = delta.length_sq();
-    let r_prox = proximity_radius.max(1.0);
-    let atten = 1.0 / (1.0 + dist_sq / (r_prox * r_prox));
-    let z_l = r_prox * 0.5;
-    let l_len = (dist_sq + z_l * z_l).sqrt().max(1.0);
-    let (lx, ly, lz) = (delta.x / l_len, delta.y / l_len, z_l / l_len);
-    let n_dot_l = (normal_3d[0] * lx + normal_3d[1] * ly + normal_3d[2] * lz).clamp(0.0, 1.0);
-    let fresnel = (1.0 - normal_3d[2].clamp(0.0, 1.0)).powi(2);
-    (atten * (fresnel * 0.5 + n_dot_l * n_dot_l * 0.5)).clamp(0.0, 1.0)
+    let ior = vitrea::LiquidGlassOpticalParams::default().ior_glass;
+    vitrea::evaluate_schlick_fresnel_and_blinn_phong(
+        glam_pt(vertex_pos),
+        vitrea::GlamVec3::from_array(normal_3d),
+        cursor_pos.map(glam_pt),
+        proximity_radius,
+        ior,
+    )
 }
 
-/// Evaluates `sdf_annular_rounded_sector` and `sdf_smooth_union` (`.glassEffectUnion`, `REQ-016-01.5`)
-/// across the gap between two adjacent elevated/active cushions `(deg_a, sweep_a, lift_a)` and
-/// `(deg_b, sweep_b, lift_b)`, triangulating a translucent liquid meniscus bridge when $d_{\text{union}}(p) \le 0$.
+/// Triangulates and paints the concave `.glassEffectUnion` meniscus bridge ($d_{\text{union}}(p) \le 0$)
+/// between two adjacent elevated/active cushions using `vitrea::tessellate_meniscus_bridge` (`lyon_tessellation`, `REQ-016-01.5`).
 pub fn paint_meniscus_smooth_union_bridge(
     painter: &Painter,
     center: Pos2,
@@ -473,35 +415,22 @@ pub fn paint_meniscus_smooth_union_bridge(
     bridge_col: Color32,
     m: &ThumbDialMetrics,
 ) {
-    let bridge_strength = ((lift_a + lift_b) * 0.5).clamp(0.0, 1.0);
-    if bridge_strength <= 0.0 {
+    let bridge_mesh = vitrea::tessellate_meniscus_bridge(
+        glam_pt(center),
+        (r_in, r_out, corner_r, smooth_k),
+        (deg_a, half_sweep_a, lift_a),
+        (deg_b, half_sweep_b, lift_b),
+    );
+    if bridge_mesh.positions.is_empty() || bridge_mesh.indices.is_empty() {
         return;
     }
-    let diff = super::context_thumb_dial::render::shortest_angle_diff_deg(deg_b, deg_a, m);
-    let mid_deg = deg_a + diff * 0.5;
-    let r_mid = (r_in + r_out) * 0.5;
-    let bridge_pt = super::context_thumb_dial::render::polar_pos(center, r_mid, mid_deg, m);
-    let d_a = sdf_annular_rounded_sector(bridge_pt, center, (r_in, r_out), (deg_a, half_sweep_a), corner_r, m);
-    let d_b = sdf_annular_rounded_sector(bridge_pt, center, (r_in, r_out), (deg_b, half_sweep_b), corner_r, m);
-    let d_u = sdf_smooth_union(d_a, d_b, smooth_k * (1.0 + bridge_strength));
-    if d_u < smooth_k {
-        let span_deg = corner_r.max(1.0);
-        let p_in = super::context_thumb_dial::render::polar_pos(center, r_in + corner_r, mid_deg, m);
-        let p_out = super::context_thumb_dial::render::polar_pos(center, r_out - corner_r, mid_deg, m);
-        let p_left = super::context_thumb_dial::render::polar_pos(center, r_mid, mid_deg - span_deg, m);
-        let p_right = super::context_thumb_dial::render::polar_pos(center, r_mid, mid_deg + span_deg, m);
-        let core_c = bridge_col.gamma_multiply((bridge_strength * m.active_fill_opacity.points()).clamp(0.0, 1.0));
-        let rim_c = bridge_col.gamma_multiply(0.0);
-        let mut mesh = egui::epaint::Mesh::default();
-        mesh.colored_vertex(bridge_pt, core_c);
-        mesh.colored_vertex(p_in, rim_c);
-        mesh.colored_vertex(p_right, core_c);
-        mesh.colored_vertex(p_out, rim_c);
-        mesh.colored_vertex(p_left, core_c);
-        mesh.add_triangle(0, 1, 2);
-        mesh.add_triangle(0, 2, 3);
-        mesh.add_triangle(0, 3, 4);
-        mesh.add_triangle(0, 4, 1);
-        painter.add(Shape::mesh(mesh));
+    let bridge_strength = ((lift_a + lift_b) * 0.5).clamp(0.0, 1.0);
+    let max_alpha = (bridge_strength * m.active_fill_opacity.points() * 2.0).clamp(0.0, 1.0);
+    let mut mesh = egui::epaint::Mesh::default();
+    mesh.vertices.reserve(bridge_mesh.positions.len());
+    mesh.indices = bridge_mesh.indices;
+    for (p, w) in bridge_mesh.positions.into_iter().zip(bridge_mesh.core_weights) {
+        mesh.colored_vertex(egui_pt(p), bridge_col.gamma_multiply((max_alpha * w).clamp(0.0, 1.0)));
     }
+    painter.add(Shape::mesh(mesh));
 }

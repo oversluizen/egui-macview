@@ -66,8 +66,8 @@ pub use label::{MacFontWeight, MacLabel, MacLabelColor};
 pub use level_indicator::{calculate_pan_weights, MacLevelIndicator, MacLevelIndicatorStyle, MacLevelOrientation};
 pub use liquid_glass::{
     build_liquid_glass_backdrop_image, deform_viscous_droplet_point, dome_surface_normal_3d,
-    evaluate_vertex_cursor_fresnel_lighting, paint_meniscus_smooth_union_bridge, refract_point_through_glass,
-    sdf_annular_rounded_sector, sdf_curved_stadium_arc, sdf_rounded_capsule, sdf_smooth_union,
+    dome_surface_normal_3d_from_sample, evaluate_vertex_cursor_fresnel_lighting, paint_meniscus_smooth_union_bridge,
+    refract_point_through_glass, sdf_annular_rounded_sector, sdf_curved_stadium_arc, sdf_rounded_capsule, sdf_smooth_union,
 };
 pub use origin_matrix::{MacOriginAnchor, MacOriginMatrix};
 pub use outline_view::{MacOutlineRow, MacOutlineRowResponse, MacOutlineTree, MacOutlineView};

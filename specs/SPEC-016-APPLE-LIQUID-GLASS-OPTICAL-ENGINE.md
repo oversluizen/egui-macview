@@ -137,53 +137,60 @@ Every public widget and layout container in `egui-macview` (52 total across the 
 
 ---
 
-## 4. Detailed Normative Mathematics for Block A (`Iter 1: M1`, `Iter 2: M2`, `Iter 3: M3`)
+## 4. Detailed Normative Mathematics for Block A (`Iter 1: M1`, `Iter 2: M2`, `Iter 3: M3`) & Standalone Model/Controller Crate (`vitrea`)
 
-### 4.1 Iteration 1 (`M1`): Analytical 2D/3D SDF Geometry & Pebble-Cushion Topology (`REQ-016-01`)
+### 4.0 Architectural Separation: Standalone Model & Controller Crate (`vitrea`) vs. View Layer (`egui-macview`)
 
-1. **Exact Rounded Annular Sector SDF (`sdf_annular_rounded_sector`):**
-   - Given polar coordinates $(r, \theta)$ relative to `hub_center` and sector center angle $\theta_c$, let $\Delta\theta = |\text{shortest\_angle}(\theta, \theta_c)|$.
-   - To form a constant-radius rounded pebble cushion with corner radius $r_c$ (`8.0–10.0 pt`) inside radial bounds $[r_{\text{in}}, r_{\text{out}}]$ and half-angular sweep $\alpha = \text{sweep}/2$:
-     - The inner core annular sector is shrunk by $r_c$ on all 4 boundaries: $r_{\text{in}}' = r_{\text{in}} + r_c$, $r_{\text{out}}' = r_{\text{out}} - r_c$, and angular half-span $\alpha'(r) = \max\!\left(0,\; \alpha - \frac{r_c}{\max(r, r_{\text{in}}')}\right)$.
-     - Let $d_{\text{core}}(p)$ be the exact Euclidean distance from $p$ to the clamped core point $p_{\text{core}} = (r_{\text{clamped}}, \theta_{\text{clamped}})$ with $r_{\text{clamped}} = \text{clamp}(r, r_{\text{in}}', r_{\text{out}}')$ and $\theta_{\text{clamped}} = \theta_c + \text{clamp}(\theta - \theta_c, -\alpha'(r_{\text{clamped}}), +\alpha'(r_{\text{clamped}}))$.
-     - For interior points inside the core sector, $d_{\text{core}}(p) = -\min\!\left(r - r_{\text{in}}',\; r_{\text{out}}' - r,\; r\sin(\alpha'(r) - \Delta\theta)\right)$.
-     - The rounded pebble cushion SDF is then:
-       $$d_{\text{cushion}}(p) = d_{\text{core}}(p) - r_c$$
-     - Every point on the cushion boundary ($d_{\text{cushion}}(p) = 0$) has a guaranteed minimum curvature radius of $r_c$, producing the exact smooth pebble silhouette of the Golden Reference Mockups (`render1_dark_mode_stand1_v3` & `render3_light_mode_aqua_stand1_v2`).
-2. **Exact Curved Stadium Arc SDF (`sdf_curved_stadium_arc` for `"↶ Undo"` & `"↷ Redo"`):**
-   - Given centerline radius $r_{\text{mid}} = (r_{\text{skirt\_in}} + r_{\text{skirt\_out}})/2$, capsule half-thickness $h_c = (r_{\text{skirt\_out}} - r_{\text{skirt\_in}})/2$, and angular span $[\theta_0, \theta_1]$:
-     - Shrink the centerline arc by $\Delta\theta_{\text{cap}} = h_c / r_{\text{mid}}$ at both ends so the semicircular end-caps stay within $[\theta_0, \theta_1]$: $\theta_0' = \theta_0 + \Delta\theta_{\text{cap}}$, $\theta_1' = \theta_1 - \Delta\theta_{\text{cap}}$.
-     - For any point $p$, project its angle $\theta$ onto $[\theta_0', \theta_1']$ to obtain the closest centerline point $q(\theta_{\text{clamped}}) = \text{center} + r_{\text{mid}}(\cos\theta_{\text{clamped}}, \sin\theta_{\text{clamped}})$.
-     - Then:
-       $$d_{\text{stadium}}(p) = \|p - q(\theta_{\text{clamped}})\|_2 - h_c$$
-     - This produces true semicircular $180^\circ$ stadium end-caps at both ends of the curved Undo and Redo buttons.
-3. **3D Dome Normal & Optical Centroid from SDF:**
-   - From any negative interior SDF value $d(p) \le 0$ and numerical/analytical unit gradient $\vec{g}(p) = \nabla d(p) / \|\nabla d(p)\|_2$:
-     $$s(p) = \text{clamp}\!\left(\frac{-d(p)}{w_{\text{bevel}}},\; 0.0,\; 1.0\right), \quad \theta(p) = \text{smoothstep}(0, 1, s(p))\cdot\frac{\pi}{2}, \quad \vec{N}(p) = \big(g_x\cos\theta(p),\; g_y\cos\theta(p),\; \sin\theta(p)\big)$$
-4. **Area-Preserving Viscous Squash & Stretch Jacobian (`deform_viscous_droplet_point`, `REQ-016-01.4`):**
-   - For any point $\vec{p}$ on a droplet/marble or cushion centered at $\vec{c}$ with press-compression scalar $p_{\text{press}} \in [0, 1]$ and instantaneous velocity/displacement vector $\vec{v} = (v_x, v_y)$:
-     - Let $\vec{u} = \vec{v} / \max(\|\vec{v}\|_2, \epsilon)$ be the unit motion axis and $\vec{u}_\perp = (-u_y, u_x)$ the orthogonal axis.
-     - The longitudinal stretch factor $\lambda_\parallel = (1 + \kappa_{\text{stretch}}\min(\|\vec{v}\|_2 / R_0, 0.35))\cdot(1 + \kappa_{\text{press}} p_{\text{press}})$ and transverse compression factor $\lambda_\perp = \frac{1 + \kappa_{\text{press}} p_{\text{press}}}{\sqrt{1 + \kappa_{\text{stretch}}\min(\|\vec{v}\|_2 / R_0, 0.35)}}$ preserve area under motion while expanding isotropically under finger pressure:
-       $$\vec{p}' = \vec{c} + \lambda_\parallel \big((\vec{p} - \vec{c})\cdot\vec{u}\big)\vec{u} + \lambda_\perp \big((\vec{p} - \vec{c})\cdot\vec{u}_\perp\big)\vec{u}_\perp$$
-5. **Meniscus Smooth-Union Bridge Triangulation (`paint_meniscus_smooth_union_bridge`, `REQ-016-01.5`):**
-   - When two adjacent cushions $A, B$ in [`MacContextThumbDial`] have combined lift/activity $L_A + L_B > 0$ (e.g., during pointer sweep or adjacent hover+latch), the inter-cushion gap along their shared radial boundary angle $\theta_{\text{mid}} = (\theta_A + \theta_B)/2$ is evaluated via `sdf_annular_rounded_sector` and `sdf_smooth_union` ($d_{\text{union}}(p) = \text{smin}_k(d_A(p), d_B(p)) < 0$) and triangulated into a translucent liquid meniscus bridge mesh connecting the two cushions.
+1. **Zero UI-Framework Coupling & Zero Dependency Bloat in `vitrea` (`REQ-016-00.1`):**
+   - All analytical 2D/3D Signed Distance Field (SDF) geometry, chain-rule gradients, Snellius 3D vector refraction, chromatic dispersion, Schlick-Fresnel reflection, star-convex triangle-fan meniscus triangulation, closed-polyline glyph/icon SDF evaluation, and area-preserving droplet kinematics reside in the standalone Model & Controller (MC) crate **`vitrea`** (`../vitrea`), which has **zero dependency** on `egui`, `egui-macview`, `kurbo`, or `lyon_tessellation`.
+   - `vitrea` depends **exclusively** on ultra-lightweight COTS foundations:
+     - **`glam`**: SIMD `Vec2` / `Vec3`, exact 3D Snellius vector refraction `Vec3::refract(incident, normal, eta)` (including Total Internal Reflection handling) and `Vec3::reflect`.
+     - **`serde`**: Serialization of [`LiquidGlassOpticalParams`] and kinematic droplet controllers.
+2. **Dedicated W3C DTCG Optical Tokens (`LiquidGlassOpticalTokens`, `REQ-016-00.2`):**
+   - Misuse of unrelated UI tokens (such as `rotary_sensitivity`, `active_stroke_width / border_stroke_width`, or linter-evading constant arithmetic like `(2.0 + 1.0)` or `0.5 * 0.5 * 0.5`) is strictly forbidden.
+   - `tokens/design_tokens.json` (`macview.metrics.control.liquid_glass`) defines normative optical physics tokens:
+     - `ior_glass` (`1.48pt`), `ior_red` (`1.474pt`), `ior_green` (`1.480pt`), `ior_blue` (`1.488pt`),
+     - `fresnel_f0` (`0.0375pt`, matching $F_0 = ((\eta - 1)/(\eta + 1))^2$),
+     - `bevel_width_pt` (`8.0pt`), `dome_thickness_pt` (`6.0pt`),
+     - `vibrancy_chroma_boost` (`1.50pt`), `meniscus_merge_k_pt` (`6.0pt`),
+     - `viscous_stretch_gain` (`0.125pt`), and `viscous_press_gain` (`0.0625pt`).
 
-### 4.2 Iteration 2 (`M2`): Optical Physics — Snellius, Fresnel, Sub-Surface Caustics & Proximity Light Field (`REQ-016-02`)
+### 4.1 Iteration 1 (`M1` — `vitrea::sdf`): Universal 2D SDF, Analytical/Finite-Difference Gradient $\nabla d(p)$ & Closed-Contour Topology (`REQ-016-01`)
 
-1. **5-Component Volumetric Glass Vertex Shader (`shade_liquid_glass_vertex`):**
-   - Given base tint $C_{\text{base}}$, accent tint $C_{\text{accent}}$, 3D normal $\vec{N}(p) = (n_x, n_y, n_z)$, normalized SDF penetration $s(p) \in [0, 1]$, and pointer-steered light direction $\vec{L}(\vec{p}(t))$:
-     1. **Top-to-Bottom Dome Gradient**: Vertical normal modulation $0.5 + 0.5(-n_y)$ brightens the upper hemisphere and deepens the lower hemisphere.
-     2. **Radial Sub-Surface Caustic Core**: Interior dome glow proportional to $s(p)^{1.5} \cdot \text{active\_glow}$, giving the active/latched cushion (`1:1+⊙` in the mockup) its deep luminous cyan-blue core while keeping the bevel darker/richer.
-     3. **Blinn-Phong Specular Hotspot**: $I_{\text{spec}} = \max(0, \vec{N} \cdot \vec{H})^8$ smoothly shifts across the dome as $\vec{p}(t)$ moves.
-     4. **Directional Schlick Fresnel Rim**: Concentrated in the rim zone $(1 - s(p))^3$, boosted on the light/cursor-facing edge.
-     5. **Per-Vertex 3D Point-Light Cursor Proximity Fresnel Glint (`evaluate_vertex_cursor_fresnel_lighting`, `REQ-016-02.5`)**:
-        - Every boundary/dome vertex $\vec{v}$ computes the exact 3D point-light vector $\vec{L}_{\text{cursor}}(\vec{v}) = \frac{(\vec{p}_{\text{cursor}} - \vec{v},\; z_L)}{\|(\vec{p}_{\text{cursor}} - \vec{v},\; z_L)\|_2}$ and Euclidean distance $d_{\text{cursor}} = \|\vec{p}_{\text{cursor}} - \vec{v}\|_2$.
-        - Vertices within proximity radius $R_{\text{prox}}$ receive an inverse-square distance-attenuated Schlick-Fresnel + Blinn-Phong rim glint:
-          $$G_{\text{prox}}(\vec{v}) = \frac{(1 - n_z)^2 \cdot \max(0,\; n_x L_x + n_y L_y + n_z L_z)^2}{1 + (d_{\text{cursor}} / R_{\text{prox}})^2}$$
-        - This function MUST be invoked in production by [`MacContextThumbDial`] (all 8 cushions, center hub, and Undo/Redo arcs), [`MacFreeJoystickBowl`] (outer rim and 3D crystal marble), and [`MacPopoverSurface`].
-2. **Live Snellius Lens Refraction of Underlying Canvas/Backdrop (`refract_point_through_glass` & `paint_refractive_glass_lens_grid`, `REQ-016-02.6`):**
-   - [`MacContextThumbDial`] (center hub & active glass cushions), [`MacFreeJoystickBowl`] (3D spherical crystal marble), and [`MacPopoverSurface`] MUST invoke `dome_surface_normal_3d` and `refract_point_through_glass` ($\eta = 1.48$) during production rendering so underlying background grid lines / backdrop features visibly bend through the curved glass dome and crystal marble.
-   - Zero dead/test-only math functions are permitted in `src/controls/liquid_glass.rs`: every public optical/geometric function (`sdf_rounded_capsule`, `sdf_smooth_union`, `sdf_annular_rounded_sector`, `sdf_curved_stadium_arc`, `dome_surface_normal_3d`, `refract_point_through_glass`, `build_liquid_glass_backdrop_image`, `deform_viscous_droplet_point`, `evaluate_vertex_cursor_fresnel_lighting`) MUST be wired into production widget rendering paths.
+1. **`SdfSample2d { distance: f32, gradient: glam::Vec2 }` (`REQ-016-01.1`):**
+   - Every SDF primitive in `vitrea::sdf` returns both the signed distance $d(p)$ (negative inside, zero on boundary, positive outside) and the outward unit gradient $\nabla d(p) = (\partial_x d, \partial_y d)$:
+     - `sdf_rounded_capsule_sample(pt, center, half_extents, corner_radius) -> SdfSample2d`
+     - `sdf_annular_rounded_sector_sample(pt, center, (r_in, r_out), (center_rad, half_sweep_rad), corner_radius) -> SdfSample2d`
+     - `sdf_curved_stadium_arc_sample(pt, center, (r_in, r_out), (start_rad, end_rad)) -> SdfSample2d`
+     - `sdf_closed_polyline_sample(pt, contour: &[glam::Vec2]) -> SdfSample2d` (evaluates exact closest segment point and signed winding interior for arbitrary flattened 2D Bézier letterforms and SVG contours without requiring `kurbo` inside `vitrea`).
+2. **Smooth-Min Combinators with Exact Chain-Rule Gradient (`REQ-016-01.2`):**
+   - `sdf_smooth_union_with_grad(a: SdfSample2d, b: SdfSample2d, k: f32) -> SdfSample2d`:
+     $$h = \text{clamp}\!\left(\frac{1}{2} + \frac{d_b - d_a}{2k},\; 0,\; 1\right), \quad d_\cup = (1 - h)d_b + h d_a - k h(1 - h), \quad \nabla d_\cup = \frac{\text{normalize}\big((1 - h)\nabla d_b + h\nabla d_a\big)}{\|\cdot\|_2}$$
+   - Plus `sdf_smooth_subtract_with_grad` and `sdf_smooth_intersect_with_grad`.
+3. **Universal 3D Dome Normal from Arbitrary 2D SDF Sample (`dome_normal_3d_from_sdf`, `REQ-016-01.3`):**
+   - Works identically for circular cushions, capsules, merged metaball unions (`sdf_smooth_union_with_grad`), and arbitrary 2D glyph/icon contours (`sdf_closed_polyline_sample`):
+     $$s(p) = \text{clamp}\!\left(\frac{-d(p)}{w_{\text{bevel}}},\; 0.0,\; 1.0\right), \quad u(s) = s^2(3 - 2s), \quad \theta(p) = u(s)\cdot\frac{\pi}{2}, \quad \vec{N}(p) = \big(\nabla_x d(p)\cos\theta(p),\; \nabla_y d(p)\cos\theta(p),\; \sin\theta(p)\big)$$
+   - Guarantees $\|\vec{N}(p)\|_2 = 1$ for all interior and boundary points.
+4. **Area-Preserving Viscous Squash & Stretch Jacobian (`vitrea::kinematics::deform_viscous_droplet_point`, `REQ-016-01.4`):**
+   - For pure velocity deformation ($p_{\text{press}} = 0$), the longitudinal stretch $\lambda_\parallel = 1 + \kappa_{\text{stretch}}\min(\|\vec{v}\|_2 / R_0, 0.35)$ and transverse compression $\lambda_\perp = 1 / \lambda_\parallel$ satisfy the exact 2D area-preservation invariant $\det J = \lambda_\parallel \cdot \lambda_\perp = 1.0$.
+5. **Star-Convex Triangle-Fan Meniscus Triangulation (`vitrea::sdf::tessellate_meniscus_bridge`, `REQ-016-01.5`):**
+   - Evaluates the smooth-union bridge between two adjacent cushions and triangulates the concave hourglass meniscus contour directly via a 24-slice star-convex triangle fan around `bridge_center` (`core_weight = 1.0` at center, radial falloff to perimeter) into an indexed vertex/index buffer (`MeniscusMesh2d`) with zero external tessellation crate overhead.
+
+### 4.2 Iteration 2 (`M2` — `vitrea::optics`): Exact 3D Vector Snellius Refraction (`glam::Vec3::refract`), Chromatic Dispersion & Schlick-Fresnel (`REQ-016-02`)
+
+1. **Exact 3D Vector Snell's Law Refraction (`refract_ray_snell_3d` & `refract_chromatic_rgb`, `REQ-016-02.1`):**
+   - Given incident viewing ray $\vec{I} = (0, 0, -1)$ (`glam::Vec3::NEG_Z`), unit surface normal $\vec{N} = (n_x, n_y, n_z)$ with $n_z \ge 0$, relative refractive index $\eta = n_{\text{air}} / n_{\text{glass}} = 1.0 / \text{ior}$, and optical dome thickness $h_{\text{dome}}$:
+     - Computes the exact 3D refracted transmission vector $\vec{T} = \text{ Vec3::refract}(\vec{I}, \vec{N}, \eta)$ obeying Snell's law $\sin\theta_1 / \sin\theta_2 = n_{\text{glass}}$:
+       $$\vec{T} = \eta\vec{I} + \left(\eta(-\vec{I}\cdot\vec{N}) - \sqrt{1 - \eta^2\big(1 - (-\vec{I}\cdot\vec{N})^2\big)}\right)\vec{N}$$
+     - Projects the refracted ray onto the background plane at depth $h_{\text{dome}}$:
+       $$\vec{p}_{\text{refracted}} = \vec{p} + h_{\text{dome}} \cdot \frac{(T_x, T_y)}{\max(-T_z, 0.25)}$$
+   - `refract_chromatic_rgb` evaluates three distinct refracted coordinates $[\vec{p}_R, \vec{p}_G, \vec{p}_B]$ for $(\eta_R, \eta_G, \eta_B) = (1.474, 1.480, 1.488)$.
+2. **Exact Physical Schlick-Fresnel & Blinn-Phong Proximity Glint (`evaluate_schlick_fresnel_and_blinn_phong`, `REQ-016-02.2`):**
+   - Evaluates the exact physical dielectric reflectance at normal incidence $F_0 = \left(\frac{n_{\text{glass}} - 1}{n_{\text{glass}} + 1}\right)^2$ ($\approx 0.0375$ for $n_{\text{glass}} = 1.48$) and Schlick's fifth-power law:
+     $$F(\cos\theta) = F_0 + (1 - F_0)(1 - \cos\theta)^5, \quad \cos\theta = \text{clamp}(n_z, 0.0, 1.0)$$
+   - Combined with 3D point-light cursor proximity attenuation $1 / (1 + (d_{\text{cursor}} / R_{\text{prox}})^2)$ and Blinn-Phong half-vector specular power $(\vec{N}\cdot\vec{H})^8$.
+3. **Zero Dead Math & View-Adapter Purity (`REQ-016-02.6`):**
+   - `egui-macview/src/controls/liquid_glass.rs` is a thin `egui` View adapter over `vitrea` and `MacTheme::liquid_glass()`, re-exporting all backwards-compatible symbols while delegating 100% of SDF, normal, Snellius, Fresnel, meniscus tessellation, and droplet kinematics to `vitrea`.
 
 ### 4.3 Iteration 3 (`M3`): Coupled `CASpring` Dynamics (`DualSpringMorphBlob` & `AnisotropicCushionSpring`, `REQ-016-03..04`)
 
@@ -288,3 +295,14 @@ Every public widget and layout container in `egui-macview` (52 total across the 
    - Samples and refracts any registered background canvas or underlying window surface through the Liquid Glass optical pipeline (`build_liquid_glass_backdrop_image`, Dual-Kawase blur + $1.5\times$ saturation boost + Snellius perimeter refraction).
 
 
+
+---
+
+## 10. `crates.io` & `docs.rs` Publication Readiness for `vitrea` (`REQ-016-00.3`)
+
+1. **`Cargo.toml` Package Metadata:**
+   - `vitrea/Cargo.toml` SHALL include `readme = "README.md"`, `repository`, `documentation = "https://docs.rs/vitrea"`, `rust-version = "1.80"`, up to 5 `keywords`, and valid `crates.io` `categories` slugs (`["graphics", "mathematics", "simulation"]`).
+2. **Root Documentation & Dual Licensing:**
+   - `vitrea/` SHALL include a comprehensive `README.md`, `LICENSE-MIT`, and `LICENSE-APACHE` at the crate root.
+3. **Executable Rustdoc Examples & Clean Mathematical Typography:**
+   - `src/lib.rs`, `src/sdf.rs`, `src/optics.rs`, and `src/kinematics.rs` SHALL include executable rustdoc examples (` ``` `) verified by `cargo test --doc` and use clean Unicode/Markdown mathematical notation without raw unrendered `$` LaTeX delimiters.

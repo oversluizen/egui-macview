@@ -554,6 +554,14 @@ fn tc_016_w3_through_w6_liquid_glass_and_sonoma_parity() {
     });
     let w6_verts: usize = shapes_w5_mid.iter().filter_map(|cs| if let egui::Shape::Mesh(m) = &cs.shape { Some(m.vertices.len()) } else { None }).sum();
     assert!(w6_verts >= 6, "Iter 14 (W6-V) violation: MacPopoverSurface must emit 3D dome sheen mesh (got {w6_verts})");
+
+    let lg_src = std::fs::read_to_string(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/controls/liquid_glass.rs")).expect("read liquid_glass.rs");
+    for bad in ["rotary_sensitivity", "2.0 + 1.0", "0.5 * 0.5 * 0.5"] {
+        assert!(!lg_src.contains(bad), "REQ-016-00.2 violation: forbidden hack `{bad}` in liquid_glass.rs");
+    }
+    for req in ["vitrea::dome_normal_3d_from_sdf", "vitrea::refract_ray_snell_3d", "vitrea::tessellate_meniscus_bridge", "vitrea::evaluate_schlick_fresnel_and_blinn_phong"] {
+        assert!(lg_src.contains(req), "REQ-016-00.1 violation: missing `{req}` in liquid_glass.rs");
+    }
 }
 
 fn first_mesh_width(shapes: &[egui::epaint::ClippedShape]) -> Option<f32> {

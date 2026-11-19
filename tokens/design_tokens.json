@@ -2672,7 +2672,18 @@
           "hint_vertical_offset": { "$type": "dimension", "$value": "6.0pt" },
           "active_fill_opacity": { "$type": "dimension", "$value": "0.28pt" },
           "hover_fill_opacity": { "$type": "dimension", "$value": "0.14pt" },
-          "rotary_sensitivity": { "$type": "dimension", "$value": "0.02pt" }
+          "rotary_sensitivity": { "$type": "dimension", "$value": "0.02pt" },
+          "ior_glass": { "$type": "dimension", "$value": "1.48pt" },
+          "ior_red": { "$type": "dimension", "$value": "1.474pt" },
+          "ior_green": { "$type": "dimension", "$value": "1.480pt" },
+          "ior_blue": { "$type": "dimension", "$value": "1.488pt" },
+          "fresnel_f0": { "$type": "dimension", "$value": "0.0375pt" },
+          "bevel_width_pt": { "$type": "dimension", "$value": "8.0pt" },
+          "dome_thickness_pt": { "$type": "dimension", "$value": "6.0pt" },
+          "vibrancy_chroma_boost": { "$type": "dimension", "$value": "1.50pt" },
+          "meniscus_merge_k_pt": { "$type": "dimension", "$value": "6.0pt" },
+          "viscous_stretch_gain": { "$type": "dimension", "$value": "0.125pt" },
+          "viscous_press_gain": { "$type": "dimension", "$value": "0.0625pt" }
         }
       },
       "toolbar": {

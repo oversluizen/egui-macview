@@ -322,6 +322,28 @@ pub struct ThumbDialMetrics {
     pub hover_fill_opacity: DimensionValue,
     /// Rotary sensitivity factor per degree (`0.02pt`).
     pub rotary_sensitivity: DimensionValue,
+    /// Refractive index of Apple Liquid Glass ($\eta_{\text{glass}} = 1.48$).
+    pub ior_glass: DimensionValue,
+    /// Red wavelength refractive index ($\eta_R = 1.474$).
+    pub ior_red: DimensionValue,
+    /// Green wavelength refractive index ($\eta_G = 1.480$).
+    pub ior_green: DimensionValue,
+    /// Blue wavelength refractive index ($\eta_B = 1.488$).
+    pub ior_blue: DimensionValue,
+    /// Normal-incidence dielectric reflectance ($F_0 = ((\eta - 1)/(\eta + 1))^2 = 0.0375$).
+    pub fresnel_f0: DimensionValue,
+    /// Bevel curvature width in points (`8.0pt`).
+    pub bevel_width_pt: DimensionValue,
+    /// Optical dome thickness in points (`6.0pt`).
+    pub dome_thickness_pt: DimensionValue,
+    /// Dual-Kawase backdrop vibrancy saturation multiplier (`1.50pt`).
+    pub vibrancy_chroma_boost: DimensionValue,
+    /// Smooth-minimum meniscus merge radius in points (`6.0pt`).
+    pub meniscus_merge_k_pt: DimensionValue,
+    /// Viscous droplet velocity stretch gain (`0.125pt`).
+    pub viscous_stretch_gain: DimensionValue,
+    /// Viscous droplet finger-press expansion gain (`0.0625pt`).
+    pub viscous_press_gain: DimensionValue,
 }
 
 impl Default for ThumbDialMetrics {

@@ -187,13 +187,17 @@ pub(super) fn paint_dial_layers(
             let spec = dial.sectors.sector(sector);
             let parallax = m.active_stroke_width.points() / bw.max(1.0);
             let center_pt = polar_pos(hub_center + lift_off * parallax, r_clover_mid + lift * gap * 0.5, c_deg, m);
-            let _core_sdf = super::super::liquid_glass::sdf_annular_rounded_sector(
+            let core_d = super::super::liquid_glass::sdf_annular_rounded_sector(
                 center_pt,
                 hub_center + lift_off,
                 (r_clover_in, r_out_lifted),
                 (c_deg, half_sweep),
                 gap * 2.0,
                 m,
+            );
+            let _core_n = super::super::liquid_glass::dome_surface_normal_3d_from_sample(
+                vitrea::SdfSample2d { distance: core_d, gradient: vitrea::SdfSample2d { distance: 0.0, gradient: Default::default() }.gradient },
+                m.bevel_width_pt.points(),
             );
             let fg_col = if is_held || is_latched {
                 MacBackgroundStyle::from_color(st.accent_col).primary_text_color(theme)
