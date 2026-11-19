@@ -309,9 +309,29 @@ fn tc_016_04_mockup_parity_8_cushion_rosette_3_tier_labels_and_stadium_undo_redo
         "REQ-014-08.1 violation: Passive NW (-135°) and SW (+135°) octants must render recessed 3D glass cushions (got nw_luma={nw_luma}, sw_luma={sw_luma})"
     );
 
+    // 2b. Iter P1 (REQ-016-01.6): Every cushion must be a unified 2D-grid SDF pebble dome mesh (>= 175 vertices per cushion, 8 cushions)
+    let pebble_dome_meshes = shapes
+        .iter()
+        .filter(|cs| matches!(&cs.shape, egui::Shape::Mesh(m) if m.vertices.len() >= 170))
+        .count();
+    assert!(
+        pebble_dome_meshes >= 8,
+        "Iter P1 (REQ-016-01.6) violation: All 8 cushions must render as true 2D-grid SDF pebble dome meshes (>= 170 vertices each), found only {pebble_dome_meshes} meshes"
+    );
+
+    // 2c. Iter P2 (REQ-016-02.7): Each cushion must render refracted sub-cushion Snellius lens lines (13-point refracted arcs)
+    let refracted_lens_lines = shapes
+        .iter()
+        .filter(|cs| matches!(&cs.shape, egui::Shape::Path(p) if p.points.len() == 13))
+        .count();
+    assert!(
+        refracted_lens_lines >= 12,
+        "Iter P2 (REQ-016-02.7) violation: Cushions must render refracted sub-cushion Snellius lens arcs (13-pt polylines), found only {refracted_lens_lines}"
+    );
+
     // 3. Verify clearly visible fluid cushion lift (>= 2.0pt radial/magnetic shift at t=0.14s on a genuine 0.28s underdamped spring)
     let hover_east = pos2(east_rest.x + 10.0, east_rest.y);
-    let _ = common::run_frame(
+    let shapes_t02 = common::run_frame(
         &ctx,
         RawInput {
             time: Some(0.02),
@@ -328,7 +348,7 @@ fn tc_016_04_mockup_parity_8_cushion_rosette_3_tier_labels_and_stadium_undo_redo
         },
     );
     let mut east_lifted = Pos2::ZERO;
-    let _ = common::run_frame(
+    let shapes_t14 = common::run_frame(
         &ctx,
         RawInput {
             time: Some(0.14),
@@ -345,6 +365,23 @@ fn tc_016_04_mockup_parity_8_cushion_rosette_3_tier_labels_and_stadium_undo_redo
             east_lifted = r.sector_center(MacThumbSector::East);
         },
     );
+    let _ = shapes_t02;
+    // Iter P3 (REQ-016-03.5): Mid-flight polar DualSpringMorphBlob droplet mesh (4x16 = 85 vertices) must appear when morphing from NE to East!
+    let has_polar_morph_droplet = shapes_t14.iter().any(|cs| matches!(&cs.shape, egui::Shape::Mesh(m) if m.vertices.len() == 85));
+    assert!(
+        has_polar_morph_droplet,
+        "Iter P3 (REQ-016-03.5) violation: Polar DualSpringMorphBlob liquid droplet mesh (85 vertices) must stretch across cushions during sector transition!"
+    );
+    // Iter P4 (REQ-016-04.5): East cushion outer radial boundary must deform viscously outward (>= 1.5pt beyond resting r_clover_out = 78pt)
+    let max_east_x = shapes_t14
+        .iter()
+        .filter_map(|cs| if let egui::Shape::Mesh(m) = &cs.shape { Some(m) } else { None })
+        .flat_map(|m| m.vertices.iter().map(|v| v.pos.x - hub_c.x))
+        .fold(0.0f32, f32::max);
+    assert!(
+        max_east_x >= 81.5,
+        "Iter P4 (REQ-016-04.5) violation: Hovered/lifted East cushion must deform viscously outward via vitrea::deform_viscous_droplet_point (expected max_east_x >= 81.5pt, got {max_east_x:.2}pt)"
+    );
     let shift_x = east_lifted.x - east_rest.x;
     assert!(
         shift_x >= 2.0,
@@ -360,104 +397,36 @@ fn tc_016_w2_edge_thumbwheel_drum_and_free_joystick_crystal_marble_physics() {
     let mut hub_c = Pos2::ZERO;
 
     // 1. Render MacEdgeThumbwheel (wide drum) and MacFreeJoystickBowl at t=0.0
-    let shapes_t0 = common::run_frame(
-        &ctx,
-        RawInput {
-            time: Some(0.0),
-            screen_rect: Some(Rect::from_min_size(Pos2::ZERO, vec2(320.0, 360.0))),
-            ..Default::default()
-        },
-        vec2(320.0, 360.0),
-        |ui| {
-            MacEdgeThumbwheel::new("w2_drum", &mut wheel_val, 0.0..=100.0)
-                .wide_drum_width(140.0)
-                .theme(&theme)
-                .show(ui);
-            let r = MacFreeJoystickBowl::new("w2_bowl").theme(&theme).show(ui);
-            hub_c = r.hub_center;
-        },
-    );
-
-    // Verify 3D spherical crystal marble mesh and 32-band cylindrical drum mesh emit dense 3D vertex shading
-    let total_mesh_verts: usize = shapes_t0
-        .iter()
-        .filter_map(|cs| if let egui::Shape::Mesh(m) = &cs.shape { Some(m.vertices.len()) } else { None })
-        .sum();
-    assert!(
-        total_mesh_verts >= 350,
-        "Iter 6 (W2-V) violation: MacEdgeThumbwheel 32-band drum + MacFreeJoystickBowl concave dish & 3D spherical crystal marble must emit >= 350 mesh vertices (got {total_mesh_verts})"
-    );
+    let shapes_t0 = common::run_frame(&ctx, RawInput { time: Some(0.0), ..Default::default() }, vec2(320.0, 360.0), |ui| {
+        MacEdgeThumbwheel::new("w2_drum", &mut wheel_val, 0.0..=100.0).wide_drum_width(140.0).theme(&theme).show(ui);
+        hub_c = MacFreeJoystickBowl::new("w2_bowl").theme(&theme).show(ui).hub_center;
+    });
+    let total_mesh_verts: usize = shapes_t0.iter().filter_map(|cs| if let egui::Shape::Mesh(m) = &cs.shape { Some(m.vertices.len()) } else { None }).sum();
+    assert!(total_mesh_verts >= 350, "Iter 6 (W2-V) violation: expected >= 350 mesh vertices, got {total_mesh_verts}");
 
     // 2. Drag crystal marble in MacFreeJoystickBowl to (+45, -35) at t=0.10s, then release at t=0.20s
     let drag_pt = pos2(hub_c.x + 45.0, hub_c.y - 35.0);
-    let _ = common::run_frame(
-        &ctx,
-        RawInput {
-            time: Some(0.10),
-            screen_rect: Some(Rect::from_min_size(Pos2::ZERO, vec2(320.0, 360.0))),
-            events: vec![
-                Event::PointerMoved(drag_pt),
-                Event::PointerButton { pos: drag_pt, button: egui::PointerButton::Primary, pressed: true, modifiers: egui::Modifiers::NONE },
-            ],
-            ..Default::default()
-        },
-        vec2(320.0, 360.0),
-        |ui| {
-            MacEdgeThumbwheel::new("w2_drum", &mut wheel_val, 0.0..=100.0)
-                .wide_drum_width(140.0)
-                .theme(&theme)
-                .show(ui);
+    for (t, pressed) in [(0.10, true), (0.20, false)] {
+        let evs = vec![
+            Event::PointerMoved(drag_pt),
+            Event::PointerButton { pos: drag_pt, button: egui::PointerButton::Primary, pressed, modifiers: egui::Modifiers::NONE },
+        ];
+        let _ = common::run_frame(&ctx, RawInput { time: Some(t), events: evs, ..Default::default() }, vec2(320.0, 360.0), |ui| {
+            MacEdgeThumbwheel::new("w2_drum", &mut wheel_val, 0.0..=100.0).wide_drum_width(140.0).theme(&theme).show(ui);
             MacFreeJoystickBowl::new("w2_bowl").theme(&theme).show(ui);
-        },
-    );
-
-    // Frame at t=0.20s: release pointer
-    let _ = common::run_frame(
-        &ctx,
-        RawInput {
-            time: Some(0.20),
-            screen_rect: Some(Rect::from_min_size(Pos2::ZERO, vec2(320.0, 360.0))),
-            events: vec![
-                Event::PointerMoved(drag_pt),
-                Event::PointerButton { pos: drag_pt, button: egui::PointerButton::Primary, pressed: false, modifiers: egui::Modifiers::NONE },
-            ],
-            ..Default::default()
-        },
-        vec2(320.0, 360.0),
-        |ui| {
-            MacEdgeThumbwheel::new("w2_drum", &mut wheel_val, 0.0..=100.0)
-                .wide_drum_width(140.0)
-                .theme(&theme)
-                .show(ui);
-            MacFreeJoystickBowl::new("w2_bowl").theme(&theme).show(ui);
-        },
-    );
+        });
+    }
 
     // Frame at t=0.24s (40ms after release): underdamped CASpring return must be in-flight (NOT teleported to 0.0 in 1 frame!)
     let mut marble_mid_return = Pos2::ZERO;
-    let _ = common::run_frame(
-        &ctx,
-        RawInput {
-            time: Some(0.24),
-            screen_rect: Some(Rect::from_min_size(Pos2::ZERO, vec2(320.0, 360.0))),
-            ..Default::default()
-        },
-        vec2(320.0, 360.0),
-        |ui| {
-            MacEdgeThumbwheel::new("w2_drum", &mut wheel_val, 0.0..=100.0)
-                .wide_drum_width(140.0)
-                .theme(&theme)
-                .show(ui);
-            let r = MacFreeJoystickBowl::new("w2_bowl").theme(&theme).show(ui);
-            marble_mid_return = r.marble_center;
-            hub_c = r.hub_center;
-        },
-    );
+    let _ = common::run_frame(&ctx, RawInput { time: Some(0.24), ..Default::default() }, vec2(320.0, 360.0), |ui| {
+        MacEdgeThumbwheel::new("w2_drum", &mut wheel_val, 0.0..=100.0).wide_drum_width(140.0).theme(&theme).show(ui);
+        let r = MacFreeJoystickBowl::new("w2_bowl").theme(&theme).show(ui);
+        marble_mid_return = r.marble_center;
+        hub_c = r.hub_center;
+    });
     let dist_mid = (marble_mid_return - hub_c).length();
-    assert!(
-        dist_mid > 3.0 && dist_mid < 55.0,
-        "Iter 7 (W2-C) violation: Released crystal marble must return smoothly to center via CASpring (not instant 0.0 teleport!), got dist_mid={dist_mid:.2}pt"
-    );
+    assert!(dist_mid > 3.0 && dist_mid < 55.0, "Iter 7 (W2-C) violation: expected mid-return dist in (3, 55), got {dist_mid:.2}");
 
     if let Ok(png_path) = std::env::var("MACVIEW_W2_RETINA_PNG") {
         let mut latched = MacThumbIntentMask::CONSTRAIN;
@@ -556,12 +525,16 @@ fn tc_016_w3_through_w6_liquid_glass_and_sonoma_parity() {
     assert!(w6_verts >= 6, "Iter 14 (W6-V) violation: MacPopoverSurface must emit 3D dome sheen mesh (got {w6_verts})");
 
     let lg_src = std::fs::read_to_string(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/controls/liquid_glass.rs")).expect("read liquid_glass.rs");
-    for bad in ["rotary_sensitivity", "2.0 + 1.0", "0.5 * 0.5 * 0.5"] {
-        assert!(!lg_src.contains(bad), "REQ-016-00.2 violation: forbidden hack `{bad}` in liquid_glass.rs");
+    for bad in ["rotary_sensitivity", "2.0 + 1.0", "0.5 * 0.5 * 0.5", "kurbo", "lyon_tessellation"] {
+        assert!(!lg_src.contains(bad), "REQ-016-00.2 violation: forbidden hack or stale dependency reference `{bad}` in liquid_glass.rs");
     }
-    for req in ["vitrea::dome_normal_3d_from_sdf", "vitrea::refract_ray_snell_3d", "vitrea::tessellate_meniscus_bridge", "vitrea::evaluate_schlick_fresnel_and_blinn_phong"] {
+    for req in ["vitrea::dome_normal_3d_from_sdf", "vitrea::refract_ray_snell_3d", "vitrea::tessellate_meniscus_bridge", "vitrea::evaluate_schlick_fresnel_and_blinn_phong", "vitrea::sdf_closed_polyline_sample"] {
         assert!(lg_src.contains(req), "REQ-016-00.1 violation: missing `{req}` in liquid_glass.rs");
     }
+    let contour = [pos2(80.0, 80.0), pos2(120.0, 80.0), pos2(120.0, 120.0), pos2(80.0, 120.0)];
+    let poly_sample = egui_macview::sdf_closed_polyline(pos2(116.0, 100.0), &contour);
+    let poly_normal = egui_macview::dome_surface_normal_3d_from_sample(poly_sample, 8.0);
+    assert!(poly_sample.distance < 0.0 && poly_normal[0] > 0.2 && poly_normal[2] > 0.2);
 }
 
 fn first_mesh_width(shapes: &[egui::epaint::ClippedShape]) -> Option<f32> {

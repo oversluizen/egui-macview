@@ -430,13 +430,13 @@ pub(super) fn show_dial(mut dial: MacContextThumbDial<'_>, ui: &mut Ui) -> MacCo
     };
 
     let accent_col = theme.resolve_glass_accent_on(dial.glass_accent, theme.popover_background());
-    let (pointer_norm, sector_lifts) = super::super::liquid_glass::step_dial_pointer_springs(
+    let (pointer_norm, sector_lifts, polar_morph) = super::super::liquid_glass::step_dial_pointer_springs(
         ui.ctx(),
         theme,
         m,
         dial.id_source,
         (hub_center, r_clover_mid, r_outer, r_skirt_out, gap),
-        (pointer_pos, held_sector, hovered_sector, now),
+        (pointer_pos, latched_sector, held_sector, hovered_sector, now),
         &mut sector_centers,
     );
     let painter = ui.painter_at(rect.intersect(ui.clip_rect()));
@@ -457,6 +457,7 @@ pub(super) fn show_dial(mut dial: MacContextThumbDial<'_>, ui: &mut Ui) -> MacCo
             joystick_offset: mem.joystick_offset,
             pointer_norm,
             sector_lifts,
+            polar_morph,
             accent_col,
             tooltip_alpha,
             tooltip_str,

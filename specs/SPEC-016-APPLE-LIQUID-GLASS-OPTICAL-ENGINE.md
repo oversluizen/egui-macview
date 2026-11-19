@@ -200,6 +200,41 @@ Every public widget and layout container in `egui-macview` (52 total across the 
      - **Trailing edge** (following behind) uses a slightly softer trailing spring ($T_{\text{trail}} = 0.32\text{s}, \zeta = 0.76$).
    - During transit from segment/sector $A$ to $B$, $|b(t) - a(t)|$ automatically **stretches** wider than its resting width and then **coalesces** back to resting width upon arrival, with `is_at_rest()` returning `true` once both springs settle.
 
+### 4.4 Iteration P1 (`REQ-016-01.6`): True 2D-Grid SDF Pebble Dome Mesh (`6 × 24` = 175 Vertices per Cushion) & 4-Sided `vitrea` Schlick-Fresnel Bevels
+
+1. **Elimination of Flat 1D Radial Strip Banding (`paint_annular_wedge_lit`):**
+   - Instead of stacking 3 overlapping 1D radial strips (`r_in..r_out`, `r_mid..r_out`, `r_top..r_out`) that only vary color radially and leave the two radial side edges (`start_deg` and `end_deg`) flat, every cushion in [`MacContextThumbDial`] (`N, NE, E, SE, S, SW, W, NW`) MUST be tessellated as a single 2D polar grid of `RADIAL_RINGS = 6` radial subdivisions by `ANGULAR_STEPS = 24` angular subdivisions (`7 × 25 = 175` vertices and `6 × 24 × 2 = 288` triangles per cushion).
+2. **Per-Vertex `vitrea::sdf_annular_rounded_sector_sample` & 4-Sided 3D Dome Normal (`vitrea::dome_normal_3d_from_sdf`):**
+   - At each grid coordinate $(u_r, u_\theta) \in [0, 1]^2$, the vertex position $\vec{p}(u_r, u_\theta)$ is placed on the filleted pebble contour $[r_{\text{fillet\_in}}(u_\theta), r_{\text{fillet\_out}}(u_\theta)]$.
+   - Its exact 2D SDF sample $(d(\vec{p}), \nabla d(\vec{p}))$ is evaluated via `vitrea::sdf_annular_rounded_sector_sample`, and its 3D outward surface normal $\vec{N}(\vec{p}) = (n_x, n_y, n_z)$ is computed via `vitrea::dome_normal_3d_from_sdf(sample, bevel_width_pt)`:
+     - Along **all 4 cushion boundaries** (the inner arc $u_r = 0$, the outer arc $u_r = 1$, the leading radial side $u_\theta = 0$, and the trailing radial side $u_\theta = 1$), $d(\vec{p}) \to 0 \implies n_z \to 0$ and $(n_x, n_y)$ points perpendicular to the local pebble edge.
+     - In the cushion interior plateau ($-d(\vec{p}) \ge w_{\text{bevel}}$), $n_z \to 1.0$.
+3. **5-Component Volumetric Pebble Dome Shading from $\vec{N}(\vec{p})$:**
+   - Each vertex color combines:
+     1. **4-Sided Bevel Curvature & Rim Darkening/Brightening**: Controlled by $n_z$ and top-light vertical normal component $(-n_y)$.
+     2. **Deep Sub-Surface Caustic Core**: Proportional to $n_z^2$, giving active/latched cushions a rich saturated sapphire/cyan core and raised pearl dome in Light Mode.
+     3. **Physical Schlick-Fresnel & Blinn-Phong Cursor Glint**: Evaluated per vertex via `vitrea::evaluate_schlick_fresnel_and_blinn_phong(p, n3d, cursor_pos, r_out, ior_glass)`, producing a continuous 3D specular highlight that wraps smoothly around all 4 rounded sides of the cushion as the cursor/thumb moves.
+
+### 4.5 Iteration P2 (`REQ-016-02.7`): Live Snellius 3D Lens Refraction (`vitrea::refract_ray_snell_3d` & `refract_chromatic_rgb`) Through the 8 Cushions & Center Hub
+
+1. **Refracted Sub-Cushion Dish Rings (`paint_annular_wedge_lit`):**
+   - For every cushion in [`MacContextThumbDial`], the underlying recessed dish precision rings at radii $r_{\text{lens},1} = r_{\text{in}} + 0.35(r_{\text{out}} - r_{\text{in}})$ and $r_{\text{lens},2} = r_{\text{in}} + 0.65(r_{\text{out}} - r_{\text{in}})$ are sampled across the angular span $[\theta_{\text{start}}, \theta_{\text{end}}]$ (`24` sample points per arc).
+   - At each sample point $\vec{p}_k$, the 3D cushion dome normal $\vec{N}(\vec{p}_k)$ is evaluated via `vitrea::sdf_annular_rounded_sector_sample` + `vitrea::dome_normal_3d_from_sdf`, and the point is refracted through the glass dome via `vitrea::refract_ray_snell_3d` ($\eta = 1.48$) and `vitrea::refract_chromatic_rgb` ($[\eta_R, \eta_G, \eta_B] = [1.474, 1.480, 1.488]$).
+   - Because $n_z \to 0$ near the 4 rounded pebble edges and $n_z \to 1$ at the center plateau, the refracted dish lines visibly bend and magnify at the cushion perimeter like a physical glass lens!
+
+### 4.6 Iteration P3 (`REQ-016-03.5`): Polar Liquid Selection & Hover Droplet (`Polar DualSpringMorphBlob` + `vitrea::sdf_smooth_union_with_grad`)
+
+1. **Coupled Polar Angle Springs ($\theta_{\text{lead}}(t), \theta_{\text{trail}}(t)$):**
+   - When the active/latched or hovered sector changes from angle $\theta_A$ to $\theta_B$, `step_dial_pointer_springs` steps two coupled continuous polar angle springs (`lg_polar_lead_deg`, `lg_polar_trail_deg`) along the shortest angular path $\Delta\theta = \text{shortest\_angle}(\theta_B, \theta_A)$:
+     - The **leading angle** uses the fast snappy spring ($T_{\text{lead}} = 0.5 T_0$) while the **trailing angle** uses the standard snappy spring ($T_{\text{trail}} = T_0$).
+   - During mid-flight transit ($|\theta_{\text{lead}}(t) - \theta_{\text{trail}}(t)| > 4^\circ$), a continuous translucent **3D Liquid Glass Morph Droplet Arc** spanning $[\min(\theta_{\text{lead}}, \theta_{\text{trail}}) - \alpha_0,\; \max(\theta_{\text{lead}}, \theta_{\text{trail}}) + \alpha_0]$ is rendered via `vitrea::sdf_annular_rounded_sector_sample` and `vitrea::dome_normal_3d_from_sdf`, visually stretching across the inter-cushion gap and coalescing onto the target cushion.
+
+### 4.7 Iteration P4 (`REQ-016-04.5`): Viscous Thumb Squash & Stretch (`vitrea::deform_viscous_droplet_point`, $\det J = 1$) on All 8 Cushions & 2.5D Optical Parallax
+
+1. **Per-Vertex Viscous Droplet Deformation on Cushions:**
+   - Every vertex $\vec{p}(u_r, u_\theta)$ of an active, held, or lifted cushion (`lift > 0.0`) in `paint_annular_wedge_lit` is transformed through `vitrea::deform_viscous_droplet_point(p, cushion_center, lift_velocity_vec, r_span, press_amount, (viscous_stretch_gain, viscous_press_gain))`.
+   - Under finger press or thumb drag, the glass cushion visibly expands and stretches toward the thumb vector while preserving 2D optical volume, and the 3-tier vector iconography (`SF Symbol` + `Caption` + `Shortcut`) floats above the caustic core with $1.5\times$ 2.5D depth parallax.
+
 ---
 
 ## 5. Detailed Normative Specification for Block B, Family 2 (`Iter 6: W2-V` & `Iter 7: W2-C` — `MacEdgeThumbwheel` & `MacFreeJoystickBowl`)
@@ -300,9 +335,11 @@ Every public widget and layout container in `egui-macview` (52 total across the 
 
 ## 10. `crates.io` & `docs.rs` Publication Readiness for `vitrea` (`REQ-016-00.3`)
 
-1. **`Cargo.toml` Package Metadata:**
-   - `vitrea/Cargo.toml` SHALL include `readme = "README.md"`, `repository`, `documentation = "https://docs.rs/vitrea"`, `rust-version = "1.80"`, up to 5 `keywords`, and valid `crates.io` `categories` slugs (`["graphics", "mathematics", "simulation"]`).
+1. **`Cargo.toml` Package Metadata & Tarball Hygiene:**
+   - `vitrea/Cargo.toml` SHALL include `readme = "README.md"`, `repository`, `documentation = "https://docs.rs/vitrea"`, `rust-version = "1.80"`, `exclude = ["tests/**"]` (excluding internal COTS test suites from the published `.crate` tarball), `[package.metadata.docs.rs]`, `[lints.rustdoc] broken_intra_doc_links = "deny"`, up to 5 `keywords`, and valid `crates.io` `categories` slugs (`["graphics", "mathematics", "simulation"]`).
 2. **Root Documentation & Dual Licensing:**
    - `vitrea/` SHALL include a comprehensive `README.md`, `LICENSE-MIT`, and `LICENSE-APACHE` at the crate root.
 3. **Executable Rustdoc Examples & Clean Mathematical Typography:**
    - `src/lib.rs`, `src/sdf.rs`, `src/optics.rs`, and `src/kinematics.rs` SHALL include executable rustdoc examples (` ``` `) verified by `cargo test --doc` and use clean Unicode/Markdown mathematical notation without raw unrendered `$` LaTeX delimiters.
+4. **View-Layer Closed-Polyline Adapter in `egui-macview`:**
+   - `egui_macview::controls::liquid_glass` SHALL expose `pub fn sdf_closed_polyline(pt: egui::Pos2, contour: &[egui::Pos2]) -> vitrea::SdfSample2d` (re-exported at the `egui_macview` root) and remove any stale doc-comment references to `kurbo::BezPath` or `lyon_tessellation`.

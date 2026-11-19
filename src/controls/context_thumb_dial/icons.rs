@@ -37,55 +37,6 @@ fn filleted_radii(i: usize, steps: usize, r_in: f32, r_out: f32, fillet_pt: f32)
     (r_i, r_o)
 }
 
-fn fill_annular_strip(
-    painter: &Painter,
-    center: Pos2,
-    (r_in, r_out): (f32, f32),
-    (start_deg, end_deg): (f32, f32),
-    (col_in, col_out): (Color32, Color32),
-    light_vec: Vec2,
-    m: &ThumbDialMetrics,
-) {
-    let steps = 32usize;
-    let sweep = end_deg - start_deg;
-    let fillet_pt = m.ring_gap.points() * 2.0;
-    let mid_deg = (start_deg + end_deg) * 0.5;
-    let mid_rad = super::render::deg_to_rad(mid_deg, m);
-    let sec_dir = Vec2::new(mid_rad.cos(), mid_rad.sin());
-    let dir_boost = (sec_dir.x * light_vec.x + sec_dir.y * light_vec.y).max(0.0);
-    let bevel_w = (r_out - r_in).max(1.0) * 0.5;
-    let r_mid = (r_in + r_out) * 0.5;
-    let c_center = polar_pos(center, r_mid, mid_deg, m);
-    let cursor_est = (light_vec.length_sq() > 0.0).then(|| center + light_vec * r_out);
-    let mut mesh = egui::epaint::Mesh::default();
-    mesh.vertices.reserve((steps + 1) * 2);
-    mesh.indices.reserve(steps * 6);
-    for i in 0..=steps {
-        let a = start_deg + sweep * (i as f32 / steps as f32);
-        let a_rad = super::render::deg_to_rad(a, m);
-        let n_dir = Vec2::new(a_rad.cos(), a_rad.sin());
-        let spec = (n_dir.x * light_vec.x + n_dir.y * light_vec.y).max(0.0);
-        let top_bias = (-n_dir.y).clamp(0.0, 1.0) * m.hover_fill_opacity.points();
-        let (ri, ro) = filleted_radii(i, steps, r_in, r_out, fillet_pt);
-        let p_in = polar_pos(center, ri, a, m);
-        let p_out = polar_pos(center, ro, a, m);
-        let n_in = super::super::liquid_glass::dome_surface_normal_3d(p_in, c_center, bevel_w, fillet_pt);
-        let n_out = super::super::liquid_glass::dome_surface_normal_3d(p_out, c_center, bevel_w, fillet_pt);
-        let prox_in = super::super::liquid_glass::evaluate_vertex_cursor_fresnel_lighting(p_in, n_in, cursor_est, r_out);
-        let prox_out = super::super::liquid_glass::evaluate_vertex_cursor_fresnel_lighting(p_out, n_out, cursor_est, r_out);
-        let boost_in = (dir_boost + spec) * 0.5 + top_bias + prox_in * 0.5;
-        let boost_out = (dir_boost + spec) * 0.5 + top_bias + prox_out;
-        mesh.colored_vertex(p_in, brighten_color(col_in, boost_in * m.active_fill_opacity.points()));
-        mesh.colored_vertex(p_out, brighten_color(col_out, boost_out * m.glass_specular_alpha.points()));
-    }
-    for i in 0..steps {
-        let base = (i * 2) as u32;
-        mesh.add_triangle(base, base + 1, base + 3);
-        mesh.add_triangle(base, base + 3, base + 2);
-    }
-    painter.add(Shape::mesh(mesh));
-}
-
 fn brighten_color(c: Color32, gain: f32) -> Color32 {
     let mut hsva = egui::epaint::Hsva::from(c);
     let g_clamped = gain.clamp(0.0, 1.0);
@@ -109,44 +60,121 @@ pub(crate) fn paint_annular_wedge_lit(
     light_vec: Vec2,
     m: &ThumbDialMetrics,
 ) {
-    let steps = 32usize;
+    let radial_rings = 6usize;
+    let ang_steps = 24usize;
     let sweep = geom.end_deg - geom.start_deg;
-    let r_mid = (geom.r_in + geom.r_out) * 0.5;
-    let r_top = (r_mid + geom.r_out) * 0.5;
-    let dome_hi = brighten_color(fill, m.hover_fill_opacity.points());
-    let sheen = brighten_color(fill, m.active_fill_opacity.points());
-    let deep_fill = shade_color(fill, m.hover_fill_opacity.points());
+    let mid_deg = (geom.start_deg + geom.end_deg) * 0.5;
+    let half_sweep = sweep.abs() * 0.5;
     let fillet_pt = m.ring_gap.points() * 2.0;
+    let bevel_w = m.bevel_width_pt.points().max(fillet_pt);
     let bw = m.border_stroke_width.points();
-    let mut sh_pts = Vec::with_capacity((steps + 1) * 2);
-    for i in 0..=steps {
-        let a = geom.start_deg + sweep * (i as f32 / steps as f32);
-        let (_, ro) = filleted_radii(i, steps, geom.r_in, geom.r_out, fillet_pt);
-        sh_pts.push(polar_pos(geom.center + Vec2::new(0.0, bw * 2.0), ro, a, m));
+    let cursor_est = (light_vec.length_sq() > 0.0)
+        .then(|| geom.center + light_vec * geom.r_out)
+        .or_else(|| Some(geom.center - Vec2::new(geom.r_in * 0.5, geom.r_out)));
+    let r_mid = (geom.r_in + geom.r_out) * 0.5;
+    let c_centroid = polar_pos(geom.center, r_mid, mid_deg, m);
+    let r_span = (geom.r_out - geom.r_in).max(1.0);
+    let vel_off = light_vec * r_span * 0.5;
+    let press_amt = light_vec.length().clamp(0.0, 1.0);
+    let deform_pt = |p: Pos2| -> Pos2 {
+        super::super::liquid_glass::deform_viscous_droplet_point(p, c_centroid, vel_off, r_span, press_amt)
+    };
+
+    let mut sh_pts = Vec::with_capacity((ang_steps + 1) * 2);
+    for j in 0..=ang_steps {
+        let a = geom.start_deg + sweep * (j as f32 / ang_steps as f32);
+        let (_, ro) = filleted_radii(j, ang_steps, geom.r_in, geom.r_out, fillet_pt);
+        sh_pts.push(deform_pt(polar_pos(geom.center, ro, a, m)) + Vec2::new(0.0, bw * 2.0));
     }
-    for i in (0..=steps).rev() {
-        let a = geom.start_deg + sweep * (i as f32 / steps as f32);
-        let (ri, _) = filleted_radii(i, steps, geom.r_in, geom.r_out, fillet_pt);
-        sh_pts.push(polar_pos(geom.center + Vec2::new(0.0, bw * 2.0), ri, a, m));
+    for j in (0..=ang_steps).rev() {
+        let a = geom.start_deg + sweep * (j as f32 / ang_steps as f32);
+        let (ri, _) = filleted_radii(j, ang_steps, geom.r_in, geom.r_out, fillet_pt);
+        sh_pts.push(deform_pt(polar_pos(geom.center, ri, a, m)) + Vec2::new(0.0, bw * 2.0));
     }
-    painter.add(Shape::convex_polygon(sh_pts, shade_color(fill, m.active_fill_opacity.points()).gamma_multiply(m.hover_fill_opacity.points()), Stroke::NONE));
-    fill_annular_strip(painter, geom.center, (geom.r_in, geom.r_out), (geom.start_deg, geom.end_deg), (deep_fill, dome_hi), light_vec, m);
-    fill_annular_strip(painter, geom.center, (r_mid, geom.r_out), (geom.start_deg, geom.end_deg), (fill, sheen), light_vec, m);
-    fill_annular_strip(painter, geom.center, (r_top, geom.r_out), (geom.start_deg, geom.end_deg), (dome_hi, stroke.color), light_vec, m);
+    painter.add(Shape::convex_polygon(
+        sh_pts,
+        shade_color(fill, m.active_fill_opacity.points()).gamma_multiply(m.hover_fill_opacity.points()),
+        Stroke::NONE,
+    ));
+
+    let mut mesh = egui::epaint::Mesh::default();
+    mesh.vertices.reserve((radial_rings + 1) * (ang_steps + 1));
+    mesh.indices.reserve(radial_rings * ang_steps * 6);
+    for r_i in 0..=radial_rings {
+        let u_r = r_i as f32 / radial_rings as f32;
+        for j in 0..=ang_steps {
+            let a = geom.start_deg + sweep * (j as f32 / ang_steps as f32);
+            let (ri, ro) = filleted_radii(j, ang_steps, geom.r_in, geom.r_out, fillet_pt);
+            let r = ri + (ro - ri) * u_r;
+            let raw_pt = polar_pos(geom.center, r, a, m);
+            let pt = deform_pt(raw_pt);
+            let sdf_sample = vitrea::sdf_annular_rounded_sector_sample(
+                vitrea::GlamVec2::new(raw_pt.x, raw_pt.y),
+                vitrea::GlamVec2::new(geom.center.x, geom.center.y),
+                (geom.r_in, geom.r_out),
+                (mid_deg, half_sweep),
+                fillet_pt,
+            );
+            let n3d = super::super::liquid_glass::dome_surface_normal_3d_from_sample(sdf_sample, bevel_w);
+            let fresnel_glint = super::super::liquid_glass::evaluate_vertex_cursor_fresnel_lighting(pt, n3d, cursor_est, geom.r_out);
+            let top_dome = (-n3d[1]).clamp(0.0, 1.0) * m.hover_fill_opacity.points();
+            let caustic_core = (n3d[2] * n3d[2]) * m.hover_fill_opacity.points();
+            let bevel_rim = (1.0 - n3d[2].clamp(0.0, 1.0)) * m.hover_fill_opacity.points();
+            let base_c = shade_color(fill, bevel_rim * 0.5);
+            let lit_c = brighten_color(base_c, top_dome + caustic_core + fresnel_glint * m.glass_specular_alpha.points());
+            mesh.colored_vertex(pt, lit_c);
+        }
+    }
+    let stride = (ang_steps + 1) as u32;
+    for r_i in 0..radial_rings {
+        for j in 0..ang_steps {
+            let b0 = (r_i as u32) * stride + (j as u32);
+            let b1 = b0 + stride;
+            mesh.add_triangle(b0, b1, b1 + 1);
+            mesh.add_triangle(b0, b1 + 1, b0 + 1);
+        }
+    }
+    painter.add(Shape::mesh(mesh));
+
+    // Iter P2 (`REQ-016-02.7`): Live Snellius 3D Lens Refraction (`vitrea::refract_ray_snell_3d`) of sub-cushion dish rings
+    let lens_steps = 12usize;
+    let ior = m.ior_glass.points();
+    let dome_thick = m.dome_thickness_pt.points();
+    let lens_col = stroke.color.gamma_multiply(m.hover_fill_opacity.points());
+    for r_ratio in [m.joystick_fine_ratio.points(), m.joystick_fast_ratio.points()] {
+        let r_ring = geom.r_in + r_span * r_ratio;
+        let mut refr_arc = Vec::with_capacity(lens_steps + 1);
+        for k in 0..=lens_steps {
+            let a = geom.start_deg + sweep * (k as f32 / lens_steps as f32);
+            let pt = polar_pos(geom.center, r_ring, a, m);
+            let s_k = vitrea::sdf_annular_rounded_sector_sample(
+                vitrea::GlamVec2::new(pt.x, pt.y),
+                vitrea::GlamVec2::new(geom.center.x, geom.center.y),
+                (geom.r_in, geom.r_out),
+                (mid_deg, half_sweep),
+                fillet_pt,
+            );
+            let n_k = vitrea::dome_normal_3d_from_sdf(s_k, bevel_w);
+            let refr = vitrea::refract_ray_snell_3d(vitrea::GlamVec2::new(pt.x, pt.y), n_k, dome_thick * 0.5, ior);
+            refr_arc.push(deform_pt(Pos2::new(refr.x, refr.y)));
+        }
+        painter.add(Shape::line(refr_arc, Stroke::new(bw, lens_col)));
+    }
+
     if stroke.width > 0.0 {
-        let mut ring_pts = Vec::with_capacity((steps + 1) * 2);
-        let mut outer_arc = Vec::with_capacity(steps + 1);
-        for i in 0..=steps {
-            let a = geom.start_deg + sweep * (i as f32 / steps as f32);
-            let (_, ro) = filleted_radii(i, steps, geom.r_in, geom.r_out, fillet_pt);
-            let pt_out = polar_pos(geom.center, ro, a, m);
+        let mut ring_pts = Vec::with_capacity((ang_steps + 1) * 2);
+        let mut outer_arc = Vec::with_capacity(ang_steps + 1);
+        for j in 0..=ang_steps {
+            let a = geom.start_deg + sweep * (j as f32 / ang_steps as f32);
+            let (_, ro) = filleted_radii(j, ang_steps, geom.r_in, geom.r_out, fillet_pt);
+            let pt_out = deform_pt(polar_pos(geom.center, ro, a, m));
             ring_pts.push(pt_out);
             outer_arc.push(pt_out);
         }
-        for i in (0..=steps).rev() {
-            let a = geom.start_deg + sweep * (i as f32 / steps as f32);
-            let (ri, _) = filleted_radii(i, steps, geom.r_in, geom.r_out, fillet_pt);
-            ring_pts.push(polar_pos(geom.center, ri, a, m));
+        for j in (0..=ang_steps).rev() {
+            let a = geom.start_deg + sweep * (j as f32 / ang_steps as f32);
+            let (ri, _) = filleted_radii(j, ang_steps, geom.r_in, geom.r_out, fillet_pt);
+            ring_pts.push(deform_pt(polar_pos(geom.center, ri, a, m)));
         }
         painter.add(Shape::closed_line(ring_pts, stroke));
         painter.add(Shape::line(outer_arc, Stroke::new(m.active_stroke_width.points(), stroke.color)));

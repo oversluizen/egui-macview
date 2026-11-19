@@ -28,6 +28,7 @@ pub(super) struct DialPaintState {
     pub(super) joystick_offset: Vec2,
     pub(super) pointer_norm: Vec2,
     pub(super) sector_lifts: [f32; 6],
+    pub(super) polar_morph: Option<(f32, f32)>,
     pub(super) accent_col: Color32,
     pub(super) tooltip_alpha: f32,
     pub(super) tooltip_str: Option<String>,
@@ -125,6 +126,16 @@ pub(super) fn paint_dial_layers(
                 (r_clover_in, r_clover_out, gap * 2.0, gap * 2.0),
                 (s_a.center_angle_deg(m), s_a.sweep_deg(m) * 0.5 - half_gap_deg, l_a),
                 (s_b.center_angle_deg(m), s_b.sweep_deg(m) * 0.5 - half_gap_deg, l_b),
+                st.accent_col,
+                m,
+            );
+        }
+        if let Some(morph_pair) = st.polar_morph {
+            super::super::liquid_glass::paint_polar_morph_droplet(
+                painter,
+                hub_center,
+                (r_clover_in, r_clover_out, gap * 2.0),
+                morph_pair,
                 st.accent_col,
                 m,
             );

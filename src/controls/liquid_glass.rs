@@ -2,7 +2,7 @@
 //!
 //! All 2D/3D Signed Distance Field (SDF) geometry, chain-rule gradients, exact 3D Snellius vector
 //! refraction (`glam::Vec3::refract`), chromatic dispersion, physical Schlick-Fresnel reflection,
-//! `lyon_tessellation` meniscus triangulation, and area-preserving droplet kinematics ($\det J = 1$)
+//! star-convex meniscus triangulation, and area-preserving droplet kinematics ($\det J = 1$)
 //! execute inside `vitrea`, configured by [`ThumbDialMetrics`] optical tokens.
 
 use crate::theme::MacTheme;
@@ -76,8 +76,15 @@ pub fn dome_surface_normal_3d(pt: Pos2, center: Pos2, radius: f32, bevel_width: 
     vitrea::dome_normal_3d_from_sdf(sample, bevel_width).to_array()
 }
 
+/// Evaluates [`vitrea::SdfSample2d`] (signed distance + outward unit gradient) for an arbitrary
+/// closed 2D polyline contour (`&[Pos2]`, flattened glyph contour or SVG icon path, `REQ-016-01.1`).
+pub fn sdf_closed_polyline(pt: Pos2, contour: &[Pos2]) -> vitrea::SdfSample2d {
+    let glam_contour: Vec<vitrea::GlamVec2> = contour.iter().copied().map(glam_pt).collect();
+    vitrea::sdf_closed_polyline_sample(glam_pt(pt), &glam_contour)
+}
+
 /// Evaluates the universal 3D outward surface normal $\vec{N}(\vec{x}) = (n_x, n_y, n_z)$
-/// directly from an arbitrary 2D [`vitrea::SdfSample2d`] (capsules, smooth-union metaballs, or `kurbo::BezPath` glyphs).
+/// directly from an arbitrary 2D [`vitrea::SdfSample2d`] (capsules, smooth-union metaballs, or closed-polyline glyphs).
 pub fn dome_surface_normal_3d_from_sample(sample: vitrea::SdfSample2d, bevel_width: f32) -> [f32; 3] {
     vitrea::dome_normal_3d_from_sdf(sample, bevel_width).to_array()
 }
@@ -156,9 +163,15 @@ pub(crate) fn step_dial_pointer_springs(
     m: &ThumbDialMetrics,
     id_source: egui::Id,
     (hub_center, r_clover_mid, r_outer, r_skirt_out, gap): (Pos2, f32, f32, f32, f32),
-    (pointer_pos, held_sector, hovered_sector, now): (Option<Pos2>, Option<super::MacThumbSector>, Option<super::MacThumbSector>, f64),
+    (pointer_pos, latched_sector, held_sector, hovered_sector, now): (
+        Option<Pos2>,
+        Option<super::MacThumbSector>,
+        Option<super::MacThumbSector>,
+        Option<super::MacThumbSector>,
+        f64,
+    ),
     sector_centers: &mut [Pos2; 6],
-) -> (Vec2, [f32; 6]) {
+) -> (Vec2, [f32; 6], Option<(f32, f32)>) {
     let base_spring = theme.tokens().macview.motion.swiftui_snappy.to_spring();
     let fast_ratio = m.viscous_stretch_gain.points();
     let spring = crate::motion::CASpring::new(base_spring.response * fast_ratio, 1.0);
@@ -198,7 +211,23 @@ pub(crate) fn step_dial_pointer_springs(
             super::context_thumb_dial::render::polar_pos(hub_center + lift_off, r_clover_mid + l * gap, c_deg, m);
         l
     });
-    (pointer_norm, sector_lifts)
+
+    // Iter P3 (`REQ-016-03.5`): Coupled Polar DualSpringMorphBlob (`lg_polar_lead_deg`, `lg_polar_trail_deg`)
+    let target_sec = held_sector.or(eff_hover).or(latched_sector);
+    let polar_morph = target_sec.map(|sec| {
+        let raw_deg = sec.center_angle_deg(m);
+        let cont_id = id_source.with("lg_polar_cont_deg");
+        let prev_cont = ctx.data(|d| d.get_temp::<f32>(cont_id)).unwrap_or(raw_deg);
+        let diff = super::context_thumb_dial::render::shortest_angle_diff_deg(raw_deg, prev_cont, m);
+        let cont_target = prev_cont + diff;
+        ctx.data_mut(|d| d.insert_temp(cont_id, cont_target));
+        let lead_s = crate::motion::CASpring::new(base_spring.response * 0.5, base_spring.damping_ratio);
+        let trail_s = base_spring;
+        let lead_deg = lead_s.animate_f32_at(ctx, id_source.with("lg_polar_lead"), cont_target, now, false);
+        let trail_deg = trail_s.animate_f32_at(ctx, id_source.with("lg_polar_trail"), cont_target, now, false);
+        (lead_deg, trail_deg)
+    });
+    (pointer_norm, sector_lifts, polar_morph)
 }
 
 /// Paints a 3D semicircular curved stadium capsule (`"↶ Undo"` or `"↷ Redo"`) with true $180^\circ$ rounded end-caps
@@ -404,8 +433,8 @@ pub fn evaluate_vertex_cursor_fresnel_lighting(
     )
 }
 
-/// Triangulates and paints the concave `.glassEffectUnion` meniscus bridge ($d_{\text{union}}(p) \le 0$)
-/// between two adjacent elevated/active cushions using `vitrea::tessellate_meniscus_bridge` (`lyon_tessellation`, `REQ-016-01.5`).
+/// Triangulates and paints the concave smooth-minimum metaball meniscus bridge ($d_{\text{union}}(p) \le 0$)
+/// between two adjacent elevated/active cushions using `vitrea::tessellate_meniscus_bridge` (`REQ-016-01.5`).
 pub fn paint_meniscus_smooth_union_bridge(
     painter: &Painter,
     center: Pos2,
@@ -431,6 +460,60 @@ pub fn paint_meniscus_smooth_union_bridge(
     mesh.indices = bridge_mesh.indices;
     for (p, w) in bridge_mesh.positions.into_iter().zip(bridge_mesh.core_weights) {
         mesh.colored_vertex(egui_pt(p), bridge_col.gamma_multiply((max_alpha * w).clamp(0.0, 1.0)));
+    }
+    painter.add(Shape::mesh(mesh));
+}
+
+/// Paints the velocity-stretched Polar `DualSpringMorphBlob` liquid droplet arc (`4 × 16 = 85` vertices)
+/// flowing across cushions during a sector transition (`Iter P3`, `REQ-016-03.5`).
+pub(crate) fn paint_polar_morph_droplet(
+    painter: &Painter,
+    center: Pos2,
+    (r_in, r_out, fillet_pt): (f32, f32, f32),
+    (lead_deg, trail_deg): (f32, f32),
+    accent_col: Color32,
+    m: &ThumbDialMetrics,
+) {
+    let span_diff = (lead_deg - trail_deg).abs();
+    if span_diff <= m.sector_gap_deg.points() * 0.5 {
+        return;
+    }
+    let min_d = lead_deg.min(trail_deg) - m.diagonal_sweep_deg.points() * 0.5 * 0.5;
+    let max_d = lead_deg.max(trail_deg) + m.diagonal_sweep_deg.points() * 0.5 * 0.5;
+    let mid_d = (min_d + max_d) * 0.5;
+    let half_s = (max_d - min_d) * 0.5;
+    let rings = 4usize;
+    let steps = 16usize;
+    let bevel_w = m.bevel_width_pt.points().max(fillet_pt);
+    let mut mesh = egui::epaint::Mesh::default();
+    mesh.vertices.reserve((rings + 1) * (steps + 1));
+    mesh.indices.reserve(rings * steps * 6);
+    for r_i in 0..=rings {
+        let u_r = r_i as f32 / rings as f32;
+        let r = r_in + (r_out - r_in) * u_r;
+        for j in 0..=steps {
+            let a = min_d + (max_d - min_d) * (j as f32 / steps as f32);
+            let pt = super::context_thumb_dial::render::polar_pos(center, r, a, m);
+            let s_p = vitrea::sdf_annular_rounded_sector_sample(
+                glam_pt(pt),
+                glam_pt(center),
+                (r_in, r_out),
+                (mid_d, half_s),
+                fillet_pt,
+            );
+            let n3d = dome_surface_normal_3d_from_sample(s_p, bevel_w);
+            let alpha = (n3d[2] * m.active_fill_opacity.points()).clamp(0.0, 1.0);
+            mesh.colored_vertex(pt, accent_col.gamma_multiply(alpha));
+        }
+    }
+    let stride = (steps + 1) as u32;
+    for r_i in 0..rings {
+        for j in 0..steps {
+            let b0 = (r_i as u32) * stride + (j as u32);
+            let b1 = b0 + stride;
+            mesh.add_triangle(b0, b1, b1 + 1);
+            mesh.add_triangle(b0, b1 + 1, b0 + 1);
+        }
     }
     painter.add(Shape::mesh(mesh));
 }
