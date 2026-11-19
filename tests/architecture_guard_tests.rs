@@ -379,6 +379,33 @@ fn test_guard_zero_dead_code_and_zero_unused_dependencies() {
     assert!(insp_src.contains("nib_scene.show("));
     let purity_v = check_scene_and_test_purity(manifest_dir);
     assert!(purity_v.is_empty(), "Scene & Test Purity Guard:\n{purity_v:#?}");
+
+    // REQ-016-02.6: Zero dead/test-only math in src/controls/liquid_glass.rs — every public optical/geometric function must be invoked in production widget code!
+    let mut prod_non_lg = String::new();
+    for file in collect_rs_files(&manifest_dir.join("src")) {
+        let fname = file.file_name().and_then(|n| n.to_str()).unwrap_or("");
+        if fname != "liquid_glass.rs" && fname != "mod.rs" && fname != "lib.rs" {
+            prod_non_lg.push_str(&strip_comments_and_strings(&fs::read_to_string(&file).expect("read prod file")));
+            prod_non_lg.push('\n');
+        }
+    }
+    for required_math_fn in [
+        "sdf_rounded_capsule(",
+        "sdf_smooth_union(",
+        "sdf_annular_rounded_sector(",
+        "sdf_curved_stadium_arc(",
+        "dome_surface_normal_3d(",
+        "refract_point_through_glass(",
+        "build_liquid_glass_backdrop_image(",
+        "deform_viscous_droplet_point(",
+        "evaluate_vertex_cursor_fresnel_lighting(",
+        "paint_meniscus_smooth_union_bridge(",
+    ] {
+        assert!(
+            prod_non_lg.contains(required_math_fn),
+            "REQ-016-02.6 Zero Dead Math Guard: `{required_math_fn}` in liquid_glass.rs is NOT wired into any production widget!"
+        );
+    }
 }
 
 #[test]

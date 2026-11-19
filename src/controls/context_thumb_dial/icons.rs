@@ -53,6 +53,10 @@ fn fill_annular_strip(
     let mid_rad = super::render::deg_to_rad(mid_deg, m);
     let sec_dir = Vec2::new(mid_rad.cos(), mid_rad.sin());
     let dir_boost = (sec_dir.x * light_vec.x + sec_dir.y * light_vec.y).max(0.0);
+    let bevel_w = (r_out - r_in).max(1.0) * 0.5;
+    let r_mid = (r_in + r_out) * 0.5;
+    let c_center = polar_pos(center, r_mid, mid_deg, m);
+    let cursor_est = (light_vec.length_sq() > 0.0).then(|| center + light_vec * r_out);
     let mut mesh = egui::epaint::Mesh::default();
     mesh.vertices.reserve((steps + 1) * 2);
     mesh.indices.reserve(steps * 6);
@@ -62,12 +66,17 @@ fn fill_annular_strip(
         let n_dir = Vec2::new(a_rad.cos(), a_rad.sin());
         let spec = (n_dir.x * light_vec.x + n_dir.y * light_vec.y).max(0.0);
         let top_bias = (-n_dir.y).clamp(0.0, 1.0) * m.hover_fill_opacity.points();
-        let boost = (dir_boost + spec) * 0.5 + top_bias;
         let (ri, ro) = filleted_radii(i, steps, r_in, r_out, fillet_pt);
         let p_in = polar_pos(center, ri, a, m);
         let p_out = polar_pos(center, ro, a, m);
-        mesh.colored_vertex(p_in, brighten_color(col_in, boost * m.active_fill_opacity.points()));
-        mesh.colored_vertex(p_out, brighten_color(col_out, boost * m.glass_specular_alpha.points()));
+        let n_in = super::super::liquid_glass::dome_surface_normal_3d(p_in, c_center, bevel_w, fillet_pt);
+        let n_out = super::super::liquid_glass::dome_surface_normal_3d(p_out, c_center, bevel_w, fillet_pt);
+        let prox_in = super::super::liquid_glass::evaluate_vertex_cursor_fresnel_lighting(p_in, n_in, cursor_est, r_out);
+        let prox_out = super::super::liquid_glass::evaluate_vertex_cursor_fresnel_lighting(p_out, n_out, cursor_est, r_out);
+        let boost_in = (dir_boost + spec) * 0.5 + top_bias + prox_in * 0.5;
+        let boost_out = (dir_boost + spec) * 0.5 + top_bias + prox_out;
+        mesh.colored_vertex(p_in, brighten_color(col_in, boost_in * m.active_fill_opacity.points()));
+        mesh.colored_vertex(p_out, brighten_color(col_out, boost_out * m.glass_specular_alpha.points()));
     }
     for i in 0..steps {
         let base = (i * 2) as u32;

@@ -112,6 +112,23 @@ pub(super) fn paint_dial_layers(
                 m,
             );
         }
+        for i in 0..MacThumbSector::ALL.len() {
+            let s_a = MacThumbSector::ALL[i];
+            let s_b = MacThumbSector::ALL[(i + 1) % MacThumbSector::ALL.len()];
+            let l_a = st.sector_lifts[s_a as usize]
+                + if st.latched_sector == Some(s_a) || st.held_sector == Some(s_a) { 0.5 } else { 0.0 };
+            let l_b = st.sector_lifts[s_b as usize]
+                + if st.latched_sector == Some(s_b) || st.held_sector == Some(s_b) { 0.5 } else { 0.0 };
+            super::super::liquid_glass::paint_meniscus_smooth_union_bridge(
+                painter,
+                hub_center,
+                (r_clover_in, r_clover_out, gap * 2.0, gap * 2.0),
+                (s_a.center_angle_deg(m), s_a.sweep_deg(m) * 0.5 - half_gap_deg, l_a),
+                (s_b.center_angle_deg(m), s_b.sweep_deg(m) * 0.5 - half_gap_deg, l_b),
+                st.accent_col,
+                m,
+            );
+        }
         for sector in MacThumbSector::ALL {
             let is_latched = st.latched_sector == Some(sector);
             let is_held = st.held_sector == Some(sector);
@@ -170,6 +187,14 @@ pub(super) fn paint_dial_layers(
             let spec = dial.sectors.sector(sector);
             let parallax = m.active_stroke_width.points() / bw.max(1.0);
             let center_pt = polar_pos(hub_center + lift_off * parallax, r_clover_mid + lift * gap * 0.5, c_deg, m);
+            let _core_sdf = super::super::liquid_glass::sdf_annular_rounded_sector(
+                center_pt,
+                hub_center + lift_off,
+                (r_clover_in, r_out_lifted),
+                (c_deg, half_sweep),
+                gap * 2.0,
+                m,
+            );
             let fg_col = if is_held || is_latched {
                 MacBackgroundStyle::from_color(st.accent_col).primary_text_color(theme)
             } else {
@@ -222,9 +247,11 @@ pub(super) fn paint_dial_layers(
         }
         let ch_arm = m.latch_dot_inset.points() * s;
         let ch_stroke = Stroke::new(bw, theme.secondary_label());
-        painter.circle_stroke(hub_center, ch_arm * 0.5, ch_stroke);
-        painter.line_segment([hub_center - Vec2::new(ch_arm, 0.0), hub_center + Vec2::new(ch_arm, 0.0)], ch_stroke);
-        painter.line_segment([hub_center - Vec2::new(0.0, ch_arm), hub_center + Vec2::new(0.0, ch_arm)], ch_stroke);
+        let hub_n = super::super::liquid_glass::dome_surface_normal_3d(hub_center + st.pointer_norm * bw, hub_center, r_hub, r_hub);
+        let refr_hub = super::super::liquid_glass::refract_point_through_glass(hub_center, hub_n, bw, theme);
+        painter.circle_stroke(refr_hub, ch_arm * 0.5, ch_stroke);
+        painter.line_segment([refr_hub - Vec2::new(ch_arm, 0.0), refr_hub + Vec2::new(ch_arm, 0.0)], ch_stroke);
+        painter.line_segment([refr_hub - Vec2::new(0.0, ch_arm), refr_hub + Vec2::new(0.0, ch_arm)], ch_stroke);
     }
 
     paint_undo_redo_crescent_arcs(

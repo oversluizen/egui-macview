@@ -137,6 +137,8 @@ pub(crate) fn paint_crystal_glass_marble(painter: &Painter, spec: MarblePaintSpe
 
     // 2. 3D Spherical Refractive Crystal Mesh (4 concentric radial rings x 24 angular segments)
     let is_light = theme.appearance == MacAppearance::Aqua;
+    let vel_off = spec.marble_center - spec.hub_center;
+    let press_amt = (vel_off.length() / (spec.puck_r * 2.0).max(1.0)).clamp(0.0, 1.0);
     let rings = 4usize;
     let segs = 24usize;
     let full_deg = m.full_circle_deg.points();
@@ -146,14 +148,28 @@ pub(crate) fn paint_crystal_glass_marble(painter: &Painter, spec: MarblePaintSpe
     for r_i in 0..=rings {
         let r_frac = r_i as f32 / rings as f32;
         let rad = spec.puck_r * r_frac;
-        let nz = (1.0 - r_frac * r_frac).max(0.0).sqrt();
-        let fresnel = (1.0 - nz) * (1.0 - nz);
         for s_i in 0..=segs {
             let a_deg = full_deg * (s_i as f32 / segs as f32);
             let a_rad = deg_to_rad(a_deg, m);
-            let (nx, ny) = (a_rad.cos() * r_frac, a_rad.sin() * r_frac);
+            let raw_pt = spec.marble_center + Vec2::new(a_rad.cos() * rad, a_rad.sin() * rad);
+            let pt = super::liquid_glass::deform_viscous_droplet_point(
+                raw_pt,
+                spec.marble_center,
+                vel_off,
+                spec.puck_r * 2.0,
+                press_amt,
+            );
+            let [nx, ny, nz] = super::liquid_glass::dome_surface_normal_3d(pt, spec.marble_center, spec.puck_r, spec.puck_r);
+            let refracted_pt = super::liquid_glass::refract_point_through_glass(pt, [nx, ny, nz], dot_r, theme);
+            let fresnel = (1.0 - nz) * (1.0 - nz);
+            let prox_glint = super::liquid_glass::evaluate_vertex_cursor_fresnel_lighting(
+                refracted_pt,
+                [nx, ny, nz],
+                Some(spec.marble_center - Vec2::splat(dot_r * 2.0)),
+                spec.puck_r * 2.0,
+            );
             let caustic = ((nx + ny) * 0.5).clamp(0.0, 1.0) * r_frac;
-            let spec_glint = ((-nx - ny) * 0.5).clamp(0.0, 1.0) * (1.0 - r_frac * 0.5);
+            let spec_glint = ((-nx - ny) * 0.5).clamp(0.0, 1.0) * (1.0 - r_frac * 0.5) + prox_glint * 0.5;
             let mut h = egui::epaint::Hsva::from(spec.accent_col);
             let base_s = if is_light { m.hover_fill_opacity.points() } else { m.active_fill_opacity.points() };
             h.s = (h.s * (base_s + caustic * m.glass_fill_alpha.points() + fresnel * 0.5)).clamp(0.0, 1.0);
@@ -163,7 +179,6 @@ pub(crate) fn paint_crystal_glass_marble(painter: &Painter, spec: MarblePaintSpe
                 (h.v + (1.0 - h.v) * (spec_glint * m.glass_fill_alpha.points() + fresnel * m.active_fill_opacity.points())).clamp(0.0, 1.0)
             };
             h.a = (m.active_fill_opacity.points() + fresnel * m.glass_fill_alpha.points() + caustic * 0.5).clamp(0.0, 1.0);
-            let pt = spec.marble_center + Vec2::new(a_rad.cos() * rad, a_rad.sin() * rad);
             sphere.colored_vertex(pt, Color32::from(h));
         }
     }
@@ -178,7 +193,27 @@ pub(crate) fn paint_crystal_glass_marble(painter: &Painter, spec: MarblePaintSpe
     }
     painter.add(Shape::mesh(sphere));
 
-    // 3. Lower-right internal cyan caustic crescent & outer Fresnel rim
+    // 2b. Snellius Refracted Lens Caustic Cross-Lines inside the 3D Crystal Marble (`refract_point_through_glass`, eta = 1.48)
+    let lens_steps = 8usize;
+    let lens_stroke = Stroke::new(bw, specular_col.gamma_multiply(m.hover_fill_opacity.points()));
+    for axis in [-0.5f32, 0.5f32] {
+        let mut h_pts = Vec::with_capacity(lens_steps + 1);
+        let mut v_pts = Vec::with_capacity(lens_steps + 1);
+        for i in 0..=lens_steps {
+            let u = (i as f32 / lens_steps as f32) * 2.0 - 1.0;
+            let max_span = (1.0 - axis * axis).max(0.0).sqrt() * (spec.puck_r - bw * 2.0);
+            let p_h = spec.marble_center + Vec2::new(u * max_span, axis * (spec.puck_r * 0.5));
+            let n_h = super::liquid_glass::dome_surface_normal_3d(p_h, spec.marble_center, spec.puck_r, spec.puck_r);
+            h_pts.push(super::liquid_glass::refract_point_through_glass(p_h, n_h, dot_r * 2.0, theme));
+            let p_v = spec.marble_center + Vec2::new(axis * (spec.puck_r * 0.5), u * max_span);
+            let n_v = super::liquid_glass::dome_surface_normal_3d(p_v, spec.marble_center, spec.puck_r, spec.puck_r);
+            v_pts.push(super::liquid_glass::refract_point_through_glass(p_v, n_v, dot_r * 2.0, theme));
+        }
+        painter.add(Shape::line(h_pts, lens_stroke));
+        painter.add(Shape::line(v_pts, lens_stroke));
+    }
+
+    // 3. Lower-right internal cyan caustic crescent & deformed outer Fresnel rim
     let caustic_c = spec.marble_center + Vec2::new(dot_r, dot_r);
     paint_radial_disc_mesh(
         painter,
@@ -188,8 +223,28 @@ pub(crate) fn paint_crystal_glass_marble(painter: &Painter, spec: MarblePaintSpe
         Color32::TRANSPARENT,
         m,
     );
-    painter.circle_stroke(spec.marble_center, spec.puck_r, Stroke::new(bw, spec.accent_col.gamma_multiply(m.glass_fill_alpha.points())));
-    painter.circle_stroke(spec.marble_center, spec.puck_r - bw, Stroke::new(m.active_stroke_width.points(), specular_col));
+    let mut rim_outer = Vec::with_capacity(segs + 1);
+    let mut rim_inner = Vec::with_capacity(segs + 1);
+    for s_i in 0..=segs {
+        let a_rad = deg_to_rad(full_deg * (s_i as f32 / segs as f32), m);
+        let dir = Vec2::new(a_rad.cos(), a_rad.sin());
+        rim_outer.push(super::liquid_glass::deform_viscous_droplet_point(
+            spec.marble_center + dir * spec.puck_r,
+            spec.marble_center,
+            vel_off,
+            spec.puck_r * 2.0,
+            press_amt,
+        ));
+        rim_inner.push(super::liquid_glass::deform_viscous_droplet_point(
+            spec.marble_center + dir * (spec.puck_r - bw),
+            spec.marble_center,
+            vel_off,
+            spec.puck_r * 2.0,
+            press_amt,
+        ));
+    }
+    painter.add(Shape::line(rim_outer, Stroke::new(bw, spec.accent_col.gamma_multiply(m.glass_fill_alpha.points()))));
+    painter.add(Shape::line(rim_inner, Stroke::new(m.active_stroke_width.points(), specular_col)));
 
     // 4. Upper-left Blinn-Phong primary specular lens reflection + secondary glint
     let hi_step = dot_r + dot_r * 0.5;

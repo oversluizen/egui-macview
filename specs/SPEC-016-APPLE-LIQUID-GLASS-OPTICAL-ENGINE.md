@@ -160,6 +160,13 @@ Every public widget and layout container in `egui-macview` (52 total across the 
 3. **3D Dome Normal & Optical Centroid from SDF:**
    - From any negative interior SDF value $d(p) \le 0$ and numerical/analytical unit gradient $\vec{g}(p) = \nabla d(p) / \|\nabla d(p)\|_2$:
      $$s(p) = \text{clamp}\!\left(\frac{-d(p)}{w_{\text{bevel}}},\; 0.0,\; 1.0\right), \quad \theta(p) = \text{smoothstep}(0, 1, s(p))\cdot\frac{\pi}{2}, \quad \vec{N}(p) = \big(g_x\cos\theta(p),\; g_y\cos\theta(p),\; \sin\theta(p)\big)$$
+4. **Area-Preserving Viscous Squash & Stretch Jacobian (`deform_viscous_droplet_point`, `REQ-016-01.4`):**
+   - For any point $\vec{p}$ on a droplet/marble or cushion centered at $\vec{c}$ with press-compression scalar $p_{\text{press}} \in [0, 1]$ and instantaneous velocity/displacement vector $\vec{v} = (v_x, v_y)$:
+     - Let $\vec{u} = \vec{v} / \max(\|\vec{v}\|_2, \epsilon)$ be the unit motion axis and $\vec{u}_\perp = (-u_y, u_x)$ the orthogonal axis.
+     - The longitudinal stretch factor $\lambda_\parallel = (1 + \kappa_{\text{stretch}}\min(\|\vec{v}\|_2 / R_0, 0.35))\cdot(1 + \kappa_{\text{press}} p_{\text{press}})$ and transverse compression factor $\lambda_\perp = \frac{1 + \kappa_{\text{press}} p_{\text{press}}}{\sqrt{1 + \kappa_{\text{stretch}}\min(\|\vec{v}\|_2 / R_0, 0.35)}}$ preserve area under motion while expanding isotropically under finger pressure:
+       $$\vec{p}' = \vec{c} + \lambda_\parallel \big((\vec{p} - \vec{c})\cdot\vec{u}\big)\vec{u} + \lambda_\perp \big((\vec{p} - \vec{c})\cdot\vec{u}_\perp\big)\vec{u}_\perp$$
+5. **Meniscus Smooth-Union Bridge Triangulation (`paint_meniscus_smooth_union_bridge`, `REQ-016-01.5`):**
+   - When two adjacent cushions $A, B$ in [`MacContextThumbDial`] have combined lift/activity $L_A + L_B > 0$ (e.g., during pointer sweep or adjacent hover+latch), the inter-cushion gap along their shared radial boundary angle $\theta_{\text{mid}} = (\theta_A + \theta_B)/2$ is evaluated via `sdf_annular_rounded_sector` and `sdf_smooth_union` ($d_{\text{union}}(p) = \text{smin}_k(d_A(p), d_B(p)) < 0$) and triangulated into a translucent liquid meniscus bridge mesh connecting the two cushions.
 
 ### 4.2 Iteration 2 (`M2`): Optical Physics — Snellius, Fresnel, Sub-Surface Caustics & Proximity Light Field (`REQ-016-02`)
 
@@ -169,7 +176,14 @@ Every public widget and layout container in `egui-macview` (52 total across the 
      2. **Radial Sub-Surface Caustic Core**: Interior dome glow proportional to $s(p)^{1.5} \cdot \text{active\_glow}$, giving the active/latched cushion (`1:1+⊙` in the mockup) its deep luminous cyan-blue core while keeping the bevel darker/richer.
      3. **Blinn-Phong Specular Hotspot**: $I_{\text{spec}} = \max(0, \vec{N} \cdot \vec{H})^8$ smoothly shifts across the dome as $\vec{p}(t)$ moves.
      4. **Directional Schlick Fresnel Rim**: Concentrated in the rim zone $(1 - s(p))^3$, boosted on the light/cursor-facing edge.
-     5. **Proximity Light Field (`proximity_rim_gain`)**: Even on unhovered neighboring cushions/controls, vertices within Euclidean distance $R_{\text{prox}}$ (`72.0 pt`) of the live cursor receive a smooth cosine-falloff rim brightening.
+     5. **Per-Vertex 3D Point-Light Cursor Proximity Fresnel Glint (`evaluate_vertex_cursor_fresnel_lighting`, `REQ-016-02.5`)**:
+        - Every boundary/dome vertex $\vec{v}$ computes the exact 3D point-light vector $\vec{L}_{\text{cursor}}(\vec{v}) = \frac{(\vec{p}_{\text{cursor}} - \vec{v},\; z_L)}{\|(\vec{p}_{\text{cursor}} - \vec{v},\; z_L)\|_2}$ and Euclidean distance $d_{\text{cursor}} = \|\vec{p}_{\text{cursor}} - \vec{v}\|_2$.
+        - Vertices within proximity radius $R_{\text{prox}}$ receive an inverse-square distance-attenuated Schlick-Fresnel + Blinn-Phong rim glint:
+          $$G_{\text{prox}}(\vec{v}) = \frac{(1 - n_z)^2 \cdot \max(0,\; n_x L_x + n_y L_y + n_z L_z)^2}{1 + (d_{\text{cursor}} / R_{\text{prox}})^2}$$
+        - This function MUST be invoked in production by [`MacContextThumbDial`] (all 8 cushions, center hub, and Undo/Redo arcs), [`MacFreeJoystickBowl`] (outer rim and 3D crystal marble), and [`MacPopoverSurface`].
+2. **Live Snellius Lens Refraction of Underlying Canvas/Backdrop (`refract_point_through_glass` & `paint_refractive_glass_lens_grid`, `REQ-016-02.6`):**
+   - [`MacContextThumbDial`] (center hub & active glass cushions), [`MacFreeJoystickBowl`] (3D spherical crystal marble), and [`MacPopoverSurface`] MUST invoke `dome_surface_normal_3d` and `refract_point_through_glass` ($\eta = 1.48$) during production rendering so underlying background grid lines / backdrop features visibly bend through the curved glass dome and crystal marble.
+   - Zero dead/test-only math functions are permitted in `src/controls/liquid_glass.rs`: every public optical/geometric function (`sdf_rounded_capsule`, `sdf_smooth_union`, `sdf_annular_rounded_sector`, `sdf_curved_stadium_arc`, `dome_surface_normal_3d`, `refract_point_through_glass`, `build_liquid_glass_backdrop_image`, `deform_viscous_droplet_point`, `evaluate_vertex_cursor_fresnel_lighting`) MUST be wired into production widget rendering paths.
 
 ### 4.3 Iteration 3 (`M3`): Coupled `CASpring` Dynamics (`DualSpringMorphBlob` & `AnisotropicCushionSpring`, `REQ-016-03..04`)
 

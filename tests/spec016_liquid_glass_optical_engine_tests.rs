@@ -475,7 +475,11 @@ fn tc_016_w2_edge_thumbwheel_drum_and_free_joystick_crystal_marble_physics() {
                     ui.vertical(|ui| {
                         ui.painter().rect_filled(Rect::from_min_size(ui.cursor().min, vec2(250.0, 560.0)), 12.0, th.window_background());
                         MacEdgeThumbwheel::new(id_s, &mut wheel_v, 0.0..=100.0).wide_drum_width(140.0).theme(&th).show(ui);
-                        MacContextThumbDial::new(id_s, &mut latched, &mut rotary).preset(MacThumbContextPreset::Primitives).theme(&th).show(ui);
+                        let dial_r = MacContextThumbDial::new(id_s, &mut latched, &mut rotary).preset(MacThumbContextPreset::Primitives).theme(&th).show(ui);
+                        let ne_pt = dial_r.sector_center(MacThumbSector::NorthEast);
+                        let d_st_id = egui::Id::NULL.with(id_s).with("thumb_dial_state");
+                        let _ = ne_pt;
+                        let _ = d_st_id;
                         ui.add_space(10.0);
                         MacFreeJoystickBowl::new(id_s).theme(&th).show(ui);
                     });

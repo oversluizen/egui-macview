@@ -194,12 +194,20 @@ pub struct MacPopoverSurface<'a> {
     theme: Option<&'a MacTheme>,
     fixed_rect: Option<Rect>,
     corner_radius: Option<f32>,
+    backdrop: Option<&'a egui::ColorImage>,
 }
 
 impl<'a> MacPopoverSurface<'a> {
     /// Creates a new AppKit `NSPopover` container surface.
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Supplies an underlying canvas/window [`egui::ColorImage`] to be blurred and refracted
+    /// through the Liquid Glass optical pipeline (`build_liquid_glass_backdrop_image`, `REQ-016-02.6`).
+    pub fn backdrop_image(mut self, backdrop: &'a egui::ColorImage) -> Self {
+        self.backdrop = Some(backdrop);
+        self
     }
 
     /// Sets an explicit widget `Id` for this popover surface.
@@ -244,7 +252,13 @@ impl<'a> MacPopoverSurface<'a> {
         let response = ui.interact(rect, surface_id, egui::Sense::click_and_drag());
         let rounding = self.corner_radius.unwrap_or_else(|| metrics.surface_corner_radius.points());
         let border_w = metrics.surface_border_width.points();
-        let bg_fill = theme.popover_background();
+        let mut bg_fill = theme.popover_background();
+        if let Some(bd) = self.backdrop {
+            let refracted = crate::controls::liquid_glass::build_liquid_glass_backdrop_image(bd, theme);
+            if let Some(&center_px) = refracted.pixels.get(refracted.pixels.len() / 2) {
+                bg_fill = crate::theme::alpha_composite(bg_fill.gamma_multiply(theme.thumb_dial().glass_fill_alpha.points()), center_px);
+            }
+        }
         let border_stroke = Stroke::new(border_w, theme.popover_border());
         let painter = ui.painter_at(rect);
         crate::controls::liquid_glass::paint_liquid_glass_capsule(

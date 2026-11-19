@@ -143,7 +143,20 @@ pub(super) fn render_segmented(control: MacSegmentedControl<'_>, ui: &mut Ui, mu
             alpha_composite(active_bg, surface_bg)
         } else {
             let pill_rect = animated_seg_rect.shrink(indicator_inset);
-            let pill_bg = theme.control();
+            let mut pill_bg = theme.control();
+            if let Some(p_idx) = pressed_seg.filter(|&p| p != active_idx) {
+                if let Some(p_slot) = slots.get(p_idx) {
+                    let mid = Pos2::new((pill_rect.center().x + p_slot.rect.center().x) * 0.5, pill_rect.center().y);
+                    let d_act = super::super::liquid_glass::sdf_rounded_capsule(mid, pill_rect, indicator_radius);
+                    let d_prs = super::super::liquid_glass::sdf_rounded_capsule(mid, p_slot.rect, indicator_radius);
+                    let d_u = super::super::liquid_glass::sdf_smooth_union(d_act, d_prs, indicator_radius * 2.0);
+                    if d_u < indicator_radius {
+                        let mut h = egui::epaint::Hsva::from(pill_bg);
+                        h.v = (h.v + (1.0 - h.v) * seg.pressed_highlight_opacity.points()).clamp(0.0, 1.0);
+                        pill_bg = Color32::from(h);
+                    }
+                }
+            }
             painter.rect_filled(
                 pill_rect.translate(Vec2::new(0.0, border_width)),
                 CornerRadius::same(indicator_radius as u8),

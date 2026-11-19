@@ -27,7 +27,7 @@ pub(crate) fn polar_pos(center: Pos2, radius: f32, angle_deg: f32, m: &ThumbDial
 }
 
 #[inline]
-fn shortest_angle_diff_deg(a_deg: f32, b_deg: f32, m: &ThumbDialMetrics) -> f32 {
+pub(crate) fn shortest_angle_diff_deg(a_deg: f32, b_deg: f32, m: &ThumbDialMetrics) -> f32 {
     let full = m.full_circle_deg.points();
     let half = m.half_circle_deg.points();
     let mut diff = (a_deg - b_deg) % full;
@@ -138,8 +138,10 @@ pub(crate) fn hit_test_undo_redo_arcs(
     let dist = delta.length();
     let angle_deg = rad_to_deg(delta.y.atan2(delta.x), m);
     let in_skirt = dist >= r_outer && dist <= r_skirt_out;
-    let hov_undo = undo_rect.contains(pos) || (in_skirt && angle_in_arc(angle_deg, undo_start, undo_end, m));
-    let hov_redo = !hov_undo && (redo_rect.contains(pos) || (in_skirt && angle_in_arc(angle_deg, redo_start, redo_end, m)));
+    let d_undo = super::super::liquid_glass::sdf_curved_stadium_arc(pos, hub_center, (r_outer, r_skirt_out), (undo_start, undo_end), m);
+    let d_redo = super::super::liquid_glass::sdf_curved_stadium_arc(pos, hub_center, (r_outer, r_skirt_out), (redo_start, redo_end), m);
+    let hov_undo = d_undo <= 0.0 || undo_rect.contains(pos) || (in_skirt && angle_in_arc(angle_deg, undo_start, undo_end, m));
+    let hov_redo = !hov_undo && (d_redo <= 0.0 || redo_rect.contains(pos) || (in_skirt && angle_in_arc(angle_deg, redo_start, redo_end, m)));
     (hov_undo, hov_redo)
 }
 

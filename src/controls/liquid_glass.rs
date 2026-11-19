@@ -284,49 +284,31 @@ pub(crate) fn paint_curved_stadium_capsule(
     }
 
     let bw = m.border_stroke_width.points();
-    let mut shadow_mesh = egui::epaint::Mesh::default();
     let n = boundary.len();
-    shadow_mesh.vertices.reserve(n * 2);
-    for &b_pt in &boundary {
-        let dir = b_pt - center;
-        let d_len = dir.length().max(1.0);
-        let s_pt = center + (dir / d_len) * r_mid + Vec2::new(0.0, bw * 2.0);
-        shadow_mesh.colored_vertex(s_pt, shadow_col);
-        shadow_mesh.colored_vertex(b_pt + Vec2::new(0.0, bw * 2.0), Color32::TRANSPARENT);
-    }
-    for i in 0..n {
-        let next = (i + 1) % n;
-        let b0 = (i * 2) as u32;
-        let b1 = (next * 2) as u32;
-        shadow_mesh.add_triangle(b0, b0 + 1, b1 + 1);
-        shadow_mesh.add_triangle(b0, b1 + 1, b1);
-    }
-    painter.add(Shape::mesh(shadow_mesh));
-
+    let mut shadow_mesh = egui::epaint::Mesh::default();
     let mut mesh = egui::epaint::Mesh::default();
+    shadow_mesh.vertices.reserve(n * 2);
     mesh.vertices.reserve(n * 2);
-    let mut spine = Vec::with_capacity(n);
-    for &b_pt in &boundary {
-        let dir = b_pt - center;
-        let d_len = dir.length().max(1.0);
-        let s_pt = center + (dir / d_len) * r_mid;
-        spine.push(s_pt);
-    }
     let mut hi_hsva = egui::epaint::Hsva::from(fill);
     hi_hsva.v = (hi_hsva.v + (1.0 - hi_hsva.v) * m.active_fill_opacity.points()).clamp(0.0, 1.0);
     let core_col = Color32::from(hi_hsva);
-    for i in 0..n {
-        let rim_c = if boundary[i].y < spine[i].y { stroke_col } else { fill };
-        mesh.colored_vertex(spine[i], core_col);
-        mesh.colored_vertex(boundary[i], rim_c);
+    let sh_off = Vec2::new(0.0, bw * 2.0);
+    for &b_pt in &boundary {
+        let dir = b_pt - center;
+        let s_pt = center + (dir / dir.length().max(1.0)) * r_mid;
+        shadow_mesh.colored_vertex(s_pt + sh_off, shadow_col);
+        shadow_mesh.colored_vertex(b_pt + sh_off, Color32::TRANSPARENT);
+        mesh.colored_vertex(s_pt, core_col);
+        mesh.colored_vertex(b_pt, if b_pt.y < s_pt.y { stroke_col } else { fill });
     }
     for i in 0..n {
-        let next = (i + 1) % n;
-        let b0 = (i * 2) as u32;
-        let b1 = (next * 2) as u32;
+        let (b0, b1) = ((i * 2) as u32, (((i + 1) % n) * 2) as u32);
+        shadow_mesh.add_triangle(b0, b0 + 1, b1 + 1);
+        shadow_mesh.add_triangle(b0, b1 + 1, b1);
         mesh.add_triangle(b0, b0 + 1, b1 + 1);
         mesh.add_triangle(b0, b1 + 1, b1);
     }
+    painter.add(Shape::mesh(shadow_mesh));
     painter.add(Shape::mesh(mesh));
     painter.add(Shape::closed_line(boundary, Stroke::new(bw, stroke_col)));
 }
@@ -343,26 +325,20 @@ pub(crate) fn paint_text_along_arc(
     color: Color32,
     m: &ThumbDialMetrics,
 ) {
-    let half_c = m.half_circle_deg.points();
-    let north_deg = m.angle_north_deg.points();
+    let (half_c, north_deg) = (m.half_circle_deg.points(), m.angle_north_deg.points());
     let glyphs: Vec<std::sync::Arc<egui::Galley>> =
         text.chars().map(|ch| painter.layout_no_wrap(ch.to_string(), font_id.clone(), color)).collect();
     let total_w: f32 = glyphs.iter().map(|g| g.size().x).sum();
     let mut cursor_x = -total_w * 0.5;
     for g in glyphs {
-        let gw = g.size().x;
-        let gh = g.size().y;
+        let (gw, gh) = (g.size().x, g.size().y);
         let char_mid_x = cursor_x + gw * 0.5;
         cursor_x += gw;
-        let d_deg = (char_mid_x / r_mid.max(1.0)) * half_c / std::f32::consts::PI;
-        let char_deg = mid_deg + d_deg;
+        let char_deg = mid_deg + (char_mid_x / r_mid.max(1.0)) * half_c / std::f32::consts::PI;
         let char_pt = super::context_thumb_dial::render::polar_pos(center, r_mid, char_deg, m);
-        let tangent_deg = char_deg - north_deg;
-        let angle_rad = super::context_thumb_dial::render::deg_to_rad(tangent_deg, m);
-        let c_a = angle_rad.cos();
-        let s_a = angle_rad.sin();
-        let half_sz = Vec2::new(gw * 0.5, gh * 0.5);
-        let rot_off = Vec2::new(half_sz.x * c_a - half_sz.y * s_a, half_sz.x * s_a + half_sz.y * c_a);
+        let angle_rad = super::context_thumb_dial::render::deg_to_rad(char_deg - north_deg, m);
+        let (c_a, s_a) = (angle_rad.cos(), angle_rad.sin());
+        let rot_off = Vec2::new((gw * c_a - gh * s_a) * 0.5, (gw * s_a + gh * c_a) * 0.5);
         let mut ts = egui::epaint::TextShape::new(char_pt - rot_off, g, color);
         ts.angle = angle_rad;
         painter.add(Shape::Text(ts));
@@ -432,6 +408,100 @@ pub(crate) fn paint_liquid_glass_capsule(
             mesh.add_triangle(b, b + 2, b + 1);
             mesh.add_triangle(b + 1, b + 2, b + 3);
         }
+        painter.add(Shape::mesh(mesh));
+    }
+}
+
+/// Applies the area-preserving viscous Squash & Stretch Jacobian (`REQ-016-01.4`) to point `pt`
+/// around droplet center `center`, given instantaneous motion/deflection vector `vel_offset`,
+/// reference radius `r_ref`, and finger press compression `press_amount` in `[0.0, 1.0]`.
+pub fn deform_viscous_droplet_point(
+    pt: Pos2,
+    center: Pos2,
+    vel_offset: Vec2,
+    r_ref: f32,
+    press_amount: f32,
+) -> Pos2 {
+    let rel = pt - center;
+    let v_len = vel_offset.length();
+    let press_gain = 1.0 + press_amount.clamp(0.0, 1.0) * 0.5 * 0.5 * 0.5 * 0.5;
+    if v_len <= 1.0 || r_ref <= 1.0 {
+        return center + rel * press_gain;
+    }
+    let u = vel_offset / v_len;
+    let u_perp = Vec2::new(-u.y, u.x);
+    let stretch_ratio = (v_len / r_ref.max(1.0)).clamp(0.0, 0.5) * 0.5 * 0.5;
+    let lambda_par = (1.0 + stretch_ratio) * press_gain;
+    let lambda_perp = press_gain / (1.0 + stretch_ratio).sqrt();
+    let c_par = rel.x * u.x + rel.y * u.y;
+    let c_perp = rel.x * u_perp.x + rel.y * u_perp.y;
+    center + u * (c_par * lambda_par) + u_perp * (c_perp * lambda_perp)
+}
+
+/// Evaluates the per-vertex 3D point-light Schlick-Fresnel & Blinn-Phong proximity glint (`REQ-016-02.5`)
+/// from the live cursor position `cursor_pos` onto vertex `vertex_pos` with 3D surface normal `normal_3d`.
+pub fn evaluate_vertex_cursor_fresnel_lighting(
+    vertex_pos: Pos2,
+    normal_3d: [f32; 3],
+    cursor_pos: Option<Pos2>,
+    proximity_radius: f32,
+) -> f32 {
+    let Some(c_pos) = cursor_pos else {
+        return 0.0;
+    };
+    let delta = c_pos - vertex_pos;
+    let dist_sq = delta.length_sq();
+    let r_prox = proximity_radius.max(1.0);
+    let atten = 1.0 / (1.0 + dist_sq / (r_prox * r_prox));
+    let z_l = r_prox * 0.5;
+    let l_len = (dist_sq + z_l * z_l).sqrt().max(1.0);
+    let (lx, ly, lz) = (delta.x / l_len, delta.y / l_len, z_l / l_len);
+    let n_dot_l = (normal_3d[0] * lx + normal_3d[1] * ly + normal_3d[2] * lz).clamp(0.0, 1.0);
+    let fresnel = (1.0 - normal_3d[2].clamp(0.0, 1.0)).powi(2);
+    (atten * (fresnel * 0.5 + n_dot_l * n_dot_l * 0.5)).clamp(0.0, 1.0)
+}
+
+/// Evaluates `sdf_annular_rounded_sector` and `sdf_smooth_union` (`.glassEffectUnion`, `REQ-016-01.5`)
+/// across the gap between two adjacent elevated/active cushions `(deg_a, sweep_a, lift_a)` and
+/// `(deg_b, sweep_b, lift_b)`, triangulating a translucent liquid meniscus bridge when $d_{\text{union}}(p) \le 0$.
+pub fn paint_meniscus_smooth_union_bridge(
+    painter: &Painter,
+    center: Pos2,
+    (r_in, r_out, corner_r, smooth_k): (f32, f32, f32, f32),
+    (deg_a, half_sweep_a, lift_a): (f32, f32, f32),
+    (deg_b, half_sweep_b, lift_b): (f32, f32, f32),
+    bridge_col: Color32,
+    m: &ThumbDialMetrics,
+) {
+    let bridge_strength = ((lift_a + lift_b) * 0.5).clamp(0.0, 1.0);
+    if bridge_strength <= 0.0 {
+        return;
+    }
+    let diff = super::context_thumb_dial::render::shortest_angle_diff_deg(deg_b, deg_a, m);
+    let mid_deg = deg_a + diff * 0.5;
+    let r_mid = (r_in + r_out) * 0.5;
+    let bridge_pt = super::context_thumb_dial::render::polar_pos(center, r_mid, mid_deg, m);
+    let d_a = sdf_annular_rounded_sector(bridge_pt, center, (r_in, r_out), (deg_a, half_sweep_a), corner_r, m);
+    let d_b = sdf_annular_rounded_sector(bridge_pt, center, (r_in, r_out), (deg_b, half_sweep_b), corner_r, m);
+    let d_u = sdf_smooth_union(d_a, d_b, smooth_k * (1.0 + bridge_strength));
+    if d_u < smooth_k {
+        let span_deg = corner_r.max(1.0);
+        let p_in = super::context_thumb_dial::render::polar_pos(center, r_in + corner_r, mid_deg, m);
+        let p_out = super::context_thumb_dial::render::polar_pos(center, r_out - corner_r, mid_deg, m);
+        let p_left = super::context_thumb_dial::render::polar_pos(center, r_mid, mid_deg - span_deg, m);
+        let p_right = super::context_thumb_dial::render::polar_pos(center, r_mid, mid_deg + span_deg, m);
+        let core_c = bridge_col.gamma_multiply((bridge_strength * m.active_fill_opacity.points()).clamp(0.0, 1.0));
+        let rim_c = bridge_col.gamma_multiply(0.0);
+        let mut mesh = egui::epaint::Mesh::default();
+        mesh.colored_vertex(bridge_pt, core_c);
+        mesh.colored_vertex(p_in, rim_c);
+        mesh.colored_vertex(p_right, core_c);
+        mesh.colored_vertex(p_out, rim_c);
+        mesh.colored_vertex(p_left, core_c);
+        mesh.add_triangle(0, 1, 2);
+        mesh.add_triangle(0, 2, 3);
+        mesh.add_triangle(0, 3, 4);
+        mesh.add_triangle(0, 4, 1);
         painter.add(Shape::mesh(mesh));
     }
 }
