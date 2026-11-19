@@ -8,7 +8,9 @@ mod common;
 use egui::{pos2, vec2, Color32, ColorImage, Event, Pos2, RawInput, Rect};
 use egui_macview::{
     build_liquid_glass_backdrop_image, contrast_ratio, dome_surface_normal_3d, refract_point_through_glass, sdf_rounded_capsule,
-    sdf_smooth_union, MacAppearance, MacContextThumbDial, MacThumbContextPreset, MacThumbIntentMask, MacThumbSector,
+    sdf_smooth_union, MacAppearance, MacButtonCell, MacCheckbox, MacContextThumbDial, MacEdgeThumbwheel, MacFreeJoystickBowl,
+    MacInputCell, MacPopoverSurface, MacSegmentedControl, MacSlider, MacTabView, MacTheme, MacThumbContextPreset, MacThumbIntentMask,
+    MacThumbSector, MacToggle,
 };
 
 /// `tc_016_01`: Analytical 3D Dome Normals (`REQ-016-01`) & Snellius 3D Lens Refraction ($\eta = 1.48$, `REQ-016-02`).
@@ -254,19 +256,309 @@ fn tc_016_03_blurred_vibrancy_backdrop_and_smooth_min_metaball_union() {
     }
 }
 
+/// `tc_016_04`: 8-Cushion $360^\circ$ Rosette (`NW` & `SW` passive cushions), Mandatory 3-Tier Cushion Typography (`label` + `shortcut_hint`),
+/// Semicircular Stadium `"↶ Undo"` / `"↷ Redo"` Crown Capsules, and Visible `>= 2.0pt` Fluid Cushion Lift (`REQ-014-08.1..3`, `REQ-016-03`).
+#[test]
+fn tc_016_04_mockup_parity_8_cushion_rosette_3_tier_labels_and_stadium_undo_redo() {
+    let (ctx, theme) = common::headless_ctx(MacAppearance::DarkAqua);
+    let mut latched = MacThumbSector::NorthEast.intent_mask();
+    let mut rotary = 0.5f32;
+    let mut hub_c = Pos2::ZERO;
+    let mut east_rest = Pos2::ZERO;
+
+    let shapes = common::run_frame(
+        &ctx,
+        RawInput {
+            time: Some(0.0),
+            screen_rect: Some(Rect::from_min_size(Pos2::ZERO, vec2(320.0, 320.0))),
+            ..Default::default()
+        },
+        vec2(320.0, 320.0),
+        |ui| {
+            let r = MacContextThumbDial::new("mockup_dial", &mut latched, &mut rotary)
+                .preset(MacThumbContextPreset::Primitives)
+                .theme(&theme)
+                .show(ui);
+            hub_c = r.hub_center;
+            east_rest = r.sector_center(MacThumbSector::East);
+        },
+    );
+
+    // 1. Verify all 6 active sector labels ("1:1", "1:1+⊙", "Center", "Shear", "Slide", "Move") AND "Undo"/"Redo" are rendered as TextShapes!
+    let mut texts = Vec::new();
+    for cs in &shapes {
+        common::collect_text_shapes(&cs.shape, &mut texts);
+    }
+    let rendered_strings: Vec<String> = texts.iter().map(|t| t.galley.job.text.clone()).collect();
+    let joined_text = rendered_strings.join("");
+    for required_caption in ["1:1", "Center", "Shear", "Slide", "Move", "Undo", "Redo"] {
+        assert!(
+            joined_text.contains(required_caption),
+            "REQ-014-08.2/3 violation: Mockup caption '{required_caption}' is completely missing from rendered MacContextThumbDial text shapes! Found: {rendered_strings:?}"
+        );
+    }
+
+    // 2. Verify 8-cushion 360-degree rosette: passive NW (-135 deg) and SW (+135 deg) octants must also contain 3D cushion mesh vertices!
+    let r_mid = 46.0f32;
+    let nw_pt = pos2(hub_c.x - r_mid * 0.707, hub_c.y - r_mid * 0.707);
+    let sw_pt = pos2(hub_c.x - r_mid * 0.707, hub_c.y + r_mid * 0.707);
+    let nw_luma = average_mesh_luma_near(&shapes, nw_pt, 12.0);
+    let sw_luma = average_mesh_luma_near(&shapes, sw_pt, 12.0);
+    assert!(
+        nw_luma > 1.0 && sw_luma > 1.0,
+        "REQ-014-08.1 violation: Passive NW (-135°) and SW (+135°) octants must render recessed 3D glass cushions (got nw_luma={nw_luma}, sw_luma={sw_luma})"
+    );
+
+    // 3. Verify clearly visible fluid cushion lift (>= 2.0pt radial/magnetic shift at t=0.14s on a genuine 0.28s underdamped spring)
+    let hover_east = pos2(east_rest.x + 10.0, east_rest.y);
+    let _ = common::run_frame(
+        &ctx,
+        RawInput {
+            time: Some(0.02),
+            screen_rect: Some(Rect::from_min_size(Pos2::ZERO, vec2(320.0, 320.0))),
+            events: vec![Event::PointerMoved(hover_east)],
+            ..Default::default()
+        },
+        vec2(320.0, 320.0),
+        |ui| {
+            MacContextThumbDial::new("mockup_dial", &mut latched, &mut rotary)
+                .preset(MacThumbContextPreset::Primitives)
+                .theme(&theme)
+                .show(ui);
+        },
+    );
+    let mut east_lifted = Pos2::ZERO;
+    let _ = common::run_frame(
+        &ctx,
+        RawInput {
+            time: Some(0.14),
+            screen_rect: Some(Rect::from_min_size(Pos2::ZERO, vec2(320.0, 320.0))),
+            events: vec![Event::PointerMoved(hover_east)],
+            ..Default::default()
+        },
+        vec2(320.0, 320.0),
+        |ui| {
+            let r = MacContextThumbDial::new("mockup_dial", &mut latched, &mut rotary)
+                .preset(MacThumbContextPreset::Primitives)
+                .theme(&theme)
+                .show(ui);
+            east_lifted = r.sector_center(MacThumbSector::East);
+        },
+    );
+    let shift_x = east_lifted.x - east_rest.x;
+    assert!(
+        shift_x >= 2.0,
+        "REQ-016-03 violation: Fluid cushion lift must be clearly visible to the human eye (>= 2.0pt at t=0.14s), got shift_x={shift_x:.2}pt"
+    );
+}
+
+/// `tc_016_w2_edge_thumbwheel_drum_and_free_joystick_crystal_marble_physics` (`Iter 6: W2-V` & `Iter 7: W2-C`).
+#[test]
+fn tc_016_w2_edge_thumbwheel_drum_and_free_joystick_crystal_marble_physics() {
+    let (ctx, theme) = common::headless_ctx(MacAppearance::Aqua);
+    let mut wheel_val = 50.0f32;
+    let mut hub_c = Pos2::ZERO;
+
+    // 1. Render MacEdgeThumbwheel (wide drum) and MacFreeJoystickBowl at t=0.0
+    let shapes_t0 = common::run_frame(
+        &ctx,
+        RawInput {
+            time: Some(0.0),
+            screen_rect: Some(Rect::from_min_size(Pos2::ZERO, vec2(320.0, 360.0))),
+            ..Default::default()
+        },
+        vec2(320.0, 360.0),
+        |ui| {
+            MacEdgeThumbwheel::new("w2_drum", &mut wheel_val, 0.0..=100.0)
+                .wide_drum_width(140.0)
+                .theme(&theme)
+                .show(ui);
+            let r = MacFreeJoystickBowl::new("w2_bowl").theme(&theme).show(ui);
+            hub_c = r.hub_center;
+        },
+    );
+
+    // Verify 3D spherical crystal marble mesh and 32-band cylindrical drum mesh emit dense 3D vertex shading
+    let total_mesh_verts: usize = shapes_t0
+        .iter()
+        .filter_map(|cs| if let egui::Shape::Mesh(m) = &cs.shape { Some(m.vertices.len()) } else { None })
+        .sum();
+    assert!(
+        total_mesh_verts >= 350,
+        "Iter 6 (W2-V) violation: MacEdgeThumbwheel 32-band drum + MacFreeJoystickBowl concave dish & 3D spherical crystal marble must emit >= 350 mesh vertices (got {total_mesh_verts})"
+    );
+
+    // 2. Drag crystal marble in MacFreeJoystickBowl to (+45, -35) at t=0.10s, then release at t=0.20s
+    let drag_pt = pos2(hub_c.x + 45.0, hub_c.y - 35.0);
+    let _ = common::run_frame(
+        &ctx,
+        RawInput {
+            time: Some(0.10),
+            screen_rect: Some(Rect::from_min_size(Pos2::ZERO, vec2(320.0, 360.0))),
+            events: vec![
+                Event::PointerMoved(drag_pt),
+                Event::PointerButton { pos: drag_pt, button: egui::PointerButton::Primary, pressed: true, modifiers: egui::Modifiers::NONE },
+            ],
+            ..Default::default()
+        },
+        vec2(320.0, 360.0),
+        |ui| {
+            MacEdgeThumbwheel::new("w2_drum", &mut wheel_val, 0.0..=100.0)
+                .wide_drum_width(140.0)
+                .theme(&theme)
+                .show(ui);
+            MacFreeJoystickBowl::new("w2_bowl").theme(&theme).show(ui);
+        },
+    );
+
+    // Frame at t=0.20s: release pointer
+    let _ = common::run_frame(
+        &ctx,
+        RawInput {
+            time: Some(0.20),
+            screen_rect: Some(Rect::from_min_size(Pos2::ZERO, vec2(320.0, 360.0))),
+            events: vec![
+                Event::PointerMoved(drag_pt),
+                Event::PointerButton { pos: drag_pt, button: egui::PointerButton::Primary, pressed: false, modifiers: egui::Modifiers::NONE },
+            ],
+            ..Default::default()
+        },
+        vec2(320.0, 360.0),
+        |ui| {
+            MacEdgeThumbwheel::new("w2_drum", &mut wheel_val, 0.0..=100.0)
+                .wide_drum_width(140.0)
+                .theme(&theme)
+                .show(ui);
+            MacFreeJoystickBowl::new("w2_bowl").theme(&theme).show(ui);
+        },
+    );
+
+    // Frame at t=0.24s (40ms after release): underdamped CASpring return must be in-flight (NOT teleported to 0.0 in 1 frame!)
+    let mut marble_mid_return = Pos2::ZERO;
+    let _ = common::run_frame(
+        &ctx,
+        RawInput {
+            time: Some(0.24),
+            screen_rect: Some(Rect::from_min_size(Pos2::ZERO, vec2(320.0, 360.0))),
+            ..Default::default()
+        },
+        vec2(320.0, 360.0),
+        |ui| {
+            MacEdgeThumbwheel::new("w2_drum", &mut wheel_val, 0.0..=100.0)
+                .wide_drum_width(140.0)
+                .theme(&theme)
+                .show(ui);
+            let r = MacFreeJoystickBowl::new("w2_bowl").theme(&theme).show(ui);
+            marble_mid_return = r.marble_center;
+            hub_c = r.hub_center;
+        },
+    );
+    let dist_mid = (marble_mid_return - hub_c).length();
+    assert!(
+        dist_mid > 3.0 && dist_mid < 55.0,
+        "Iter 7 (W2-C) violation: Released crystal marble must return smoothly to center via CASpring (not instant 0.0 teleport!), got dist_mid={dist_mid:.2}pt"
+    );
+
+    if let Ok(png_path) = std::env::var("MACVIEW_W2_RETINA_PNG") {
+        let mut latched = MacThumbIntentMask::CONSTRAIN;
+        let mut rotary = 0.0f32;
+        let mut wheel_v = 50.0f32;
+        let fb = common::RetinaCpuFramebuffer::render_retina(&ctx, vec2(520.0, 560.0), 2.0, Color32::from_rgb(28, 30, 34), |ui| {
+            ui.horizontal(|ui| {
+                for (app, id_s) in [(MacAppearance::DarkAqua, "d"), (MacAppearance::Aqua, "l")] {
+                    let b_id = egui::Id::NULL.with(id_s);
+                    ui.ctx().data_mut(|d| {
+                        d.insert_temp(b_id.with("jb_ret_x"), (26.0f32, 26.0f32, 0.0f64));
+                        d.insert_temp(b_id.with("jb_ret_y"), (-24.0f32, -24.0f32, 0.0f64));
+                    });
+                    let th = MacTheme::new(app);
+                    ui.vertical(|ui| {
+                        ui.painter().rect_filled(Rect::from_min_size(ui.cursor().min, vec2(250.0, 560.0)), 12.0, th.window_background());
+                        MacEdgeThumbwheel::new(id_s, &mut wheel_v, 0.0..=100.0).wide_drum_width(140.0).theme(&th).show(ui);
+                        MacContextThumbDial::new(id_s, &mut latched, &mut rotary).preset(MacThumbContextPreset::Primitives).theme(&th).show(ui);
+                        ui.add_space(10.0);
+                        MacFreeJoystickBowl::new(id_s).theme(&th).show(ui);
+                    });
+                }
+            });
+        });
+        fb.save_png(std::path::Path::new(&png_path));
+    }
+}
+
 fn average_mesh_luma_near(shapes: &[egui::epaint::ClippedShape], target: Pos2, radius: f32) -> f32 {
-    let mut sum = 0.0f32;
-    let mut count = 0usize;
+    let (mut sum, mut count) = (0.0f32, 0usize);
     for cs in shapes {
         if let egui::Shape::Mesh(mesh) = &cs.shape {
-            for v in &mesh.vertices {
-                if (v.pos - target).length() <= radius {
-                    let [r, g, b, _] = v.color.to_array();
-                    sum += 0.2126 * r as f32 + 0.7152 * g as f32 + 0.0722 * b as f32;
-                    count += 1;
-                }
+            for v in mesh.vertices.iter().filter(|v| (v.pos - target).length() <= radius) {
+                let [r, g, b, _] = v.color.to_array();
+                sum += 0.2126 * r as f32 + 0.7152 * g as f32 + 0.0722 * b as f32;
+                count += 1;
             }
         }
     }
     if count > 0 { sum / count as f32 } else { 0.0 }
+}
+
+/// `tc_016_w3_through_w6_liquid_glass_and_sonoma_parity` (`Iter 8..15: W3..W6` + `BUG-SONOMA-01..03`).
+#[test]
+fn tc_016_w3_through_w6_liquid_glass_and_sonoma_parity() {
+    let (ctx, theme) = common::headless_ctx(MacAppearance::DarkAqua);
+    let mut seg_idx = 0usize;
+    let mut tab_idx = 0usize;
+    let shapes_w3_t0 = common::run_frame(&ctx, RawInput { time: Some(0.0), ..Default::default() }, vec2(400.0, 240.0), |ui| {
+        MacSegmentedControl::new(&["Design", "Prototype", "Inspect"], seg_idx).theme(&theme).show(ui, |i| seg_idx = i);
+        MacTabView::new(&mut tab_idx).theme(&theme).tab("Canvas", |_| {}).tab("Layers", |_| {}).show(ui);
+    });
+    let w3_verts: usize = shapes_w3_t0.iter().filter_map(|cs| if let egui::Shape::Mesh(m) = &cs.shape { Some(m.vertices.len()) } else { None }).sum();
+    assert!(w3_verts >= 12, "Iter 8 (W3-V) violation: expected >= 12 3D capsule mesh vertices, got {w3_verts}");
+
+    seg_idx = 2;
+    let _ = common::run_frame(&ctx, RawInput { time: Some(0.05), ..Default::default() }, vec2(400.0, 240.0), |ui| {
+        MacSegmentedControl::new(&["Design", "Prototype", "Inspect"], seg_idx).theme(&theme).show(ui, |i| seg_idx = i);
+    });
+    let shapes_w3_mid = common::run_frame(&ctx, RawInput { time: Some(0.09), ..Default::default() }, vec2(400.0, 240.0), |ui| {
+        MacSegmentedControl::new(&["Design", "Prototype", "Inspect"], seg_idx).theme(&theme).show(ui, |i| seg_idx = i);
+    });
+    let (pill_w_t0, pill_w_mid) = (first_mesh_width(&shapes_w3_t0).unwrap_or(0.0), first_mesh_width(&shapes_w3_mid).unwrap_or(0.0));
+    assert!(pill_w_mid > pill_w_t0 + 4.0, "Iter 9 (W3-C) violation: DualSpringMorphBlob must stretch (t0={pill_w_t0:.1}, mid={pill_w_mid:.1})");
+
+    let (mut chk, mut tog, mut sld) = (true, true, 60.0f32);
+    let shapes_w4_inactive = common::run_frame(&ctx, RawInput { time: Some(0.20), focused: false, ..Default::default() }, vec2(400.0, 200.0), |ui| {
+        MacButtonCell::new("Apply").selected(true).theme(&theme).show(ui);
+        MacCheckbox::new(&mut chk, "Snap").theme(&theme).show(ui);
+        MacToggle::new(&mut tog).theme(&theme).show(ui);
+        MacSlider::new(&mut sld, 0.0..=100.0).theme(&theme).show(ui);
+    });
+    let has_saturated_blue = shapes_w4_inactive.iter().any(|cs| match &cs.shape {
+        egui::Shape::Rect(r) => r.fill == theme.control_accent(),
+        egui::Shape::Mesh(m) => m.vertices.iter().any(|v| v.color == theme.control_accent()),
+        _ => false,
+    });
+    assert!(!has_saturated_blue, "Iter 11 (W4-C / BUG-SONOMA-01) violation: unfocused window controls must de-saturate to graphite");
+
+    let mut txt = String::from("350.0");
+    let cell_id = egui::Id::NULL.with("w5_input");
+    ctx.memory_mut(|m| m.request_focus(cell_id));
+    let _ = common::run_frame(&ctx, RawInput { time: Some(0.30), ..Default::default() }, vec2(320.0, 180.0), |ui| {
+        MacInputCell::with_id(cell_id, &mut txt).theme(&theme).show(ui);
+    });
+    let shapes_w5_mid = common::run_frame(&ctx, RawInput { time: Some(0.33), ..Default::default() }, vec2(320.0, 180.0), |ui| {
+        MacPopoverSurface::new().theme(&theme).show(ui, |p_ui| {
+            MacInputCell::with_id(cell_id, &mut txt).theme(&theme).show(p_ui);
+        });
+    });
+    let w6_verts: usize = shapes_w5_mid.iter().filter_map(|cs| if let egui::Shape::Mesh(m) = &cs.shape { Some(m.vertices.len()) } else { None }).sum();
+    assert!(w6_verts >= 6, "Iter 14 (W6-V) violation: MacPopoverSurface must emit 3D dome sheen mesh (got {w6_verts})");
+}
+
+fn first_mesh_width(shapes: &[egui::epaint::ClippedShape]) -> Option<f32> {
+    shapes.iter().find_map(|cs| match &cs.shape {
+        egui::Shape::Mesh(m) if m.vertices.len() >= 6 => {
+            let min_x = m.vertices.iter().map(|v| v.pos.x).fold(f32::INFINITY, f32::min);
+            let max_x = m.vertices.iter().map(|v| v.pos.x).fold(f32::NEG_INFINITY, f32::max);
+            Some(max_x - min_x)
+        }
+        _ => None,
+    })
 }

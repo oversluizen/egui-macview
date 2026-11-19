@@ -304,6 +304,26 @@ impl MacTheme {
         }
     }
 
+    /// Resolves `controlAccentColor` when the host window is active (`is_window_active(ctx)`),
+    /// or de-saturates to neutral graphite (`selected_control_inactive`) when unfocused (`BUG-SONOMA-01`).
+    pub fn effective_control_accent(&self, ctx: &egui::Context) -> Color32 {
+        if crate::layout::is_window_active(ctx) {
+            self.control_accent()
+        } else {
+            self.selected_control_inactive()
+        }
+    }
+
+    /// Resolves `selectedControlColor` when the host window is active (`is_window_active(ctx)`),
+    /// or de-saturates to neutral graphite (`selected_control_inactive`) when unfocused (`BUG-SONOMA-01`).
+    pub fn effective_selected_control(&self, ctx: &egui::Context) -> Color32 {
+        if crate::layout::is_window_active(ctx) {
+            self.selected_control()
+        } else {
+            self.selected_control_inactive()
+        }
+    }
+
     /// Renders an AppKit outer keyboard focus ring (`NSFocusRingPlacementOutside`) around `rect`.
     pub fn paint_focus_ring(&self, painter: &egui::Painter, rect: egui::Rect, corner_radius: f32) {
         let ring = self.focus_ring();
@@ -315,6 +335,42 @@ impl MacTheme {
             egui::Stroke::new(ring.stroke_width.points(), self.keyboard_focus_indicator()),
             egui::StrokeKind::Outside,
         );
+    }
+
+    /// Renders a spring-animated AppKit outer keyboard focus ring (`BUG-SONOMA-02`), smoothly
+    /// interpolating expansion and opacity via `CASpring` and requesting `0` repaints at rest.
+    pub fn paint_animated_focus_ring(
+        &self,
+        ctx: &egui::Context,
+        id: egui::Id,
+        painter: &egui::Painter,
+        rect: egui::Rect,
+        corner_radius: f32,
+        is_focused: bool,
+    ) {
+        let spring_key = id.with("focus_ring_caspring");
+        if !is_focused && ctx.data(|d| d.get_temp::<(f32, f32, f64)>(spring_key)).is_none() {
+            return;
+        }
+        let base_s = self.motion().swiftui_snappy.to_spring();
+        let focus_spring = crate::motion::CASpring::new(base_s.response * 0.5, base_s.damping_ratio);
+        let target = if is_focused { 1.0f32 } else { 0.0f32 };
+        let prog = focus_spring.animate_f32(ctx, spring_key, target).clamp(0.0, 1.0);
+        if !is_focused && prog <= 0.0 {
+            ctx.data_mut(|d| d.remove_temp::<(f32, f32, f64)>(spring_key));
+            return;
+        }
+        if prog > 0.0 {
+            let ring = self.focus_ring();
+            let focus_rect = rect.expand(ring.offset.points() * prog);
+            let focus_radius = corner_radius + ring.corner_radius_delta.points() * prog;
+            painter.rect_stroke(
+                focus_rect,
+                egui::CornerRadius::same(focus_radius as u8),
+                egui::Stroke::new(ring.stroke_width.points() * prog, self.keyboard_focus_indicator().gamma_multiply(prog)),
+                egui::StrokeKind::Outside,
+            );
+        }
     }
 
     /// Computes the subpixel-snapped top-Y coordinate for a text galley so that its

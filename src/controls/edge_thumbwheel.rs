@@ -251,7 +251,7 @@ impl<'a> MacEdgeThumbwheel<'a> {
         let is_free_spinning = !is_down && mem.velocity_pt_s.abs() > m.edge_wheel_stop_threshold.points();
         ui.ctx().data_mut(|d| d.insert_temp(mem_id, mem));
 
-        // Paint Top-Down Cylindrical Edge Thumbwheel in Liquid Glass
+        // Paint Top-Down Cylindrical Edge Thumbwheel in Liquid Glass (Iter 6: W2-V)
         let accent_col = theme.resolve_glass_accent_on(self.glass_accent, theme.popover_background());
         let painter = ui.painter_at(rect.intersect(ui.clip_rect()));
         let outer_cr = CornerRadius::same((m.edge_wheel_corner_radius.points() * s) as u8);
@@ -260,9 +260,21 @@ impl<'a> MacEdgeThumbwheel<'a> {
         let inner_cr = CornerRadius::same(((m.edge_wheel_corner_radius.points() * s) - pad).max(1.0) as u8);
 
         let bw = m.border_stroke_width.points();
-        let glass_housing = theme.popover_background().gamma_multiply(m.glass_fill_alpha.points());
+        let is_light = theme.appearance == crate::theme::MacAppearance::Aqua;
+        let glass_housing = if is_light {
+            theme.box_background()
+        } else {
+            theme.popover_background().gamma_multiply(m.glass_fill_alpha.points())
+        };
         let border_stroke = Stroke::new(bw, theme.separator());
-        let specular_col = theme.knob_fill().gamma_multiply(m.glass_specular_alpha.points());
+        let specular_col = theme.specular_rim_top();
+        painter.rect_filled(rect.translate(Vec2::new(0.0, bw * 2.0)), outer_cr, theme.drop_shadow());
+        painter.rect_stroke(
+            rect.expand(bw),
+            outer_cr,
+            Stroke::new(m.active_stroke_width.points(), accent_col.gamma_multiply(m.hover_fill_opacity.points())),
+            StrokeKind::Outside,
+        );
         painter.rect(rect, outer_cr, glass_housing, border_stroke, StrokeKind::Inside);
         painter.line_segment(
             [Pos2::new(rect.min.x + pad, rect.min.y + bw), Pos2::new(rect.max.x - pad, rect.min.y + bw)],
@@ -274,34 +286,47 @@ impl<'a> MacEdgeThumbwheel<'a> {
             painter.rect_stroke(inner_rect.expand(1.0), inner_cr, glow_stroke, StrokeKind::Outside);
         }
 
-        painter.rect(inner_rect, inner_cr, theme.window_background(), border_stroke, StrokeKind::Inside);
+        let drum_base = if is_light { theme.window_background() } else { theme.control_background() };
+        painter.rect(inner_rect, inner_cr, drum_base, border_stroke, StrokeKind::Inside);
 
-        // 16-Band Cosine-Interpolated 3D Cylindrical Shading Mesh
+        // 32-Band x 8-Column 2D Cylindrical Metallic/Glass Drum Mesh with Pointer-Steered Specular Band
         let r_cyl = inner_rect.height() * 0.5;
         let y_c = inner_rect.center().y;
-        let bands = 16usize;
+        let ptr_bias = pointer_pos
+            .filter(|p| rect.contains(*p))
+            .map(|p| ((p.y - y_c) / r_cyl.max(1.0)).clamp(-0.5, 0.5))
+            .unwrap_or(0.0);
+        let bands = 32usize;
+        let cols = 8usize;
         let mut cyl_mesh = egui::epaint::Mesh::default();
-        cyl_mesh.vertices.reserve((bands + 1) * 2);
-        cyl_mesh.indices.reserve(bands * 6);
-        let shadow_col = theme.drop_shadow();
-        let crown_col = specular_col.gamma_multiply(m.active_fill_opacity.points());
+        cyl_mesh.vertices.reserve((bands + 1) * (cols + 1));
+        cyl_mesh.indices.reserve(bands * cols * 6);
         for i in 0..=bands {
             let frac = (i as f32) / (bands as f32);
             let y_i = inner_rect.min.y + inner_rect.height() * frac;
             let phi = (frac * 2.0 - 1.0) * std::f32::consts::FRAC_PI_2;
             let c_val = phi.cos().clamp(0.0, 1.0);
-            let band_col = if c_val > m.joystick_fast_ratio.points() {
-                crown_col
-            } else {
-                shadow_col.gamma_multiply(1.0 - c_val)
-            };
-            cyl_mesh.colored_vertex(Pos2::new(inner_rect.min.x, y_i), band_col);
-            cyl_mesh.colored_vertex(Pos2::new(inner_rect.max.x, y_i), band_col);
+            let spec_dist = (frac - (0.5 - m.hover_fill_opacity.points() + ptr_bias * m.active_fill_opacity.points())).abs();
+            let spec_band = (1.0 - spec_dist / m.active_fill_opacity.points().max(0.5)).clamp(0.0, 1.0);
+            for j in 0..=cols {
+                let u_frac = (j as f32) / (cols as f32);
+                let x_j = inner_rect.min.x + inner_rect.width() * u_frac;
+                let axial = (1.0 - (u_frac * 2.0 - 1.0).abs()).clamp(0.0, 1.0);
+                let mut h = egui::epaint::Hsva::from(drum_base);
+                let rim_dark = (1.0 - c_val) * m.glass_specular_alpha.points();
+                let hi_gain = (spec_band * spec_band * (0.5 + 0.5 * axial) * m.active_fill_opacity.points()).clamp(0.0, 1.0);
+                h.v = (h.v * (1.0 - rim_dark) + (1.0 - h.v) * hi_gain).clamp(0.0, 1.0);
+                cyl_mesh.colored_vertex(Pos2::new(x_j, y_i), Color32::from(h));
+            }
         }
+        let stride = (cols + 1) as u32;
         for i in 0..bands {
-            let b = (i * 2) as u32;
-            cyl_mesh.add_triangle(b, b + 1, b + 3);
-            cyl_mesh.add_triangle(b, b + 3, b + 2);
+            for j in 0..cols {
+                let b0 = (i as u32) * stride + (j as u32);
+                let b1 = b0 + stride;
+                cyl_mesh.add_triangle(b0, b0 + 1, b1 + 1);
+                cyl_mesh.add_triangle(b0, b1 + 1, b1);
+            }
         }
         painter.add(egui::Shape::mesh(cyl_mesh));
 
@@ -313,6 +338,14 @@ impl<'a> MacEdgeThumbwheel<'a> {
         let right_cap = Rect::from_min_max(Pos2::new(inner_rect.max.x - cap_w, inner_rect.min.y), inner_rect.max);
         painter.rect(left_cap, inner_cr, cap_fill, cap_stroke, StrokeKind::Inside);
         painter.rect(right_cap, inner_cr, cap_fill, cap_stroke, StrokeKind::Inside);
+        painter.line_segment(
+            [Pos2::new(left_cap.center().x, left_cap.min.y + pad), Pos2::new(left_cap.center().x, left_cap.max.y - pad)],
+            Stroke::new(bw, specular_col),
+        );
+        painter.line_segment(
+            [Pos2::new(right_cap.center().x, right_cap.min.y + pad), Pos2::new(right_cap.center().x, right_cap.max.y - pad)],
+            Stroke::new(bw, specular_col),
+        );
 
         let max_ang = m.edge_wheel_max_angle_deg.points();
         let step_deg = m.detent_step_deg.points().max(1.0);
@@ -325,12 +358,22 @@ impl<'a> MacEdgeThumbwheel<'a> {
                 let phi_rad = phi_deg * std::f32::consts::PI / m.half_circle_deg.points();
                 let y = y_c - r_cyl * phi_rad.sin();
                 let crown_cos = phi_rad.cos().clamp(0.0, 1.0);
-                let thickness = m.border_stroke_width.points() + crown_cos * m.active_stroke_width.points();
-                let ridge_col =
-                    if crown_cos > m.joystick_fast_ratio.points() { theme.knob_fill() } else { theme.label().gamma_multiply(crown_cos) };
+                let thickness = bw + crown_cos * bw;
+                let trough_col = theme.drop_shadow().gamma_multiply(crown_cos * 0.5);
+                let crest_col = if is_light {
+                    specular_col.gamma_multiply(crown_cos)
+                } else if crown_cos > m.joystick_fast_ratio.points() {
+                    specular_col
+                } else {
+                    theme.secondary_label().gamma_multiply(crown_cos)
+                };
+                painter.line_segment(
+                    [Pos2::new(inner_rect.min.x + cap_w, y + bw), Pos2::new(inner_rect.max.x - cap_w, y + bw)],
+                    Stroke::new(thickness, trough_col),
+                );
                 painter.line_segment(
                     [Pos2::new(inner_rect.min.x + cap_w, y), Pos2::new(inner_rect.max.x - cap_w, y)],
-                    Stroke::new(thickness, ridge_col),
+                    Stroke::new(thickness, crest_col),
                 );
             }
             base_ang += step_deg;

@@ -10,6 +10,9 @@ struct InputCellTransactionState {
     active: bool,
     snapshot: String,
     buffer: String,
+    focus_ring_target: f32,
+    focus_ring_prev: f32,
+    focus_ring_start: f64,
 }
 
 fn decimal_places_if_valid(s: &str) -> usize {
@@ -111,7 +114,14 @@ pub(super) fn show_input_cell(cell: MacInputCell<'_>, ui: &mut Ui) -> Response {
 
     if is_focused && !was_active && !esc_pressed {
         let initial = cell.value.clone();
-        tx = Some(InputCellTransactionState { active: true, snapshot: initial.clone(), buffer: initial });
+        tx = Some(InputCellTransactionState {
+            active: true,
+            snapshot: initial.clone(),
+            buffer: initial,
+            focus_ring_target: 0.0,
+            focus_ring_prev: 0.0,
+            focus_ring_start: ui.input(|i| i.time),
+        });
         tx_dirty = true;
     } else if is_focused && was_active && !esc_pressed {
         if let Some(ref mut st) = tx {
@@ -131,8 +141,12 @@ pub(super) fn show_input_cell(cell: MacInputCell<'_>, ui: &mut Ui) -> Response {
         }
     }
     if let Some(override_buf) = injected_buf {
-        let st =
-            tx.get_or_insert_with(|| InputCellTransactionState { active: is_focused, snapshot: cell.value.clone(), buffer: String::new() });
+        let st = tx.get_or_insert_with(|| InputCellTransactionState {
+            active: is_focused,
+            snapshot: cell.value.clone(),
+            buffer: String::new(),
+            ..Default::default()
+        });
         st.buffer = override_buf;
         tx_dirty = true;
     }
@@ -202,13 +216,40 @@ pub(super) fn show_input_cell(cell: MacInputCell<'_>, ui: &mut Ui) -> Response {
     }
 
     let painter = ui.painter_at(rect);
-    if is_focused && !surrender_now {
+    let show_focus = is_focused && !surrender_now;
+    let target_f = if show_focus { 1.0f32 } else { 0.0f32 };
+    if let Some(ref mut st) = tx {
+        let now = ui.input(|i| i.time);
+        let base_s = theme.motion().swiftui_snappy.to_spring();
+        let focus_s = crate::motion::CASpring::new(base_s.response * 0.5, base_s.damping_ratio);
+        if (st.focus_ring_target - target_f).abs() > f32::EPSILON {
+            let dt0 = (now - st.focus_ring_start).max(0.0) as f32;
+            st.focus_ring_prev = st.focus_ring_prev + (st.focus_ring_target - st.focus_ring_prev) * focus_s.position_at(dt0);
+            st.focus_ring_target = target_f;
+            st.focus_ring_start = now;
+            tx_dirty = true;
+        }
+        let dt = (now - st.focus_ring_start).max(0.0) as f32;
+        let prog = (st.focus_ring_prev + (st.focus_ring_target - st.focus_ring_prev) * focus_s.position_at(dt)).clamp(0.0, 1.0);
+        if (st.focus_ring_target - st.focus_ring_prev).abs() > f32::EPSILON && dt < focus_s.settling_duration() {
+            ui.ctx().request_repaint();
+        }
+        if prog > 0.0 {
+            let ring = theme.focus_ring();
+            painter.rect_stroke(
+                rect.expand(ring.offset.points() * prog),
+                CornerRadius::same((corner_radius + ring.corner_radius_delta.points() * prog) as u8),
+                Stroke::new(ring.stroke_width.points() * prog, theme.keyboard_focus_indicator().gamma_multiply(prog)),
+                StrokeKind::Outside,
+            );
+        }
+    } else if show_focus {
         theme.paint_focus_ring(&painter, rect, corner_radius);
     }
 
     let bg_color = theme.control_background().gamma_multiply(alpha_factor);
-    let border_stroke = if is_focused && !surrender_now {
-        Stroke::new(metrics.border_width.points(), theme.control_accent())
+    let border_stroke = if show_focus {
+        Stroke::new(metrics.border_width.points(), theme.effective_control_accent(ui.ctx()))
     } else {
         Stroke::new(metrics.border_width.points(), theme.separator().gamma_multiply(alpha_factor))
     };

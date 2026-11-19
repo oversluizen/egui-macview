@@ -5,7 +5,7 @@ mod dropdown;
 use crate::controls::MacControlSize;
 use crate::layout::subpixel_snap_rect;
 use crate::theme::MacTheme;
-use egui::{Color32, CornerRadius, FontId, Key, Modifiers, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2, Widget};
+use egui::{Color32, CornerRadius, FontId, Key, Modifiers, Pos2, Rect, Response, Sense, Stroke, Ui, Vec2, Widget};
 
 /// Authentic macOS AppKit Pop-Up Button (`NSPopUpButton` equivalent).
 ///
@@ -225,12 +225,22 @@ impl<'a> Widget for MacPopUpButton<'a> {
             theme.control_background()
         };
         let border_w = metrics.border_width.points();
-        let border_col =
-            if enabled && response.has_focus() { theme.control_accent() } else { theme.apply_enabled(theme.separator(), enabled) };
-        if enabled && response.has_focus() {
-            theme.paint_focus_ring(&painter, visual_rect, corner_radius);
+        let border_col = if enabled && response.has_focus() {
+            theme.effective_control_accent(ui.ctx())
+        } else {
+            theme.apply_enabled(theme.separator(), enabled)
+        };
+        if enabled {
+            theme.paint_animated_focus_ring(ui.ctx(), response.id, &painter, visual_rect, corner_radius, response.has_focus());
         }
-        painter.rect(visual_rect, CornerRadius::same(corner_radius as u8), bg_color, Stroke::new(border_w, border_col), StrokeKind::Inside);
+        super::liquid_glass::paint_liquid_glass_capsule(
+            &painter,
+            visual_rect,
+            corner_radius,
+            bg_color,
+            Stroke::new(border_w, border_col),
+            theme.apply_enabled(theme.specular_rim_top(), enabled),
+        );
 
         let text_color = theme.apply_enabled(theme.label(), enabled);
         let text_top_y = theme.baseline_text_y(visual_rect, baseline_from_top, ascender, ppp);
@@ -252,9 +262,9 @@ impl<'a> Widget for MacPopUpButton<'a> {
             let badge_fill = if !enabled {
                 theme.control().gamma_multiply(theme.disabled_opacity())
             } else if response.is_pointer_button_down_on() {
-                theme.selected_control()
+                theme.effective_selected_control(ui.ctx())
             } else {
-                theme.control_accent()
+                theme.effective_control_accent(ui.ctx())
             };
             painter.rect_filled(badge_rect, CornerRadius::same((corner_radius - border_w).max(0.0) as u8), badge_fill);
             badge_rect.center().x

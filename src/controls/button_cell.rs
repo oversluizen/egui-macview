@@ -6,7 +6,7 @@
 use crate::controls::MacControlSize;
 use crate::layout::subpixel_snap_rect;
 use crate::theme::MacTheme;
-use egui::{Color32, CornerRadius, Rect, Response, Stroke, StrokeKind, Ui, Vec2, Widget};
+use egui::{Color32, Rect, Response, Stroke, Ui, Vec2, Widget};
 
 /// Authentic macOS AppKit Push Button / Tool Button (`NSButtonCell` equivalent).
 ///
@@ -165,7 +165,7 @@ impl<'a> Widget for MacButtonCell<'a> {
         } else if response.is_pointer_button_down_on() {
             theme.selected_control_inactive()
         } else if self.selected {
-            theme.selected_control()
+            theme.effective_selected_control(ui.ctx())
         } else if response.hovered() {
             theme.control()
         } else {
@@ -175,7 +175,14 @@ impl<'a> Widget for MacButtonCell<'a> {
 
         let border_stroke = Stroke::new(metrics.border_width.points(), theme.separator().gamma_multiply(alpha_factor));
 
-        painter.rect(rect, CornerRadius::same(corner_radius as u8), bg_color, border_stroke, StrokeKind::Inside);
+        super::liquid_glass::paint_liquid_glass_capsule(
+            &painter,
+            rect,
+            corner_radius,
+            bg_color,
+            border_stroke,
+            theme.specular_rim_top().gamma_multiply(alpha_factor),
+        );
 
         let bg_style = theme.background_style(base_bg);
         let text_color = bg_style.primary_text_color(theme).gamma_multiply(alpha_factor);

@@ -271,10 +271,10 @@ impl MacThumbContextPreset {
             Self::Primitives => MacThumbSectorSet {
                 items: [
                     MacThumbSectorSpec { icon: SFSymbol(SF::AspectRatio), label: "1:1", shortcut_hint: "⇧" },
-                    MacThumbSectorSpec { icon: SFSymbol(SF::Viewfinder), label: "1:1+Or", shortcut_hint: "⇧⌥" },
-                    MacThumbSectorSpec { icon: SFSymbol(SF::Scope), label: "Origin", shortcut_hint: "⌥" },
+                    MacThumbSectorSpec { icon: SFSymbol(SF::Viewfinder), label: "1:1+O", shortcut_hint: "⇧⌥" },
+                    MacThumbSectorSpec { icon: SFSymbol(SF::Scope), label: "Center", shortcut_hint: "⌥" },
                     MacThumbSectorSpec { icon: SFSymbol(SF::Skew), label: "Shear", shortcut_hint: "⌘⌥" },
-                    MacThumbSectorSpec { icon: SFSymbol(SF::Scribble), label: "Radius", shortcut_hint: "⌘" },
+                    MacThumbSectorSpec { icon: SFSymbol(SF::Scribble), label: "Slide", shortcut_hint: "⌘" },
                     MacThumbSectorSpec { icon: SFSymbol(SF::ArrowUpAndDownAndLeftAndRight), label: "Move", shortcut_hint: "␣" },
                 ],
             },

@@ -41,7 +41,8 @@ pub use theme::{
 
 pub use controls::{
     build_liquid_glass_backdrop_image, calculate_pan_weights, dome_surface_normal_3d, format_remaining_timecode, format_timecode,
-    refract_point_through_glass, sdf_rounded_capsule, sdf_smooth_union, InlineActionKind, MacBox, MacButton, MacButtonCell, MacCheckbox,
+    refract_point_through_glass, sdf_annular_rounded_sector, sdf_curved_stadium_arc, sdf_rounded_capsule, sdf_smooth_union,
+    InlineActionKind, MacBox, MacButton, MacButtonCell, MacCheckbox,
     MacCircularSlider, MacCollectionView, MacCollectionViewFlowLayout, MacColorWell, MacComboBox, MacContextThumbDial,
     MacContextThumbDialState, MacContextThumbResponse, MacControlSize, MacDate, MacDatePicker, MacDatePickerElementFlags,
     MacDatePickerStyle, MacDisclosureButton, MacDisclosureGroup, MacDisclosureResponse, MacEdgeThumbwheel, MacEdgeThumbwheelResponse,

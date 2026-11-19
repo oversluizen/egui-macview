@@ -238,13 +238,13 @@ impl<'a> Widget for MacCheckbox<'a> {
         let box_rect =
             subpixel_snap_rect(Rect::from_min_size(Pos2::new(rect.left(), rect.center().y - box_sz * 0.5), Vec2::splat(box_sz)), ppp);
 
-        if enabled && response.has_focus() {
-            theme.paint_focus_ring(&painter, box_rect, corner_r);
+        if enabled {
+            theme.paint_animated_focus_ring(ui.ctx(), response.id, &painter, box_rect, corner_r, response.has_focus());
         }
 
         let is_active = *self.checked || self.mixed;
         let fill_color = if is_active && !self.unaccented {
-            theme.control_accent().gamma_multiply(alpha)
+            theme.effective_control_accent(ui.ctx()).gamma_multiply(alpha)
         } else if response.is_pointer_button_down_on() && enabled {
             theme.control().gamma_multiply(alpha)
         } else {

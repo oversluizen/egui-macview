@@ -127,14 +127,15 @@ pub(super) fn render_segmented(control: MacSegmentedControl<'_>, ui: &mut Ui, mu
         track_surface
     } else {
         let target_rect = slots.get(active_idx).map_or(rect, |s| s.rect);
-        let spring = theme.motion().swiftui_snappy.to_spring();
-        let anim_x = spring.animate_f32(ui.ctx(), response.id.with("seg_caspring_x"), target_rect.min.x - rect.min.x);
-        let anim_w = if layout.uniform_widths {
-            target_rect.width()
-        } else {
-            spring.animate_f32(ui.ctx(), response.id.with("seg_caspring_w"), target_rect.width())
-        };
-        let animated_seg_rect = Rect::from_min_size(Pos2::new(rect.min.x + anim_x, rect.min.y), Vec2::new(anim_w, rect.height()));
+        let (anim_min_x, anim_max_x) = super::super::liquid_glass::step_dual_spring_morph_interval(
+            ui.ctx(),
+            response.id.with("seg_dual_morph"),
+            target_rect.min.x - rect.min.x,
+            target_rect.max.x - rect.min.x,
+            theme,
+        );
+        let animated_seg_rect =
+            Rect::from_min_max(Pos2::new(rect.min.x + anim_min_x, rect.min.y), Pos2::new(rect.min.x + anim_max_x, rect.max.y));
 
         if control.small_square {
             let active_bg = theme.segmented_small_square_active_bg();
@@ -148,21 +149,14 @@ pub(super) fn render_segmented(control: MacSegmentedControl<'_>, ui: &mut Ui, mu
                 CornerRadius::same(indicator_radius as u8),
                 theme.drop_shadow().gamma_multiply(alpha_factor),
             );
-            painter.rect(
+            super::super::liquid_glass::paint_liquid_glass_capsule(
+                &painter,
                 pill_rect,
-                CornerRadius::same(indicator_radius as u8),
+                indicator_radius,
                 pill_bg.gamma_multiply(alpha_factor),
                 Stroke::new(border_width, theme.box_border().gamma_multiply(alpha_factor)),
-                StrokeKind::Inside,
+                theme.specular_rim_top().gamma_multiply(alpha_factor),
             );
-            let rim_x0 = pill_rect.min.x + indicator_radius;
-            let rim_x1 = pill_rect.max.x - indicator_radius;
-            if rim_x1 > rim_x0 {
-                painter.line_segment(
-                    [Pos2::new(rim_x0, pill_rect.min.y), Pos2::new(rim_x1, pill_rect.min.y)],
-                    Stroke::new(border_width, theme.on_accent_text().gamma_multiply(0.5 * alpha_factor)),
-                );
-            }
             alpha_composite(pill_bg, surface_bg)
         }
     };

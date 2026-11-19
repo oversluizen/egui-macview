@@ -17,7 +17,6 @@ pub(super) struct SegmentedLayout {
     pub rect: Rect,
     pub response: Response,
     pub slots: InlineBuf<SegLayoutSlot>,
-    pub uniform_widths: bool,
 }
 
 pub(super) fn compute_segmented_layout(
@@ -83,26 +82,17 @@ pub(super) fn compute_segmented_layout(
 
     let mut slots: InlineBuf<SegLayoutSlot> = InlineBuf::new();
     let mut cur_x = rect.min.x;
-    let mut first_w: Option<f32> = None;
-    let mut uniform_widths = true;
 
     if control.segments.is_empty() {
         slots.push(SegLayoutSlot { rect, galley: None });
     } else {
         for (item, galley) in control.segments.iter().zip(shaped_galleys) {
             let w = item.width.unwrap_or(fallback_w);
-            if let Some(w0) = first_w {
-                if (w - w0).abs() != 0.0 {
-                    uniform_widths = false;
-                }
-            } else {
-                first_w = Some(w);
-            }
             let seg_rect = Rect::from_min_size(Pos2::new(cur_x, rect.min.y), Vec2::new(w, rect.height()));
             slots.push(SegLayoutSlot { rect: seg_rect, galley });
             cur_x += w;
         }
     }
 
-    SegmentedLayout { rect, response, slots, uniform_widths }
+    SegmentedLayout { rect, response, slots }
 }

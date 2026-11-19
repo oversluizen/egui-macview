@@ -253,19 +253,39 @@ impl<'a> MacTabView<'a> {
                 );
 
                 let tab_w = bar_rect.width() / (tab_count as f32);
+                let active_tab_i = (*self.selected_index).min(tab_count.saturating_sub(1));
+                let target_min_x = (active_tab_i as f32) * tab_w;
+                let (anim_min_x, anim_max_x) = super::liquid_glass::step_dual_spring_morph_interval(
+                    ui.ctx(),
+                    response.id.with("tab_dual_morph"),
+                    target_min_x,
+                    target_min_x + tab_w,
+                    theme,
+                );
+                let active_pill_rect = Rect::from_min_max(
+                    Pos2::new(bar_rect.min.x + anim_min_x, bar_rect.min.y),
+                    Pos2::new(bar_rect.min.x + anim_max_x, bar_rect.max.y),
+                );
+                super::liquid_glass::paint_liquid_glass_capsule(
+                    &painter,
+                    active_pill_rect,
+                    corner_r,
+                    theme.control_background(),
+                    Stroke::new(1.0, theme.separator()),
+                    theme.specular_rim_top(),
+                );
+
                 for i in 0..tab_count {
                     let tab_rect =
                         Rect::from_min_size(Pos2::new(bar_rect.min.x + (i as f32) * tab_w, bar_rect.min.y), Vec2::new(tab_w, bar_h));
                     let tab_hovered = ui.input(|inp| inp.pointer.hover_pos()).is_some_and(|p| tab_rect.contains(p));
 
                     let is_active = *self.selected_index == i;
-                    if is_active || tab_hovered {
-                        let tab_fill = if is_active { theme.control_background() } else { theme.control() };
-
+                    if !is_active && tab_hovered {
                         painter.rect(
                             tab_rect,
                             CornerRadius::same(corner_r as u8),
-                            tab_fill,
+                            theme.control(),
                             Stroke::new(1.0, theme.separator()),
                             StrokeKind::Inside,
                         );

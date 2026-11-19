@@ -246,7 +246,15 @@ impl<'a> MacPopoverSurface<'a> {
         let border_w = metrics.surface_border_width.points();
         let bg_fill = theme.popover_background();
         let border_stroke = Stroke::new(border_w, theme.popover_border());
-        ui.painter_at(rect).rect(rect, CornerRadius::same(rounding as u8), bg_fill, border_stroke, StrokeKind::Inside);
+        let painter = ui.painter_at(rect);
+        crate::controls::liquid_glass::paint_liquid_glass_capsule(
+            &painter,
+            rect,
+            rounding,
+            bg_fill,
+            border_stroke,
+            theme.specular_rim_top(),
+        );
         let pad = metrics.inner_padding.points();
         let content_rect = rect.shrink2(Vec2::new(pad.min(rect.width() * 0.5), pad.min(rect.height() * 0.5)));
         let mut child_ui = ui.new_child(

@@ -4,7 +4,7 @@
 
 use crate::controls::MacControlSize;
 use crate::theme::MacTheme;
-use egui::{CornerRadius, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2, Widget};
+use egui::{Pos2, Rect, Response, Sense, Stroke, Ui, Vec2, Widget};
 
 /// Standalone AppKit `NSSwitch` pill switch alias (`REQ-013-02A`).
 pub type MacSwitch<'a> = MacToggle<'a>;
@@ -105,14 +105,20 @@ impl<'a> Widget for MacToggle<'a> {
 
         let alpha_factor = if self.enabled { 1.0 } else { theme.disabled_opacity() };
         let painter = ui.painter_at(rect);
-        let bg_color = theme.control().lerp_to_gamma(theme.system_green(), anim_progress).gamma_multiply(alpha_factor);
+        let active_green = if crate::layout::is_window_active(ui.ctx()) {
+            theme.system_green()
+        } else {
+            theme.selected_control_inactive()
+        };
+        let bg_color = theme.control().lerp_to_gamma(active_green, anim_progress).gamma_multiply(alpha_factor);
 
-        painter.rect(
+        super::liquid_glass::paint_liquid_glass_capsule(
+            &painter,
             rect,
-            CornerRadius::same(radius),
+            radius as f32,
             bg_color,
             Stroke::new(metrics.border_width.points(), theme.separator().gamma_multiply(alpha_factor)),
-            StrokeKind::Inside,
+            theme.specular_rim_top().gamma_multiply(alpha_factor),
         );
 
         let knob_radius = metrics.knob_size.points() * 0.5;

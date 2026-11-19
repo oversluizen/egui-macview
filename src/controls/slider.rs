@@ -201,7 +201,11 @@ impl<'a> Widget for MacSlider<'a> {
                 Pos2::new(track_left, center_y - eff_track_height * 0.5),
                 Pos2::new(thumb_center_x, center_y + eff_track_height * 0.5),
             );
-            let fill_c = if self.enabled { theme.control_accent() } else { theme.selected_control_inactive().gamma_multiply(alpha_factor) };
+            let fill_c = if self.enabled {
+                theme.effective_control_accent(ui.ctx())
+            } else {
+                theme.selected_control_inactive().gamma_multiply(alpha_factor)
+            };
             painter.rect(active_rect, CornerRadius::same(track_radius as u8), fill_c, Stroke::NONE, StrokeKind::Inside);
         }
 
