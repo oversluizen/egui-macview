@@ -75,7 +75,7 @@ pub(crate) fn paint_3d_recessed_bowl(painter: &Painter, spec: MarblePaintSpec, r
     paint_crystal_glass_marble(painter, spec, theme, m);
 }
 
-fn paint_radial_disc_mesh(
+pub(crate) fn paint_radial_disc_mesh(
     painter: &Painter,
     center: Pos2,
     radius: f32,

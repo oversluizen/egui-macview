@@ -80,6 +80,38 @@ pub(super) fn paint_dial_layers(
             m,
         );
     } else {
+        let border_stroke = Stroke::new(bw, theme.separator());
+        let glass_bg = if is_light {
+            theme.box_background()
+        } else {
+            theme.box_background().gamma_multiply(m.glass_fill_alpha.points())
+        };
+        let outer_rim_col = if st.hovered_rotary { st.accent_col } else { specular_col };
+        painter.circle_filled(hub_center + Vec2::new(0.0, gap * 2.0), r_outer + bw * 2.0, theme.drop_shadow());
+        painter.circle_filled(hub_center + Vec2::new(0.0, gap), r_outer + bw, theme.drop_shadow());
+        painter.circle(hub_center, r_outer, glass_bg, border_stroke);
+        painter.circle_stroke(hub_center, r_outer - bw, Stroke::new(m.active_stroke_width.points(), outer_rim_col));
+
+        let bowl_core = if is_light {
+            theme.window_background()
+        } else {
+            theme.window_background().gamma_multiply(m.glass_fill_alpha.points())
+        };
+        let bowl_rim = if is_light {
+            theme.box_background()
+        } else {
+            theme.control_background().gamma_multiply(m.glass_fill_alpha.points())
+        };
+        painter.circle_filled(hub_center, r_clover_out + bw, theme.drop_shadow().gamma_multiply(0.5));
+        crate::controls::free_joystick_bowl::paint_radial_disc_mesh(painter, hub_center, r_clover_out, bowl_core, bowl_rim, m);
+        painter.circle_stroke(hub_center, r_clover_out, border_stroke);
+        painter.circle_stroke(
+            hub_center - Vec2::new(0.0, bw),
+            r_clover_out - bw,
+            Stroke::new(m.active_stroke_width.points(), theme.drop_shadow().gamma_multiply(0.5)),
+        );
+        painter.circle_stroke(hub_center + Vec2::new(0.0, bw), r_clover_out - bw, Stroke::new(bw, specular_col));
+
         let half_gap_deg = m.sector_gap_deg.points() * 0.5;
         let r_clover_mid = (r_clover_in + r_clover_out) * 0.5;
         let pad = m.bevel_width_pt.points() * s;

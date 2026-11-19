@@ -422,10 +422,11 @@ fn tc_016_w2_edge_thumbwheel_drum_and_free_joystick_crystal_marble_physics() {
     assert!(dist_mid > 3.0 && dist_mid < 55.0, "Iter 7 (W2-C) violation: expected mid-return dist in (3, 55), got {dist_mid:.2}");
 
     if let Ok(png_path) = std::env::var("MACVIEW_W2_RETINA_PNG") {
-        let mut latched = MacThumbIntentMask::CONSTRAIN;
+        let mut latched = MacThumbSector::NorthEast.intent_mask();
         let mut rotary = 0.0f32;
         let mut wheel_v = 50.0f32;
-        let fb = common::RetinaCpuFramebuffer::render_retina(&ctx, vec2(520.0, 560.0), 2.0, Color32::from_rgb(28, 30, 34), |ui| {
+        let (clean_ctx, _) = common::headless_ctx(MacAppearance::DarkAqua);
+        let fb = common::RetinaCpuFramebuffer::render_retina(&clean_ctx, vec2(520.0, 560.0), 2.0, Color32::from_rgb(28, 30, 34), |ui| {
             ui.horizontal(|ui| {
                 for (app, id_s) in [(MacAppearance::DarkAqua, "d"), (MacAppearance::Aqua, "l")] {
                     let b_id = egui::Id::NULL.with(id_s);
@@ -437,13 +438,21 @@ fn tc_016_w2_edge_thumbwheel_drum_and_free_joystick_crystal_marble_physics() {
                     ui.vertical(|ui| {
                         ui.painter().rect_filled(Rect::from_min_size(ui.cursor().min, vec2(250.0, 560.0)), 12.0, th.window_background());
                         MacEdgeThumbwheel::new(id_s, &mut wheel_v, 0.0..=100.0).wide_drum_width(140.0).theme(&th).show(ui);
-                        let dial_r = MacContextThumbDial::new(id_s, &mut latched, &mut rotary).preset(MacThumbContextPreset::Primitives).theme(&th).show(ui);
-                        let ne_pt = dial_r.sector_center(MacThumbSector::NorthEast);
-                        let d_st_id = egui::Id::NULL.with(id_s).with("thumb_dial_state");
-                        let _ = ne_pt;
-                        let _ = d_st_id;
+                        let dial_r = MacContextThumbDial::new(id_s, &mut latched, &mut rotary)
+                            .preset(MacThumbContextPreset::Primitives)
+                            .undo_arc_placement(egui_macview::MacThumbArcPlacement::TopCrown)
+                            .can_undo(true)
+                            .can_redo(true)
+                            .theme(&th)
+                            .show(ui);
+                        let _ = dial_r.sector_center(MacThumbSector::NorthEast);
                         ui.add_space(10.0);
-                        MacFreeJoystickBowl::new(id_s).theme(&th).show(ui);
+                        MacFreeJoystickBowl::new(id_s)
+                            .undo_arc_placement(egui_macview::MacThumbArcPlacement::TopCrown)
+                            .can_undo(true)
+                            .can_redo(true)
+                            .theme(&th)
+                            .show(ui);
                     });
                 }
             });
