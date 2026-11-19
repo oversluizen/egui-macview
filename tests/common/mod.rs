@@ -216,11 +216,23 @@ impl RetinaCpuFramebuffer {
                     let u = (w0 * v0.uv.x + w1 * v1.uv.x + w2 * v2.uv.x).clamp(0.0, 1.0);
                     let v = (w0 * v0.uv.y + w1 * v1.uv.y + w2 * v2.uv.y).clamp(0.0, 1.0);
                     if u > 0.0 || v > 0.0 {
-                        let tx = ((u * tw as f32) as usize).min(tw.saturating_sub(1));
-                        let ty = ((v * th as f32) as usize).min(th.saturating_sub(1));
-                        let tcol = tbuf[ty * tw + tx];
+                        let fx = (u * (tw as f32) - 0.5).clamp(0.0, (tw.saturating_sub(1)) as f32);
+                        let fy = (v * (th as f32) - 0.5).clamp(0.0, (th.saturating_sub(1)) as f32);
+                        let x0 = fx.floor() as usize;
+                        let y0 = fy.floor() as usize;
+                        let x1 = (x0 + 1).min(tw.saturating_sub(1));
+                        let y1 = (y0 + 1).min(th.saturating_sub(1));
+                        let tx = fx - x0 as f32;
+                        let ty = fy - y0 as f32;
+                        let p00 = tbuf[y0 * tw + x0];
+                        let p10 = tbuf[y0 * tw + x1];
+                        let p01 = tbuf[y1 * tw + x0];
+                        let p11 = tbuf[y1 * tw + x1];
                         for ch in 0..4 {
-                            rgba[ch] = ((rgba[ch] as u16 * tcol[ch] as u16) / 255) as u8;
+                            let top = p00[ch] as f32 * (1.0 - tx) + p10[ch] as f32 * tx;
+                            let bot = p01[ch] as f32 * (1.0 - tx) + p11[ch] as f32 * tx;
+                            let tcol = (top * (1.0 - ty) + bot * ty).round().clamp(0.0, 255.0) as u16;
+                            rgba[ch] = ((rgba[ch] as u16 * tcol) / 255) as u8;
                         }
                     }
                 }

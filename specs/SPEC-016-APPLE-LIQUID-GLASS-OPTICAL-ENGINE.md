@@ -200,40 +200,19 @@ Every public widget and layout container in `egui-macview` (52 total across the 
      - **Trailing edge** (following behind) uses a slightly softer trailing spring ($T_{\text{trail}} = 0.32\text{s}, \zeta = 0.76$).
    - During transit from segment/sector $A$ to $B$, $|b(t) - a(t)|$ automatically **stretches** wider than its resting width and then **coalesces** back to resting width upon arrival, with `is_at_rest()` returning `true` once both springs settle.
 
-### 4.4 Iteration P1 (`REQ-016-01.6`): True 2D-Grid SDF Pebble Dome Mesh (`6 × 24` = 175 Vertices per Cushion) & 4-Sided `vitrea` Schlick-Fresnel Bevels
+### 4.4 Iteration P1–P4 Replaced by Per-Pixel Raytraced Rosette Shader (`REQ-016-01.6`, `REQ-016-02.7`, `REQ-016-03.5`, `REQ-016-04.5`)
 
-1. **Elimination of Flat 1D Radial Strip Banding (`paint_annular_wedge_lit`):**
-   - Instead of stacking 3 overlapping 1D radial strips (`r_in..r_out`, `r_mid..r_out`, `r_top..r_out`) that only vary color radially and leave the two radial side edges (`start_deg` and `end_deg`) flat, every cushion in [`MacContextThumbDial`] (`N, NE, E, SE, S, SW, W, NW`) MUST be tessellated as a single 2D polar grid of `RADIAL_RINGS = 6` radial subdivisions by `ANGULAR_STEPS = 24` angular subdivisions (`7 × 25 = 175` vertices and `6 × 24 × 2 = 288` triangles per cushion).
-2. **Per-Vertex `vitrea::sdf_annular_rounded_sector_sample` & 4-Sided 3D Dome Normal (`vitrea::dome_normal_3d_from_sdf`):**
-   - At each grid coordinate $(u_r, u_\theta) \in [0, 1]^2$, the vertex position $\vec{p}(u_r, u_\theta)$ is placed on the filleted pebble contour $[r_{\text{fillet\_in}}(u_\theta), r_{\text{fillet\_out}}(u_\theta)]$.
-   - Its exact 2D SDF sample $(d(\vec{p}), \nabla d(\vec{p}))$ is evaluated via `vitrea::sdf_annular_rounded_sector_sample`, and its 3D outward surface normal $\vec{N}(\vec{p}) = (n_x, n_y, n_z)$ is computed via `vitrea::dome_normal_3d_from_sdf(sample, bevel_width_pt)`:
-     - Along **all 4 cushion boundaries** (the inner arc $u_r = 0$, the outer arc $u_r = 1$, the leading radial side $u_\theta = 0$, and the trailing radial side $u_\theta = 1$), $d(\vec{p}) \to 0 \implies n_z \to 0$ and $(n_x, n_y)$ points perpendicular to the local pebble edge.
-     - In the cushion interior plateau ($-d(\vec{p}) \ge w_{\text{bevel}}$), $n_z \to 1.0$.
-3. **5-Component Volumetric Pebble Dome Shading from $\vec{N}(\vec{p})$:**
-   - Each vertex color combines:
-     1. **4-Sided Bevel Curvature & Rim Darkening/Brightening**: Controlled by $n_z$ and top-light vertical normal component $(-n_y)$.
-     2. **Deep Sub-Surface Caustic Core**: Proportional to $n_z^2$, giving active/latched cushions a rich saturated sapphire/cyan core and raised pearl dome in Light Mode.
-     3. **Physical Schlick-Fresnel & Blinn-Phong Cursor Glint**: Evaluated per vertex via `vitrea::evaluate_schlick_fresnel_and_blinn_phong(p, n3d, cursor_pos, r_out, ior_glass)`, producing a continuous 3D specular highlight that wraps smoothly around all 4 rounded sides of the cushion as the cursor/thumb moves.
-
-### 4.5 Iteration P2 (`REQ-016-02.7`): Live Snellius 3D Lens Refraction (`vitrea::refract_ray_snell_3d` & `refract_chromatic_rgb`) Through the 8 Cushions & Center Hub
-
-1. **Refracted Sub-Cushion Dish Rings (`paint_annular_wedge_lit`):**
-   - For every cushion in [`MacContextThumbDial`], the underlying recessed dish precision rings at radii $r_{\text{lens},1} = r_{\text{in}} + 0.35(r_{\text{out}} - r_{\text{in}})$ and $r_{\text{lens},2} = r_{\text{in}} + 0.65(r_{\text{out}} - r_{\text{in}})$ are sampled across the angular span $[\theta_{\text{start}}, \theta_{\text{end}}]$ (`24` sample points per arc).
-   - At each sample point $\vec{p}_k$, the 3D cushion dome normal $\vec{N}(\vec{p}_k)$ is evaluated via `vitrea::sdf_annular_rounded_sector_sample` + `vitrea::dome_normal_3d_from_sdf`, and the point is refracted through the glass dome via `vitrea::refract_ray_snell_3d` ($\eta = 1.48$) and `vitrea::refract_chromatic_rgb` ($[\eta_R, \eta_G, \eta_B] = [1.474, 1.480, 1.488]$).
-   - Because $n_z \to 0$ near the 4 rounded pebble edges and $n_z \to 1$ at the center plateau, the refracted dish lines visibly bend and magnify at the cushion perimeter like a physical glass lens!
-
-### 4.6 Iteration P3 (`REQ-016-03.5`): Polar Liquid Selection & Hover Droplet (`Polar DualSpringMorphBlob` + `vitrea::sdf_smooth_union_with_grad`)
-
-1. **Coupled Polar Angle Springs ($\theta_{\text{lead}}(t), \theta_{\text{trail}}(t)$):**
-   - When the active/latched or hovered sector changes from angle $\theta_A$ to $\theta_B$, `step_dial_pointer_springs` steps two coupled continuous polar angle springs (`lg_polar_lead_deg`, `lg_polar_trail_deg`) along the shortest angular path $\Delta\theta = \text{shortest\_angle}(\theta_B, \theta_A)$:
-     - The **leading angle** uses the fast snappy spring ($T_{\text{lead}} = 0.5 T_0$) while the **trailing angle** uses the standard snappy spring ($T_{\text{trail}} = T_0$).
-   - During mid-flight transit ($|\theta_{\text{lead}}(t) - \theta_{\text{trail}}(t)| > 4^\circ$), a continuous translucent **3D Liquid Glass Morph Droplet Arc** spanning $[\min(\theta_{\text{lead}}, \theta_{\text{trail}}) - \alpha_0,\; \max(\theta_{\text{lead}}, \theta_{\text{trail}}) + \alpha_0]$ is rendered via `vitrea::sdf_annular_rounded_sector_sample` and `vitrea::dome_normal_3d_from_sdf`, visually stretching across the inter-cushion gap and coalescing onto the target cushion.
-
-### 4.7 Iteration P4 (`REQ-016-04.5`): Viscous Thumb Squash & Stretch (`vitrea::deform_viscous_droplet_point`, $\det J = 1$) on All 8 Cushions & 2.5D Optical Parallax
-
-1. **Per-Vertex Viscous Droplet Deformation on Cushions:**
-   - Every vertex $\vec{p}(u_r, u_\theta)$ of an active, held, or lifted cushion (`lift > 0.0`) in `paint_annular_wedge_lit` is transformed through `vitrea::deform_viscous_droplet_point(p, cushion_center, lift_velocity_vec, r_span, press_amount, (viscous_stretch_gain, viscous_press_gain))`.
-   - Under finger press or thumb drag, the glass cushion visibly expands and stretches toward the thumb vector while preserving 2D optical volume, and the 3-tier vector iconography (`SF Symbol` + `Caption` + `Shortcut`) floats above the caustic core with $1.5\times$ 2.5D depth parallax.
+1. **Why Gouraud Triangle Meshes (`WHITE_UV`) Are Forbidden for the Pie Menu Rosette:**
+   - Linear vertex-color interpolation (`WHITE_UV` Gouraud triangles) across sparse polar grids smears non-linear fifth-power Schlick-Fresnel curves $(1 - n_z)^5$, high-exponent Blinn-Phong specular rims $(\vec{N}\cdot\vec{H})^{24}$, Total Internal Reflection (TIR) inner absorption bands, and wavelength-dependent RGB chromatic dispersion $[\vec{p}_R, \vec{p}_G, \vec{p}_B]$ into flat, opaque plastic slabs.
+2. **Per-Pixel Composite SDF & Chromatic Snellius Raytracer (`render_rosette_liquid_glass_image`):**
+   - [`MacContextThumbDial`] renders its entire 3D glass housing, recessed bowl, 8 rounded annular pebble cushions (`N, NE, E, SE, S, SW, W, NW`), central hub lens, and smooth-union meniscus coalescing (`vitrea::sdf_smooth_union_with_grad`) into a per-pixel raytraced [`egui::ColorImage`] uploaded to an [`egui::TextureHandle`] (cached by quantized optical state) and drawn as a single textured quad (`uv: (0,0)..(1,1)`):
+     - **Structured Optical Backdrop Field:** Evaluates the recessed glass dish, outer 3D bevel, ambient contact cavities under each cushion, and subsurface azure/sapphire caustic glow under latched, held, and hovered cushions.
+     - **Exact Per-Pixel Composite SDF & 3D Dome Normal:** At every pixel $\vec{p} = (x, y)$, evaluates `vitrea::sdf_annular_rounded_sector_sample` (with `vitrea::deform_viscous_droplet_point` $\det J = 1$ viscous thumb deformation on active/lifted cushions), blends adjacent elevated cushions and the polar morph droplet (`lg_polar_lead`, `lg_polar_trail`) via `vitrea::sdf_smooth_union_with_grad`, and lifts the signed distance and 2D gradient into a 3D unit dome normal $\vec{N}(\vec{p}) = (n_x, n_y, n_z)$ via `vitrea::dome_normal_3d_from_sdf`.
+     - **Per-Pixel Chromatic 3D Snellius Refraction:** Evaluates `vitrea::refract_chromatic_rgb(p, N(p), dome_thickness, [1.474, 1.480, 1.488])` to sample the structured backdrop at three wavelength-dispersed coordinates $[\vec{p}_R, \vec{p}_G, \vec{p}_B]$.
+     - **Volumetric 3D Pebble Dome Shading (Golden Mockup Parity `render1_dark_mode_stand1_v3` & `render3_light_mode_aqua_stand1_v2`):**
+       - **Deep Recessed Inter-Cushion Channels:** In the gaps between cushions ($d_{\text{rosette}}(\vec{p}) > 0$), renders a deep recessed glass channel shadow and crisp contact ambient occlusion around every pebble silhouette.
+       - **Smooth Top-Left to Bottom-Right Convex Dome Gradient:** Inside each pebble ($d \le 0$), evaluates directional dome illumination $\vec{N}(\vec{p})\cdot\vec{L}_{\text{key}}$ combined with a Total Internal Reflection (TIR) inner rim absorption trough at $s \in [0.15, 0.45]$ and a crisp `1.5–2.5 px` directional Schlick-Fresnel + Blinn-Phong specular highlight rim along the curved perimeter ($d \in [-2.5\text{pt}, 0]$).
+       - **Luminous Subsurface Sapphire/Azure Core (Active/Latched/Hovered Cushion):** Active and latched cushions emit an intense internal sapphire/cyan volumetric core ($n_z^2$ subsurface transmission + outer neon blue ambient halo bleeding into the surrounding dish) matching `render1_dark_mode_stand1_v3` and `render3_light_mode_aqua_stand1_v2`.
 
 ---
 

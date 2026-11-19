@@ -464,56 +464,54 @@ pub fn paint_meniscus_smooth_union_bridge(
     painter.add(Shape::mesh(mesh));
 }
 
-/// Paints the velocity-stretched Polar `DualSpringMorphBlob` liquid droplet arc (`4 × 16 = 85` vertices)
-/// flowing across cushions during a sector transition (`Iter P3`, `REQ-016-03.5`).
-pub(crate) fn paint_polar_morph_droplet(
+/// Renders and caches the per-pixel raytraced 8-cushion Liquid Glass rosette [`egui::TextureHandle`]
+/// via `vitrea::render_rosette_liquid_glass_rgba` and draws it as a single textured UV quad (`SPEC-016 §4.4`).
+pub(crate) fn paint_raytraced_rosette_quad(
     painter: &Painter,
-    center: Pos2,
-    (r_in, r_out, fillet_pt): (f32, f32, f32),
-    (lead_deg, trail_deg): (f32, f32),
-    accent_col: Color32,
-    m: &ThumbDialMetrics,
+    id_source: egui::Id,
+    dial_rect: Rect,
+    scene: &vitrea::RosetteOpticalScene,
+    tex_dim: usize,
 ) {
-    let span_diff = (lead_deg - trail_deg).abs();
-    if span_diff <= m.sector_gap_deg.points() * 0.5 {
-        return;
+    use std::hash::{Hash, Hasher};
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    let max_u8 = f32::from(u8::MAX);
+    tex_dim.hash(&mut hasher);
+    scene.is_light_mode.hash(&mut hasher);
+    for ch in scene.accent_rgb {
+        ((ch * max_u8).round() as u8).hash(&mut hasher);
     }
-    let min_d = lead_deg.min(trail_deg) - m.diagonal_sweep_deg.points() * 0.5 * 0.5;
-    let max_d = lead_deg.max(trail_deg) + m.diagonal_sweep_deg.points() * 0.5 * 0.5;
-    let mid_d = (min_d + max_d) * 0.5;
-    let half_s = (max_d - min_d) * 0.5;
-    let rings = 4usize;
-    let steps = 16usize;
-    let bevel_w = m.bevel_width_pt.points().max(fillet_pt);
-    let mut mesh = egui::epaint::Mesh::default();
-    mesh.vertices.reserve((rings + 1) * (steps + 1));
-    mesh.indices.reserve(rings * steps * 6);
-    for r_i in 0..=rings {
-        let u_r = r_i as f32 / rings as f32;
-        let r = r_in + (r_out - r_in) * u_r;
-        for j in 0..=steps {
-            let a = min_d + (max_d - min_d) * (j as f32 / steps as f32);
-            let pt = super::context_thumb_dial::render::polar_pos(center, r, a, m);
-            let s_p = vitrea::sdf_annular_rounded_sector_sample(
-                glam_pt(pt),
-                glam_pt(center),
-                (r_in, r_out),
-                (mid_d, half_s),
-                fillet_pt,
-            );
-            let n3d = dome_surface_normal_3d_from_sample(s_p, bevel_w);
-            let alpha = (n3d[2] * m.active_fill_opacity.points()).clamp(0.0, 1.0);
-            mesh.colored_vertex(pt, accent_col.gamma_multiply(alpha));
+    if let Some(cp) = scene.cursor_pos {
+        ((cp.x * 2.0).round() as i32).hash(&mut hasher);
+        ((cp.y * 2.0).round() as i32).hash(&mut hasher);
+    }
+    for c in &scene.cushions {
+        ((c.center.x * 2.0).round() as i32).hash(&mut hasher);
+        ((c.center.y * 2.0).round() as i32).hash(&mut hasher);
+        ((c.radii.1 * 2.0).round() as i32).hash(&mut hasher);
+        ((c.active_weight * max_u8).round() as i32).hash(&mut hasher);
+        ((c.lift_weight * max_u8).round() as i32).hash(&mut hasher);
+    }
+    let state_hash = hasher.finish();
+    let cache_id = id_source.with("lg_rosette_ray_tex");
+    let ctx = painter.ctx();
+    let cached = ctx.data(|d| d.get_temp::<(u64, egui::TextureHandle)>(cache_id));
+    let tex_handle = match cached {
+        Some((prev_h, handle)) if prev_h == state_hash => handle,
+        _ => {
+            let rgba = vitrea::render_rosette_liquid_glass_rgba(tex_dim, tex_dim, scene);
+            let mut flat = Vec::with_capacity(rgba.len() * 4);
+            for px in rgba {
+                flat.extend_from_slice(&px);
+            }
+            let img = ColorImage::from_rgba_unmultiplied([tex_dim, tex_dim], &flat);
+            let handle = ctx.load_texture("vitrea_rosette_lg", img, egui::TextureOptions::LINEAR);
+            ctx.data_mut(|d| d.insert_temp(cache_id, (state_hash, handle.clone())));
+            handle
         }
-    }
-    let stride = (steps + 1) as u32;
-    for r_i in 0..rings {
-        for j in 0..steps {
-            let b0 = (r_i as u32) * stride + (j as u32);
-            let b1 = b0 + stride;
-            mesh.add_triangle(b0, b1, b1 + 1);
-            mesh.add_triangle(b0, b1 + 1, b0 + 1);
-        }
-    }
+    };
+    let mut mesh = egui::epaint::Mesh::with_texture(tex_handle.id());
+    let tint = Color32::from(egui::epaint::Hsva::new(0.0, 0.0, 1.0, 1.0));
+    mesh.add_rect_with_uv(dial_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), tint);
     painter.add(Shape::mesh(mesh));
 }

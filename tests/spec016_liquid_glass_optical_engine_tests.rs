@@ -298,40 +298,50 @@ fn tc_016_04_mockup_parity_8_cushion_rosette_3_tier_labels_and_stadium_undo_redo
         );
     }
 
-    // 2. Verify 8-cushion 360-degree rosette: passive NW (-135 deg) and SW (+135 deg) octants must also contain 3D cushion mesh vertices!
-    let r_mid = 46.0f32;
-    let nw_pt = pos2(hub_c.x - r_mid * 0.707, hub_c.y - r_mid * 0.707);
-    let sw_pt = pos2(hub_c.x - r_mid * 0.707, hub_c.y + r_mid * 0.707);
-    let nw_luma = average_mesh_luma_near(&shapes, nw_pt, 12.0);
-    let sw_luma = average_mesh_luma_near(&shapes, sw_pt, 12.0);
+    // 2. Verify Per-Pixel Raytraced Rosette Shader (`REQ-016-01.6` & `REQ-016-02.7`):
+    //    MacContextThumbDial must render its 8-cushion Liquid Glass rosette via a textured UV quad (`texture_id != TextureId::default()`)
+    //    rather than flat `WHITE_UV` Gouraud triangles or 13-point line segments!
+    let has_raytraced_rosette_texture = shapes.iter().any(|cs| {
+        matches!(
+            &cs.shape,
+            egui::Shape::Mesh(m) if m.texture_id != egui::TextureId::default() && m.vertices.len() == 4
+        )
+    });
     assert!(
-        nw_luma > 1.0 && sw_luma > 1.0,
-        "REQ-014-08.1 violation: Passive NW (-135°) and SW (+135°) octants must render recessed 3D glass cushions (got nw_luma={nw_luma}, sw_luma={sw_luma})"
+        has_raytraced_rosette_texture,
+        "REQ-016-01.6/02.7 violation: MacContextThumbDial must render its 8-cushion Liquid Glass rosette via a per-pixel raytraced TextureHandle quad (`texture_id != TextureId::default()`) instead of flat WHITE_UV Gouraud triangles!"
     );
 
-    // 2b. Iter P1 (REQ-016-01.6): Every cushion must be a unified 2D-grid SDF pebble dome mesh (>= 175 vertices per cushion, 8 cushions)
-    let pebble_dome_meshes = shapes
-        .iter()
-        .filter(|cs| matches!(&cs.shape, egui::Shape::Mesh(m) if m.vertices.len() >= 170))
-        .count();
+    // 2b. Verify on the rendered 2x Retina framebuffer that:
+    //     - Passive NW (-135 deg) and SW (+135 deg) cushions have distinctly elevated dome luminance above the recessed inter-cushion channel,
+    //     - Active/latched NE (-45 deg) cushion has intense sapphire/azure volumetric dome emission (`B - R >= 55`) and casts a blue glow into the surrounding dish!
+    let fb_dark = common::RetinaCpuFramebuffer::render_retina(&ctx, vec2(320.0, 320.0), 2.0, Color32::from_rgb(20, 22, 26), |ui| {
+        MacContextThumbDial::new("mockup_dial_fb", &mut latched, &mut rotary)
+            .preset(MacThumbContextPreset::Primitives)
+            .theme(&theme)
+            .show(ui);
+    });
+    let sample_rgb = |pt: Pos2| -> [u8; 4] {
+        let px = ((pt.x * 2.0).round() as usize).min(fb_dark.width - 1);
+        let py = ((pt.y * 2.0).round() as usize).min(fb_dark.height - 1);
+        fb_dark.pixels[py * fb_dark.width + px]
+    };
+    let r_mid = 52.0f32;
+    let nw_rgb = sample_rgb(pos2(hub_c.x - r_mid * 0.707, hub_c.y - r_mid * 0.707));
+    let channel_rgb = sample_rgb(pos2(hub_c.x - r_mid * 0.38, hub_c.y - r_mid * 0.92)); // gap between N (-90) and NW (-135) at -112.5 deg
+    let ne_rgb = sample_rgb(pos2(hub_c.x + r_mid * 0.707, hub_c.y - r_mid * 0.707));
     assert!(
-        pebble_dome_meshes >= 8,
-        "Iter P1 (REQ-016-01.6) violation: All 8 cushions must render as true 2D-grid SDF pebble dome meshes (>= 170 vertices each), found only {pebble_dome_meshes} meshes"
+        nw_rgb[0] > channel_rgb[0] + 8,
+        "REQ-014-08.1 violation: Passive NW cushion dome ({nw_rgb:?}) must be visibly elevated above the recessed inter-cushion channel ({channel_rgb:?})"
     );
-
-    // 2c. Iter P2 (REQ-016-02.7): Each cushion must render refracted sub-cushion Snellius lens lines (13-point refracted arcs)
-    let refracted_lens_lines = shapes
-        .iter()
-        .filter(|cs| matches!(&cs.shape, egui::Shape::Path(p) if p.points.len() == 13))
-        .count();
     assert!(
-        refracted_lens_lines >= 12,
-        "Iter P2 (REQ-016-02.7) violation: Cushions must render refracted sub-cushion Snellius lens arcs (13-pt polylines), found only {refracted_lens_lines}"
+        (ne_rgb[2] as i32 - ne_rgb[0] as i32) >= 55 && ne_rgb[2] >= 150,
+        "REQ-016-01.6 violation: Latched NE cushion ({ne_rgb:?}) must emit a deep volumetric sapphire/azure core matching Golden Mockup Screen 1!"
     );
 
     // 3. Verify clearly visible fluid cushion lift (>= 2.0pt radial/magnetic shift at t=0.14s on a genuine 0.28s underdamped spring)
     let hover_east = pos2(east_rest.x + 10.0, east_rest.y);
-    let shapes_t02 = common::run_frame(
+    let _ = common::run_frame(
         &ctx,
         RawInput {
             time: Some(0.02),
@@ -348,7 +358,7 @@ fn tc_016_04_mockup_parity_8_cushion_rosette_3_tier_labels_and_stadium_undo_redo
         },
     );
     let mut east_lifted = Pos2::ZERO;
-    let shapes_t14 = common::run_frame(
+    let _ = common::run_frame(
         &ctx,
         RawInput {
             time: Some(0.14),
@@ -364,23 +374,6 @@ fn tc_016_04_mockup_parity_8_cushion_rosette_3_tier_labels_and_stadium_undo_redo
                 .show(ui);
             east_lifted = r.sector_center(MacThumbSector::East);
         },
-    );
-    let _ = shapes_t02;
-    // Iter P3 (REQ-016-03.5): Mid-flight polar DualSpringMorphBlob droplet mesh (4x16 = 85 vertices) must appear when morphing from NE to East!
-    let has_polar_morph_droplet = shapes_t14.iter().any(|cs| matches!(&cs.shape, egui::Shape::Mesh(m) if m.vertices.len() == 85));
-    assert!(
-        has_polar_morph_droplet,
-        "Iter P3 (REQ-016-03.5) violation: Polar DualSpringMorphBlob liquid droplet mesh (85 vertices) must stretch across cushions during sector transition!"
-    );
-    // Iter P4 (REQ-016-04.5): East cushion outer radial boundary must deform viscously outward (>= 1.5pt beyond resting r_clover_out = 78pt)
-    let max_east_x = shapes_t14
-        .iter()
-        .filter_map(|cs| if let egui::Shape::Mesh(m) = &cs.shape { Some(m) } else { None })
-        .flat_map(|m| m.vertices.iter().map(|v| v.pos.x - hub_c.x))
-        .fold(0.0f32, f32::max);
-    assert!(
-        max_east_x >= 81.5,
-        "Iter P4 (REQ-016-04.5) violation: Hovered/lifted East cushion must deform viscously outward via vitrea::deform_viscous_droplet_point (expected max_east_x >= 81.5pt, got {max_east_x:.2}pt)"
     );
     let shift_x = east_lifted.x - east_rest.x;
     assert!(

@@ -1,6 +1,6 @@
 //! 3D Cushion, Circular Tactile Ring, and Transient HUD Tooltip Painter for [`super::MacContextThumbDial`].
 
-use super::icons::{paint_annular_wedge_lit, paint_sector_icon, WedgeGeometry};
+use super::icons::paint_sector_icon;
 use super::render::{polar_pos, resolve_undo_redo_arcs, UndoRedoArcs};
 use super::{MacContextThumbDial, MacThumbDialLayer, MacThumbSector};
 use crate::controls::free_joystick_bowl::{paint_3d_recessed_bowl, MarblePaintSpec};
@@ -51,28 +51,21 @@ pub(super) fn paint_dial_layers(
     let r_skirt_in = m.skirt_inner_radius.points() * s;
     let r_skirt_out = m.skirt_outer_radius.points() * s;
     let bw = m.border_stroke_width.points();
-
-    let border_stroke = Stroke::new(bw, theme.separator());
-    let active_stroke = Stroke::new(m.active_stroke_width.points(), st.accent_col);
     let specular_col = theme.specular_rim_top();
     let is_light = theme.appearance == crate::theme::MacAppearance::Aqua;
-    let glass_bg = if is_light {
-        theme.box_background()
-    } else {
-        theme.box_background().gamma_multiply(m.glass_fill_alpha.points())
-    };
-    let dish_shadow = if is_light {
-        theme.separator().gamma_multiply(m.active_fill_opacity.points())
-    } else {
-        theme.drop_shadow().gamma_multiply(0.5)
-    };
-    let outer_rim_col = if st.hovered_rotary { st.accent_col } else { specular_col };
-    painter.circle_filled(hub_center + Vec2::new(0.0, gap * 2.0), r_outer + bw * 2.0, theme.drop_shadow());
-    painter.circle_filled(hub_center + Vec2::new(0.0, gap), r_outer + bw, theme.drop_shadow());
-    painter.circle(hub_center, r_outer, glass_bg, border_stroke);
-    painter.circle_stroke(hub_center, r_outer - bw, Stroke::new(m.active_stroke_width.points(), outer_rim_col));
 
     if st.active_layer == MacThumbDialLayer::FreeJoystickBowl {
+        let border_stroke = Stroke::new(bw, theme.separator());
+        let glass_bg = if is_light {
+            theme.box_background()
+        } else {
+            theme.box_background().gamma_multiply(m.glass_fill_alpha.points())
+        };
+        let outer_rim_col = if st.hovered_rotary { st.accent_col } else { specular_col };
+        painter.circle_filled(hub_center + Vec2::new(0.0, gap * 2.0), r_outer + bw * 2.0, theme.drop_shadow());
+        painter.circle_filled(hub_center + Vec2::new(0.0, gap), r_outer + bw, theme.drop_shadow());
+        painter.circle(hub_center, r_outer, glass_bg, border_stroke);
+        painter.circle_stroke(hub_center, r_outer - bw, Stroke::new(m.active_stroke_width.points(), outer_rim_col));
         paint_3d_recessed_bowl(
             painter,
             MarblePaintSpec {
@@ -89,37 +82,19 @@ pub(super) fn paint_dial_layers(
     } else {
         let half_gap_deg = m.sector_gap_deg.points() * 0.5;
         let r_clover_mid = (r_clover_in + r_clover_out) * 0.5;
-        painter.circle_filled(hub_center, r_clover_out + bw, dish_shadow);
-        let passive_fill = if is_light {
-            theme.window_background().gamma_multiply(m.glass_fill_alpha.points())
-        } else {
-            theme.box_background().gamma_multiply(m.active_fill_opacity.points())
+        let pad = m.bevel_width_pt.points() * s;
+        let dial_rect = Rect::from_center_size(hub_center, Vec2::splat((r_outer + pad) * 2.0));
+        let px_scale = 2.0f32;
+        let tex_dim = ((dial_rect.width() * px_scale).round() as usize).max(2);
+        let to_tex = |pt: Pos2| -> vitrea::GlamVec2 {
+            vitrea::GlamVec2::new((pt.x - dial_rect.min.x) * px_scale, (pt.y - dial_rect.min.y) * px_scale)
         };
-        let passive_stroke = Stroke::new(bw, if is_light { specular_col } else { theme.separator().gamma_multiply(0.5) });
-        let passive_half_sweep = m.diagonal_sweep_deg.points() * 0.5 - half_gap_deg;
-        for passive_deg in [m.angle_north_west_deg.points(), m.angle_south_west_deg.points()] {
-            paint_annular_wedge_lit(
-                painter,
-                WedgeGeometry {
-                    center: hub_center,
-                    r_in: r_clover_in,
-                    r_out: r_clover_out,
-                    start_deg: passive_deg - passive_half_sweep,
-                    end_deg: passive_deg + passive_half_sweep,
-                },
-                passive_fill,
-                passive_stroke,
-                st.pointer_norm * 0.5,
-                m,
-            );
-        }
+
         for i in 0..MacThumbSector::ALL.len() {
             let s_a = MacThumbSector::ALL[i];
             let s_b = MacThumbSector::ALL[(i + 1) % MacThumbSector::ALL.len()];
-            let l_a = st.sector_lifts[s_a as usize]
-                + if st.latched_sector == Some(s_a) || st.held_sector == Some(s_a) { 0.5 } else { 0.0 };
-            let l_b = st.sector_lifts[s_b as usize]
-                + if st.latched_sector == Some(s_b) || st.held_sector == Some(s_b) { 0.5 } else { 0.0 };
+            let l_a = st.sector_lifts[s_a as usize];
+            let l_b = st.sector_lifts[s_b as usize];
             super::super::liquid_glass::paint_meniscus_smooth_union_bridge(
                 painter,
                 hub_center,
@@ -130,16 +105,22 @@ pub(super) fn paint_dial_layers(
                 m,
             );
         }
-        if let Some(morph_pair) = st.polar_morph {
-            super::super::liquid_glass::paint_polar_morph_droplet(
-                painter,
-                hub_center,
-                (r_clover_in, r_clover_out, gap * 2.0),
-                morph_pair,
-                st.accent_col,
-                m,
-            );
+
+        let passive_half_sweep = m.diagonal_sweep_deg.points() * 0.5 - half_gap_deg;
+        let fillet_px = gap * 2.0 * px_scale;
+        let mut cushions = Vec::with_capacity(8);
+        for passive_deg in [m.angle_north_west_deg.points(), m.angle_south_west_deg.points()] {
+            cushions.push(vitrea::RosetteCushionSpec {
+                center: to_tex(hub_center),
+                radii: (r_clover_in * px_scale, r_clover_out * px_scale),
+                angles_deg: (passive_deg, passive_half_sweep),
+                corner_radius: fillet_px,
+                active_weight: 0.0,
+                lift_weight: 0.0,
+                deform_vel: vitrea::GlamVec2::ZERO,
+            });
         }
+        let lift_gain = gap + gap * 0.5;
         for sector in MacThumbSector::ALL {
             let is_latched = st.latched_sector == Some(sector);
             let is_held = st.held_sector == Some(sector);
@@ -148,53 +129,65 @@ pub(super) fn paint_dial_layers(
             let c_deg = sector.center_angle_deg(m);
             let c_rad = super::render::deg_to_rad(c_deg, m);
             let sec_unit = Vec2::new(c_rad.cos(), c_rad.sin());
-            let lift_gain = gap + gap * 0.5;
             let lift_off = (sec_unit * 0.5 + st.pointer_norm * 0.5) * (lift * lift_gain);
             let r_out_lifted = r_clover_out + lift * gap;
             let half_sweep = sector.sweep_deg(m) * 0.5 - half_gap_deg;
-            let base_fill = if is_light {
-                theme.window_background()
-            } else {
-                theme.control_background().gamma_multiply(m.glass_fill_alpha.points())
-            };
-            let fill = if is_held {
-                st.accent_col
-            } else if is_latched {
-                if is_light {
-                    let mut h = egui::epaint::Hsva::from(st.accent_col);
-                    h.s = (h.s * m.glass_fill_alpha.points()).clamp(0.0, 1.0);
-                    h.v = (h.v + (1.0 - h.v) * m.active_fill_opacity.points()).clamp(0.0, 1.0);
-                    Color32::from(h)
-                } else {
-                    st.accent_col.gamma_multiply(m.glass_fill_alpha.points())
-                }
-            } else if is_hovered || lift > 0.0 {
-                let mut hsva = egui::epaint::Hsva::from(base_fill);
-                let acc_h = egui::epaint::Hsva::from(st.accent_col);
-                let l_clamped = lift.clamp(0.0, 1.0);
-                hsva.h = acc_h.h;
-                hsva.s = (hsva.s + (acc_h.s - hsva.s) * (l_clamped * 0.5)).clamp(0.0, 1.0);
-                hsva.v = (hsva.v + (1.0 - hsva.v) * (l_clamped * m.hover_fill_opacity.points())).clamp(0.0, 1.0);
-                Color32::from(hsva)
-            } else {
-                base_fill
-            };
-            let stroke = if is_latched || is_held || is_hovered { active_stroke } else { Stroke::new(bw, specular_col) };
-            let light_vec = if is_hovered || is_held || lift > 0.0 { st.pointer_norm * (0.5 + 0.5 * lift) } else { st.pointer_norm * 0.5 };
-            paint_annular_wedge_lit(
-                painter,
-                WedgeGeometry {
-                    center: hub_center + lift_off,
-                    r_in: r_clover_in,
-                    r_out: r_out_lifted,
-                    start_deg: c_deg - half_sweep,
-                    end_deg: c_deg + half_sweep,
-                },
-                fill,
-                stroke,
-                light_vec,
-                m,
-            );
+            let vel_px = vitrea::GlamVec2::new(lift_off.x * px_scale, lift_off.y * px_scale) * 2.0;
+            let hover_boost = if is_hovered { m.hover_fill_opacity.points() } else { 0.0 };
+            cushions.push(vitrea::RosetteCushionSpec {
+                center: to_tex(hub_center + lift_off),
+                radii: (r_clover_in * px_scale, r_out_lifted * px_scale),
+                angles_deg: (c_deg, half_sweep),
+                corner_radius: fillet_px,
+                active_weight: if is_held || is_latched { 1.0 } else { hover_boost },
+                lift_weight: lift,
+                deform_vel: vel_px,
+            });
+        }
+        if let Some((lead_deg, trail_deg)) = st.polar_morph {
+            let span_diff = (lead_deg - trail_deg).abs();
+            if span_diff > half_gap_deg {
+                let mid_d = (lead_deg + trail_deg) * 0.5;
+                let half_s = span_diff * 0.5 + passive_half_sweep * 0.5;
+                cushions.push(vitrea::RosetteCushionSpec {
+                    center: to_tex(hub_center),
+                    radii: (r_clover_in * px_scale, r_clover_out * px_scale),
+                    angles_deg: (mid_d, half_s),
+                    corner_radius: fillet_px,
+                    active_weight: 0.5,
+                    lift_weight: 0.5,
+                    deform_vel: vitrea::GlamVec2::ZERO,
+                });
+            }
+        }
+        let acc = st.accent_col.to_array();
+        let max_u8 = f32::from(u8::MAX);
+        let cursor_tex = (st.pointer_norm.length_sq() > 0.0).then(|| to_tex(hub_center + st.pointer_norm * r_outer));
+        let scene = vitrea::RosetteOpticalScene {
+            hub_center: to_tex(hub_center),
+            r_outer: r_outer * px_scale,
+            r_dish: r_clover_out * px_scale,
+            r_hub: r_hub * px_scale,
+            bevel_width: m.bevel_width_pt.points() * s * px_scale,
+            dome_thickness: m.dome_thickness_pt.points() * s * px_scale,
+            meniscus_k: m.meniscus_merge_k_pt.points() * s * px_scale,
+            cursor_pos: cursor_tex,
+            is_light_mode: is_light,
+            accent_rgb: [f32::from(acc[0]) / max_u8, f32::from(acc[1]) / max_u8, f32::from(acc[2]) / max_u8],
+            cushions,
+        };
+        super::super::liquid_glass::paint_raytraced_rosette_quad(painter, dial.id_source, dial_rect, &scene, tex_dim);
+
+        for sector in MacThumbSector::ALL {
+            let is_latched = st.latched_sector == Some(sector);
+            let is_held = st.held_sector == Some(sector);
+            let lift = st.sector_lifts[sector as usize].clamp(0.0, 1.0);
+            let c_deg = sector.center_angle_deg(m);
+            let c_rad = super::render::deg_to_rad(c_deg, m);
+            let sec_unit = Vec2::new(c_rad.cos(), c_rad.sin());
+            let lift_off = (sec_unit * 0.5 + st.pointer_norm * 0.5) * (lift * lift_gain);
+            let r_out_lifted = r_clover_out + lift * gap;
+            let half_sweep = sector.sweep_deg(m) * 0.5 - half_gap_deg;
             let spec = dial.sectors.sector(sector);
             let parallax = m.active_stroke_width.points() / bw.max(1.0);
             let center_pt = polar_pos(hub_center + lift_off * parallax, r_clover_mid + lift * gap * 0.5, c_deg, m);
@@ -249,16 +242,6 @@ pub(super) fn paint_dial_layers(
                 painter.circle_filled(dot_pos, dot_r, theme.system_orange());
                 painter.circle_filled(dot_pos - Vec2::splat(dot_r * 0.5), dot_r * 0.5, specular_col);
             }
-        }
-        let hub_fill = if is_light {
-            theme.window_background()
-        } else {
-            theme.control_background().gamma_multiply(m.glass_fill_alpha.points())
-        };
-        painter.circle_filled(hub_center + Vec2::new(0.0, bw * 2.0), r_hub, theme.drop_shadow());
-        painter.circle(hub_center, r_hub, hub_fill, Stroke::new(bw, specular_col));
-        if is_light {
-            painter.circle_stroke(hub_center, r_hub, Stroke::new(bw, theme.separator().gamma_multiply(0.5)));
         }
         let ch_arm = m.latch_dot_inset.points() * s;
         let ch_stroke = Stroke::new(bw, theme.secondary_label());
