@@ -6,8 +6,8 @@
 
 use super::setup_system_or_custom_fonts;
 use crate::{GalleryApp, GalleryScreen};
-use egui::{pos2, vec2, Align, Context, Event, Key, Layout, Modifiers, MouseWheelUnit, PointerButton, Pos2, RawInput, Rect, Ui};
-use egui_macview::{theme::MacTheme, MacButtonCell, MacSegmentedControl};
+use egui::{pos2, vec2, Align, Context, Layout, Rect, Ui};
+use egui_macview::{theme::MacTheme, MacButtonCell, MacSegmentedControl, MacWebGlSession};
 #[cfg(not(target_arch = "wasm32"))]
 use std::{
     io::{Read, Write},
@@ -18,17 +18,23 @@ use std::{
 #[cfg(not(target_arch = "wasm32"))]
 const MOBILE_WEB_HTML: &str = include_str!("mobile_web_html.html");
 
-/// Interactive headless `GalleryApp` session driving the mobile/tablet WebGL2 `<canvas>`.
+/// Interactive headless `GalleryApp` session driving the mobile/tablet WebGL2 `<canvas>` via [`MacWebGlSession`].
 pub(crate) struct MobileWebSession {
-    pub(crate) ctx: Context,
+    pub(crate) web: MacWebGlSession,
     pub(crate) app: GalleryApp,
-    pub(crate) atlas_rgba: Vec<u8>,
-    pub(crate) atlas_width: u32,
-    pub(crate) atlas_height: u32,
-    pub(crate) atlas_version: u32,
-    pub(crate) time_secs: f64,
-    pub(crate) last_pos: Pos2,
-    pub(crate) last_viewport: (f32, f32, f32),
+}
+
+impl std::ops::Deref for MobileWebSession {
+    type Target = MacWebGlSession;
+    fn deref(&self) -> &Self::Target {
+        &self.web
+    }
+}
+
+impl std::ops::DerefMut for MobileWebSession {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.web
+    }
 }
 
 impl MobileWebSession {
@@ -36,237 +42,38 @@ impl MobileWebSession {
         let ctx = Context::default();
         setup_system_or_custom_fonts(&ctx);
         let mut session = Self {
-            ctx,
+            web: MacWebGlSession::with_context(ctx),
             app: GalleryApp::new(),
-            atlas_rgba: Vec::new(),
-            atlas_width: 0,
-            atlas_height: 0,
-            atlas_version: 0,
-            time_secs: 1.0,
-            last_pos: pos2(180.0, 200.0),
-            last_viewport: (390.0, 844.0, 2.0),
         };
         let _ = session.encode_frame(390.0, 844.0, 2.0, "");
         session
     }
 
     pub(crate) fn encode_atlas(&self) -> Vec<u8> {
-        let mut out = Vec::with_capacity(8 + self.atlas_rgba.len());
-        out.extend_from_slice(&self.atlas_width.to_le_bytes());
-        out.extend_from_slice(&self.atlas_height.to_le_bytes());
-        out.extend_from_slice(&self.atlas_rgba);
-        out
+        self.web.encode_atlas()
     }
 
     pub(crate) fn encode_frame(&mut self, width_arg: f32, height_arg: f32, dpr_arg: f32, body: &str) -> Vec<u8> {
-        if (width_arg - 390.0).abs() > 0.5 || (height_arg - 844.0).abs() > 0.5 {
-            self.last_viewport = (width_arg.clamp(280.0, 2560.0), height_arg.clamp(320.0, 2560.0), dpr_arg.clamp(1.0, 3.0));
-        }
-        let (mut width, mut height, mut dpr) = self.last_viewport;
-        let mut event_passes: Vec<Vec<Event>> = vec![Vec::new()];
-        let mut has_press_in_current_pass = false;
-        let mut client_clock: Option<f64> = None;
-        for line in body.lines() {
-            let parts: Vec<&str> = line.split_whitespace().collect();
-            match parts.as_slice() {
-                ["V", w, h, d] => {
-                    width = w.parse::<f32>().unwrap_or(width).clamp(280.0, 2560.0);
-                    height = h.parse::<f32>().unwrap_or(height).clamp(320.0, 2560.0);
-                    dpr = d.parse::<f32>().unwrap_or(dpr).clamp(1.0, 3.0);
-                    self.last_viewport = (width, height, dpr);
-                }
-                ["C", t_str] => {
-                    if let Ok(t) = t_str.parse::<f64>() {
-                        client_clock = Some(t);
-                    }
-                }
-                ["M", x, y] => {
-                    let p = pos2(x.parse().unwrap_or(0.0), y.parse().unwrap_or(0.0));
-                    self.last_pos = p;
-                    if let Some(cur) = event_passes.last_mut() {
-                        cur.push(Event::PointerMoved(p));
-                    }
-                }
-                ["D", x, y] => {
-                    let p = pos2(x.parse().unwrap_or(0.0), y.parse().unwrap_or(0.0));
-                    (self.last_pos, has_press_in_current_pass) = (p, true);
-                    if let Some(cur) = event_passes.last_mut() {
-                        cur.push(Event::PointerMoved(p));
-                        cur.push(Event::PointerButton {
-                            pos: p,
-                            button: PointerButton::Primary,
-                            pressed: true,
-                            modifiers: Modifiers::NONE,
-                        });
-                    }
-                }
-                ["U", x, y] => {
-                    let p = pos2(x.parse().unwrap_or(0.0), y.parse().unwrap_or(0.0));
-                    self.last_pos = p;
-                    if has_press_in_current_pass {
-                        event_passes.push(Vec::new());
-                        has_press_in_current_pass = false;
-                    }
-                    if let Some(cur) = event_passes.last_mut() {
-                        cur.push(Event::PointerMoved(p));
-                        cur.push(Event::PointerButton {
-                            pos: p,
-                            button: PointerButton::Primary,
-                            pressed: false,
-                            modifiers: Modifiers::NONE,
-                        });
-                    }
-                }
-                ["W", dx, dy] => {
-                    let delta = vec2(dx.parse().unwrap_or(0.0), dy.parse().unwrap_or(0.0));
-                    if let Some(cur) = event_passes.last_mut() {
-                        cur.push(Event::MouseWheel {
-                            unit: MouseWheelUnit::Point,
-                            delta,
-                            modifiers: Modifiers::NONE,
-                            phase: egui::TouchPhase::Move,
-                            source: egui::MouseWheelSource::Trackpad,
-                        });
-                    }
-                }
-                ["K", k] => {
-                    if let Some(key) = match *k {
-                        "Backspace" => Some(Key::Backspace),
-                        "Enter" => Some(Key::Enter),
-                        "ArrowUp" => Some(Key::ArrowUp),
-                        "ArrowDown" => Some(Key::ArrowDown),
-                        "Escape" => Some(Key::Escape),
-                        _ => None,
-                    } {
-                        if let Some(cur) = event_passes.last_mut() {
-                            cur.push(Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers: Modifiers::NONE });
-                        }
-                    }
-                }
-                _ if line.starts_with("T ") => {
-                    let payload = &line[2..];
-                    if let Some(rest) = payload.strip_prefix('\u{1f}') {
-                        let (name, kb) = rest.split_once('|').unwrap_or((rest, "1024"));
-                        let ext = std::path::Path::new(name).extension().and_then(|e| e.to_str()).unwrap_or("FILE").to_uppercase();
-                        self.app.center.finder_custom_entries.push(super::FinderCustomEntry {
-                            name: name.to_string(),
-                            path: std::path::PathBuf::from(format!("/Users/studio/Local_Disk/{name}")),
-                            is_dir: false,
-                            size_mb: (kb.parse::<u32>().unwrap_or(1024) / 1024).max(1),
-                            codec: ext,
-                            duration: "Local Disk".to_string(),
-                            rating: 5,
-                            tags: vec!["Local".to_string(), "Browser".to_string()],
-                        });
-                        self.app.center.finder_current_dir = Some(std::path::PathBuf::from("/Users/studio/Local_Disk"));
-                    } else if let Some(cur) = event_passes.last_mut().filter(|_| !payload.is_empty()) {
-                        cur.push(Event::Text(payload.to_string()));
-                    }
-                }
-                _ => {}
-            }
-        }
-
-        let mut last_shapes = Vec::new();
-        let mut anim_active = false;
-        let mut cursor_code = 0u32;
-        if let Some(ct) = client_clock {
-            self.time_secs = ct.max(self.time_secs + 0.0005);
-        }
-        for (pass_idx, events) in event_passes.into_iter().enumerate() {
-            if client_clock.is_none() || pass_idx > 0 {
-                self.time_secs += 1.0 / 60.0;
-            }
-            let mut raw = RawInput {
-                screen_rect: Some(Rect::from_min_size(Pos2::ZERO, vec2(width, height))),
-                time: Some(self.time_secs),
-                focused: true,
-                events,
-                ..Default::default()
-            };
-            raw.viewports.entry(egui::ViewportId::ROOT).or_default().native_pixels_per_point = Some(dpr);
-
-            let mut full_output = self.ctx.run_ui(raw, |ui| self.app.render_ui(ui));
-            if full_output
-                .viewport_output
-                .get(&egui::ViewportId::ROOT)
-                .is_some_and(|v| v.repaint_delay <= std::time::Duration::from_millis(100))
-            {
-                anim_active = true;
-            }
-            use egui::CursorIcon as C;
-            cursor_code = match full_output.platform_output.cursor_icon {
-                C::ResizeHorizontal | C::ResizeColumn | C::ResizeEast | C::ResizeWest => 1,
-                C::ResizeVertical | C::ResizeRow | C::ResizeNorth | C::ResizeSouth => 2,
-                C::ResizeSouthEast | C::ResizeNorthWest | C::ResizeNwSe => 3,
-                C::PointingHand => 4,
-                C::Text | C::VerticalText => 5,
-                _ => 0,
-            };
-            self.apply_texture_deltas(&full_output.textures_delta);
-            full_output.textures_delta.clear();
-            last_shapes = full_output.shapes;
-        }
-        let meshes: Vec<_> = self
-            .ctx
-            .tessellate(last_shapes, dpr)
-            .into_iter()
-            .filter_map(|c| match c.primitive {
-                egui::epaint::Primitive::Mesh(m)
-                    if m.texture_id == egui::TextureId::Managed(0) && !m.vertices.is_empty() && !m.indices.is_empty() =>
-                {
-                    Some((c.clip_rect, m))
-                }
-                _ => None,
-            })
-            .collect();
-
-        let ver_word = (self.atlas_version & 0x0FFF_FFFF) | ((cursor_code & 0x7) << 28) | if anim_active { 0x8000_0000 } else { 0 };
-        let mut buf = Vec::with_capacity(4096);
-        buf.extend_from_slice(b"MWGL");
-        for u in [ver_word, self.atlas_width, self.atlas_height, meshes.len() as u32] {
-            buf.extend_from_slice(&u.to_le_bytes());
-        }
-        for (clip, mesh) in meshes {
-            for f in [clip.min.x, clip.min.y, clip.max.x, clip.max.y] {
-                buf.extend_from_slice(&f.to_le_bytes());
-            }
-            buf.extend_from_slice(&(mesh.vertices.len() as u32).to_le_bytes());
-            buf.extend_from_slice(&(mesh.indices.len() as u32).to_le_bytes());
-            for v in &mesh.vertices {
-                for f in [v.pos.x, v.pos.y, v.uv.x, v.uv.y] {
-                    buf.extend_from_slice(&f.to_le_bytes());
-                }
-                buf.extend_from_slice(&v.color.to_array());
-            }
-            for &idx in &mesh.indices {
-                buf.extend_from_slice(&idx.to_le_bytes());
-            }
+        let app = &mut self.app;
+        let buf = self.web.encode_frame(width_arg, height_arg, dpr_arg, body, |ui| {
+            app.render_ui(ui);
+        });
+        for rest in self.web.drain_custom_payloads() {
+            let (name, kb) = rest.split_once('|').unwrap_or((&rest, "1024"));
+            let ext = std::path::Path::new(name).extension().and_then(|e| e.to_str()).unwrap_or("FILE").to_uppercase();
+            self.app.center.finder_custom_entries.push(super::FinderCustomEntry {
+                name: name.to_string(),
+                path: std::path::PathBuf::from(format!("/Users/studio/Local_Disk/{name}")),
+                is_dir: false,
+                size_mb: (kb.parse::<u32>().unwrap_or(1024) / 1024).max(1),
+                codec: ext,
+                duration: "Local Disk".to_string(),
+                rating: 5,
+                tags: vec!["Local".to_string(), "Browser".to_string()],
+            });
+            self.app.center.finder_current_dir = Some(std::path::PathBuf::from("/Users/studio/Local_Disk"));
         }
         buf
-    }
-
-    fn apply_texture_deltas(&mut self, delta: &egui::TexturesDelta) {
-        if let Some(deltas) = delta.set.get(&egui::TextureId::Managed(0)) {
-            for img_delta in deltas {
-                let egui::ImageData::Color(ref color_img) = img_delta.image;
-                let [w, h] = color_img.size;
-                if let Some([px, py]) = img_delta.pos {
-                    let (dst_w, dst_h) = (self.atlas_width as usize, self.atlas_height as usize);
-                    for (y, x) in (0..h).flat_map(|y| (0..w).map(move |x| (y, x))) {
-                        let (dx, dy) = (px + x, py + y);
-                        let dst_idx = (dy * dst_w + dx) * 4;
-                        if dx < dst_w && dy < dst_h && dst_idx + 4 <= self.atlas_rgba.len() {
-                            self.atlas_rgba[dst_idx..dst_idx + 4].copy_from_slice(&color_img.pixels[y * w + x].to_array());
-                        }
-                    }
-                } else {
-                    (self.atlas_width, self.atlas_height) = (w as u32, h as u32);
-                    self.atlas_rgba = color_img.pixels.iter().flat_map(|p| p.to_array()).collect();
-                }
-                self.atlas_version = self.atlas_version.wrapping_add(1).max(1);
-            }
-        }
     }
 }
 

@@ -393,7 +393,7 @@ fn run_req013_02s_suite() {
         screen_rect: Some(egui::Rect::from_min_size(egui::Pos2::ZERO, egui::Vec2::new(1440.0, 900.0))),
         ..Default::default()
     };
-    let mut out = session.ctx.run_ui(raw_input.clone(), |ui| session.app.render_ui(ui));
+    let mut out = session.web.ctx.run_ui(raw_input.clone(), |ui| session.app.render_ui(ui));
     out.textures_delta.clear();
     let well_pos = out
         .shapes
@@ -425,7 +425,7 @@ fn run_req013_02s_suite() {
         &format!("V 1440 900 1.0\nM {:.1} {:.1}\nU {:.1} {:.1}", well_pos.x, well_pos.y, well_pos.x, well_pos.y),
     );
     let _ = session.encode_frame(1440.0, 900.0, 1.0, "V 1440 900 1.0");
-    let mut out_open = session.ctx.run_ui(raw_input, |ui| session.app.render_ui(ui));
+    let mut out_open = session.web.ctx.run_ui(raw_input, |ui| session.app.render_ui(ui));
     out_open.textures_delta.clear();
     let expected_red = egui_macview::theme::MacTheme::default().system_red();
     let swatch_pos = out_open

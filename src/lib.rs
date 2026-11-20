@@ -28,6 +28,9 @@ pub mod surfaces;
 pub mod symbols;
 pub mod theme;
 pub mod tokens;
+pub mod web_session;
+
+pub use web_session::MacWebGlSession;
 
 pub use symbols::{
     setup_custom_macview_fonts, setup_macview_fonts, setup_symbols_font, MacSymbol, CUPERTINO_ICONS_FONT_BYTES, CUPERTINO_ICONS_FONT_NAME,

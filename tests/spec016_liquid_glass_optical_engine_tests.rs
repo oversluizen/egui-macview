@@ -504,6 +504,28 @@ fn tc_016_w3_through_w6_liquid_glass_and_sonoma_parity() {
     let poly_sample = egui_macview::sdf_closed_polyline(pos2(116.0, 100.0), &contour);
     let poly_normal = egui_macview::dome_surface_normal_3d_from_sample(poly_sample, 8.0);
     assert!(poly_sample.distance < 0.0 && poly_normal[0] > 0.2 && poly_normal[2] > 0.2);
+
+    // REQ-016-09: Tool- & App-Agnostic MacWebGlSession must pack ALL TextureId::Managed(0..N) textures
+    // (including 3-Matrix Liquid Glass TextureHandles) into the combined MWGL Mega-Atlas!
+    let mut web_sess = egui_macview::MacWebGlSession::new();
+    let mut latched = MacThumbSector::NorthEast.intent_mask();
+    let mut rotary = 0.35f32;
+    let mut wheel_v = 50.0f32;
+    let mwgl_buf = web_sess.encode_frame(360.0, 420.0, 2.0, "V 360.0 420.0 2.0\nC 0.1000\n", |ui| {
+        egui::CentralPanel::default().frame(egui::Frame::NONE).show(ui, |ui| {
+            MacEdgeThumbwheel::new("web_drum", &mut wheel_v, 0.0..=100.0).wide_drum_width(140.0).theme(&theme).show(ui);
+            MacContextThumbDial::new("web_dial", &mut latched, &mut rotary).theme(&theme).show(ui);
+            MacFreeJoystickBowl::new("web_bowl").theme(&theme).show(ui);
+        });
+    });
+    assert!(mwgl_buf.starts_with(b"MWGL") && mwgl_buf.len() > 200);
+    let atlas_buf = web_sess.encode_atlas();
+    let atlas_h = u32::from_le_bytes([atlas_buf[4], atlas_buf[5], atlas_buf[6], atlas_buf[7]]);
+    assert!(
+        web_sess.packed_texture_count() >= 4 && atlas_h > 256,
+        "REQ-016-09.2 violation: MacWebGlSession must pack all custom 3-Matrix Liquid Glass TextureHandles (Managed(1..N)) alongside Managed(0), got count={} atlas_h={atlas_h}",
+        web_sess.packed_texture_count()
+    );
 }
 
 fn first_mesh_width(shapes: &[egui::epaint::ClippedShape]) -> Option<f32> {

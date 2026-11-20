@@ -368,6 +368,14 @@ COTS verification tests in `tests/spec016_liquid_glass_optical_engine_tests.rs` 
 
 
 
+### 9.1 Tool- & App-Agnostic Multi-Texture `MWGL` WebGL2 / WASM Session (`egui_macview::web_session::MacWebGlSession`, `REQ-016-09`)
+
+1. **Public App-Agnostic WebGL2 Session Engine (`src/web_session.rs`):**
+   - `egui_macview::web_session::MacWebGlSession` (re-exported at the `egui_macview` root) MUST provide a 100% tool- and app-agnostic headless WebGL2/WASM session serializer for any `egui-macview` host application (`macview_gallery`, `Patrix`, `Glifo`) via `encode_frame(&mut self, width: f32, height: f32, dpr: f32, batch: &str, render_ui: impl FnMut(&mut egui::Ui)) -> Vec<u8>` and `encode_atlas(&self) -> Vec<u8>`.
+2. **Multi-Texture `TextureId::Managed(0..N)` Mega-Atlas Packing (`REQ-016-09.2`):**
+   - Unlike legacy font-only serializers that dropped every mesh with `m.texture_id != egui::TextureId::Managed(0)`, `MacWebGlSession` MUST capture **all** `TextureId::Managed(id)` textures from `egui::TexturesDelta` (including `Managed(0)` font/symbol atlas AND all `Managed(k)` ($k \ge 1$) 3-Matrix Liquid Glass `TextureHandle`s from `MacContextThumbDial`, `"↶ Undo"` / `"↷ Redo"` stadium capsules, `MacEdgeThumbwheel`, and `MacFreeJoystickBowl`).
+   - All active `TextureId::Managed(id)` textures MUST be packed into a single combined RGBA8 WebGL2 Mega-Atlas (`encode_atlas()`), and every tessellated `egui::epaint::Mesh` MUST have its vertex `(u, v)` coordinates transparently remapped into its assigned sub-rectangle in the Mega-Atlas before emitting the `MWGL` binary frame.
+
 ---
 
 ## 10. `crates.io` & `docs.rs` Publication Readiness for `vitrea` (`REQ-016-00.3`)
