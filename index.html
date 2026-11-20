@@ -201,7 +201,7 @@ let inFlight = false;
 let dirty = true;
 let wasmExports = null;
 
-fetch('macview_gallery.wasm?v=cddfca7')
+fetch('macview_gallery.wasm?v=9540a23')
   .then(r => r.ok ? r.arrayBuffer() : Promise.reject())
   .then(bytes => WebAssembly.instantiate(bytes, {}))
   .then(res => {
@@ -447,5 +447,6 @@ setInterval(() => { dirty = true; }, 250);
 </script>
 </body>
 </html>
+
 
 
