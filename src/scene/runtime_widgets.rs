@@ -8,7 +8,7 @@ use crate::controls::{
 };
 use crate::scene::ir::{SceneNode, SceneNodeKind};
 use crate::scene::runtime::MacSceneDataSource;
-use crate::scene::runtime_tabs::render_tab_view_node;
+use crate::scene::runtime_tabs::{render_search_field_node, render_tab_view_node, render_table_view_node};
 use crate::theme::MacTheme;
 use egui::{Rect, Ui, UiBuilder};
 
@@ -65,12 +65,14 @@ pub(crate) fn render_checkbox_node(
             .inner
     } else {
         let is_mixed = meta == "NSMixedCheckbox" && !val;
+        let extra_w = theme.table_view().header_height.points();
+        let chk_rect = egui::Rect::from_min_size(rect.min, egui::vec2(rect.width() + extra_w, rect.height()));
         MacCheckbox::new(&mut val, node.title.as_str())
             .theme(theme)
             .control_size(ctrl_size)
             .mixed(is_mixed)
             .enabled(enabled)
-            .fixed_rect(rect)
+            .fixed_rect(chk_rect)
             .show(ui)
             .changed()
     };
@@ -206,6 +208,9 @@ pub(crate) fn render_extended_node(
     enabled: bool,
 ) {
     match &node.kind {
+        SceneNodeKind::SearchField => {
+            render_search_field_node(ui, theme, data_source, node, rect, enabled);
+        }
         SceneNodeKind::ComboBox { options } => {
             let fb_id = ui.scope_id().with(("nib_cb_str", node.id.0));
             let mut text = node
@@ -298,6 +303,9 @@ pub(crate) fn render_extended_node(
         }
         SceneNodeKind::TabView { .. } => {
             render_tab_view_node(ui, theme, data_source, node, rect, ctrl_size);
+        }
+        SceneNodeKind::TableView { columns } => {
+            render_table_view_node(ui, theme, node, rect, columns);
         }
         SceneNodeKind::RuleEditor => {
             const DEFAULT_CRITERIA: &[&[&str]] = &[&["Key", "Value"], &["==", "!="], &["True", "False"]];

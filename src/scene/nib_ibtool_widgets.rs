@@ -1,9 +1,10 @@
 //! Native AppKit Widget Class & Cell Decoder for `ibtool --compile` `NIBArchive` (`REQ-013-05.2`, `REQ-013-05.5`).
 
 use crate::scene::constraints::ValueTransformer;
-use crate::scene::ir::{CustomClassMapper, NodeId, SceneNode, SceneNodeKind, VisibilityRule};
+use crate::scene::ir::{ActionId, BindingId, CustomClassMapper, NodeId, SceneNode, SceneNodeKind, VisibilityRule};
 use crate::scene::nib_ibtool::{IbDecodeState, IbNibGraph, IbVal};
 use crate::scene::nib_varint::decode_cflags_control_size;
+use crate::scene::xib_strings::flatten_controller_key_path;
 use std::collections::BTreeMap;
 
 pub(crate) fn build_ibtool_node(st: &mut IbDecodeState<'_>, obj_i: usize, nid: NodeId, parent_id: NodeId) -> SceneNode {
@@ -21,12 +22,35 @@ pub(crate) fn build_ibtool_node(st: &mut IbDecodeState<'_>, obj_i: usize, nid: N
         .unwrap_or_else(|| format!("nib-{obj_i}"));
 
     let mut frame = g.resolve_rect(obj_i).unwrap_or([0.0, 0.0, 120.0, 22.0]);
+    let root_flipped = st
+        .nodes
+        .first()
+        .is_some_and(|n| matches!(n.kind, SceneNodeKind::Container { is_flipped: true }));
+    if !root_flipped {
+        if let Some(p_node) = st.nodes.iter().find(|n| n.id == parent_id) {
+            if matches!(p_node.kind, SceneNodeKind::BoxContainer)
+                && frame[1] < p_node.nib_frame[1]
+                && frame[1] + frame[3] <= p_node.nib_frame[3]
+            {
+                frame[0] += p_node.nib_frame[0];
+                frame[1] += p_node.nib_frame[1] + 22.0;
+            }
+        }
+    }
     let mask = g.prop_val(obj_i, "NSvFlags").and_then(IbVal::as_u32).map(|v| (v & 0x3F) as u8).unwrap_or(0);
     let cell_idx = g.prop_val(obj_i, "NSCell").and_then(IbVal::as_obj_ref);
     let title_cell_idx = cell_idx.or_else(|| g.prop_val(obj_i, "NSTitleCell").and_then(IbVal::as_obj_ref));
     let mut title = title_cell_idx
-        .and_then(|c| g.prop_val(c, "NSContents").or_else(|| g.prop_val(c, "NSTitle")))
-        .or_else(|| g.prop_val(obj_i, "NSTitle").or_else(|| g.prop_val(obj_i, "NSContents")))
+        .and_then(|c| {
+            g.prop_val(c, "NSContents")
+                .or_else(|| g.prop_val(c, "NSTitle"))
+                .or_else(|| g.prop_val(c, "NSPlaceholderString"))
+        })
+        .or_else(|| {
+            g.prop_val(obj_i, "NSTitle")
+                .or_else(|| g.prop_val(obj_i, "NSContents"))
+                .or_else(|| g.prop_val(obj_i, "NSPlaceholderString"))
+        })
         .and_then(|v| g.resolve_str(v))
         .or_else(|| rattrs.and_then(|m| m.get("title")).cloned())
         .unwrap_or_default();
@@ -98,8 +122,17 @@ fn decode_ibtool_text_and_list_kind(
         .and_then(|c| g.prop_val(c, "NSImage").or_else(|| g.prop_val(c, "NSNormalImage")))
         .or_else(|| g.prop_val(obj_i, "NSImage"))
         .and_then(|v| g.resolve_str(v));
-    if effective_cls.contains("SteppingTextField") || mapper.is_stepping_number_field(effective_cls) {
-        let fmt_idx = cell_idx.and_then(|c| g.prop_val(c, "NSFormatter")).and_then(IbVal::as_obj_ref);
+    let fmt_idx = cell_idx
+        .and_then(|c| g.prop_val(c, "NSFormatter"))
+        .or_else(|| g.prop_val(obj_i, "NSFormatter"))
+        .and_then(IbVal::as_obj_ref);
+    let has_number_formatter = fmt_idx.is_some_and(|f| {
+        g.obj_inherits(f, "NumberFormatter")
+            || g.prop_val(f, "NS.min").is_some()
+            || g.prop_val(f, "NS.max").is_some()
+            || g.prop_val(f, "NS.attributes").is_some()
+    });
+    if has_number_formatter || effective_cls.contains("SteppingTextField") || mapper.is_stepping_number_field(effective_cls) {
         let attr_dict = fmt_idx.and_then(|f| g.prop_val(f, "NS.attributes")).and_then(IbVal::as_obj_ref);
         let min = fmt_idx
             .and_then(|f| g.prop_val(f, "NS.min").and_then(|v| g.resolve_f64(v)))
@@ -111,10 +144,21 @@ fn decode_ibtool_text_and_list_kind(
         let shift_step = rattrs.and_then(|m| m.get("shiftStep")).and_then(|s| s.parse::<f64>().ok()).unwrap_or(10.0);
         return Some((SceneNodeKind::NumberField { step, shift_step, min, max }, explicit_icon));
     }
-    if base_cls.contains("TokenField") || effective_cls.contains("TokenField") {
+    if base_cls.contains("TokenField") || effective_cls.contains("TokenField") || g.obj_inherits(obj_i, "TokenField") {
         return Some((SceneNodeKind::TextField, Some("NSTokenField".into())));
     }
-    if base_cls.contains("TextField") {
+    let cell_cls = cell_idx.map(|c| g.obj_class(c)).unwrap_or_default();
+    if base_cls.contains("SearchField")
+        || effective_cls.contains("SearchField")
+        || cell_cls.contains("SearchField")
+        || g.obj_inherits(obj_i, "SearchField")
+    {
+        if title.is_empty() {
+            *title = "Search".to_string();
+        }
+        return Some((SceneNodeKind::SearchField, explicit_icon));
+    }
+    if base_cls.contains("TextField") || g.obj_inherits(obj_i, "TextField") || cell_cls.contains("TextFieldCell") {
         let draws_bg = cell_idx.and_then(|c| g.prop_val(c, "NSDrawsBackground")).and_then(IbVal::as_u32).unwrap_or(0) != 0;
         if (cflags & 0x4000_0000) != 0 || draws_bg {
             return Some((SceneNodeKind::TextField, explicit_icon));
@@ -193,6 +237,54 @@ fn decode_ibtool_text_and_list_kind(
             .filter_map(|ti| g.prop_val(ti, "NSLabel").and_then(|v| g.resolve_str(v)))
             .collect();
         return Some((SceneNodeKind::TabView { tabs }, explicit_icon));
+    }
+    if base_cls.contains("ScrollView") {
+        let doc_idx = g.prop_val(obj_i, "NSDocView").and_then(IbVal::as_obj_ref).or_else(|| {
+            g.prop_val(obj_i, "NSContentView")
+                .and_then(IbVal::as_obj_ref)
+                .and_then(|cv| g.prop_val(cv, "NSDocView").and_then(IbVal::as_obj_ref))
+        }).or_else(|| {
+            g.prop_val(obj_i, "NSSubviews")
+                .and_then(IbVal::as_obj_ref)
+                .into_iter()
+                .flat_map(|a| g.resolve_array_refs(a))
+                .find_map(|sub| {
+                    g.prop_val(sub, "NSDocView").and_then(IbVal::as_obj_ref).or_else(|| {
+                        g.prop_val(sub, "NSSubviews")
+                            .and_then(IbVal::as_obj_ref)
+                            .into_iter()
+                            .flat_map(|ca| g.resolve_array_refs(ca))
+                            .find(|&c| {
+                                let cls = g.obj_class(c);
+                                cls.contains("TableView") || cls.contains("OutlineView")
+                            })
+                    })
+                })
+        });
+        if let Some(tv_idx) = doc_idx {
+            let tv_cls = g.obj_class(tv_idx);
+            let tv_orig = g.prop_val(tv_idx, "NSOriginalClassName").and_then(|v| g.resolve_str(v)).unwrap_or_default();
+            if tv_cls.contains("TableView") || tv_cls.contains("OutlineView") || tv_orig.contains("TableView") {
+                let col_arr = g.prop_val(tv_idx, "NSTableColumns").and_then(IbVal::as_obj_ref);
+                let mut columns = Vec::new();
+                for col_idx in col_arr.map(|a| g.resolve_array_refs(a)).unwrap_or_default() {
+                    let hdr_title = g
+                        .prop_val(col_idx, "NSHeaderCell")
+                        .and_then(IbVal::as_obj_ref)
+                        .and_then(|hc| g.prop_val(hc, "NSContents").or_else(|| g.prop_val(hc, "NSTitle")))
+                        .or_else(|| g.prop_val(col_idx, "NSTitle"))
+                        .or_else(|| g.prop_val(col_idx, "NSIdentifier"))
+                        .and_then(|v| g.resolve_str(v))
+                        .unwrap_or_default();
+                    let col_w = g
+                        .prop_val(col_idx, "NSWidth")
+                        .and_then(|v| g.resolve_f64(v))
+                        .unwrap_or(100.0) as f32;
+                    columns.push((hdr_title, col_w));
+                }
+                return Some((SceneNodeKind::TableView { columns }, explicit_icon));
+            }
+        }
     }
     None
 }
@@ -310,6 +402,34 @@ fn decode_ibtool_button_and_value_kind(
         let lines = rattrs.and_then(|m| m.get("lineNumbers")).is_some_and(|v| v == "YES");
         return (SceneNodeKind::TextView { monospace: mono, line_numbers: lines }, explicit_icon);
     }
+    if base_cls.contains("PathControl") || effective_cls.contains("PathControl") {
+        let comp_arr = cell_idx
+            .and_then(|c| g.prop_val(c, "NSPathComponentCells"))
+            .or_else(|| g.prop_val(obj_i, "NSPathComponentCells"))
+            .and_then(IbVal::as_obj_ref);
+        let comps: Vec<String> = comp_arr
+            .map(|a| g.resolve_array_refs(a))
+            .unwrap_or_default()
+            .into_iter()
+            .filter_map(|pc| {
+                g.prop_val(pc, "NSContents")
+                    .or_else(|| g.prop_val(pc, "NSTitle"))
+                    .and_then(|v| g.resolve_str(v))
+            })
+            .collect();
+        if !comps.is_empty() {
+            *title = comps.join(" / ");
+        } else if title.is_empty() {
+            if let Some(url_str) = cell_idx
+                .and_then(|c| g.prop_val(c, "NSURL"))
+                .or_else(|| g.prop_val(obj_i, "NSURL"))
+                .and_then(|v| g.resolve_str(v))
+            {
+                *title = url_str;
+            }
+        }
+        return (SceneNodeKind::Label, explicit_icon);
+    }
     if base_cls.contains("Box") {
         let btype = g.prop_val(obj_i, "NSBoxType").and_then(IbVal::as_u32).unwrap_or(0);
         if btype == 2 {
@@ -332,4 +452,45 @@ fn decode_ibtool_button_and_value_kind(
         return (SceneNodeKind::DisclosureGroup { trailing_add_button: add_btn }, explicit_icon);
     }
     (SceneNodeKind::CustomCanvasSlot { class_name: effective_cls.to_string() }, explicit_icon)
+}
+
+pub(crate) fn wire_ibtool_connectors(st: &mut IbDecodeState<'_>) {
+    for obj_i in 0..st.graph.objects.len() {
+        let cls = st.graph.obj_class(obj_i);
+        if cls == "NSIBHelpConnector" {
+            let dst_obj =
+                st.graph.prop_val(obj_i, "NSDestination").or_else(|| st.graph.prop_val(obj_i, "NSObject")).and_then(IbVal::as_obj_ref);
+            if let Some(&n_idx) = dst_obj.and_then(|o| st.obj_to_node_idx.get(&o)) {
+                if st.nodes[n_idx].tooltip.is_empty() {
+                    if let Some(tip) = st.graph.prop_val(obj_i, "NSMarker").and_then(|v| st.graph.resolve_str(v)) {
+                        st.nodes[n_idx].tooltip = tip;
+                    }
+                }
+            }
+            continue;
+        }
+        if cls != "NSNibControlConnector" && cls != "NSNibBindingConnector" {
+            continue;
+        }
+        let src_obj = st.graph.prop_val(obj_i, "NSSource").or_else(|| st.graph.prop_val(obj_i, "NSObject")).and_then(IbVal::as_obj_ref);
+        let Some(&n_idx) = src_obj.and_then(|o| st.obj_to_node_idx.get(&o)) else { continue };
+        if cls == "NSNibControlConnector" && st.nodes[n_idx].action_selector.is_none() {
+            if let Some(sel) = st.graph.prop_val(obj_i, "NSLabel").and_then(|v| st.graph.resolve_str(v)) {
+                st.nodes[n_idx].action = Some(ActionId(st.next_action));
+                st.nodes[n_idx].action_selector = Some(sel);
+                st.next_action += 1;
+            }
+        } else if cls == "NSNibBindingConnector" && st.nodes[n_idx].binding_path.is_none() {
+            if let Some(raw_kp) = st.graph.prop_val(obj_i, "NSKeyPath").and_then(|v| st.graph.resolve_str(v)) {
+                let norm = flatten_controller_key_path(&raw_kp);
+                let bid = *st.binding_by_path.entry(norm.clone()).or_insert_with(|| {
+                    let b = BindingId(st.next_binding);
+                    st.next_binding += 1;
+                    b
+                });
+                st.nodes[n_idx].value_binding = Some(bid);
+                st.nodes[n_idx].binding_path = Some(norm);
+            }
+        }
+    }
 }

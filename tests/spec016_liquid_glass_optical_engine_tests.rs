@@ -339,20 +339,26 @@ fn tc_016_04_mockup_parity_8_cushion_rosette_3_tier_labels_and_stadium_undo_redo
     );
 }
 
-/// `tc_016_w2_edge_thumbwheel_drum_and_free_joystick_crystal_marble_physics` (`Iter 6: W2-V` & `Iter 7: W2-C`).
+/// `tc_016_w2_edge_thumbwheel_drum_and_free_joystick_crystal_marble_physics` (`Fase 1 Clean-Room Rebuild`: Unified 3-Matrix Pipeline for `MacEdgeThumbwheel` & `MacFreeJoystickBowl`).
 #[test]
 fn tc_016_w2_edge_thumbwheel_drum_and_free_joystick_crystal_marble_physics() {
     let (ctx, theme) = common::headless_ctx(MacAppearance::Aqua);
     let mut wheel_val = 50.0f32;
     let mut hub_c = Pos2::ZERO;
 
-    // 1. Render MacEdgeThumbwheel (wide drum) and MacFreeJoystickBowl at t=0.0
+    // 1. Both MacEdgeThumbwheel AND MacFreeJoystickBowl must render via per-pixel raytraced TextureHandle UV quads (`texture_id != TextureId::default()`)
     let shapes_t0 = common::run_frame(&ctx, RawInput { time: Some(0.0), ..Default::default() }, vec2(320.0, 360.0), |ui| {
         MacEdgeThumbwheel::new("w2_drum", &mut wheel_val, 0.0..=100.0).wide_drum_width(140.0).theme(&theme).show(ui);
         hub_c = MacFreeJoystickBowl::new("w2_bowl").theme(&theme).show(ui).hub_center;
     });
-    let total_mesh_verts: usize = shapes_t0.iter().filter_map(|cs| if let egui::Shape::Mesh(m) = &cs.shape { Some(m.vertices.len()) } else { None }).sum();
-    assert!(total_mesh_verts >= 350, "Iter 6 (W2-V) violation: expected >= 350 mesh vertices, got {total_mesh_verts}");
+    let raytraced_tex_quads = shapes_t0
+        .iter()
+        .filter(|cs| matches!(&cs.shape, egui::Shape::Mesh(m) if m.texture_id != egui::TextureId::default() && m.vertices.len() == 4))
+        .count();
+    assert!(
+        raytraced_tex_quads >= 2,
+        "Fase 1 (SPEC-016 §5.1) violation: Both MacEdgeThumbwheel AND MacFreeJoystickBowl must render via per-pixel raytraced TextureHandle UV quads (`texture_id != TextureId::default()`), found only {raytraced_tex_quads} textured quads"
+    );
 
     // 2. Drag crystal marble in MacFreeJoystickBowl to (+45, -35) at t=0.10s, then release at t=0.20s
     let drag_pt = pos2(hub_c.x + 45.0, hub_c.y - 35.0);
@@ -473,15 +479,15 @@ fn tc_016_w3_through_w6_liquid_glass_and_sonoma_parity() {
     let cell_id = egui::Id::NULL.with("w5_input");
     ctx.memory_mut(|m| m.request_focus(cell_id));
     let _ = common::run_frame(&ctx, RawInput { time: Some(0.30), ..Default::default() }, vec2(320.0, 180.0), |ui| {
-        MacInputCell::with_id(cell_id, &mut txt).theme(&theme).show(ui);
+        MacInputCell::with_id(cell_id, &mut txt).liquid_glass_pill(true).theme(&theme).show(ui);
     });
     let shapes_w5_mid = common::run_frame(&ctx, RawInput { time: Some(0.33), ..Default::default() }, vec2(320.0, 180.0), |ui| {
         MacPopoverSurface::new().theme(&theme).show(ui, |p_ui| {
-            MacInputCell::with_id(cell_id, &mut txt).theme(&theme).show(p_ui);
+            MacInputCell::with_id(cell_id, &mut txt).liquid_glass_pill(true).theme(&theme).show(p_ui);
         });
     });
     let w6_verts: usize = shapes_w5_mid.iter().filter_map(|cs| if let egui::Shape::Mesh(m) = &cs.shape { Some(m.vertices.len()) } else { None }).sum();
-    assert!(w6_verts >= 6, "Iter 14 (W6-V) violation: MacPopoverSurface must emit 3D dome sheen mesh (got {w6_verts})");
+    assert!(w6_verts >= 14, "Iter 14 (W6-V) violation: MacPopoverSurface + MacInputCell::liquid_glass_pill(true) must emit >= 14 3D dome sheen mesh vertices (got {w6_verts})");
 
     let lg_src = std::fs::read_to_string(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/controls/liquid_glass.rs")).expect("read liquid_glass.rs");
     for bad in ["rotary_sensitivity", "2.0 + 1.0", "0.5 * 0.5 * 0.5", "kurbo", "lyon_tessellation"] {

@@ -4,7 +4,7 @@
 //! Fully data-driven: zero hardcoded colors or dimensions.
 
 use crate::theme::MacTheme;
-use egui::{CornerRadius, Id, Pos2, Rect, Response, Stroke, StrokeKind, Ui, Vec2};
+use egui::{Id, Pos2, Rect, Response, Stroke, Ui, Vec2};
 use std::hash::Hash;
 
 /// Direction that the popover arrow points towards the anchor element.
@@ -128,8 +128,15 @@ impl<'a> MacPopover<'a> {
 
         let painter = ui.painter_at(active_rect);
 
-        // Body bubble
-        painter.rect(active_rect, CornerRadius::same(corner_radius as u8), bg_color, stroke, StrokeKind::Inside);
+        // Body bubble with 3D Liquid Glass dome sheen (`SPEC-016 §9`)
+        crate::controls::liquid_glass::paint_liquid_glass_capsule(
+            &painter,
+            active_rect,
+            corner_radius,
+            bg_color,
+            stroke,
+            theme.specular_rim_top().gamma_multiply(self.alpha),
+        );
 
         if self.arrow_edge != MacPopoverArrowEdge::None {
             let arrow_points = match self.arrow_edge {

@@ -9,9 +9,168 @@
 
 use crate::controls::context_thumb_dial::icons::MacTapticEvent;
 use crate::theme::MacTheme;
-use egui::{Color32, CornerRadius, Id, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Vec2};
-use std::hash::Hash;
+use crate::tokens::ThumbDialMetrics;
+use egui::{Color32, ColorImage, CornerRadius, Id, Painter, Pos2, Rect, Response, Sense, Shape, Stroke, StrokeKind, Ui, Vec2};
+use std::hash::{Hash, Hasher};
 use std::ops::RangeInclusive;
+
+struct DrumMatrixSpec {
+    tex_w: usize,
+    tex_h: usize,
+    r_cyl: f32,
+    cap_w: f32,
+    corner_r: f32,
+    ptr_bias: f32,
+    is_active: bool,
+    accent_col: Color32,
+}
+
+fn color_to_rgb_norm(c: Color32) -> [f32; 3] {
+    let [r, g, b, _] = c.to_array();
+    let max_u8 = f32::from(u8::MAX);
+    [f32::from(r) / max_u8, f32::from(g) / max_u8, f32::from(b) / max_u8]
+}
+
+fn eval_drum_backdrop_at(
+    p: vitrea::GlamVec2,
+    ds: &DrumMatrixSpec,
+    (drum_rgb, accent_rgb): ([f32; 3], [f32; 3]),
+    m: &ThumbDialMetrics,
+) -> [f32; 3] {
+    let (w, h) = (ds.tex_w as f32, ds.tex_h as f32);
+    let y_frac = (p.y / h.max(1.0)).clamp(0.0, 1.0);
+    let u_frac = (p.x / w.max(1.0)).clamp(0.0, 1.0);
+    let phi = (y_frac * 2.0 - 1.0) * std::f32::consts::FRAC_PI_2;
+    let c_val = phi.cos().clamp(0.0, 1.0);
+    let (act_a, hov_a, spec_a) = (m.active_fill_opacity.points(), m.hover_fill_opacity.points(), m.glass_specular_alpha.points());
+    let spec_dist = (y_frac - (0.5 - hov_a + ds.ptr_bias * act_a)).abs();
+    let spec_band = (1.0 - spec_dist / act_a.max(0.5)).clamp(0.0, 1.0);
+    let axial = (1.0 - (u_frac * 2.0 - 1.0).abs()).clamp(0.0, 1.0);
+    let rim_dark = (1.0 - c_val) * spec_a;
+    let hi_gain = (spec_band * spec_band * (0.5 + 0.5 * axial) * act_a).clamp(0.0, 1.0);
+    let mut rgb = [0, 1, 2].map(|ch| (drum_rgb[ch] * (1.0 - rim_dark) + (1.0 - drum_rgb[ch]) * hi_gain).clamp(0.0, 1.0));
+    let cap_bleed = ((1.0 - (p.x - ds.cap_w).max(0.0) / (ds.cap_w * 2.0).max(1.0)).clamp(0.0, 1.0))
+        .max((1.0 - (w - ds.cap_w - p.x).max(0.0) / (ds.cap_w * 2.0).max(1.0)).clamp(0.0, 1.0));
+    let bleed_w = cap_bleed * cap_bleed * (if ds.is_active { act_a } else { hov_a });
+    for ch in 0..3 {
+        rgb[ch] = (rgb[ch] * (1.0 - bleed_w) + accent_rgb[ch] * bleed_w).clamp(0.0, 1.0);
+    }
+    rgb
+}
+
+fn synthesize_drum_matrix_rgba(ds: &DrumMatrixSpec, theme: &MacTheme, m: &ThumbDialMetrics) -> Vec<u8> {
+    let mut flat = vec![0u8; ds.tex_w * ds.tex_h * 4];
+    let is_light = theme.appearance == crate::theme::MacAppearance::Aqua;
+    let drum_rgb = color_to_rgb_norm(if is_light { theme.window_background() } else { theme.control_background() });
+    let accent_rgb = color_to_rgb_norm(ds.accent_col);
+    let spec_rgb = color_to_rgb_norm(theme.specular_rim_top());
+    let (w, h) = (ds.tex_w as f32, ds.tex_h as f32);
+    let center = vitrea::GlamVec2::new(w * 0.5, h * 0.5);
+    let half_ext = vitrea::GlamVec2::new(w * 0.5, h * 0.5);
+    let cap_half = vitrea::GlamVec2::new(ds.cap_w * 0.5, h * 0.5);
+    let left_c = vitrea::GlamVec2::new(ds.cap_w * 0.5, h * 0.5);
+    let right_c = vitrea::GlamVec2::new(w - ds.cap_w * 0.5, h * 0.5);
+    let params = vitrea::LiquidGlassOpticalParams {
+        ior_glass: m.ior_glass.points(),
+        ior_dispersion_rgb: [m.ior_red.points(), m.ior_green.points(), m.ior_blue.points()],
+        fresnel_f0: m.fresnel_f0.points(),
+        bevel_width_pt: (ds.cap_w * 0.5).max(2.0),
+        dome_thickness_pt: m.dome_thickness_pt.points(),
+        vibrancy_chroma_boost: m.vibrancy_chroma_boost.points(),
+        meniscus_merge_k_pt: m.meniscus_merge_k_pt.points(),
+    };
+    let (fill_a, act_a, hov_a, spec_a) = (m.glass_fill_alpha.points(), m.active_fill_opacity.points(), m.hover_fill_opacity.points(), m.glass_specular_alpha.points());
+    let max_u8 = f32::from(u8::MAX);
+    let cursor_pt = Some(vitrea::GlamVec2::new(w * 0.5, h * (0.5 + ds.ptr_bias)));
+
+    for y in 0..ds.tex_h {
+        for x in 0..ds.tex_w {
+            let p = vitrea::GlamVec2::new(x as f32 + 0.5, y as f32 + 0.5);
+            let s_drum = vitrea::sdf_rounded_capsule_sample(p, center, half_ext, ds.corner_r);
+            let surf_drum = vitrea::evaluate_glass_surface_sample(p, s_drum, &params, cursor_pt, ds.r_cyl * 2.0);
+            if surf_drum.coverage <= 0.0 {
+                continue;
+            }
+            let s_l = vitrea::sdf_rounded_capsule_sample(p, left_c, cap_half, ds.corner_r.min(ds.cap_w * 0.5));
+            let s_r = vitrea::sdf_rounded_capsule_sample(p, right_c, cap_half, ds.corner_r.min(ds.cap_w * 0.5));
+            let s_cap = if s_l.distance < s_r.distance { s_l } else { s_r };
+            let surf_cap = vitrea::evaluate_glass_surface_sample(p, s_cap, &params, cursor_pt, ds.r_cyl * 2.0);
+            let [p_r, p_g, p_b] = if surf_cap.coverage > 0.0 { surf_cap.refracted_rgb_pts } else { surf_drum.refracted_rgb_pts };
+            let mut rgb = [
+                eval_drum_backdrop_at(p_r, ds, (drum_rgb, accent_rgb), m)[0],
+                eval_drum_backdrop_at(p_g, ds, (drum_rgb, accent_rgb), m)[1],
+                eval_drum_backdrop_at(p_b, ds, (drum_rgb, accent_rgb), m)[2],
+            ];
+            let drum_rim = surf_drum.fresnel_specular * (if is_light { hov_a } else { act_a });
+            for ch in 0..3 {
+                rgb[ch] = (rgb[ch] + drum_rim * spec_rgb[ch]).clamp(0.0, 1.0);
+            }
+            if surf_cap.coverage > 0.0 {
+                let cap_w_mix = (if ds.is_active { fill_a } else { act_a }) * surf_cap.coverage;
+                let cap_rim = surf_cap.fresnel_specular * spec_a;
+                let cap_dome = surf_cap.key_illumination * hov_a;
+                for ch in 0..3 {
+                    let c_body = (accent_rgb[ch] * (fill_a + surf_cap.dome_elevation * act_a) + cap_dome + cap_rim * spec_rgb[ch]).clamp(0.0, 1.0);
+                    rgb[ch] = (rgb[ch] * (1.0 - cap_w_mix) + c_body * cap_w_mix).clamp(0.0, 1.0);
+                }
+            }
+            let idx = (y * ds.tex_w + x) * 4;
+            flat[idx] = (rgb[0] * max_u8).round() as u8;
+            flat[idx + 1] = (rgb[1] * max_u8).round() as u8;
+            flat[idx + 2] = (rgb[2] * max_u8).round() as u8;
+            flat[idx + 3] = (surf_drum.coverage * max_u8).round() as u8;
+        }
+    }
+    flat
+}
+
+fn paint_raytraced_edge_thumbwheel_quad(
+    painter: &Painter,
+    id_source: Id,
+    inner_rect: Rect,
+    (cap_w, corner_r, ptr_bias, is_active): (f32, f32, f32, bool),
+    accent_col: Color32,
+    theme: &MacTheme,
+    m: &ThumbDialMetrics,
+) {
+    let px_scale = 2.0f32;
+    let tex_w = ((inner_rect.width() * px_scale).round() as usize).max(2);
+    let tex_h = ((inner_rect.height() * px_scale).round() as usize).max(2);
+    let max_u8 = f32::from(u8::MAX);
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    (tex_w, tex_h, is_active).hash(&mut hasher);
+    (theme.appearance == crate::theme::MacAppearance::Aqua).hash(&mut hasher);
+    accent_col.to_array().hash(&mut hasher);
+    ((ptr_bias * max_u8).round() as i32).hash(&mut hasher);
+    let state_hash = hasher.finish();
+    let cache_id = id_source.with("lg_drum_ray_tex");
+    let ctx = painter.ctx();
+    let cached = ctx.data(|d| d.get_temp::<(u64, egui::TextureHandle)>(cache_id));
+    let tex_handle = match cached {
+        Some((prev_h, handle)) if prev_h == state_hash => handle,
+        _ => {
+            let ds = DrumMatrixSpec {
+                tex_w,
+                tex_h,
+                r_cyl: inner_rect.height() * 0.5 * px_scale,
+                cap_w: cap_w * px_scale,
+                corner_r: corner_r * px_scale,
+                ptr_bias,
+                is_active,
+                accent_col,
+            };
+            let flat = synthesize_drum_matrix_rgba(&ds, theme, m);
+            let img = ColorImage::from_rgba_unmultiplied([tex_w, tex_h], &flat);
+            let handle = ctx.load_texture("vitrea_drum_lg", img, egui::TextureOptions::LINEAR);
+            ctx.data_mut(|d| d.insert_temp(cache_id, (state_hash, handle.clone())));
+            handle
+        }
+    };
+    let mut mesh = egui::epaint::Mesh::with_texture(tex_handle.id());
+    let tint = Color32::from(egui::epaint::Hsva::new(0.0, 0.0, 1.0, 1.0));
+    mesh.add_rect_with_uv(inner_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), tint);
+    painter.add(Shape::mesh(mesh));
+}
 
 #[derive(Clone, Copy, Default)]
 struct EdgeWheelMemory {
@@ -286,66 +445,24 @@ impl<'a> MacEdgeThumbwheel<'a> {
             painter.rect_stroke(inner_rect.expand(1.0), inner_cr, glow_stroke, StrokeKind::Outside);
         }
 
-        let drum_base = if is_light { theme.window_background() } else { theme.control_background() };
-        painter.rect(inner_rect, inner_cr, drum_base, border_stroke, StrokeKind::Inside);
-
-        // 32-Band x 8-Column 2D Cylindrical Metallic/Glass Drum Mesh with Pointer-Steered Specular Band
         let r_cyl = inner_rect.height() * 0.5;
         let y_c = inner_rect.center().y;
         let ptr_bias = pointer_pos
             .filter(|p| rect.contains(*p))
             .map(|p| ((p.y - y_c) / r_cyl.max(1.0)).clamp(-0.5, 0.5))
             .unwrap_or(0.0);
-        let bands = 32usize;
-        let cols = 8usize;
-        let mut cyl_mesh = egui::epaint::Mesh::default();
-        cyl_mesh.vertices.reserve((bands + 1) * (cols + 1));
-        cyl_mesh.indices.reserve(bands * cols * 6);
-        for i in 0..=bands {
-            let frac = (i as f32) / (bands as f32);
-            let y_i = inner_rect.min.y + inner_rect.height() * frac;
-            let phi = (frac * 2.0 - 1.0) * std::f32::consts::FRAC_PI_2;
-            let c_val = phi.cos().clamp(0.0, 1.0);
-            let spec_dist = (frac - (0.5 - m.hover_fill_opacity.points() + ptr_bias * m.active_fill_opacity.points())).abs();
-            let spec_band = (1.0 - spec_dist / m.active_fill_opacity.points().max(0.5)).clamp(0.0, 1.0);
-            for j in 0..=cols {
-                let u_frac = (j as f32) / (cols as f32);
-                let x_j = inner_rect.min.x + inner_rect.width() * u_frac;
-                let axial = (1.0 - (u_frac * 2.0 - 1.0).abs()).clamp(0.0, 1.0);
-                let mut h = egui::epaint::Hsva::from(drum_base);
-                let rim_dark = (1.0 - c_val) * m.glass_specular_alpha.points();
-                let hi_gain = (spec_band * spec_band * (0.5 + 0.5 * axial) * m.active_fill_opacity.points()).clamp(0.0, 1.0);
-                h.v = (h.v * (1.0 - rim_dark) + (1.0 - h.v) * hi_gain).clamp(0.0, 1.0);
-                cyl_mesh.colored_vertex(Pos2::new(x_j, y_i), Color32::from(h));
-            }
-        }
-        let stride = (cols + 1) as u32;
-        for i in 0..bands {
-            for j in 0..cols {
-                let b0 = (i as u32) * stride + (j as u32);
-                let b1 = b0 + stride;
-                cyl_mesh.add_triangle(b0, b0 + 1, b1 + 1);
-                cyl_mesh.add_triangle(b0, b1 + 1, b1);
-            }
-        }
-        painter.add(egui::Shape::mesh(cyl_mesh));
-
-        // Illuminated 3D Liquid Glass End-Cap Rings on Left and Right Drum Edges
         let cap_w = (m.ring_gap.points() * 2.0 * s).min(inner_rect.width() * m.hover_fill_opacity.points());
-        let cap_fill = accent_col.gamma_multiply(m.active_fill_opacity.points());
-        let cap_stroke = Stroke::new(m.active_stroke_width.points(), accent_col);
-        let left_cap = Rect::from_min_max(inner_rect.min, Pos2::new(inner_rect.min.x + cap_w, inner_rect.max.y));
-        let right_cap = Rect::from_min_max(Pos2::new(inner_rect.max.x - cap_w, inner_rect.min.y), inner_rect.max);
-        painter.rect(left_cap, inner_cr, cap_fill, cap_stroke, StrokeKind::Inside);
-        painter.rect(right_cap, inner_cr, cap_fill, cap_stroke, StrokeKind::Inside);
-        painter.line_segment(
-            [Pos2::new(left_cap.center().x, left_cap.min.y + pad), Pos2::new(left_cap.center().x, left_cap.max.y - pad)],
-            Stroke::new(bw, specular_col),
+        let inner_cr_pt = ((m.edge_wheel_corner_radius.points() * s) - pad).max(1.0);
+        paint_raytraced_edge_thumbwheel_quad(
+            &painter,
+            self.id_source,
+            inner_rect,
+            (cap_w, inner_cr_pt, ptr_bias, is_free_spinning || is_down),
+            accent_col,
+            theme,
+            m,
         );
-        painter.line_segment(
-            [Pos2::new(right_cap.center().x, right_cap.min.y + pad), Pos2::new(right_cap.center().x, right_cap.max.y - pad)],
-            Stroke::new(bw, specular_col),
-        );
+        painter.rect_stroke(inner_rect, inner_cr, border_stroke, StrokeKind::Inside);
 
         let max_ang = m.edge_wheel_max_angle_deg.points();
         let step_deg = m.detent_step_deg.points().max(1.0);

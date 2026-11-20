@@ -21,13 +21,13 @@ impl CustomClassMapper {
     /// Creates a mapper pre-populated with common studio custom control subclass patterns.
     pub fn default_studio_mappings() -> Self {
         let mut m = Self::default();
-        for name in ["SteppingTextField", "GSSteppingTextField", "CalculatingTextField"] {
+        for name in ["SteppingTextField", "CalculatingTextField"] {
             m.stepping_classes.insert(name.to_string());
         }
-        for name in ["OriginPointControl", "GSOriginPointControl", "TransformGrid", "GSTransformGrid"] {
+        for name in ["OriginPointControl", "TransformGrid"] {
             m.origin_classes.insert(name.to_string());
         }
-        for name in ["MouseOverButton", "GSMouseOverButton", "InlineActionButton", "GSInlineActionButton"] {
+        for name in ["MouseOverButton", "InlineActionButton"] {
             m.inline_button_classes.insert(name.to_string());
         }
         for name in ["PopoverColorWell", "BFPopoverColorWell"] {

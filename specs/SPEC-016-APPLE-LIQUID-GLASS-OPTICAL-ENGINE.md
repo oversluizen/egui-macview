@@ -217,8 +217,9 @@ Every public widget and layout container in `egui-macview` (52 total across the 
 | **4** | **Backdrop Vibrancy, Shifted Shadow & Snellius Refraction** (`vitrea::optics` + `MacTheme`) | **100% Coupled:** The interior of each glass cushion has no opaque paint; it samples the **Backdrop & Dish Matrix $B(x,y)$** at the Snellius-refracted coordinates $[\vec{p}_R, \vec{p}_G, \vec{p}_B]$. | **Cross-Cushion Subsurface Bleed:** An active/latched cushion (`accent_col`) radiates a radial subsurface glow into the dish matrix $B(x,y)$; adjacent passive cushions pick up and refract that blue glow along their facing bevels. | **Dynamic Parallax & Shadow Shift:** As the cushion lifts or stretches under the thumb, its refractive lens sweeps across $B(x,y)$ and its directional drop shadow $d(p - \vec{\Delta}_{\text{light}})$ shifts across the dish floor. |
 | **5** | **Schlick-Fresnel Rim, Specular Glint & Foreground Contrast** (`vitrea::optics` + `MacTheme`) | **Adaptive Contrast (`label_on`):** The luminance of the refracted surface determines whether foreground SF Symbols and labels use `plusDarker` or `plusLighter` (`>= 4.5:1` WCAG AA). | **Continuous Perimeter Glint:** When two neighbors coalesce, the `1.5 px` fifth-power Schlick-Fresnel specular rim wraps continuously around the outer union boundary. | **3D Proximity Point-Light Glint:** The cursor/thumb acts as a 3D point light $\vec{L}_{\text{cursor}}$; the cushion bevel closest to the pointer brightens via Blinn-Phong $(\vec{N}\cdot\vec{H})^n$. |
 
-3. **Strict Model-Controller (`vitrea`) vs. View (`egui-macview`) Separation & Zero Hardcoded Numbers Invariant (`REQ-016-02.6`):**
-   - **`vitrea` (`MC` Crate Purity):** `vitrea` MUST NOT contain widget-specific scene structs (`RosetteOpticalScene`), dark/light-mode branches (`if is_light_mode`), or hardcoded UI color literals (`0.895`, `0.215`, `0.955`). `vitrea::optics` exposes pure, dimensionless optical evaluators (`GlassSurfaceSample`, `evaluate_glass_surface_sample`, `dome_normal_3d_from_sdf`, `refract_chromatic_rgb`, `evaluate_schlick_fresnel_and_blinn_phong`).
+3. **Strict Model-Controller (`vitrea`) vs. View (`egui-macview`) Separation, Cross-Repo Read-Only Ownership Boundary & Zero Hardcoded Numbers Invariant (`REQ-016-00.4`, `REQ-016-02.6`):**
+   - **Cross-Repo Read-Only Boundary (`REQ-016-00.4`):** The `egui-macview` repository and session are **strictly read-only consumers** of the external `vitrea` crate (`../vitrea`). `egui-macview` sessions MUST NEVER edit, overwrite, or commit files inside `../vitrea`. Whenever a new mathematical, optical, or kinematic operator is required in `vitrea`, the `egui-macview` session MUST stop and emit a self-contained handoff prompt (specifying the exact Rust function signature, mathematical equations, invariants, and COTS test cases) to be executed in the dedicated `vitrea` / `grafia` session.
+   - **`vitrea` (`MC` Crate Purity):** `vitrea` MUST NOT contain widget-specific scene structs (`RosetteOpticalScene`), dark/light-mode branches (`if is_light_mode`), or hardcoded UI color literals (`0.895`, `0.215`, `0.955`). `vitrea::optics` exposes pure, dimensionless optical evaluators (`dome_normal_3d_from_sdf`, `refract_ray_snell_3d`, `refract_chromatic_rgb`, `evaluate_schlick_fresnel_and_blinn_phong`).
    - **`egui-macview` (`View` Layer Token Purity):** All colors in the stacked 2D matrices MUST originate exclusively from `&MacTheme` (`window_background()`, `box_background()`, `control_background()`, `specular_rim_top()`, `drop_shadow()`, `resolve_glass_accent_on()`), and all optical/geometric ratios MUST originate exclusively from `&ThumbDialMetrics` (`tokens/design_tokens.json`), enforced by `test_guard_zero_magic_numbers_and_colors_in_ui_components`.
 
 4. **The 3-Phase / 4-Layer 2D Matrix Compositor Pipeline:**
@@ -282,42 +283,28 @@ COTS verification tests in `tests/spec016_liquid_glass_optical_engine_tests.rs` 
 
 ---
 
-## 5. Detailed Normative Specification for Block B, Family 2 (`Iter 6: W2-V` & `Iter 7: W2-C` — `MacEdgeThumbwheel` & `MacFreeJoystickBowl`)
+## 5. Detailed Normative Specification for Block B, Family 1 & 2 (`Fase 1 Clean-Room Rebuild` — `MacContextThumbDial`, `MacEdgeThumbwheel` & `MacFreeJoystickBowl`)
 
-### 5.1 `MacEdgeThumbwheel` (`Component B` in Golden Reference Mockups `render1_dark_mode_stand1_v3` & `render3_light_mode_aqua_stand1_v2`)
+### 5.1 Unified 3-Matrix `GlassEffectContainer` Architecture Across All 3 Triad Controls (`REQ-016-01.6`, `REQ-016-02.7`, `REQ-016-08`)
 
-1. **1. Base Appearance (*Self / Resting State*):**
-   - **Recessed Glass Trough Housing**: Outer rounded glass trough (`outer_cr`) with soft outer cyan/white ambient halo (`rect.expand(gap)`), `1.0pt` specular top rim, and deep recessed inner groove shadow around `inner_rect`.
-   - **32-Band 2D-Grid Metallic/Glass Cylindrical Drum Mesh**:
-     - The drum surface inside `inner_rect` is tessellated as a 2D cylindrical mesh with vertical angle $\phi(y) \in [-\frac{\pi}{2}, +\frac{\pi}{2}]$ and horizontal axial normalized coordinate $u(x) \in [-1, +1]$.
-     - The vertical cylindrical luminance profile features a bright upper-center **specular reflection band** at $\phi_{\text{spec}} \approx -0.22\text{ rad}$ (modulated dynamically by pointer offset $p_y(t)$), deep curvature shadow at $\phi \to \pm\frac{\pi}{2}$, and a secondary lower-hemisphere bounce reflection.
-   - **Illuminated 3D Blue/Accent End-Cap Rings**:
-     - The left and right cylinder ends (`[inner_rect.min.x .. inner_rect.min.x + cap_w]` and `[inner_rect.max.x - cap_w .. inner_rect.max.x]`) render as 3D curved end-cap bevels with bright vertical specular core and saturated `.glass_accent(Color32)` neon rim illumination.
-   - **Foreshortened 3D Tactile Ridges (Shadow + Highlight Pair)**:
-     - Each ridge at angle $\phi_k$ renders a dual-line 3D groove (dark micro-trough at $y(\phi_k) + \text{bw}$ paired with a bright specular ridge crest at $y(\phi_k)$) whose thickness and opacity scale with $\cos(\phi_k)$.
-2. **2. Outward Emission (*Behavior Toward Environment*):**
-   - Emits `value_delta`, `delta_ticks`, `is_free_spinning`, and `MacTapticEvent::{RotaryDetentTick, FlywheelBraked}`; when paired above `MacContextThumbDial`, shares the unified `.glass_accent(Color32)` vibrancy palette.
-3. **3. Inward Reception (*Response From Environment*):**
-   - Tracks pointer vertical position $p_y(t)$ via `CASpring` to shift the cylindrical specular band in real time; responds to slow drags (Ratchet Mode), fast flicks ($\ge 120\text{ pt/s}$, Free-Spin Flywheel inertia $\omega(t) = \omega_0 e^{-\lambda t}$), and immediate **Touch-to-Brake** on finger contact.
-
-### 5.2 `MacFreeJoystickBowl` (`Stand 2` in Golden Reference Mockups `screen2_dark_mode_stand2_joystick_bowl` & `screen4_light_mode_aqua_stand2_joystick_bowl_v2`)
-
-1. **1. Base Appearance (*Self / Resting State*):**
-   - **Single Smooth 3D Outer Glass Bezel & Recessed $360^\circ$ Dish**:
-     - Shares the exact single-bezel outer glass rim and semicircular `"↶ Undo"` / `"↷ Redo"` curved-baseline stadium capsules of `MacContextThumbDial` (`r_bowl = r_outer - gap * 2.0`, with zero flat double outer ring).
-     - The recessed dish renders a radially shaded concave bowl (`egui::epaint::Mesh` radial rings from deeper inner-top shadow rim to luminous pearl/dark-glass concave floor).
-     - Concentric `Fine` ($0.45 R$) and `Fast` ($0.82 R$) rings render as `48` crisp circular micro-dots with `"Fine"` and `"Fast"` labels centered in the lower hemisphere.
-   - **3D Volumetric Refractive Crystal Glass Marble (`paint_crystal_glass_marble`)**:
-     - Tessellated as a multi-ring 3D spherical `egui::epaint::Mesh` (`puck_r`) rather than flat `circle_filled` primitives:
-       1. Multi-layer soft ambient + blue/accent **caustic floor glow** cast onto the bowl floor in the direction away from the top-left light source,
-       2. Concave refractive sphere body mesh with Schlick Fresnel rim darkening/brightening around the perimeter ($r \to \text{puck\_r}$),
-       3. Internal lower-right **cyan-azure caustic lens focus** inside the marble,
-       4. Crisp `1.5pt` outer Fresnel specular ring, and
-       5. Upper-left elliptical **Blinn-Phong primary specular highlight** + secondary lower-right internal reflection pinpoint.
-2. **2. Outward Emission (*Behavior Toward Environment*):**
-   - Emits quadratic radial velocity vector `nudge_delta`, `MacTapticEvent::JoystickRingCrossed` when crossing `Fine` or `Fast` rings, and `undo_clicked` / `redo_clicked`.
-3. **3. Inward Reception (*Response From Environment*):**
-   - When dragged, the crystal marble glides smoothly across $360^\circ$ inside `r_bowl`; when released, instead of teleporting instantaneously to `(0, 0)` in 1 frame, the marble **springs back to the center origin via an underdamped `CASpring`** (`joystick_return_x`, `joystick_return_y`), with `0` idle repaints once settled at center.
+1. **Zero Legacy `WHITE_UV` Triangle Strips for Glass Bodies:**
+   - Every glass component of the Bimanual Precision Triad (`MacContextThumbDial` 8-cushion rosette, `"↶ Undo"` & `"↷ Redo"` semicircular stadium capsules, `MacFreeJoystickBowl` 3D crystal marble, and `MacEdgeThumbwheel` cylindrical glass/metallic drum & end-cap rings) MUST be rendered via per-pixel `2x` Retina `egui::TextureHandle` matrices evaluated through `vitrea::evaluate_glass_surface_sample` and cached by 64-bit quantized state hash (`0.0 ms` CPU cost at rest).
+2. **`MacContextThumbDial` + `"↶ Undo"` & `"↷ Redo"` Stadium Capsules (`Stand 1` in Golden Reference Mockups `render1_dark_mode_stand1_v3` & `render3_light_mode_aqua_stand1_v2`):**
+   - **Matrix 1 ($B_{\text{group}}(x, y)$):** Recessed `MacTheme` dish floor (`window_background` $\leftrightarrow$ `box_background` / `control_background`) plus radial subsurface `accent_col` glow emitted by active/latched/hovered cushions.
+   - **Matrix 2 ($D_{\text{group}}(x, y)$):** Composite 2D SDF combining all 8 annular pebble cushions (`vitrea::sdf_annular_rounded_sector_sample` deformed by `vitrea::deform_viscous_droplet_point` $\det J = 1$), the coupled polar morph droplet (`lg_polar_lead`, `lg_polar_trail`), the central hub lens, AND the two `"↶ Undo"` / `"↷ Redo"` curved stadium capsules (`vitrea::sdf_curved_stadium_arc_sample`) via `vitrea::sdf_smooth_union_with_grad`, plus directional light-shifted drop shadow $d(\vec{p} - \vec{\Delta}_{\text{light}})$.
+   - **Matrix 3 ($G_{\text{group}}(x, y)$):** Per-pixel evaluation of `vitrea::evaluate_glass_surface_sample` sampling Matrix 1 at chromatic Snellius coordinates $[\vec{p}_R, \vec{p}_G, \vec{p}_B]$, producing identical 3D dome normals, refraction, and crisp `1.5 px` Schlick-Fresnel specular rims across the 8 cushions, the central hub, and the `"↶ Undo"` / `"↷ Redo"` crown/skirt arcs.
+3. **`MacEdgeThumbwheel` (`Component B` in Golden Reference Mockups `render1_dark_mode_stand1_v3` & `render3_light_mode_aqua_stand1_v2`):**
+   - **Per-Pixel 2.5D Cylindrical Drum & Illuminated End-Cap Matrix (`paint_raytraced_edge_thumbwheel_quad`):**
+     - Evaluated at `2x` Retina resolution into a cached `egui::TextureHandle` quad (`texture_id != TextureId::default()`) using `vitrea::sdf_rounded_capsule_sample` + `vitrea::evaluate_glass_surface_sample`:
+       - **Recessed Glass Trough Housing**: Outer capsuleSDF with `evaluate_glass_surface_sample` 3D bevel, top specular rim, and deep recessed inner slot groove shadow.
+       - **Cylindrical Drum Surface**: Evaluates true vertical cylindrical angle $\phi(y) = \arcsin(\text{clamp}((y - y_c)/R_{\text{cyl}}, -1, 1))$ and surface normal $N_y = \sin\phi, N_z = \cos\phi$, producing a pointer-steered upper-center Blinn-Phong specular reflection band, deep curvature falloff at $\phi \to \pm\frac{\pi}{2}$, lower-hemisphere bounce light, and foreshortened tactile ridges at phase angles $\phi_k$.
+       - **Illuminated 3D Sapphire/Accent End-Cap Rings**: Left and right drum end-caps evaluated via `vitrea::sdf_rounded_capsule_sample` + `vitrea::evaluate_glass_surface_sample` with saturated `.glass_accent(Color32)` subsurface core and bright vertical specular glint.
+4. **`MacFreeJoystickBowl` (`Stand 2` in Golden Reference Mockups `screen2_dark_mode_stand2_joystick_bowl` & `screen4_light_mode_aqua_stand2_joystick_bowl_v2`):**
+   - **Per-Pixel 3-Matrix Recessed Bowl, Refracted `Fine`/`Fast` Micro-Dot Rings & 3D Crystal Glass Marble (`paint_raytraced_joystick_bowl_quad`):**
+     - Evaluated at `2x` Retina resolution into a cached `egui::TextureHandle` quad (`texture_id != TextureId::default()`):
+       - **Matrix 1 ($B_{\text{bowl}}(x, y)$):** Includes the concave `MacTheme` dish floor, the `48` circular micro-dots of the concentric `Fine` ($0.45 R$), intermediate, and `Fast` ($0.82 R$) precision rings, the tether vector line from `hub_center` to `marble_center`, and the lower-right subsurface cyan/sapphire caustic floor glow cast by the marble.
+       - **Matrix 2 ($D_{\text{bowl}}(x, y)$):** Combines the `"↶ Undo"` / `"↷ Redo"` curved stadium capsules (`vitrea::sdf_curved_stadium_arc_sample`) and the viscously deformed 3D spherical crystal marble (`vitrea::deform_viscous_droplet_point` $\det J = 1$, radial sphere SDF $d(\vec{p}) = \|\vec{p}' - \vec{c}_{\text{marble}}\|_2 - R_{\text{puck}}$).
+       - **Matrix 3 ($G_{\text{bowl}}(x, y)$):** Evaluates `vitrea::evaluate_glass_surface_sample` on the crystal marble and Undo/Redo arcs, sampling **Matrix 1 ($B_{\text{bowl}}(x, y)$) at the chromatic Snellius coordinates $[\vec{p}_R, \vec{p}_G, \vec{p}_B]$** — so the underlying `Fine`/`Fast` micro-dots and tether line visibly bend and magnify through the curved 3D glass marble!
 
 ---
 
@@ -350,13 +337,17 @@ COTS verification tests in `tests/spec016_liquid_glass_optical_engine_tests.rs` 
      - When the host window is active (`is_window_active(ui.ctx()) == true`), accented controls (`MacButtonCell::selected(true)`, `MacCheckbox`, `MacRadioButton`, `MacSlider` active track, `MacPopUpButton::accent_badge(true)`) render with full `theme.control_accent()` / `theme.selected_control()`.
      - When the host window becomes inactive/unfocused (`is_window_active(ui.ctx()) == false`), `theme.effective_control_accent(ui.ctx())` automatically de-saturates to neutral graphite (`theme.selected_control_inactive()`), matching native macOS Sonoma / Tahoe window deactivation semantics.
 
+### 7.1 Per-Pixel 2.5D Capsule Evaluation (`paint_liquid_glass_capsule` via `vitrea::sdf_rounded_capsule_sample` & `vitrea::evaluate_glass_surface_sample`)
+
+- Every 3D capsule / pill primitive (`MacSegmentedControl`, `MacTabView`, `MacTableActionBar`, `MacButtonCell`, `MacPopUpButton`, `MacToggle`, `MacSlider`, `MacInputCell::liquid_glass_pill(true)`, `MacPopoverSurface`, `MacPopover`) MUST evaluate `vitrea::sdf_rounded_capsule_sample` and `vitrea::evaluate_glass_surface_sample` along its vertical dome profile (`paint_liquid_glass_capsule`) so that its top-to-bottom convex dome normal, directional key illumination, and fifth-power Schlick-Fresnel specular rim are driven directly by `vitrea` optical mathematics.
+
 ---
 
 ## 8. Detailed Normative Specification for Block B, Family 5 (`Iter 12: W5-V` & `Iter 13: W5-C` — Text, Inspector & Form Controls + `BUG-SONOMA-02`)
 
 1. **1. Base Appearance (*Self / Resting State*):**
    - `MacInputCell` preserves the exact `2.0pt` `-[NSTextFieldCell drawingRectForBounds:]` horizontal inset and `0%` text truncation guarantee across all NIB dimensions (`REQ-013-08.2`), with a `1.0pt` top inner shadow groove (`input_top_inset_shadow`).
-   - Supports `.liquid_glass_pill(true)` (matching the glowing 3D blue `X: 350.0` active row in the `SelectionInfo` inspector panel of the golden reference mockups).
+   - Supports `.liquid_glass_pill(true)` (matching the glowing 3D blue `X: 350.0` active row in the `SelectionInfo` inspector panel of the golden reference mockups): when enabled or focused with `.liquid_glass_pill(true)`, renders a pill-rounded (`corner_radius = height * 0.5`) 3D Liquid Glass capsule (`paint_liquid_glass_capsule`) filled with `theme.effective_control_accent(ui.ctx())` and adaptive `MacBackgroundStyle::from_color` foreground text contrast.
 2. **2. Outward Emission (*Behavior Toward Environment*):**
    - Emits transactional text/numeric mutations and participates in cyclic `Tab` / `Shift+Tab` focus transfer.
 3. **3. Inward Reception (*Response From Environment*) & `BUG-SONOMA-02` Fix (`paint_animated_focus_ring`):**
@@ -368,11 +359,12 @@ COTS verification tests in `tests/spec016_liquid_glass_optical_engine_tests.rs` 
 ## 9. Detailed Normative Specification for Block B, Family 6 (`Iter 14: W6-V` & `Iter 15: W6-C` — Floating Surfaces, Navigation & Media: `MacPopoverSurface`, `MacPopover`, `MacPanel`, `MacFloatingInfoBox`)
 
 1. **1. Base Appearance (*Self / Resting State*):**
-   - Floating glass surfaces (`MacPopoverSurface`, `MacPopover`) render a 3D Liquid Glass material layer combining `popover_background`, subtle top-to-bottom convex glass sheen, and a crisp `1.0pt` `specular_rim_top` inner highlight along the top edge.
+   - Floating glass surfaces (`MacPopoverSurface`, `MacPopover`, `MacPanel`, `MacFloatingInfoBox`) render a 3D Liquid Glass material layer (`paint_liquid_glass_capsule`) combining `popover_background` / `hud_background`, subtle top-to-bottom convex glass sheen evaluated via `vitrea::evaluate_glass_surface_sample`, and a crisp `1.0pt` `specular_rim_top` inner highlight along the top edge.
 2. **2. Outward Emission (*Behavior Toward Environment*):**
    - Registers its surface vibrancy slot via `theme.register_surface_rect_slot(ui.ctx(), rect, bg_fill)` so all nested controls inside the popover/panel automatically adapt their foreground contrast and vibrancy.
 3. **3. Inward Reception (*Response From Environment*):**
    - Samples and refracts any registered background canvas or underlying window surface through the Liquid Glass optical pipeline (`build_liquid_glass_backdrop_image`, Dual-Kawase blur + $1.5\times$ saturation boost + Snellius perimeter refraction).
+   - In `macview_gallery` State 1 (`render_state1_hud_and_popover`), the Compact HUD (`MacFloatingInfoBox`) and Spring Inspector (`MacPopover`) use `MacInputCell::liquid_glass_pill(true)` on the active focused coordinate row (`W:` / `H:` / `R:`) so the floating inspector exhibits the glowing 3D blue Liquid Glass active pill from the Golden Reference Mockups.
 
 
 

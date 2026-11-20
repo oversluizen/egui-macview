@@ -366,7 +366,8 @@ pub(crate) fn step_dual_spring_morph_interval(
     (anim_min, anim_max)
 }
 
-/// Paints a 3D convex Liquid Glass / Sonoma vertical-sheen capsule (`SPEC-016 §6..§9` & `BUG-SONOMA-03`).
+/// Paints a 3D convex Liquid Glass / Sonoma vertical-sheen capsule (`SPEC-016 §6..§9` & `BUG-SONOMA-03`)
+/// evaluated via `vitrea::sdf_rounded_capsule_sample` & `vitrea::evaluate_glass_surface_sample`.
 pub(crate) fn paint_liquid_glass_capsule(
     painter: &Painter,
     rect: Rect,
@@ -379,11 +380,25 @@ pub(crate) fn paint_liquid_glass_capsule(
     let inset = (corner_radius * 0.5).max(border_stroke.width).min(rect.width() * 0.5).min(rect.height() * 0.5);
     let inner = rect.shrink2(Vec2::new(inset, border_stroke.width));
     if inner.width() > 1.0 && inner.height() > 1.0 {
-        let f0_step = vitrea::LiquidGlassOpticalParams::default().fresnel_f0;
+        let params = vitrea::LiquidGlassOpticalParams {
+            bevel_width_pt: (rect.height() * 0.5).max(1.0),
+            ..Default::default()
+        };
+        let center_g = glam_pt(rect.center());
+        let half_ext = glam_vec(rect.size() * 0.5);
+        let p_top = glam_pt(Pos2::new(rect.center().x, inner.min.y + border_stroke.width.max(1.0)));
+        let p_bot = glam_pt(Pos2::new(rect.center().x, inner.max.y));
+        let s_top = vitrea::sdf_rounded_capsule_sample(p_top, center_g, half_ext, corner_radius);
+        let s_bot = vitrea::sdf_rounded_capsule_sample(p_bot, center_g, half_ext, corner_radius);
+        let surf_top = vitrea::evaluate_glass_surface_sample(p_top, s_top, &params, None, rect.width());
+        let surf_bot = vitrea::evaluate_glass_surface_sample(p_bot, s_bot, &params, None, rect.width());
+        let f0_step = params.fresnel_f0;
+        let top_gain = f0_step + surf_top.key_illumination * f0_step;
+        let bot_loss = f0_step + (1.0 - surf_bot.dome_elevation) * f0_step * 0.5;
         let mut top_h = egui::epaint::Hsva::from(fill);
-        top_h.v = (top_h.v + f0_step).clamp(0.0, 1.0);
+        top_h.v = (top_h.v + top_gain).clamp(0.0, 1.0);
         let mut bot_h = egui::epaint::Hsva::from(fill);
-        bot_h.v = (bot_h.v - f0_step).clamp(0.0, 1.0);
+        bot_h.v = (bot_h.v - bot_loss).clamp(0.0, 1.0);
         let top_c = Color32::from(top_h);
         let bot_c = Color32::from(bot_h);
         let mid_y = inner.center().y;

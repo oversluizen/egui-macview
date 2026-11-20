@@ -247,17 +247,33 @@ pub(super) fn show_input_cell(cell: MacInputCell<'_>, ui: &mut Ui) -> Response {
         theme.paint_focus_ring(&painter, rect, corner_radius);
     }
 
-    let bg_color = theme.control_background().gamma_multiply(alpha_factor);
-    let border_stroke = if show_focus {
+    let bg_color = if cell.liquid_glass_pill {
+        theme.effective_control_accent(ui.ctx()).gamma_multiply(alpha_factor)
+    } else {
+        theme.control_background().gamma_multiply(alpha_factor)
+    };
+    let border_stroke = if show_focus || cell.liquid_glass_pill {
         Stroke::new(metrics.border_width.points(), theme.effective_control_accent(ui.ctx()))
     } else {
         Stroke::new(metrics.border_width.points(), theme.separator().gamma_multiply(alpha_factor))
     };
-    painter.rect(rect, CornerRadius::same(corner_radius as u8), bg_color, border_stroke, StrokeKind::Inside);
-    painter.line_segment(
-        [Pos2::new(rect.min.x + 1.0, rect.min.y + 1.0), Pos2::new(rect.max.x - 1.0, rect.min.y + 1.0)],
-        Stroke::new(1.0, theme.input_top_inset_shadow().gamma_multiply(alpha_factor)),
-    );
+    if cell.liquid_glass_pill {
+        let pill_r = (height * 0.5).max(corner_radius);
+        super::super::liquid_glass::paint_liquid_glass_capsule(
+            &painter,
+            rect,
+            pill_r,
+            bg_color,
+            border_stroke,
+            theme.specular_rim_top().gamma_multiply(alpha_factor),
+        );
+    } else {
+        painter.rect(rect, CornerRadius::same(corner_radius as u8), bg_color, border_stroke, StrokeKind::Inside);
+        painter.line_segment(
+            [Pos2::new(rect.min.x + 1.0, rect.min.y + 1.0), Pos2::new(rect.max.x - 1.0, rect.min.y + 1.0)],
+            Stroke::new(1.0, theme.input_top_inset_shadow().gamma_multiply(alpha_factor)),
+        );
+    }
 
     let shrink_pad = if effective_fixed.is_some()
         || height < tf_tokens.auto_size_regular_min_height.points()
@@ -283,7 +299,11 @@ pub(super) fn show_input_cell(cell: MacInputCell<'_>, ui: &mut Ui) -> Response {
     };
 
     let font_id = FontId::proportional(font_size);
-    let text_color = theme.label().gamma_multiply(alpha_factor);
+    let text_color = if cell.liquid_glass_pill {
+        theme.background_style(bg_color).primary_text_color(&theme).gamma_multiply(alpha_factor)
+    } else {
+        theme.label().gamma_multiply(alpha_factor)
+    };
     let hint_color = theme.placeholder_text().gamma_multiply(alpha_factor);
 
     if !(is_focused && !surrender_now) {

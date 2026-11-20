@@ -65,6 +65,7 @@ pub struct MacInputCell<'a> {
     pub(super) prev_focus_id: Option<Id>,
     pub(super) placeholder: Option<&'a str>,
     pub(super) numeric_config: Option<(RangeInclusive<f64>, f64)>,
+    pub(super) liquid_glass_pill: bool,
 }
 
 impl<'a> MacInputCell<'a> {
@@ -93,7 +94,14 @@ impl<'a> MacInputCell<'a> {
             prev_focus_id: None,
             placeholder: None,
             numeric_config: None,
+            liquid_glass_pill: false,
         }
+    }
+
+    /// Enables 3D Liquid Glass pill styling (`SPEC-016 §8`) matching the glowing blue active row in the `SelectionInfo` inspector.
+    pub fn liquid_glass_pill(mut self, pill: bool) -> Self {
+        self.liquid_glass_pill = pill;
+        self
     }
 
     /// Configures numeric arrow-key stepping (`ArrowUp`/`ArrowDown` by `±step`,

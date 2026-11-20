@@ -284,15 +284,9 @@ fn oracle_1_exact_apple_nib_coordinate_bijection_inspector_shape_bounds() {
         );
     }
 
-    // Render inside a wide 800x600 host panel and verify MacSceneIR::show does NOT stretch or inflate beyond 192x44
     let (ctx, theme) = common::headless_ctx(MacAppearance::DarkAqua);
     let mut store = ShapeBoundsStore {
-        vals: BTreeMap::from([
-            (BindingId(1), "120".into()),
-            (BindingId(2), "-40".into()),
-            (BindingId(3), "680".into()),
-            (BindingId(4), "700".into()),
-        ]),
+        vals: BTreeMap::from([(BindingId(1), "120".into()), (BindingId(2), "-40".into()), (BindingId(3), "680".into()), (BindingId(4), "700".into())]),
     };
     let mut used_rect = Rect::NOTHING;
     let shapes = common::run_frame(&ctx, RawInput::default(), vec2(800.0, 600.0), |ui| {
@@ -301,21 +295,22 @@ fn oracle_1_exact_apple_nib_coordinate_bijection_inspector_shape_bounds() {
             used_rect = s_ui.min_rect();
         });
     });
-    assert!(
-        (used_rect.width() - 192.0).abs() <= 0.5 && (used_rect.height() - 44.0).abs() <= 0.5,
-        "Oracle 1 violation: MacSceneIR::show under ExactAppleNib inflated 192x44 scene to {:?}",
-        used_rect.size()
-    );
+    assert!((used_rect.width() - 192.0).abs() <= 0.5 && (used_rect.height() - 44.0).abs() <= 0.5);
     for cs in &shapes {
         if let egui::Shape::Rect(r) = &cs.shape {
             if r.fill == theme.control_background() {
-                assert!(
-                    r.rect.max.x <= 192.5 && r.rect.max.y <= 44.5,
-                    "Control bezel rect {:?} escaped 192x44 ExactAppleNib design_size",
-                    r.rect
-                );
+                assert!(r.rect.max.x <= 192.5 && r.rect.max.y <= 44.5);
             }
         }
+    }
+
+    let real_nib_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../nib/crates/nib-gui/assets/nibs/Frameworks/App.framework/Versions/A/Resources/Base.lproj/InspectorViewShapeBounds.nib");
+    if real_nib_path.exists() {
+        let mapper = egui_macview::scene::CustomClassMapper::default();
+        let real_scene = egui_macview::scene::NibArchiveFrontend::from_path(&real_nib_path, &mapper).expect("decode real nib");
+        let root_r = real_scene.solve_exact_nib_layout()[&real_scene.root_id()];
+        assert!(root_r.width() < 260.0 && root_r.height() < 100.0);
     }
 }
 

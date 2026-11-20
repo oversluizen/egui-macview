@@ -79,6 +79,7 @@ impl CenterState {
                     MacInputCell::with_id(hud_w_id, &mut card.width)
                         .theme(theme)
                         .control_size(MacControlSize::CompactInfobox)
+                        .liquid_glass_pill(true)
                         .numeric(w_range, 1.0)
                         .width(cell_w)
                         .prev_focus(hud_r_id)

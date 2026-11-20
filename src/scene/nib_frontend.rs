@@ -63,7 +63,17 @@ impl NibArchiveFrontend {
 
     /// Loads a `.nib` file or `.nib` bundle directory (`keyedobjects-101300.nib` / `keyedobjects.nib`) from disk (`REQ-013-05.2`).
     pub fn from_path(path: &std::path::Path, mapper: &CustomClassMapper) -> Result<MacSceneIR, SceneCompileError> {
-        crate::scene::nib_ibtool::load_nib_from_path(path, mapper)
+        crate::scene::load_nib_from_path(path, mapper)
+    }
+
+    /// Decodes a top-level AppKit `NSMenu` hierarchy (`MainMenu.nib`) from binary `.nib` bytes into `Vec<NSMenu>` (`REQ-013-09.2`).
+    pub fn decode_menu_bar_from_bytes(bytes: &[u8]) -> Result<Vec<crate::navigation::NSMenu>, SceneCompileError> {
+        crate::scene::decode_menu_bar_from_nib_bytes(bytes)
+    }
+
+    /// Loads and decodes a top-level AppKit `NSMenu` hierarchy (`MainMenu.nib`) from a `.nib` file or bundle directory (`REQ-013-09.2`).
+    pub fn decode_menu_bar_from_path(path: &std::path::Path) -> Result<Vec<crate::navigation::NSMenu>, SceneCompileError> {
+        crate::scene::decode_menu_bar_from_nib_path(path)
     }
 
     fn parse_nib_archive_v1(bytes: &[u8], mapper: &CustomClassMapper) -> Result<MacSceneIR, SceneCompileError> {

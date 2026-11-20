@@ -9,13 +9,13 @@
 use crate::controls::context_thumb_dial::icons::MacTapticEvent;
 use crate::controls::context_thumb_dial::paint::{paint_undo_redo_crescent_arcs, UndoRedoPaintStyle};
 use crate::controls::context_thumb_dial::render::{
-    allocate_docked_thumb_rect, compute_undo_redo_hit_rects, deg_to_rad, hit_test_undo_redo_arcs, polar_pos, step_joystick_bowl_physics,
+    allocate_docked_thumb_rect, compute_undo_redo_hit_rects, hit_test_undo_redo_arcs, polar_pos, step_joystick_bowl_physics,
 };
 use crate::controls::{MacThumbArcPlacement, MacThumbDockZone};
 use crate::theme::{MacAppearance, MacTheme};
 use crate::tokens::ThumbDialMetrics;
-use egui::{Align2, Color32, FontId, Id, Painter, Pos2, Rect, Response, Shape, Stroke, Ui, Vec2};
-use std::hash::Hash;
+use egui::{Align2, Color32, ColorImage, FontId, Id, Painter, Pos2, Rect, Response, Shape, Stroke, Ui, Vec2};
+use std::hash::{Hash, Hasher};
 
 pub(crate) struct MarblePaintSpec {
     pub(crate) hub_center: Pos2,
@@ -23,6 +23,136 @@ pub(crate) struct MarblePaintSpec {
     pub(crate) puck_r: f32,
     pub(crate) scale: f32,
     pub(crate) accent_col: Color32,
+}
+
+fn color_to_rgb_norm(c: Color32) -> [f32; 3] {
+    let [r, g, b, _] = c.to_array();
+    let max_u8 = f32::from(u8::MAX);
+    [f32::from(r) / max_u8, f32::from(g) / max_u8, f32::from(b) / max_u8]
+}
+
+fn eval_bowl_backdrop_at(
+    p: vitrea::GlamVec2,
+    (hub_c, marble_c, r_bowl, puck_r): (vitrea::GlamVec2, vitrea::GlamVec2, f32, f32),
+    (bowl_core, bowl_rim, accent_rgb, dot_rgb): ([f32; 3], [f32; 3], [f32; 3], [f32; 3]),
+    m: &ThumbDialMetrics,
+) -> [f32; 3] {
+    let d_vec = p - hub_c;
+    let r = d_vec.length();
+    let r_norm = (r / r_bowl.max(1.0)).clamp(0.0, 1.0);
+    let mut rgb = [0, 1, 2].map(|ch| bowl_core[ch] + (bowl_rim[ch] - bowl_core[ch]) * r_norm);
+    let fine_r = r_bowl * m.joystick_fine_ratio.points();
+    let fast_r = r_bowl * m.joystick_fast_ratio.points();
+    let slow_r = (fine_r + fast_r) * 0.5;
+    let ring_d = (r - fine_r).abs().min((r - slow_r).abs()).min((r - fast_r).abs());
+    let bw = m.border_stroke_width.points() * 2.0;
+    if ring_d <= bw * 2.0 {
+        let ang_deg = d_vec.y.atan2(d_vec.x) * m.half_circle_deg.points() / std::f32::consts::PI;
+        let step_d = (m.detent_step_deg.points() * 0.5).max(1.0);
+        let rem = (ang_deg.rem_euclid(step_d) - step_d * 0.5).abs();
+        let arc_d = rem * (std::f32::consts::PI / m.half_circle_deg.points()) * r;
+        let dot_w = (1.0 - (ring_d * ring_d + arc_d * arc_d).sqrt() / (bw * 2.0)).clamp(0.0, 1.0) * m.active_fill_opacity.points();
+        rgb = [0, 1, 2].map(|ch| rgb[ch] * (1.0 - dot_w) + dot_rgb[ch] * dot_w);
+    }
+    let seg = marble_c - hub_c;
+    let seg_len_sq = seg.length_squared();
+    let t_seg = if seg_len_sq > 0.0 { ((p - hub_c).dot(seg) / seg_len_sq).clamp(0.0, 1.0) } else { 0.0 };
+    let d_tether = (p - (hub_c + seg * t_seg)).length();
+    let tether_w = (1.0 - d_tether / (m.active_stroke_width.points() * 2.0).max(1.0)).clamp(0.0, 1.0) * m.glass_fill_alpha.points();
+    let caus_off = vitrea::GlamVec2::splat(m.latch_dot_radius.points() * 2.0);
+    let caus_t = (1.0 - (p - (marble_c + caus_off)).length() / (puck_r * 2.0).max(1.0)).clamp(0.0, 1.0);
+    let glow_w = (tether_w + caus_t * caus_t * m.active_fill_opacity.points()).clamp(0.0, 1.0);
+    [0, 1, 2].map(|ch| (rgb[ch] * (1.0 - glow_w) + accent_rgb[ch] * glow_w).clamp(0.0, 1.0))
+}
+
+fn synthesize_marble_matrix_rgba(
+    tex_dim: usize,
+    (hub_c, marble_c, r_bowl, puck_r, scale): (vitrea::GlamVec2, vitrea::GlamVec2, f32, f32, f32),
+    accent_col: Color32,
+    theme: &MacTheme,
+    m: &ThumbDialMetrics,
+) -> Vec<u8> {
+    let mut flat = vec![0u8; tex_dim * tex_dim * 4];
+    let is_light = theme.appearance == MacAppearance::Aqua;
+    let bowl_core_col = theme.window_background();
+    let bowl_core = color_to_rgb_norm(bowl_core_col);
+    let bowl_rim = color_to_rgb_norm(if is_light { theme.box_background() } else { theme.control_background() });
+    let accent_rgb = color_to_rgb_norm(accent_col);
+    let dot_rgb = color_to_rgb_norm(theme.secondary_label_on(bowl_core_col));
+    let spec_rgb = color_to_rgb_norm(theme.specular_rim_top());
+    let shadow_rgb = color_to_rgb_norm(theme.drop_shadow());
+
+    let params = vitrea::LiquidGlassOpticalParams {
+        ior_glass: m.ior_glass.points(),
+        ior_dispersion_rgb: [m.ior_red.points(), m.ior_green.points(), m.ior_blue.points()],
+        fresnel_f0: m.fresnel_f0.points(),
+        bevel_width_pt: puck_r,
+        dome_thickness_pt: puck_r * 0.5,
+        vibrancy_chroma_boost: m.vibrancy_chroma_boost.points(),
+        meniscus_merge_k_pt: m.meniscus_merge_k_pt.points() * scale,
+    };
+    let stretch_gains = (m.viscous_stretch_gain.points(), m.viscous_press_gain.points());
+    let vel_off = marble_c - hub_c;
+    let press_amt = (vel_off.length() / (puck_r * 2.0).max(1.0)).clamp(0.0, 1.0);
+    let dot_px = m.latch_dot_radius.points() * scale;
+    let sh_off = vitrea::GlamVec2::new(dot_px, dot_px * 2.0);
+    let cursor_pt = Some(marble_c - vitrea::GlamVec2::splat(dot_px * 2.0));
+    let (fill_a, act_a, hov_a, spec_a) = (m.glass_fill_alpha.points(), m.active_fill_opacity.points(), m.hover_fill_opacity.points(), m.glass_specular_alpha.points());
+    let max_u8 = f32::from(u8::MAX);
+    let b_geom = (hub_c, marble_c, r_bowl, puck_r);
+    let b_cols = (bowl_core, bowl_rim, accent_rgb, dot_rgb);
+
+    for y in 0..tex_dim {
+        for x in 0..tex_dim {
+            let p = vitrea::GlamVec2::new(x as f32 + 0.5, y as f32 + 0.5);
+            let p_def = vitrea::deform_viscous_droplet_point(p, marble_c, -vel_off, puck_r * 2.0, press_amt * 0.5, stretch_gains);
+            let d_vec = p_def - marble_c;
+            let dist = d_vec.length();
+            let grad = if dist > 0.0 { d_vec / dist } else { vitrea::GlamVec2::X };
+            let s_marble = vitrea::SdfSample2d { distance: dist - puck_r, gradient: grad };
+            let sh_t = (1.0 - (((p_def - sh_off - marble_c).length() - puck_r).max(0.0) / (dot_px * 2.0).max(1.0)).clamp(0.0, 1.0)).powi(2);
+            let caus_t = (1.0 - (((p_def - vitrea::GlamVec2::splat(dot_px * 2.0) - marble_c).length() - puck_r).max(0.0) / (dot_px * 2.0).max(1.0)).clamp(0.0, 1.0)).powi(2);
+            let sh_a = (sh_t * hov_a + caus_t * act_a).clamp(0.0, fill_a);
+            let sh_c = [0, 1, 2].map(|ch| (shadow_rgb[ch] * sh_t + accent_rgb[ch] * caus_t) / (sh_t + caus_t).max(params.fresnel_f0));
+
+            let surf = vitrea::evaluate_glass_surface_sample(p, s_marble, &params, cursor_pt, puck_r * 2.0);
+            let idx = (y * tex_dim + x) * 4;
+            if surf.coverage <= 0.0 {
+                if sh_a > 0.0 {
+                    flat[idx..idx + 4].copy_from_slice(&[
+                        (sh_c[0] * max_u8).round() as u8,
+                        (sh_c[1] * max_u8).round() as u8,
+                        (sh_c[2] * max_u8).round() as u8,
+                        (sh_a * max_u8).round() as u8,
+                    ]);
+                }
+                continue;
+            }
+            let [p_r, p_g, p_b] = surf.refracted_rgb_pts;
+            let refr_rgb = [
+                eval_bowl_backdrop_at(p_r, b_geom, b_cols, m)[0],
+                eval_bowl_backdrop_at(p_g, b_geom, b_cols, m)[1],
+                eval_bowl_backdrop_at(p_b, b_geom, b_cols, m)[2],
+            ];
+            let caustic_in = ((surf.normal_3d.x + surf.normal_3d.y) * 0.5).clamp(0.0, 1.0) * (1.0 - surf.dome_elevation);
+            let hi_glint = surf.key_illumination * fill_a + surf.fresnel_specular * spec_a;
+            let trans_w = if is_light { act_a } else { hov_a };
+            let g_rgb = [0, 1, 2].map(|ch| {
+                let tint_c = (accent_rgb[ch] * (act_a + caustic_in * fill_a) + refr_rgb[ch] * trans_w).clamp(0.0, 1.0);
+                let lit_c = (tint_c + hi_glint * spec_rgb[ch]).clamp(0.0, 1.0);
+                (lit_c * surf.coverage + sh_c[ch] * (1.0 - surf.coverage)).clamp(0.0, 1.0)
+            });
+            let g_alpha = (fill_a + (1.0 - fill_a) * surf.fresnel_specular).clamp(0.0, 1.0);
+            let out_a = (surf.coverage * g_alpha + (1.0 - surf.coverage) * sh_a).clamp(0.0, 1.0);
+            flat[idx..idx + 4].copy_from_slice(&[
+                (g_rgb[0] * max_u8).round() as u8,
+                (g_rgb[1] * max_u8).round() as u8,
+                (g_rgb[2] * max_u8).round() as u8,
+                (out_a * max_u8).round() as u8,
+            ]);
+        }
+    }
+    flat
 }
 
 pub(crate) fn paint_3d_recessed_bowl(painter: &Painter, spec: MarblePaintSpec, r_bowl: f32, theme: &MacTheme, m: &ThumbDialMetrics) {
@@ -57,22 +187,17 @@ pub(crate) fn paint_3d_recessed_bowl(painter: &Painter, spec: MarblePaintSpec, r
         deg += step_deg;
     }
 
-    painter.text(
-        spec.hub_center + Vec2::new(0.0, fine_r - m.hint_vertical_offset.points() * s),
-        Align2::CENTER_CENTER,
-        "Fine",
-        FontId::proportional(m.hint_font_size.points() * s),
-        theme.secondary_label_on(bowl_core),
-    );
-    painter.text(
-        spec.hub_center + Vec2::new(0.0, fast_r - m.hint_vertical_offset.points() * s),
-        Align2::CENTER_CENTER,
-        "Fast",
-        FontId::proportional(m.hint_font_size.points() * s),
-        theme.secondary_label_on(bowl_core),
-    );
+    for label_spec in [(fine_r, "Fine"), (fast_r, "Fast")] {
+        painter.text(
+            spec.hub_center + Vec2::new(0.0, label_spec.0 - m.hint_vertical_offset.points() * s),
+            Align2::CENTER_CENTER,
+            label_spec.1,
+            FontId::proportional(m.hint_font_size.points() * s),
+            theme.secondary_label_on(bowl_core),
+        );
+    }
 
-    paint_crystal_glass_marble(painter, spec, theme, m);
+    paint_crystal_glass_marble(painter, spec, r_bowl, theme, m);
 }
 
 pub(crate) fn paint_radial_disc_mesh(
@@ -86,12 +211,9 @@ pub(crate) fn paint_radial_disc_mesh(
     let steps = 32usize;
     let full_deg = m.full_circle_deg.points();
     let mut mesh = egui::epaint::Mesh::default();
-    mesh.vertices.reserve(steps + 2);
-    mesh.indices.reserve(steps * 3);
     mesh.colored_vertex(center, core_col);
     for i in 0..=steps {
-        let a = full_deg * (i as f32 / steps as f32);
-        let pt = polar_pos(center, radius, a, m);
+        let pt = polar_pos(center, radius, full_deg * (i as f32 / steps as f32), m);
         mesh.colored_vertex(pt, rim_col);
     }
     for i in 0..steps {
@@ -101,156 +223,59 @@ pub(crate) fn paint_radial_disc_mesh(
     painter.add(Shape::mesh(mesh));
 }
 
-pub(crate) fn paint_crystal_glass_marble(painter: &Painter, spec: MarblePaintSpec, theme: &MacTheme, m: &ThumbDialMetrics) {
-    let s = spec.scale;
-    let active_stroke = Stroke::new(m.active_stroke_width.points(), spec.accent_col);
-    let specular_col = theme.specular_rim_top();
-    let dot_r = m.latch_dot_radius.points() * s;
-    let bw = m.border_stroke_width.points();
-
+pub(crate) fn paint_crystal_glass_marble(painter: &Painter, spec: MarblePaintSpec, r_bowl: f32, theme: &MacTheme, m: &ThumbDialMetrics) {
+    let (s, bw, dot_r) = (spec.scale, m.border_stroke_width.points(), m.latch_dot_radius.points() * spec.scale);
     painter.line_segment(
         [spec.hub_center, spec.marble_center],
         Stroke::new(m.active_stroke_width.points() * 2.0, spec.accent_col.gamma_multiply(m.hover_fill_opacity.points())),
     );
-    painter.line_segment([spec.hub_center, spec.marble_center], active_stroke);
+    painter.line_segment([spec.hub_center, spec.marble_center], Stroke::new(m.active_stroke_width.points(), spec.accent_col));
     painter.circle_stroke(spec.hub_center, dot_r, Stroke::new(bw, theme.secondary_label()));
     painter.circle_filled(spec.hub_center, dot_r * 0.5, theme.window_background());
 
-    // 1. Multi-layer soft ambient drop shadow + lower-right blue caustic floor transmission
-    let sh_off = Vec2::new(dot_r * 2.0, dot_r * 2.0);
-    paint_radial_disc_mesh(
-        painter,
-        spec.marble_center + sh_off,
-        spec.puck_r + dot_r * 2.0,
-        spec.accent_col.gamma_multiply(m.active_fill_opacity.points()),
-        Color32::TRANSPARENT,
-        m,
-    );
-    paint_radial_disc_mesh(
-        painter,
-        spec.marble_center + Vec2::new(0.0, dot_r),
-        spec.puck_r + dot_r,
-        theme.drop_shadow().gamma_multiply(m.glass_fill_alpha.points()),
-        Color32::TRANSPARENT,
-        m,
-    );
-
-    // 2. 3D Spherical Refractive Crystal Mesh (4 concentric radial rings x 24 angular segments)
-    let is_light = theme.appearance == MacAppearance::Aqua;
     let vel_off = spec.marble_center - spec.hub_center;
     let press_amt = (vel_off.length() / (spec.puck_r * 2.0).max(1.0)).clamp(0.0, 1.0);
-    let rings = 4usize;
-    let segs = 24usize;
-    let full_deg = m.full_circle_deg.points();
-    let mut sphere = egui::epaint::Mesh::default();
-    sphere.vertices.reserve((rings + 1) * (segs + 1));
-    sphere.indices.reserve(rings * segs * 6);
-    for r_i in 0..=rings {
-        let r_frac = r_i as f32 / rings as f32;
-        let rad = spec.puck_r * r_frac;
-        for s_i in 0..=segs {
-            let a_deg = full_deg * (s_i as f32 / segs as f32);
-            let a_rad = deg_to_rad(a_deg, m);
-            let raw_pt = spec.marble_center + Vec2::new(a_rad.cos() * rad, a_rad.sin() * rad);
-            let pt = super::liquid_glass::deform_viscous_droplet_point(
-                raw_pt,
-                spec.marble_center,
-                vel_off,
-                spec.puck_r * 2.0,
-                press_amt,
+    let probe_pt = super::liquid_glass::deform_viscous_droplet_point(spec.marble_center, spec.marble_center, vel_off, spec.puck_r * 2.0, press_amt);
+    let probe_n = super::liquid_glass::dome_surface_normal_3d(probe_pt, spec.marble_center, spec.puck_r, spec.puck_r);
+    let _ = super::liquid_glass::evaluate_vertex_cursor_fresnel_lighting(probe_pt, probe_n, Some(spec.marble_center), spec.puck_r * 2.0);
+
+    let px_scale = 2.0f32;
+    let quad_half = spec.puck_r + dot_r * 2.0 * 2.0;
+    let marble_rect = Rect::from_center_size(spec.marble_center, Vec2::splat(quad_half * 2.0));
+    let tex_dim = ((marble_rect.width() * px_scale).round() as usize).max(2);
+    let to_tex = |pt: Pos2| -> vitrea::GlamVec2 {
+        vitrea::GlamVec2::new((pt.x - marble_rect.min.x) * px_scale, (pt.y - marble_rect.min.y) * px_scale)
+    };
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    tex_dim.hash(&mut hasher);
+    (theme.appearance == MacAppearance::Aqua).hash(&mut hasher);
+    spec.accent_col.to_array().hash(&mut hasher);
+    ((vel_off.x * 2.0).round() as i32).hash(&mut hasher);
+    ((vel_off.y * 2.0).round() as i32).hash(&mut hasher);
+    let state_hash = hasher.finish();
+    let cache_id = Id::NULL.with(("lg_marble_ray_tex", (spec.hub_center.x as i32, spec.hub_center.y as i32)));
+    let ctx = painter.ctx();
+    let cached = ctx.data(|d| d.get_temp::<(u64, egui::TextureHandle)>(cache_id));
+    let tex_handle = match cached {
+        Some((prev_h, handle)) if prev_h == state_hash => handle,
+        _ => {
+            let flat = synthesize_marble_matrix_rgba(
+                tex_dim,
+                (to_tex(spec.hub_center), to_tex(spec.marble_center), r_bowl * px_scale, spec.puck_r * px_scale, s * px_scale),
+                spec.accent_col,
+                theme,
+                m,
             );
-            let [nx, ny, nz] = super::liquid_glass::dome_surface_normal_3d(pt, spec.marble_center, spec.puck_r, spec.puck_r);
-            let refracted_pt = super::liquid_glass::refract_point_through_glass(pt, [nx, ny, nz], dot_r, theme);
-            let fresnel = (1.0 - nz) * (1.0 - nz);
-            let prox_glint = super::liquid_glass::evaluate_vertex_cursor_fresnel_lighting(
-                refracted_pt,
-                [nx, ny, nz],
-                Some(spec.marble_center - Vec2::splat(dot_r * 2.0)),
-                spec.puck_r * 2.0,
-            );
-            let caustic = ((nx + ny) * 0.5).clamp(0.0, 1.0) * r_frac;
-            let spec_glint = ((-nx - ny) * 0.5).clamp(0.0, 1.0) * (1.0 - r_frac * 0.5) + prox_glint * 0.5;
-            let mut h = egui::epaint::Hsva::from(spec.accent_col);
-            let base_s = if is_light { m.hover_fill_opacity.points() } else { m.active_fill_opacity.points() };
-            h.s = (h.s * (base_s + caustic * m.glass_fill_alpha.points() + fresnel * 0.5)).clamp(0.0, 1.0);
-            h.v = if is_light {
-                (m.glass_fill_alpha.points() + (1.0 - m.glass_fill_alpha.points()) * (spec_glint + caustic * 0.5)).clamp(0.0, 1.0)
-            } else {
-                (h.v + (1.0 - h.v) * (spec_glint * m.glass_fill_alpha.points() + fresnel * m.active_fill_opacity.points())).clamp(0.0, 1.0)
-            };
-            h.a = (m.active_fill_opacity.points() + fresnel * m.glass_fill_alpha.points() + caustic * 0.5).clamp(0.0, 1.0);
-            sphere.colored_vertex(pt, Color32::from(h));
+            let img = ColorImage::from_rgba_unmultiplied([tex_dim, tex_dim], &flat);
+            let handle = ctx.load_texture("vitrea_marble_lg", img, egui::TextureOptions::LINEAR);
+            ctx.data_mut(|d| d.insert_temp(cache_id, (state_hash, handle.clone())));
+            handle
         }
-    }
-    let stride = (segs + 1) as u32;
-    for r_i in 0..rings {
-        for s_i in 0..segs {
-            let b0 = (r_i as u32) * stride + (s_i as u32);
-            let b1 = b0 + stride;
-            sphere.add_triangle(b0, b1, b1 + 1);
-            sphere.add_triangle(b0, b1 + 1, b0 + 1);
-        }
-    }
-    painter.add(Shape::mesh(sphere));
-
-    // 2b. Snellius Refracted Lens Caustic Cross-Lines inside the 3D Crystal Marble (`refract_point_through_glass`, eta = 1.48)
-    let lens_steps = 8usize;
-    let lens_stroke = Stroke::new(bw, specular_col.gamma_multiply(m.hover_fill_opacity.points()));
-    for axis in [-0.5f32, 0.5f32] {
-        let mut h_pts = Vec::with_capacity(lens_steps + 1);
-        let mut v_pts = Vec::with_capacity(lens_steps + 1);
-        for i in 0..=lens_steps {
-            let u = (i as f32 / lens_steps as f32) * 2.0 - 1.0;
-            let max_span = (1.0 - axis * axis).max(0.0).sqrt() * (spec.puck_r - bw * 2.0);
-            let p_h = spec.marble_center + Vec2::new(u * max_span, axis * (spec.puck_r * 0.5));
-            let n_h = super::liquid_glass::dome_surface_normal_3d(p_h, spec.marble_center, spec.puck_r, spec.puck_r);
-            h_pts.push(super::liquid_glass::refract_point_through_glass(p_h, n_h, dot_r * 2.0, theme));
-            let p_v = spec.marble_center + Vec2::new(axis * (spec.puck_r * 0.5), u * max_span);
-            let n_v = super::liquid_glass::dome_surface_normal_3d(p_v, spec.marble_center, spec.puck_r, spec.puck_r);
-            v_pts.push(super::liquid_glass::refract_point_through_glass(p_v, n_v, dot_r * 2.0, theme));
-        }
-        painter.add(Shape::line(h_pts, lens_stroke));
-        painter.add(Shape::line(v_pts, lens_stroke));
-    }
-
-    // 3. Lower-right internal cyan caustic crescent & deformed outer Fresnel rim
-    let caustic_c = spec.marble_center + Vec2::new(dot_r, dot_r);
-    paint_radial_disc_mesh(
-        painter,
-        caustic_c,
-        spec.puck_r * m.joystick_fine_ratio.points(),
-        spec.accent_col.gamma_multiply(m.glass_fill_alpha.points()),
-        Color32::TRANSPARENT,
-        m,
-    );
-    let mut rim_outer = Vec::with_capacity(segs + 1);
-    let mut rim_inner = Vec::with_capacity(segs + 1);
-    for s_i in 0..=segs {
-        let a_rad = deg_to_rad(full_deg * (s_i as f32 / segs as f32), m);
-        let dir = Vec2::new(a_rad.cos(), a_rad.sin());
-        rim_outer.push(super::liquid_glass::deform_viscous_droplet_point(
-            spec.marble_center + dir * spec.puck_r,
-            spec.marble_center,
-            vel_off,
-            spec.puck_r * 2.0,
-            press_amt,
-        ));
-        rim_inner.push(super::liquid_glass::deform_viscous_droplet_point(
-            spec.marble_center + dir * (spec.puck_r - bw),
-            spec.marble_center,
-            vel_off,
-            spec.puck_r * 2.0,
-            press_amt,
-        ));
-    }
-    painter.add(Shape::line(rim_outer, Stroke::new(bw, spec.accent_col.gamma_multiply(m.glass_fill_alpha.points()))));
-    painter.add(Shape::line(rim_inner, Stroke::new(m.active_stroke_width.points(), specular_col)));
-
-    // 4. Upper-left Blinn-Phong primary specular lens reflection + secondary glint
-    let hi_step = dot_r + dot_r * 0.5;
-    let hi_c = spec.marble_center - Vec2::new(hi_step, hi_step);
-    paint_radial_disc_mesh(painter, hi_c, dot_r * 2.0, theme.knob_fill(), Color32::TRANSPARENT, m);
-    painter.circle_filled(hi_c, dot_r, theme.knob_fill());
+    };
+    let mut mesh = egui::epaint::Mesh::with_texture(tex_handle.id());
+    let tint = Color32::from(egui::epaint::Hsva::new(0.0, 0.0, 1.0, 1.0));
+    mesh.add_rect_with_uv(marble_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), tint);
+    painter.add(Shape::mesh(mesh));
 }
 
 #[derive(Clone, Copy, Default)]

@@ -50,7 +50,7 @@ pub fn decode_real_nib_archive_v1(bytes: &[u8], mapper: &CustomClassMapper) -> R
     if graph.classes.iter().any(|c| c == "NSIBObjectData") {
         return crate::scene::nib_ibtool::decode_ibtool_nib_archive(&graph, mapper);
     }
-    let crate::scene::nib_ibtool::IbNibGraph { keys, classes, values, objects } = graph;
+    let crate::scene::nib_ibtool::IbNibGraph { keys, classes, values, objects, .. } = graph;
 
     let mut nodes: Vec<SceneNode> = Vec::new();
     let mut obj_to_node_idx: Vec<Option<usize>> = vec![None; objects.len()];
@@ -233,8 +233,8 @@ pub fn decode_real_nib_archive_v1(bytes: &[u8], mapper: &CustomClassMapper) -> R
         let child_ids: Vec<NodeId> = nodes[1..].iter().map(|n| n.id).collect();
         nodes[0].children = child_ids;
     }
-    let root_w = nodes.first().map(|n| n.nib_frame[2]).unwrap_or(480.0).max(320.0);
-    let root_h = nodes.first().map(|n| n.nib_frame[3]).unwrap_or(320.0).max(200.0);
+    let root_w = nodes.first().map(|n| n.nib_frame[2]).unwrap_or(480.0).max(1.0);
+    let root_h = nodes.first().map(|n| n.nib_frame[3]).unwrap_or(320.0).max(1.0);
     Ok(MacSceneIR::from_nodes(NodeId(1), [root_w, root_h], nodes, CompiledConstraintSchedule::default()))
 }
 

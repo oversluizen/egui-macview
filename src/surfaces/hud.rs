@@ -7,7 +7,7 @@
 use crate::controls::{MacControlSize, MacInputCell};
 use crate::theme::MacTheme;
 use egui::{
-    Align, Align2, Context, CornerRadius, FontId, Id, Layout, Order, Pos2, Rect, Response, RichText, Sense, Stroke, StrokeKind, Ui,
+    Align, Align2, Context, CornerRadius, FontId, Id, Layout, Order, Pos2, Rect, Response, RichText, Sense, Stroke, Ui,
     UiBuilder, Vec2,
 };
 use std::hash::Hash;
@@ -120,7 +120,14 @@ impl<'a> MacFloatingInfoBox<'a> {
 
                 let painter = ui.painter_at(hud_rect);
                 let border_stroke = Stroke::new(border_w, theme.hud_border());
-                painter.rect(hud_rect, CornerRadius::same(corner_r), theme.hud_background(), border_stroke, StrokeKind::Inside);
+                crate::controls::liquid_glass::paint_liquid_glass_capsule(
+                    &painter,
+                    hud_rect,
+                    corner_r as f32,
+                    theme.hud_background(),
+                    border_stroke,
+                    theme.specular_rim_top(),
+                );
 
                 // Header bar separator & centered title
                 let sep_y = hud_rect.min.y + header_h;

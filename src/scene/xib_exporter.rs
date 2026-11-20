@@ -159,7 +159,7 @@ fn emit_xib_node(scene: &MacSceneIR, node: &SceneNode, indent: &str, out: &mut S
         }
         SceneNodeKind::NumberField { min, max, .. } => {
             out.push_str(&format!(
-                "{indent}<textField identifier=\"{id}\" verticalHuggingPriority=\"750\" customClass=\"GSSteppingTextField\"{cs_attr}{en_attr}{tip_attr} id=\"{id}\">\n{rect_line}{mask_line}"
+                "{indent}<textField identifier=\"{id}\" verticalHuggingPriority=\"750\" customClass=\"NSSteppingTextField\"{cs_attr}{en_attr}{tip_attr} id=\"{id}\">\n{rect_line}{mask_line}"
             ));
             out.push_str(&format!(
                 "{indent}    <textFieldCell key=\"cell\"{cs_attr} scrollable=\"YES\" lineBreakMode=\"clipping\" selectable=\"YES\" editable=\"YES\" sendsActionOnEndEditing=\"YES\" state=\"on\" borderStyle=\"bezel\" title=\"{title}\" drawsBackground=\"YES\" id=\"cell-{id}\">\n"
@@ -456,7 +456,7 @@ fn emit_complex_widget_xml(node: &SceneNode, ctx: &XibNodeCtx<'_>, out: &mut Str
         }
         _ => {
             let cls = match &node.kind {
-                SceneNodeKind::OriginMatrix => "GSOriginPointControl",
+                SceneNodeKind::OriginMatrix => "NSOriginPointControl",
                 SceneNodeKind::TagColorPicker => "ColorLabelView",
                 SceneNodeKind::TableActionBar => "NSTableActionBar",
                 SceneNodeKind::DisclosureGroup { .. } => "NSDisclosureGroup",
