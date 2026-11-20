@@ -231,7 +231,7 @@ pub(crate) fn step_dial_pointer_springs(
 }
 
 /// Paints a 3D semicircular curved stadium capsule (`"↶ Undo"` or `"↷ Redo"`) with true $180^\circ$ rounded end-caps
-/// and 5-layer volumetric Liquid Glass dome shading via `vitrea::sdf_curved_stadium_arc_sample` & `vitrea::evaluate_glass_surface_sample` (`REQ-014-08.3`, `SPEC-016 §4.5.1`).
+/// and per-pixel `2x` Retina Liquid Glass dome shading via `vitrea::sdf_curved_stadium_arc_sample` & `vitrea::evaluate_glass_surface_sample` (`REQ-014-08.3`, `SPEC-016 §4.5.1`).
 pub(crate) fn paint_curved_stadium_capsule(
     painter: &Painter,
     center: Pos2,
@@ -240,78 +240,107 @@ pub(crate) fn paint_curved_stadium_capsule(
     (fill, stroke_col, shadow_col): (Color32, Color32, Color32),
     m: &ThumbDialMetrics,
 ) {
+    use std::hash::{Hash, Hasher};
+    let bw = m.border_stroke_width.points();
+    let pad = bw * 2.0 * 2.0;
     let r_mid = (r_in + r_out) * 0.5;
     let h_cap = ((r_out - r_in) * 0.5).max(1.0);
-    let half_c = m.half_circle_deg.points();
-    let cap_deg = (h_cap / r_mid.max(1.0)) * half_c / std::f32::consts::PI;
-    let s_deg = start_deg + cap_deg;
-    let e_deg = (end_deg - cap_deg).max(s_deg + 1.0);
-    let arc_steps = 20usize;
-    let cap_steps = 10usize;
-    let mut boundary = Vec::with_capacity((arc_steps + 1) * 2 + cap_steps * 2);
-
-    for i in 0..=arc_steps {
-        let a = s_deg + (e_deg - s_deg) * (i as f32 / arc_steps as f32);
-        boundary.push(super::context_thumb_dial::render::polar_pos(center, r_out, a, m));
+    let mut min_p = Pos2::new(f32::INFINITY, f32::INFINITY);
+    let mut max_p = Pos2::new(f32::NEG_INFINITY, f32::NEG_INFINITY);
+    let steps = 16usize;
+    for i in 0..=steps {
+        let a = start_deg + (end_deg - start_deg) * (i as f32 / steps as f32);
+        let p = super::context_thumb_dial::render::polar_pos(center, r_mid, a, m);
+        min_p = min_p.min(p - Vec2::splat(h_cap + pad));
+        max_p = max_p.max(p + Vec2::splat(h_cap + pad));
     }
-    let end_center = super::context_thumb_dial::render::polar_pos(center, r_mid, e_deg, m);
-    for i in 1..cap_steps {
-        let frac = i as f32 / cap_steps as f32;
-        let a_rad = (e_deg + frac * half_c) * std::f32::consts::PI / half_c;
-        boundary.push(end_center + Vec2::new(a_rad.cos() * h_cap, a_rad.sin() * h_cap));
-    }
-    for i in (0..=arc_steps).rev() {
-        let a = s_deg + (e_deg - s_deg) * (i as f32 / arc_steps as f32);
-        boundary.push(super::context_thumb_dial::render::polar_pos(center, r_in, a, m));
-    }
-    let start_center = super::context_thumb_dial::render::polar_pos(center, r_mid, s_deg, m);
-    for i in 1..cap_steps {
-        let frac = i as f32 / cap_steps as f32;
-        let a_rad = (s_deg - half_c + frac * half_c) * std::f32::consts::PI / half_c;
-        boundary.push(start_center + Vec2::new(a_rad.cos() * h_cap, a_rad.sin() * h_cap));
-    }
-
-    let bw = m.border_stroke_width.points();
-    let n = boundary.len();
-    let mut shadow_mesh = egui::epaint::Mesh::default();
-    let mut mesh = egui::epaint::Mesh::default();
-    shadow_mesh.vertices.reserve(n * 2);
-    mesh.vertices.reserve(n * 2);
-    let params = vitrea::LiquidGlassOpticalParams {
-        ior_glass: m.ior_glass.points(),
-        ior_dispersion_rgb: [m.ior_red.points(), m.ior_green.points(), m.ior_blue.points()],
-        fresnel_f0: m.fresnel_f0.points(),
-        bevel_width_pt: h_cap,
-        dome_thickness_pt: m.dome_thickness_pt.points(),
-        vibrancy_chroma_boost: m.vibrancy_chroma_boost.points(),
-        meniscus_merge_k_pt: m.meniscus_merge_k_pt.points(),
+    let arc_rect = Rect::from_min_max(min_p, max_p);
+    let px_scale = 2.0f32;
+    let tex_w = ((arc_rect.width() * px_scale).round() as usize).max(2);
+    let tex_h = ((arc_rect.height() * px_scale).round() as usize).max(2);
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    (tex_w, tex_h, start_deg.to_bits(), end_deg.to_bits(), center.x.to_bits(), center.y.to_bits()).hash(&mut hasher);
+    (fill.to_array(), stroke_col.to_array(), shadow_col.to_array()).hash(&mut hasher);
+    let state_hash = hasher.finish();
+    let cache_id = egui::Id::NULL.with(("lg_stadium_arc_tex", start_deg.to_bits(), center.x.to_bits(), center.y.to_bits()));
+    let ctx = painter.ctx();
+    let cached = ctx.data(|d| d.get_temp::<(u64, egui::TextureHandle)>(cache_id));
+    let tex_handle = match cached {
+        Some((prev_h, handle)) if prev_h == state_hash => handle,
+        _ => {
+            let mut flat = vec![0u8; tex_w * tex_h * 4];
+            let max_u8 = f32::from(u8::MAX);
+            let to_rgb = |c: Color32| -> [f32; 3] {
+                let [r, g, b, _] = c.to_array();
+                [f32::from(r) / max_u8, f32::from(g) / max_u8, f32::from(b) / max_u8]
+            };
+            let (fill_rgb, stroke_rgb, sh_rgb) = (to_rgb(fill), to_rgb(stroke_col), to_rgb(shadow_col));
+            let c_tex = vitrea::GlamVec2::new((center.x - arc_rect.min.x) * px_scale, (center.y - arc_rect.min.y) * px_scale);
+            let radii_px = (r_in * px_scale, r_out * px_scale);
+            let h_cap_px = h_cap * px_scale;
+            let sh_off = vitrea::GlamVec2::new(0.0, bw * 2.0 * px_scale);
+            let params = vitrea::LiquidGlassOpticalParams {
+                ior_glass: m.ior_glass.points(),
+                ior_dispersion_rgb: [m.ior_red.points(), m.ior_green.points(), m.ior_blue.points()],
+                fresnel_f0: m.fresnel_f0.points(),
+                bevel_width_pt: h_cap_px * 0.5,
+                dome_thickness_pt: m.dome_thickness_pt.points() * px_scale,
+                vibrancy_chroma_boost: m.vibrancy_chroma_boost.points(),
+                meniscus_merge_k_pt: m.meniscus_merge_k_pt.points() * px_scale,
+            };
+            let (fill_a, act_a, hov_a, spec_a) = (
+                m.glass_fill_alpha.points(),
+                m.active_fill_opacity.points(),
+                m.hover_fill_opacity.points(),
+                m.glass_specular_alpha.points(),
+            );
+            for y in 0..tex_h {
+                for x in 0..tex_w {
+                    let p = vitrea::GlamVec2::new(x as f32 + 0.5, y as f32 + 0.5);
+                    let s_arc = vitrea::sdf_curved_stadium_arc_sample(p, c_tex, radii_px, (start_deg, end_deg));
+                    let s_sh = vitrea::sdf_curved_stadium_arc_sample(p - sh_off, c_tex, radii_px, (start_deg, end_deg));
+                    let sh_t = (1.0 - (s_sh.distance.max(0.0) / (h_cap_px * 0.5).max(1.0)).clamp(0.0, 1.0)).powi(2);
+                    let sh_a = (sh_t * hov_a).clamp(0.0, act_a);
+                    let surf = vitrea::evaluate_glass_surface_sample(p, s_arc, &params, None, radii_px.1);
+                    let idx = (y * tex_w + x) * 4;
+                    if surf.coverage <= 0.0 {
+                        if sh_a > 0.0 {
+                            flat[idx..idx + 4].copy_from_slice(&[
+                                (sh_rgb[0] * max_u8).round() as u8,
+                                (sh_rgb[1] * max_u8).round() as u8,
+                                (sh_rgb[2] * max_u8).round() as u8,
+                                (sh_a * max_u8).round() as u8,
+                            ]);
+                        }
+                        continue;
+                    }
+                    let dome_gain = (surf.key_illumination - 0.5) * hov_a;
+                    let rim_gain = (surf.fresnel_specular * spec_a).clamp(0.0, 1.0);
+                    let g_rgb = [0, 1, 2].map(|ch| {
+                        let body = (fill_rgb[ch] + dome_gain).clamp(0.0, 1.0);
+                        let lit = (body * (1.0 - rim_gain) + stroke_rgb[ch] * rim_gain).clamp(0.0, 1.0);
+                        (lit * surf.coverage + sh_rgb[ch] * (1.0 - surf.coverage)).clamp(0.0, 1.0)
+                    });
+                    let g_a = (fill_a + (1.0 - fill_a) * surf.fresnel_specular).clamp(0.0, 1.0);
+                    let out_a = (surf.coverage * g_a + (1.0 - surf.coverage) * sh_a).clamp(0.0, 1.0);
+                    flat[idx..idx + 4].copy_from_slice(&[
+                        (g_rgb[0] * max_u8).round() as u8,
+                        (g_rgb[1] * max_u8).round() as u8,
+                        (g_rgb[2] * max_u8).round() as u8,
+                        (out_a * max_u8).round() as u8,
+                    ]);
+                }
+            }
+            let img = ColorImage::from_rgba_unmultiplied([tex_w, tex_h], &flat);
+            let handle = ctx.load_texture("vitrea_stadium_arc_lg", img, egui::TextureOptions::LINEAR);
+            ctx.data_mut(|d| d.insert_temp(cache_id, (state_hash, handle.clone())));
+            handle
+        }
     };
-    let mut hi_hsva = egui::epaint::Hsva::from(fill);
-    hi_hsva.v = (hi_hsva.v + (1.0 - hi_hsva.v) * m.active_fill_opacity.points()).clamp(0.0, 1.0);
-    let core_col = Color32::from(hi_hsva);
-    let sh_off = Vec2::new(0.0, bw * 2.0);
-    for &b_pt in &boundary {
-        let dir = b_pt - center;
-        let s_pt = center + (dir / dir.length().max(1.0)) * r_mid;
-        let b_sdf = vitrea::sdf_curved_stadium_arc_sample(glam_pt(b_pt), glam_pt(center), (r_in, r_out), (start_deg, end_deg));
-        let b_surf = vitrea::evaluate_glass_surface_sample(glam_pt(b_pt), b_sdf, &params, None, r_out);
-        let rim_mix = (b_surf.fresnel_specular * m.glass_specular_alpha.points() + b_surf.key_illumination * 0.5).clamp(0.0, 1.0);
-        let rim_c = Color32::from(egui::epaint::Hsva::from(fill)).lerp_to_gamma(stroke_col, rim_mix);
-        shadow_mesh.colored_vertex(s_pt + sh_off, shadow_col);
-        shadow_mesh.colored_vertex(b_pt + sh_off, Color32::TRANSPARENT);
-        mesh.colored_vertex(s_pt, core_col);
-        mesh.colored_vertex(b_pt, rim_c);
-    }
-    for i in 0..n {
-        let (b0, b1) = ((i * 2) as u32, (((i + 1) % n) * 2) as u32);
-        shadow_mesh.add_triangle(b0, b0 + 1, b1 + 1);
-        shadow_mesh.add_triangle(b0, b1 + 1, b1);
-        mesh.add_triangle(b0, b0 + 1, b1 + 1);
-        mesh.add_triangle(b0, b1 + 1, b1);
-    }
-    painter.add(Shape::mesh(shadow_mesh));
+    let mut mesh = egui::epaint::Mesh::with_texture(tex_handle.id());
+    let tint = Color32::from(egui::epaint::Hsva::new(0.0, 0.0, 1.0, 1.0));
+    mesh.add_rect_with_uv(arc_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), tint);
     painter.add(Shape::mesh(mesh));
-    painter.add(Shape::closed_line(boundary, Stroke::new(bw, stroke_col)));
 }
 
 /// Paints text character-by-character along a circular arc centerline of radius `r_mid`

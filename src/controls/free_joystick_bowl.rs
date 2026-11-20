@@ -135,11 +135,16 @@ fn synthesize_marble_matrix_rgba(
                 eval_bowl_backdrop_at(p_b, b_geom, b_cols, m)[2],
             ];
             let caustic_in = ((surf.normal_3d.x + surf.normal_3d.y) * 0.5).clamp(0.0, 1.0) * (1.0 - surf.dome_elevation);
-            let hi_glint = surf.key_illumination * fill_a + surf.fresnel_specular * spec_a;
-            let trans_w = if is_light { act_a } else { hov_a };
+            let hi_glint = surf.key_illumination * (if is_light { hov_a * 0.5 } else { act_a }) + surf.fresnel_specular * spec_a;
+            let rim_fresnel = (1.0 - surf.dome_elevation).clamp(0.0, 1.0);
+            let tint_w = if is_light {
+                (hov_a + rim_fresnel * act_a + caustic_in * act_a).clamp(0.0, fill_a)
+            } else {
+                (act_a + rim_fresnel * hov_a + caustic_in * act_a).clamp(0.0, fill_a)
+            };
             let g_rgb = [0, 1, 2].map(|ch| {
-                let tint_c = (accent_rgb[ch] * (act_a + caustic_in * fill_a) + refr_rgb[ch] * trans_w).clamp(0.0, 1.0);
-                let lit_c = (tint_c + hi_glint * spec_rgb[ch]).clamp(0.0, 1.0);
+                let tint_c = (refr_rgb[ch] * (1.0 - tint_w) + accent_rgb[ch] * tint_w).clamp(0.0, 1.0);
+                let lit_c = (tint_c + (1.0 - tint_c) * hi_glint * spec_rgb[ch]).clamp(0.0, 1.0);
                 (lit_c * surf.coverage + sh_c[ch] * (1.0 - surf.coverage)).clamp(0.0, 1.0)
             });
             let g_alpha = (fill_a + (1.0 - fill_a) * surf.fresnel_specular).clamp(0.0, 1.0);

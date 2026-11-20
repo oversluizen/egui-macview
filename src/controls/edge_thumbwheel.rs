@@ -46,9 +46,12 @@ fn eval_drum_backdrop_at(
     let spec_dist = (y_frac - (0.5 - hov_a + ds.ptr_bias * act_a)).abs();
     let spec_band = (1.0 - spec_dist / act_a.max(0.5)).clamp(0.0, 1.0);
     let axial = (1.0 - (u_frac * 2.0 - 1.0).abs()).clamp(0.0, 1.0);
-    let rim_dark = (1.0 - c_val) * spec_a;
+    let rim_dark = (1.0 - c_val * c_val) * spec_a;
     let hi_gain = (spec_band * spec_band * (0.5 + 0.5 * axial) * act_a).clamp(0.0, 1.0);
-    let mut rgb = [0, 1, 2].map(|ch| (drum_rgb[ch] * (1.0 - rim_dark) + (1.0 - drum_rgb[ch]) * hi_gain).clamp(0.0, 1.0));
+    let groove_d = (p.x - ds.cap_w).abs().min((w - ds.cap_w - p.x).abs());
+    let groove_dark = (1.0 - (groove_d / (ds.cap_w * 0.5).max(1.0)).clamp(0.0, 1.0)).powi(2) * act_a;
+    let tot_dark = (rim_dark + groove_dark).clamp(0.0, 1.0);
+    let mut rgb = [0, 1, 2].map(|ch| (drum_rgb[ch] * (1.0 - tot_dark) + (1.0 - drum_rgb[ch]) * hi_gain).clamp(0.0, 1.0));
     let cap_bleed = ((1.0 - (p.x - ds.cap_w).max(0.0) / (ds.cap_w * 2.0).max(1.0)).clamp(0.0, 1.0))
         .max((1.0 - (w - ds.cap_w - p.x).max(0.0) / (ds.cap_w * 2.0).max(1.0)).clamp(0.0, 1.0));
     let bleed_w = cap_bleed * cap_bleed * (if ds.is_active { act_a } else { hov_a });
@@ -484,12 +487,13 @@ impl<'a> MacEdgeThumbwheel<'a> {
                 } else {
                     theme.secondary_label().gamma_multiply(crown_cos)
                 };
+                let ridge_inset = cap_w + pad * 0.5;
                 painter.line_segment(
-                    [Pos2::new(inner_rect.min.x + cap_w, y + bw), Pos2::new(inner_rect.max.x - cap_w, y + bw)],
+                    [Pos2::new(inner_rect.min.x + ridge_inset, y + bw), Pos2::new(inner_rect.max.x - ridge_inset, y + bw)],
                     Stroke::new(thickness, trough_col),
                 );
                 painter.line_segment(
-                    [Pos2::new(inner_rect.min.x + cap_w, y), Pos2::new(inner_rect.max.x - cap_w, y)],
+                    [Pos2::new(inner_rect.min.x + ridge_inset, y), Pos2::new(inner_rect.max.x - ridge_inset, y)],
                     Stroke::new(thickness, crest_col),
                 );
             }

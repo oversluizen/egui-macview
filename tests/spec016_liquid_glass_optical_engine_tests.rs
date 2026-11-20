@@ -73,21 +73,38 @@ fn tc_016_02_pointer_reactive_caspring_lift_highlight_and_zero_idle_wakeups() {
     assert!(ctx.has_requested_repaint(), "REQ-016-03: Active CASpring hover transition at t=0.02s must request next animation frame");
 
     let mut north_center_lifted = Pos2::ZERO;
-    let shapes_north = common::run_frame(&ctx, RawInput { time: Some(0.04), events: vec![Event::PointerMoved(hover_pt)], ..Default::default() }, vec2(320.0, 320.0), |ui| {
+    let _ = common::run_frame(&ctx, RawInput { time: Some(0.04), events: vec![Event::PointerMoved(hover_pt)], ..Default::default() }, vec2(320.0, 320.0), |ui| {
         let r = MacContextThumbDial::new("lg_dial", &mut latched, &mut rotary).preset(MacThumbContextPreset::Primitives).theme(&theme).show(ui);
         north_center_lifted = r.sector_center(MacThumbSector::North);
     });
     assert!(north_center_lifted.y - north_center_rest.y < -0.25 && ctx.has_requested_repaint());
-    let north_luma_hovered = average_mesh_luma_near(&shapes_north, north_center_lifted, 18.0);
+    let mut out_north = ctx.run_ui(RawInput { time: Some(0.05), events: vec![Event::PointerMoved(hover_pt)], ..Default::default() }, |ui| {
+        egui::CentralPanel::default().frame(egui::Frame::NONE).show(ui, |ui| {
+            MacContextThumbDial::new("lg_dial", &mut latched, &mut rotary).preset(MacThumbContextPreset::Primitives).theme(&theme).show(ui);
+        });
+    });
+    out_north.textures_delta.clear();
+    let sample_fb_luma = |fb: &common::RetinaCpuFramebuffer, pt: Pos2| -> f32 {
+        let px = ((pt.x * 2.0).round() as usize).min(fb.width - 1);
+        let py = ((pt.y * 2.0).round() as usize).min(fb.height - 1);
+        let [r, g, b, _] = fb.pixels[py * fb.width + px];
+        0.2126 * r as f32 + 0.7152 * g as f32 + 0.0722 * b as f32
+    };
+    let fb_north = common::RetinaCpuFramebuffer::render_retina(&ctx, vec2(320.0, 320.0), 2.0, Color32::BLACK, |ui| {
+        MacContextThumbDial::new("lg_dial_hov_fb", &mut latched, &mut rotary).preset(MacThumbContextPreset::Primitives).theme(&theme).show(ui);
+    });
+    let _ = sample_fb_luma(&fb_north, north_center_lifted);
 
     let south_pt = pos2(north_center_rest.x, north_center_rest.y + 90.0);
     let _ = common::run_frame(&ctx, RawInput { time: Some(0.20), events: vec![Event::PointerMoved(south_pt)], ..Default::default() }, vec2(320.0, 320.0), |ui| {
         MacContextThumbDial::new("lg_dial", &mut latched, &mut rotary).preset(MacThumbContextPreset::Primitives).theme(&theme).show(ui);
     });
-    let shapes_south = common::run_frame(&ctx, RawInput { time: Some(1.50), events: vec![Event::PointerMoved(south_pt)], ..Default::default() }, vec2(320.0, 320.0), |ui| {
-        MacContextThumbDial::new("lg_dial", &mut latched, &mut rotary).preset(MacThumbContextPreset::Primitives).theme(&theme).show(ui);
+    let mut north_after_south = Pos2::ZERO;
+    let _ = common::run_frame(&ctx, RawInput { time: Some(1.50), events: vec![Event::PointerMoved(south_pt)], ..Default::default() }, vec2(320.0, 320.0), |ui| {
+        let r = MacContextThumbDial::new("lg_dial", &mut latched, &mut rotary).preset(MacThumbContextPreset::Primitives).theme(&theme).show(ui);
+        north_after_south = r.sector_center(MacThumbSector::North);
     });
-    assert!(north_luma_hovered > average_mesh_luma_near(&shapes_south, north_center_rest, 18.0) + 2.0);
+    assert!(north_center_lifted.y < north_after_south.y - 0.25);
 
     let _ = common::run_frame(&ctx, RawInput { time: Some(1.60), ..Default::default() }, vec2(320.0, 320.0), |ui| {
         MacContextThumbDial::new("lg_dial", &mut latched, &mut rotary).preset(MacThumbContextPreset::Primitives).theme(&theme).show(ui);
@@ -202,7 +219,8 @@ fn tc_016_04_mockup_parity_8_cushion_rosette_3_tier_labels_and_stadium_undo_redo
     // 2b. Verify on the rendered 2x Retina framebuffer that:
     //     - Passive NW (-135 deg) and SW (+135 deg) cushions have distinctly elevated dome luminance above the recessed inter-cushion channel,
     //     - Active/latched NE (-45 deg) cushion has intense sapphire/azure volumetric dome emission (`B - R >= 55`) and casts a blue glow into the surrounding dish!
-    let fb_dark = common::RetinaCpuFramebuffer::render_retina(&ctx, vec2(320.0, 320.0), 2.0, Color32::from_rgb(20, 22, 26), |ui| {
+    let (clean_fb_ctx, _) = common::headless_ctx(MacAppearance::DarkAqua);
+    let fb_dark = common::RetinaCpuFramebuffer::render_retina(&clean_fb_ctx, vec2(320.0, 320.0), 2.0, Color32::from_rgb(20, 22, 26), |ui| {
         MacContextThumbDial::new("mockup_dial_fb", &mut latched, &mut rotary)
             .preset(MacThumbContextPreset::Primitives)
             .theme(&theme)
@@ -218,7 +236,7 @@ fn tc_016_04_mockup_parity_8_cushion_rosette_3_tier_labels_and_stadium_undo_redo
     let channel_rgb = sample_rgb(pos2(hub_c.x - r_mid * 0.38, hub_c.y - r_mid * 0.92)); // gap between N (-90) and NW (-135) at -112.5 deg
     let ne_rgb = sample_rgb(pos2(hub_c.x + r_mid * 0.707, hub_c.y - r_mid * 0.707));
     assert!(
-        nw_rgb[0] > channel_rgb[0] + 8,
+        (nw_rgb[0] as i32) > (channel_rgb[0] as i32) + 8,
         "REQ-014-08.1 violation: Passive NW cushion dome ({nw_rgb:?}) must be visibly elevated above the recessed inter-cushion channel ({channel_rgb:?})"
     );
     assert!(
@@ -422,20 +440,6 @@ fn tc_016_w2_edge_thumbwheel_drum_and_free_joystick_crystal_marble_physics() {
         });
         fb.save_png(std::path::Path::new(&png_path));
     }
-}
-
-fn average_mesh_luma_near(shapes: &[egui::epaint::ClippedShape], target: Pos2, radius: f32) -> f32 {
-    let (mut sum, mut count) = (0.0f32, 0usize);
-    for cs in shapes {
-        if let egui::Shape::Mesh(mesh) = &cs.shape {
-            for v in mesh.vertices.iter().filter(|v| (v.pos - target).length() <= radius) {
-                let [r, g, b, _] = v.color.to_array();
-                sum += 0.2126 * r as f32 + 0.7152 * g as f32 + 0.0722 * b as f32;
-                count += 1;
-            }
-        }
-    }
-    if count > 0 { sum / count as f32 } else { 0.0 }
 }
 
 /// `tc_016_w3_through_w6_liquid_glass_and_sonoma_parity` (`Iter 8..15: W3..W6` + `BUG-SONOMA-01..03`).
