@@ -201,7 +201,7 @@ let inFlight = false;
 let dirty = true;
 let wasmExports = null;
 
-fetch('macview_gallery.wasm?v=a60e08d')
+fetch('macview_gallery.wasm?v=2dee8cb')
   .then(r => r.ok ? r.arrayBuffer() : Promise.reject())
   .then(bytes => WebAssembly.instantiate(bytes, {}))
   .then(res => {
