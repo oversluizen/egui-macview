@@ -60,159 +60,46 @@ fn tc_016_02_pointer_reactive_caspring_lift_highlight_and_zero_idle_wakeups() {
     let mut latched = MacThumbIntentMask::NONE;
     let mut rotary = 0.5f32;
 
-    // Frame 0 at t=0.0: pointer at rest far outside the dial
     let mut north_center_rest = Pos2::ZERO;
-    let _ = common::run_frame(
-        &ctx,
-        RawInput {
-            time: Some(0.0),
-            screen_rect: Some(Rect::from_min_size(Pos2::ZERO, vec2(320.0, 320.0))),
-            ..Default::default()
-        },
-        vec2(320.0, 320.0),
-        |ui| {
-            let r = MacContextThumbDial::new("lg_dial", &mut latched, &mut rotary)
-                .preset(MacThumbContextPreset::Primitives)
-                .theme(&theme)
-                .show(ui);
-            north_center_rest = r.sector_center(MacThumbSector::North);
-        },
-    );
+    let _ = common::run_frame(&ctx, RawInput { time: Some(0.0), ..Default::default() }, vec2(320.0, 320.0), |ui| {
+        let r = MacContextThumbDial::new("lg_dial", &mut latched, &mut rotary).preset(MacThumbContextPreset::Primitives).theme(&theme).show(ui);
+        north_center_rest = r.sector_center(MacThumbSector::North);
+    });
 
-    // Frame 1 at t=0.02s: pointer arrives on North cushion -> initiates CASpring target transition (0.0 -> 1.0)
     let hover_pt = pos2(north_center_rest.x, north_center_rest.y - 8.0);
-    let _ = common::run_frame(
-        &ctx,
-        RawInput {
-            time: Some(0.02),
-            screen_rect: Some(Rect::from_min_size(Pos2::ZERO, vec2(320.0, 320.0))),
-            events: vec![Event::PointerMoved(hover_pt)],
-            ..Default::default()
-        },
-        vec2(320.0, 320.0),
-        |ui| {
-            MacContextThumbDial::new("lg_dial", &mut latched, &mut rotary)
-                .preset(MacThumbContextPreset::Primitives)
-                .theme(&theme)
-                .show(ui);
-        },
-    );
-    assert!(
-        ctx.has_requested_repaint(),
-        "REQ-016-03: Active CASpring hover transition at t=0.02s must request next animation frame"
-    );
+    let _ = common::run_frame(&ctx, RawInput { time: Some(0.02), events: vec![Event::PointerMoved(hover_pt)], ..Default::default() }, vec2(320.0, 320.0), |ui| {
+        MacContextThumbDial::new("lg_dial", &mut latched, &mut rotary).preset(MacThumbContextPreset::Primitives).theme(&theme).show(ui);
+    });
+    assert!(ctx.has_requested_repaint(), "REQ-016-03: Active CASpring hover transition at t=0.02s must request next animation frame");
 
-    // Frame 2 at t=0.04s: spring advances in-flight -> North cushion centroid magnetically lifts upward toward pointer!
     let mut north_center_lifted = Pos2::ZERO;
-    let shapes_north = common::run_frame(
-        &ctx,
-        RawInput {
-            time: Some(0.04),
-            screen_rect: Some(Rect::from_min_size(Pos2::ZERO, vec2(320.0, 320.0))),
-            events: vec![Event::PointerMoved(hover_pt)],
-            ..Default::default()
-        },
-        vec2(320.0, 320.0),
-        |ui| {
-            let r = MacContextThumbDial::new("lg_dial", &mut latched, &mut rotary)
-                .preset(MacThumbContextPreset::Primitives)
-                .theme(&theme)
-                .show(ui);
-            north_center_lifted = r.sector_center(MacThumbSector::North);
-        },
-    );
-
-    let lift_shift_y = north_center_lifted.y - north_center_rest.y;
-    assert!(
-        lift_shift_y < -0.25,
-        "REQ-016-03 (.lift): Hovered North cushion centroid must magnetically lift upward toward pointer (shift_y={lift_shift_y}, rest={north_center_rest:?}, lifted={north_center_lifted:?})"
-    );
-    assert!(
-        ctx.has_requested_repaint(),
-        "REQ-016-03: In-flight CASpring hover transition at t=0.08s must continue requesting animation frames"
-    );
-
-    // Verify 3D mesh vertices on the North cushion are brighter when pointer illuminates North than when pointer moves to South
+    let shapes_north = common::run_frame(&ctx, RawInput { time: Some(0.04), events: vec![Event::PointerMoved(hover_pt)], ..Default::default() }, vec2(320.0, 320.0), |ui| {
+        let r = MacContextThumbDial::new("lg_dial", &mut latched, &mut rotary).preset(MacThumbContextPreset::Primitives).theme(&theme).show(ui);
+        north_center_lifted = r.sector_center(MacThumbSector::North);
+    });
+    assert!(north_center_lifted.y - north_center_rest.y < -0.25 && ctx.has_requested_repaint());
     let north_luma_hovered = average_mesh_luma_near(&shapes_north, north_center_lifted, 18.0);
 
-    // Move pointer to South at t=0.20s, then evaluate settled South illumination at t=1.50s
     let south_pt = pos2(north_center_rest.x, north_center_rest.y + 90.0);
-    let _ = common::run_frame(
-        &ctx,
-        RawInput {
-            time: Some(0.20),
-            screen_rect: Some(Rect::from_min_size(Pos2::ZERO, vec2(320.0, 320.0))),
-            events: vec![Event::PointerMoved(south_pt)],
-            ..Default::default()
-        },
-        vec2(320.0, 320.0),
-        |ui| {
-            MacContextThumbDial::new("lg_dial", &mut latched, &mut rotary)
-                .preset(MacThumbContextPreset::Primitives)
-                .theme(&theme)
-                .show(ui);
-        },
-    );
-    let shapes_south = common::run_frame(
-        &ctx,
-        RawInput {
-            time: Some(1.50),
-            screen_rect: Some(Rect::from_min_size(Pos2::ZERO, vec2(320.0, 320.0))),
-            events: vec![Event::PointerMoved(south_pt)],
-            ..Default::default()
-        },
-        vec2(320.0, 320.0),
-        |ui| {
-            MacContextThumbDial::new("lg_dial", &mut latched, &mut rotary)
-                .preset(MacThumbContextPreset::Primitives)
-                .theme(&theme)
-                .show(ui);
-        },
-    );
-    let north_luma_when_south = average_mesh_luma_near(&shapes_south, north_center_rest, 18.0);
-    assert!(
-        north_luma_hovered > north_luma_when_south + 2.0,
-        "REQ-016-03 (.highlight): Pointer-reactive 3D Blinn-Phong specular & Fresnel must brighten North cushion under cursor ({north_luma_hovered:.2} vs {north_luma_when_south:.2})"
-    );
+    let _ = common::run_frame(&ctx, RawInput { time: Some(0.20), events: vec![Event::PointerMoved(south_pt)], ..Default::default() }, vec2(320.0, 320.0), |ui| {
+        MacContextThumbDial::new("lg_dial", &mut latched, &mut rotary).preset(MacThumbContextPreset::Primitives).theme(&theme).show(ui);
+    });
+    let shapes_south = common::run_frame(&ctx, RawInput { time: Some(1.50), events: vec![Event::PointerMoved(south_pt)], ..Default::default() }, vec2(320.0, 320.0), |ui| {
+        MacContextThumbDial::new("lg_dial", &mut latched, &mut rotary).preset(MacThumbContextPreset::Primitives).theme(&theme).show(ui);
+    });
+    assert!(north_luma_hovered > average_mesh_luma_near(&shapes_south, north_center_rest, 18.0) + 2.0);
 
-    // Frame at t=1.60s settles any remaining hover release, then t=3.00s verifies zero idle wakeups!
-    let _ = common::run_frame(
-        &ctx,
-        RawInput {
-            time: Some(1.60),
-            screen_rect: Some(Rect::from_min_size(Pos2::ZERO, vec2(320.0, 320.0))),
-            ..Default::default()
-        },
-        vec2(320.0, 320.0),
-        |ui| {
-            MacContextThumbDial::new("lg_dial", &mut latched, &mut rotary)
-                .preset(MacThumbContextPreset::Primitives)
-                .theme(&theme)
-                .show(ui);
-        },
-    );
-    let mut out_idle = ctx.run_ui(
-        RawInput {
-            time: Some(3.00),
-            screen_rect: Some(Rect::from_min_size(Pos2::ZERO, vec2(320.0, 320.0))),
-            ..Default::default()
-        },
-        |ui| {
-            egui::CentralPanel::default().frame(egui::Frame::NONE).show(ui, |ui| {
-                MacContextThumbDial::new("lg_dial", &mut latched, &mut rotary)
-                    .preset(MacThumbContextPreset::Primitives)
-                    .theme(&theme)
-                    .show(ui);
-            });
-        },
-    );
+    let _ = common::run_frame(&ctx, RawInput { time: Some(1.60), ..Default::default() }, vec2(320.0, 320.0), |ui| {
+        MacContextThumbDial::new("lg_dial", &mut latched, &mut rotary).preset(MacThumbContextPreset::Primitives).theme(&theme).show(ui);
+    });
+    let mut out_idle = ctx.run_ui(RawInput { time: Some(3.00), ..Default::default() }, |ui| {
+        egui::CentralPanel::default().frame(egui::Frame::NONE).show(ui, |ui| {
+            MacContextThumbDial::new("lg_dial", &mut latched, &mut rotary).preset(MacThumbContextPreset::Primitives).theme(&theme).show(ui);
+        });
+    });
     out_idle.textures_delta.clear();
     let idle_delay = out_idle.viewport_output.get(&egui::ViewportId::ROOT).map(|v| v.repaint_delay).unwrap_or(std::time::Duration::MAX);
-    assert_eq!(
-        idle_delay,
-        std::time::Duration::MAX,
-        "REQ-016-03 (SPEC-004 invariant): Settled LiquidPointerSpring must schedule ZERO idle repaints (got {idle_delay:?})"
-    );
+    assert_eq!(idle_delay, std::time::Duration::MAX);
 }
 
 /// `tc_016_03`: Blurred Vibrancy Backdrop (`REQ-016-02`), Smooth-Min Metaball Union (`REQ-016-05`), and Dynamic Contrast (`REQ-016-06`).
@@ -337,6 +224,76 @@ fn tc_016_04_mockup_parity_8_cushion_rosette_3_tier_labels_and_stadium_undo_redo
     assert!(
         (ne_rgb[2] as i32 - ne_rgb[0] as i32) >= 55 && ne_rgb[2] >= 150,
         "REQ-016-01.6 violation: Latched NE cushion ({ne_rgb:?}) must emit a deep volumetric sapphire/azure core matching Golden Mockup Screen 1!"
+    );
+
+    // 2c. Independent Group Ensemble Oracle O_group_1 (SPEC-016 §4.5.2):
+    //     Cross-Neighbor Optical Symmetry Breaking on the 2x Retina Framebuffer!
+    //     Passive cushion North (-90 deg) sits between passive NW (-135 deg) on its left and active glowing blue NE (-45 deg) on its right.
+    //     Because North's right bevel (-73 deg) refracts the shared Layer 1 Dish Matrix B_group(x,y) containing NE's subsurface blue glow,
+    //     the rendered blue chroma excess (B - R) on North's right bevel MUST exceed North's left bevel (-107 deg) by >= 12!
+    let rad_left = (-107.0f32).to_radians();
+    let rad_right = (-73.0f32).to_radians();
+    let north_left_bevel_rgb = sample_rgb(pos2(hub_c.x + rad_left.cos() * r_mid, hub_c.y + rad_left.sin() * r_mid));
+    let north_right_bevel_rgb = sample_rgb(pos2(hub_c.x + rad_right.cos() * r_mid, hub_c.y + rad_right.sin() * r_mid));
+    let blue_chroma_left = north_left_bevel_rgb[2] as i32 - north_left_bevel_rgb[0] as i32;
+    let blue_chroma_right = north_right_bevel_rgb[2] as i32 - north_right_bevel_rgb[0] as i32;
+    assert!(
+        blue_chroma_right >= blue_chroma_left + 12,
+        "Oracle O_group_1 (SPEC-016 §4.5.2) violation: Passive North cushion right bevel ({north_right_bevel_rgb:?}, B-R={blue_chroma_right}) facing active blue NE must refract measurably more subsurface blue chroma from B_group(x,y) than its left bevel ({north_left_bevel_rgb:?}, B-R={blue_chroma_left}) facing passive NW!"
+    );
+
+    // 2d. Independent Solo Oracles O_solo_1..3 & Group Oracle O_group_2 + vitrea MC-Crate Purity (SPEC-016 §4.4.3 & §4.5.2):
+    let vitrea_optics_src = std::fs::read_to_string(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../vitrea/src/optics.rs"),
+    )
+    .expect("read vitrea/src/optics.rs");
+    for forbidden_in_vitrea in ["RosetteOpticalScene", "render_rosette_liquid_glass_rgba", "is_light_mode", "0.895", "0.215", "0.955"] {
+        assert!(
+            !vitrea_optics_src.contains(forbidden_in_vitrea),
+            "REQ-016-02.6 / SPEC-016 §4.4.3 MC-Crate Purity violation: vitrea/src/optics.rs must NOT contain widget-specific or hardcoded color construct `{forbidden_in_vitrea}`!"
+        );
+    }
+    assert!(
+        vitrea_optics_src.contains("pub struct GlassSurfaceSample") && vitrea_optics_src.contains("pub fn evaluate_glass_surface_sample("),
+        "SPEC-016 §4.5.1 violation: vitrea/src/optics.rs must expose shape-agnostic `GlassSurfaceSample` and `evaluate_glass_surface_sample`"
+    );
+
+    // Oracle O_solo_3: Monte-Carlo / 2D Pixel Grid Area Conservation under Viscous Stretch (det J = 1, <= 1.5% discrete grid error)
+    let (mut area_rest, mut area_stretched) = (0usize, 0usize);
+    let c_center = vitrea::GlamVec2::new(50.0, 50.0);
+    let half_ext = vitrea::GlamVec2::new(14.0, 9.0);
+    for gy in 0..200 {
+        for gx in 0..200 {
+            let p = vitrea::GlamVec2::new((gx as f32 + 0.5) * 0.5, (gy as f32 + 0.5) * 0.5);
+            if vitrea::sdf_rounded_capsule_sample(p, c_center, half_ext, 5.0).distance <= 0.0 {
+                area_rest += 1;
+            }
+            let p_def = vitrea::deform_viscous_droplet_point(p, c_center, vitrea::GlamVec2::new(10.0, 0.0), 20.0, 0.0, (0.25, 0.0625));
+            if vitrea::sdf_rounded_capsule_sample(p_def, c_center, half_ext, 5.0).distance <= 0.0 {
+                area_stretched += 1;
+            }
+        }
+    }
+    let rel_area_err = ((area_stretched as f32 - area_rest as f32).abs()) / (area_rest.max(1) as f32);
+    assert!(
+        rel_area_err <= 0.015,
+        "Oracle O_solo_3 (SPEC-016 §4.5.2) violation: 2D pixel-integrated droplet area under viscous stretch ({area_stretched}) must match resting area ({area_rest}) within <= 1.5%, got {:.2}%",
+        rel_area_err * 100.0
+    );
+
+    // Oracle O_group_2: Topological Meniscus Bridge Closure at inter-cushion gap midpoint (-22.5 deg between NE -45 deg and E 0 deg)
+    let gap_rad = (-22.5f32).to_radians();
+    let p_gap = vitrea::GlamVec2::new(hub_c.x + gap_rad.cos() * r_mid, hub_c.y + gap_rad.sin() * r_mid);
+    let c_hub = vitrea::GlamVec2::new(hub_c.x, hub_c.y);
+    let s_ne_rest = vitrea::sdf_annular_rounded_sector_sample(p_gap, c_hub, (30.0, 78.0), (-45.0, 19.0), 6.0);
+    let s_e_rest = vitrea::sdf_annular_rounded_sector_sample(p_gap, c_hub, (30.0, 78.0), (0.0, 19.0), 6.0);
+    assert!(s_ne_rest.distance > 0.0 && s_e_rest.distance > 0.0, "Oracle O_group_2: Gap midpoint must be outside glass at rest");
+    let s_union_active = vitrea::sdf_smooth_union_with_grad(s_ne_rest, s_e_rest, 16.0);
+    let n_bridge = vitrea::dome_normal_3d_from_sdf(s_union_active, 8.0);
+    assert!(
+        s_union_active.distance < 0.0 && (n_bridge.length() - 1.0).abs() < 1e-4,
+        "Oracle O_group_2 (SPEC-016 §4.5.2) violation: Smooth-union meniscus bridge must topologically close across inter-cushion gap (d={:.2})",
+        s_union_active.distance
     );
 
     // 3. Verify clearly visible fluid cushion lift (>= 2.0pt radial/magnetic shift at t=0.14s on a genuine 0.28s underdamped spring)

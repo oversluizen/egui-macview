@@ -4,8 +4,182 @@
 use super::{MacThumbDialLayer, MacThumbSector};
 use crate::controls::SegmentIconFn;
 use crate::symbols::MacSymbol;
+use crate::theme::MacTheme;
 use crate::tokens::ThumbDialMetrics;
 use egui::{Align2, Color32, FontId, Painter, Rect, Shape, Stroke, Vec2};
+
+/// Member descriptor for the 3-Matrix `GlassEffectContainer` rosette pipeline (`SPEC-016 §4.4.4`).
+pub(crate) struct RosetteMemberSpec {
+    pub(crate) center: vitrea::GlamVec2,
+    pub(crate) radii: (f32, f32),
+    pub(crate) angles_deg: (f32, f32),
+    pub(crate) corner_radius: f32,
+    pub(crate) active_weight: f32,
+    pub(crate) lift_weight: f32,
+    pub(crate) deform_vel: vitrea::GlamVec2,
+}
+
+/// Container descriptor for the 3-Matrix `GlassEffectContainer` rosette pipeline (`SPEC-016 §4.4.4`).
+pub(crate) struct RosetteContainerSpec {
+    pub(crate) hub_center: vitrea::GlamVec2,
+    pub(crate) r_outer: f32,
+    pub(crate) r_dish: f32,
+    pub(crate) r_hub: f32,
+    pub(crate) scale: f32,
+    pub(crate) cursor_pos: Option<vitrea::GlamVec2>,
+    pub(crate) accent_col: Color32,
+    pub(crate) members: Vec<RosetteMemberSpec>,
+}
+
+fn color_to_rgb_norm(c: Color32) -> [f32; 3] {
+    let [r, g, b, _] = c.to_array();
+    let max_u8 = f32::from(u8::MAX);
+    [f32::from(r) / max_u8, f32::from(g) / max_u8, f32::from(b) / max_u8]
+}
+
+fn eval_shared_dish_matrix_at(
+    p: vitrea::GlamVec2,
+    sc: &RosetteContainerSpec,
+    (dish_core, dish_rim, accent_rgb): ([f32; 3], [f32; 3], [f32; 3]),
+    m: &ThumbDialMetrics,
+) -> [f32; 3] {
+    let r_norm = ((p - sc.hub_center).length() / sc.r_dish.max(1.0)).clamp(0.0, 1.0);
+    let mut rgb = [0, 1, 2].map(|ch| dish_core[ch] + (dish_rim[ch] - dish_core[ch]) * r_norm);
+    let (boost, bleed_gain) = (m.vibrancy_chroma_boost.points(), m.glass_fill_alpha.points());
+    for mem in &sc.members {
+        let w = (mem.active_weight + mem.lift_weight * 0.5).clamp(0.0, 1.0);
+        if w > 0.0 {
+            let r_mid = (mem.radii.0 + mem.radii.1) * 0.5;
+            let rad = super::render::deg_to_rad(mem.angles_deg.0, m);
+            let c_pos = mem.center + vitrea::GlamVec2::new(rad.cos() * r_mid, rad.sin() * r_mid);
+            let t = (1.0 - (p - c_pos).length() / ((mem.radii.1 - mem.radii.0) * boost).max(1.0)).clamp(0.0, 1.0);
+            let glow = t * t * w * bleed_gain;
+            rgb = [0, 1, 2].map(|ch| (rgb[ch] * (1.0 - glow) + accent_rgb[ch] * glow).clamp(0.0, 1.0));
+        }
+    }
+    rgb
+}
+
+pub(crate) fn synthesize_rosette_matrix_rgba(tex_dim: usize, sc: &RosetteContainerSpec, theme: &MacTheme, m: &ThumbDialMetrics) -> Vec<u8> {
+    let mut flat = vec![0u8; tex_dim * tex_dim * 4];
+    let is_light = theme.appearance == crate::theme::MacAppearance::Aqua;
+    let dish_core = color_to_rgb_norm(theme.window_background());
+    let dish_rim = color_to_rgb_norm(if is_light { theme.box_background() } else { theme.control_background() });
+    let passive_tint = color_to_rgb_norm(if is_light { theme.window_background() } else { theme.control_background() });
+    let accent_rgb = color_to_rgb_norm(sc.accent_col);
+    let spec_rgb = color_to_rgb_norm(theme.specular_rim_top());
+    let shadow_rgb = color_to_rgb_norm(theme.drop_shadow());
+
+    let params = vitrea::LiquidGlassOpticalParams {
+        ior_glass: m.ior_glass.points(),
+        ior_dispersion_rgb: [m.ior_red.points(), m.ior_green.points(), m.ior_blue.points()],
+        fresnel_f0: m.fresnel_f0.points(),
+        bevel_width_pt: m.bevel_width_pt.points() * sc.scale,
+        dome_thickness_pt: m.dome_thickness_pt.points() * sc.scale,
+        vibrancy_chroma_boost: m.vibrancy_chroma_boost.points(),
+        meniscus_merge_k_pt: m.meniscus_merge_k_pt.points() * sc.scale,
+    };
+    let stretch_gains = (m.viscous_stretch_gain.points(), m.viscous_press_gain.points());
+    let sh_off = vitrea::GlamVec2::new(params.bevel_width_pt * m.hover_fill_opacity.points(), params.bevel_width_pt * m.active_fill_opacity.points());
+    let (fill_a, act_a, hov_a, spec_a) = (m.glass_fill_alpha.points(), m.active_fill_opacity.points(), m.hover_fill_opacity.points(), m.glass_specular_alpha.points());
+    let max_u8 = f32::from(u8::MAX);
+
+    for y in 0..tex_dim {
+        for x in 0..tex_dim {
+            let p = vitrea::GlamVec2::new(x as f32 + 0.5, y as f32 + 0.5);
+            let d_center = p - sc.hub_center;
+            let r = d_center.length();
+            if r > sc.r_outer + 1.0 {
+                continue;
+            }
+            let outer_grad = if r > 0.0 { d_center / r } else { vitrea::GlamVec2::X };
+            let mut best_s = vitrea::SdfSample2d { distance: sc.r_outer, gradient: vitrea::GlamVec2::X };
+            let mut sh_dist = sc.r_outer;
+            let (mut best_act, mut best_lift) = (0.0f32, 0.0f32);
+            for (idx, mem) in sc.members.iter().enumerate() {
+                let r_mid = (mem.radii.0 + mem.radii.1) * 0.5;
+                let rad = super::render::deg_to_rad(mem.angles_deg.0, m);
+                let c_cent = mem.center + vitrea::GlamVec2::new(rad.cos() * r_mid, rad.sin() * r_mid);
+                let r_span = (mem.radii.1 - mem.radii.0).max(1.0);
+                let p_def = vitrea::deform_viscous_droplet_point(p, c_cent, -mem.deform_vel, r_span, mem.lift_weight * 0.5, stretch_gains);
+                let s_i = vitrea::sdf_annular_rounded_sector_sample(p_def, mem.center, mem.radii, mem.angles_deg, mem.corner_radius);
+                let s_sh = vitrea::sdf_annular_rounded_sector_sample(p_def - sh_off, mem.center, mem.radii, mem.angles_deg, mem.corner_radius);
+                sh_dist = sh_dist.min(s_sh.distance);
+                if idx == 0 {
+                    (best_s, best_act, best_lift) = (s_i, mem.active_weight, mem.lift_weight);
+                } else {
+                    let pair_w = (best_lift + mem.lift_weight + (best_act + mem.active_weight) * 0.5).clamp(0.0, 1.0);
+                    let k_m = (params.meniscus_merge_k_pt * pair_w * 0.5).max(params.fresnel_f0);
+                    let h = (0.5 + 0.5 * (s_i.distance - best_s.distance) / k_m).clamp(0.0, 1.0);
+                    best_s = vitrea::sdf_smooth_union_with_grad(best_s, s_i, k_m);
+                    best_act = best_act * h + mem.active_weight * (1.0 - h);
+                    best_lift = best_lift * h + mem.lift_weight * (1.0 - h);
+                }
+            }
+            let d_hub = r - sc.r_hub;
+            sh_dist = sh_dist.min((p - sh_off - sc.hub_center).length() - sc.r_hub);
+            let hub_s = vitrea::SdfSample2d { distance: d_hub, gradient: outer_grad };
+            let (glass_s, act_w, lift_w) = if hub_s.distance < best_s.distance {
+                (hub_s, 0.0, 0.0)
+            } else {
+                (best_s, best_act.clamp(0.0, 1.0), best_lift.clamp(0.0, 1.0))
+            };
+
+            let (mut sh_a, mut sh_col) = (0.0f32, shadow_rgb);
+            if r <= sc.r_dish + 1.0 {
+                let dir_t = (1.0 - (sh_dist.max(0.0) / (params.bevel_width_pt * 0.5)).clamp(0.0, 1.0)).powi(2);
+                let ao_t = (1.0 - (glass_s.distance.max(0.0) / (params.bevel_width_pt * 0.5)).clamp(0.0, 1.0)).powi(2);
+                let sh_gain = if is_light { hov_a * 0.5 } else { act_a };
+                sh_a = ((dir_t + ao_t * 0.5) * sh_gain).clamp(0.0, act_a + hov_a);
+                let dish_here = eval_shared_dish_matrix_at(p, sc, (dish_core, dish_rim, accent_rgb), m);
+                let blue_excess = (dish_here[2] - dish_core[2]).max(0.0);
+                if blue_excess > params.fresnel_f0 {
+                    sh_col = accent_rgb;
+                    sh_a = (sh_a * 0.5 + blue_excess * 0.5).clamp(0.0, fill_a * 0.5);
+                }
+            }
+            let surf = vitrea::evaluate_glass_surface_sample(p, glass_s, &params, sc.cursor_pos, sc.r_outer);
+            let idx_px = (y * tex_dim + x) * 4;
+            if surf.coverage <= 0.0 {
+                if sh_a > 0.0 {
+                    flat[idx_px] = (sh_col[0] * max_u8).round() as u8;
+                    flat[idx_px + 1] = (sh_col[1] * max_u8).round() as u8;
+                    flat[idx_px + 2] = (sh_col[2] * max_u8).round() as u8;
+                    flat[idx_px + 3] = (sh_a * max_u8).round() as u8;
+                }
+                continue;
+            }
+
+            let [p_r, p_g, p_b] = surf.refracted_rgb_pts;
+            let refr_rgb = [
+                eval_shared_dish_matrix_at(p_r, sc, (dish_core, dish_rim, accent_rgb), m)[0],
+                eval_shared_dish_matrix_at(p_g, sc, (dish_core, dish_rim, accent_rgb), m)[1],
+                eval_shared_dish_matrix_at(p_b, sc, (dish_core, dish_rim, accent_rgb), m)[2],
+            ];
+            let active_mix = (act_w + lift_w * 0.5).clamp(0.0, 1.0);
+            let bevel_trans = (1.0 - surf.dome_elevation).clamp(0.0, 1.0);
+            let trans_w = (act_a + bevel_trans * spec_a).clamp(0.0, fill_a);
+            let dome_gain = surf.key_illumination * hov_a + surf.dome_elevation * params.fresnel_f0;
+            let rim_gain = surf.fresnel_specular * (if is_light { fill_a } else { spec_a + act_a * active_mix });
+            let mut g_rgb = [0.0f32; 3];
+            for ch in 0..3 {
+                let mat_c = (passive_tint[ch] + dome_gain).clamp(0.0, 1.0);
+                let pas_c = refr_rgb[ch] * trans_w + mat_c * (1.0 - trans_w);
+                let act_c = (accent_rgb[ch] * (fill_a + surf.dome_elevation * act_a) + dome_gain).clamp(0.0, 1.0);
+                let body_c = pas_c * (1.0 - active_mix * fill_a) + act_c * (active_mix * fill_a);
+                let lit_c = (body_c + rim_gain * spec_rgb[ch]).clamp(0.0, 1.0);
+                g_rgb[ch] = (lit_c * surf.coverage + sh_col[ch] * (1.0 - surf.coverage)).clamp(0.0, 1.0);
+            }
+            let g_alpha = (fill_a + (1.0 - fill_a) * (surf.fresnel_specular + active_mix * 0.5)).clamp(0.0, 1.0);
+            let out_a = (surf.coverage * g_alpha + (1.0 - surf.coverage) * sh_a).clamp(0.0, 1.0);
+            flat[idx_px] = (g_rgb[0] * max_u8).round() as u8;
+            flat[idx_px + 1] = (g_rgb[1] * max_u8).round() as u8;
+            flat[idx_px + 2] = (g_rgb[2] * max_u8).round() as u8;
+            flat[idx_px + 3] = (out_a * max_u8).round() as u8;
+        }
+    }
+    flat
+}
 
 /// Official Apple SF Symbols identifiers rendered as resolution-independent vector strokes (`REQ-014-07`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

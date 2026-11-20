@@ -231,7 +231,7 @@ pub(crate) fn step_dial_pointer_springs(
 }
 
 /// Paints a 3D semicircular curved stadium capsule (`"↶ Undo"` or `"↷ Redo"`) with true $180^\circ$ rounded end-caps
-/// and 5-layer volumetric Liquid Glass dome shading (`REQ-014-08.3`, `SPEC-016 §4.1`).
+/// and 5-layer volumetric Liquid Glass dome shading via `vitrea::sdf_curved_stadium_arc_sample` & `vitrea::evaluate_glass_surface_sample` (`REQ-014-08.3`, `SPEC-016 §4.5.1`).
 pub(crate) fn paint_curved_stadium_capsule(
     painter: &Painter,
     center: Pos2,
@@ -277,6 +277,15 @@ pub(crate) fn paint_curved_stadium_capsule(
     let mut mesh = egui::epaint::Mesh::default();
     shadow_mesh.vertices.reserve(n * 2);
     mesh.vertices.reserve(n * 2);
+    let params = vitrea::LiquidGlassOpticalParams {
+        ior_glass: m.ior_glass.points(),
+        ior_dispersion_rgb: [m.ior_red.points(), m.ior_green.points(), m.ior_blue.points()],
+        fresnel_f0: m.fresnel_f0.points(),
+        bevel_width_pt: h_cap,
+        dome_thickness_pt: m.dome_thickness_pt.points(),
+        vibrancy_chroma_boost: m.vibrancy_chroma_boost.points(),
+        meniscus_merge_k_pt: m.meniscus_merge_k_pt.points(),
+    };
     let mut hi_hsva = egui::epaint::Hsva::from(fill);
     hi_hsva.v = (hi_hsva.v + (1.0 - hi_hsva.v) * m.active_fill_opacity.points()).clamp(0.0, 1.0);
     let core_col = Color32::from(hi_hsva);
@@ -284,10 +293,14 @@ pub(crate) fn paint_curved_stadium_capsule(
     for &b_pt in &boundary {
         let dir = b_pt - center;
         let s_pt = center + (dir / dir.length().max(1.0)) * r_mid;
+        let b_sdf = vitrea::sdf_curved_stadium_arc_sample(glam_pt(b_pt), glam_pt(center), (r_in, r_out), (start_deg, end_deg));
+        let b_surf = vitrea::evaluate_glass_surface_sample(glam_pt(b_pt), b_sdf, &params, None, r_out);
+        let rim_mix = (b_surf.fresnel_specular * m.glass_specular_alpha.points() + b_surf.key_illumination * 0.5).clamp(0.0, 1.0);
+        let rim_c = Color32::from(egui::epaint::Hsva::from(fill)).lerp_to_gamma(stroke_col, rim_mix);
         shadow_mesh.colored_vertex(s_pt + sh_off, shadow_col);
         shadow_mesh.colored_vertex(b_pt + sh_off, Color32::TRANSPARENT);
         mesh.colored_vertex(s_pt, core_col);
-        mesh.colored_vertex(b_pt, if b_pt.y < s_pt.y { stroke_col } else { fill });
+        mesh.colored_vertex(b_pt, rim_c);
     }
     for i in 0..n {
         let (b0, b1) = ((i * 2) as u32, (((i + 1) % n) * 2) as u32);
@@ -461,57 +474,5 @@ pub fn paint_meniscus_smooth_union_bridge(
     for (p, w) in bridge_mesh.positions.into_iter().zip(bridge_mesh.core_weights) {
         mesh.colored_vertex(egui_pt(p), bridge_col.gamma_multiply((max_alpha * w).clamp(0.0, 1.0)));
     }
-    painter.add(Shape::mesh(mesh));
-}
-
-/// Renders and caches the per-pixel raytraced 8-cushion Liquid Glass rosette [`egui::TextureHandle`]
-/// via `vitrea::render_rosette_liquid_glass_rgba` and draws it as a single textured UV quad (`SPEC-016 §4.4`).
-pub(crate) fn paint_raytraced_rosette_quad(
-    painter: &Painter,
-    id_source: egui::Id,
-    dial_rect: Rect,
-    scene: &vitrea::RosetteOpticalScene,
-    tex_dim: usize,
-) {
-    use std::hash::{Hash, Hasher};
-    let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    let max_u8 = f32::from(u8::MAX);
-    tex_dim.hash(&mut hasher);
-    scene.is_light_mode.hash(&mut hasher);
-    for ch in scene.accent_rgb {
-        ((ch * max_u8).round() as u8).hash(&mut hasher);
-    }
-    if let Some(cp) = scene.cursor_pos {
-        ((cp.x * 2.0).round() as i32).hash(&mut hasher);
-        ((cp.y * 2.0).round() as i32).hash(&mut hasher);
-    }
-    for c in &scene.cushions {
-        ((c.center.x * 2.0).round() as i32).hash(&mut hasher);
-        ((c.center.y * 2.0).round() as i32).hash(&mut hasher);
-        ((c.radii.1 * 2.0).round() as i32).hash(&mut hasher);
-        ((c.active_weight * max_u8).round() as i32).hash(&mut hasher);
-        ((c.lift_weight * max_u8).round() as i32).hash(&mut hasher);
-    }
-    let state_hash = hasher.finish();
-    let cache_id = id_source.with("lg_rosette_ray_tex");
-    let ctx = painter.ctx();
-    let cached = ctx.data(|d| d.get_temp::<(u64, egui::TextureHandle)>(cache_id));
-    let tex_handle = match cached {
-        Some((prev_h, handle)) if prev_h == state_hash => handle,
-        _ => {
-            let rgba = vitrea::render_rosette_liquid_glass_rgba(tex_dim, tex_dim, scene);
-            let mut flat = Vec::with_capacity(rgba.len() * 4);
-            for px in rgba {
-                flat.extend_from_slice(&px);
-            }
-            let img = ColorImage::from_rgba_unmultiplied([tex_dim, tex_dim], &flat);
-            let handle = ctx.load_texture("vitrea_rosette_lg", img, egui::TextureOptions::LINEAR);
-            ctx.data_mut(|d| d.insert_temp(cache_id, (state_hash, handle.clone())));
-            handle
-        }
-    };
-    let mut mesh = egui::epaint::Mesh::with_texture(tex_handle.id());
-    let tint = Color32::from(egui::epaint::Hsva::new(0.0, 0.0, 1.0, 1.0));
-    mesh.add_rect_with_uv(dial_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), tint);
     painter.add(Shape::mesh(mesh));
 }

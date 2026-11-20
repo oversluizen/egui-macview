@@ -1,12 +1,58 @@
 //! 3D Cushion, Circular Tactile Ring, and Transient HUD Tooltip Painter for [`super::MacContextThumbDial`].
 
-use super::icons::paint_sector_icon;
+use super::icons::{paint_sector_icon, RosetteContainerSpec};
 use super::render::{polar_pos, resolve_undo_redo_arcs, UndoRedoArcs};
 use super::{MacContextThumbDial, MacThumbDialLayer, MacThumbSector};
 use crate::controls::free_joystick_bowl::{paint_3d_recessed_bowl, MarblePaintSpec};
 use crate::theme::{MacBackgroundStyle, MacTheme};
 use crate::tokens::ThumbDialMetrics;
-use egui::{Align2, Color32, FontId, Painter, Pos2, Rect, Stroke, Vec2};
+use egui::{Align2, Color32, ColorImage, FontId, Painter, Pos2, Rect, Shape, Stroke, Vec2};
+
+pub(crate) fn paint_raytraced_rosette_quad(
+    painter: &Painter,
+    id_source: egui::Id,
+    dial_rect: Rect,
+    sc: &RosetteContainerSpec,
+    tex_dim: usize,
+    theme: &MacTheme,
+    m: &ThumbDialMetrics,
+) {
+    use std::hash::{Hash, Hasher};
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    let max_u8 = f32::from(u8::MAX);
+    tex_dim.hash(&mut hasher);
+    (theme.appearance == crate::theme::MacAppearance::Aqua).hash(&mut hasher);
+    sc.accent_col.to_array().hash(&mut hasher);
+    if let Some(cp) = sc.cursor_pos {
+        ((cp.x * 2.0).round() as i32).hash(&mut hasher);
+        ((cp.y * 2.0).round() as i32).hash(&mut hasher);
+    }
+    for c in &sc.members {
+        ((c.center.x * 2.0).round() as i32).hash(&mut hasher);
+        ((c.center.y * 2.0).round() as i32).hash(&mut hasher);
+        ((c.radii.1 * 2.0).round() as i32).hash(&mut hasher);
+        ((c.active_weight * max_u8).round() as i32).hash(&mut hasher);
+        ((c.lift_weight * max_u8).round() as i32).hash(&mut hasher);
+    }
+    let state_hash = hasher.finish();
+    let cache_id = id_source.with("lg_rosette_ray_tex");
+    let ctx = painter.ctx();
+    let cached = ctx.data(|d| d.get_temp::<(u64, egui::TextureHandle)>(cache_id));
+    let tex_handle = match cached {
+        Some((prev_h, handle)) if prev_h == state_hash => handle,
+        _ => {
+            let flat = super::icons::synthesize_rosette_matrix_rgba(tex_dim, sc, theme, m);
+            let img = ColorImage::from_rgba_unmultiplied([tex_dim, tex_dim], &flat);
+            let handle = ctx.load_texture("vitrea_rosette_lg", img, egui::TextureOptions::LINEAR);
+            ctx.data_mut(|d| d.insert_temp(cache_id, (state_hash, handle.clone())));
+            handle
+        }
+    };
+    let mut mesh = egui::epaint::Mesh::with_texture(tex_handle.id());
+    let tint = Color32::from(egui::epaint::Hsva::new(0.0, 0.0, 1.0, 1.0));
+    mesh.add_rect_with_uv(dial_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), tint);
+    painter.add(Shape::mesh(mesh));
+}
 
 pub(crate) struct UndoRedoPaintStyle {
     pub(crate) can_undo: bool,
@@ -140,9 +186,9 @@ pub(super) fn paint_dial_layers(
 
         let passive_half_sweep = m.diagonal_sweep_deg.points() * 0.5 - half_gap_deg;
         let fillet_px = gap * 2.0 * px_scale;
-        let mut cushions = Vec::with_capacity(8);
+        let mut members = Vec::with_capacity(8);
         for passive_deg in [m.angle_north_west_deg.points(), m.angle_south_west_deg.points()] {
-            cushions.push(vitrea::RosetteCushionSpec {
+            members.push(super::icons::RosetteMemberSpec {
                 center: to_tex(hub_center),
                 radii: (r_clover_in * px_scale, r_clover_out * px_scale),
                 angles_deg: (passive_deg, passive_half_sweep),
@@ -166,7 +212,7 @@ pub(super) fn paint_dial_layers(
             let half_sweep = sector.sweep_deg(m) * 0.5 - half_gap_deg;
             let vel_px = vitrea::GlamVec2::new(lift_off.x * px_scale, lift_off.y * px_scale) * 2.0;
             let hover_boost = if is_hovered { m.hover_fill_opacity.points() } else { 0.0 };
-            cushions.push(vitrea::RosetteCushionSpec {
+            members.push(super::icons::RosetteMemberSpec {
                 center: to_tex(hub_center + lift_off),
                 radii: (r_clover_in * px_scale, r_out_lifted * px_scale),
                 angles_deg: (c_deg, half_sweep),
@@ -181,7 +227,7 @@ pub(super) fn paint_dial_layers(
             if span_diff > half_gap_deg {
                 let mid_d = (lead_deg + trail_deg) * 0.5;
                 let half_s = span_diff * 0.5 + passive_half_sweep * 0.5;
-                cushions.push(vitrea::RosetteCushionSpec {
+                members.push(super::icons::RosetteMemberSpec {
                     center: to_tex(hub_center),
                     radii: (r_clover_in * px_scale, r_clover_out * px_scale),
                     angles_deg: (mid_d, half_s),
@@ -192,23 +238,18 @@ pub(super) fn paint_dial_layers(
                 });
             }
         }
-        let acc = st.accent_col.to_array();
-        let max_u8 = f32::from(u8::MAX);
         let cursor_tex = (st.pointer_norm.length_sq() > 0.0).then(|| to_tex(hub_center + st.pointer_norm * r_outer));
-        let scene = vitrea::RosetteOpticalScene {
+        let container = RosetteContainerSpec {
             hub_center: to_tex(hub_center),
             r_outer: r_outer * px_scale,
             r_dish: r_clover_out * px_scale,
             r_hub: r_hub * px_scale,
-            bevel_width: m.bevel_width_pt.points() * s * px_scale,
-            dome_thickness: m.dome_thickness_pt.points() * s * px_scale,
-            meniscus_k: m.meniscus_merge_k_pt.points() * s * px_scale,
+            scale: s * px_scale,
             cursor_pos: cursor_tex,
-            is_light_mode: is_light,
-            accent_rgb: [f32::from(acc[0]) / max_u8, f32::from(acc[1]) / max_u8, f32::from(acc[2]) / max_u8],
-            cushions,
+            accent_col: st.accent_col,
+            members,
         };
-        super::super::liquid_glass::paint_raytraced_rosette_quad(painter, dial.id_source, dial_rect, &scene, tex_dim);
+        paint_raytraced_rosette_quad(painter, dial.id_source, dial_rect, &container, tex_dim, theme, m);
 
         for sector in MacThumbSector::ALL {
             let is_latched = st.latched_sector == Some(sector);
