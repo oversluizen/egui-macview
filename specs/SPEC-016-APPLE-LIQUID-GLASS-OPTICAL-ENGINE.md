@@ -1,123 +1,356 @@
-# SPEC-016: Apple Liquid Glass Optical Engine, 15-Iteration MVC Roadmap & 52-Widget Environmental Interaction Matrix (`v0.9.0`)
+# SPEC-016: Apple Liquid Glass Optical Engine, `A0–B2` 3-Matrix Architecture & 52-Widget Environmental Interaction Matrix (`v0.9.0`)
 
 | Attribute | Specification Value |
 | :--- | :--- |
 | **Document ID** | SPEC-016 |
-| **Document Title** | Apple Liquid Glass Optical Engine, 15-Iteration MVC Roadmap & 52-Widget Environmental Interaction Matrix (`v0.9.0`) |
-| **Document Version** | `0.9.0` |
+| **Document Title** | Apple Liquid Glass Optical Engine, `A0–B2` 3-Matrix Architecture & 52-Widget Environmental Interaction Matrix (`v0.9.0`) |
+| **Document Version** | `0.9.0` (SSOT Consolidated — `A0 → A1 → A2 → B1 → B2`) |
 | **Status** | Accepted / Normative |
 | **Target Milestone** | Milestone 0.9.0 |
-| **Target Host** | Standalone crate `egui-macview` (Rust, egui 0.37) |
+| **Target Host** | Standalone crate `egui-macview` (Rust, egui 0.37) consuming standalone MC crate `vitrea` |
 | **Author** | Jaco Oversluizen / `egui-macview` contributors |
-| **Normative Standards** | ISO/IEC/IEEE 42010:2011 (MVC Separation), ISO/IEC/IEEE 29119-3:2021, Apple macOS 26 Tahoe / visionOS Liquid Glass HIG, W3C DTCG, W3C WCAG 2.1 AA |
+| **Normative Standards** | ISO/IEC/IEEE 42010:2011 (MVC Separation), ISO/IEC/IEEE 29119-3:2021, Apple WWDC25 Session 219 (*Meet Liquid Glass*), W3C DTCG, W3C WCAG 2.1 AA |
+| **Primary Optical Sources** | 1. [`iyinchao/liquid-glass-studio`](https://github.com/iyinchao/liquid-glass-studio) (`src/shaders/fragment-main.glsl`, `src/shaders/fragment-bg.glsl`, `src/shaders/lib/sdf.glsl`, `src/shaders/lib/color.glsl`, `src/Controls.tsx`)<br/>2. [Apple WWDC25 Session 219 — *Meet Liquid Glass*](https://wwdcnotes.com/documentation/wwdcnotes/wwdc25-219-meet-liquid-glass/) (`Glass.regular`, `Glass.clear`, `GlassEffectContainer`) |
 
 ---
 
 ## 1. Executive Summary & Architectural Philosophy
 
-Apple's **Liquid Glass** design language (macOS 26 Tahoe, iOS 26, visionOS) treats user interface controls not as isolated 2D painted rectangles, but as a **coupled optical and physical ecosystem**. Every control in a Liquid Glass scene participates in three formal relationships:
-1. **Base Material State (*Self / Resting Geometry & Optics*)**: Its 2D/3D Signed Distance Field (SDF) silhouette, surface normal field $\vec{N}(\vec{x}) = (n_x, n_y, n_z)$, internal sub-surface caustic tint, and resting Fresnel rim.
-2. **Outward Emission (*Effect on Neighboring Controls & Parent Surface*)**: How the control emits light, shadow, refractive surface registration (`register_surface_rect`), fluid selection transfer (`DualSpringMorphBlob`), or metaball coalescing bridges (`.glassEffectUnion`) into its surrounding environment.
-3. **Inward Reception (*Response to Pointer Field, Backdrop & Layout Regime*)**: How the control deforms, tilts, and shifts its specular highlight under the global 2D pointer light field $\vec{p}(t)$, how it adapts foreground contrast to underlying canvas luminance (`sample_backdrop_luminance_at`), and how it preserves 1:1 coordinate bijection under `LayoutPolicy::ExactAppleNib` (`MacOs14Sonoma`).
+Apple's **Liquid Glass** design language (macOS 26 Tahoe, iOS 26, visionOS) treats user interface controls not as isolated 2D painted polygons, but as a **coupled optical and physical ecosystem** suspended over a structured, continuous backdrop.
+
+To achieve a **99% optical and behavioral clone** of Apple Liquid Glass and eliminate legacy overdraw ("layers hiding layers"), this specification enforces a strict **5-Block Architecture (`A0 → A1 → A2 → B1 → B2`)**:
+
+1. **Block `A0` — The Structured Backdrop & Recessed Bowl Matrix 1 (`Zero-Overdraw Prerequisite`):**
+   - No widget or group may ever paint an opaque background circle, disc mesh, or matte rectangle over the underlying canvas grid.
+   - Matrix 1 ($B_{\text{sharp}}(x,y)$ and its Gaussian-blurred twin $B_{\text{blur}}(x,y)$) contains the continuous canvas precision grid, concentric bowl micro-grooves, radial bowl depth shading, sub-surface color spill, and the exponential SDF drop shadow $S(\vec{p}) = \exp(-|d_{\text{shifted}}(\vec{p})|/s_{\text{expand}}) \cdot 0.6 \cdot s_{\text{factor}}$.
+2. **Block `A1` — Individual Widget Build Specification (`Solo SDF Families A..D` + Universal `STEP 9` Optical Pipeline):**
+   - Geometry (`2D SDF` $d(\vec{p})$ + analytical gradient $\nabla d(\vec{p})$) is strictly separated from Optics (the universal `STEP 9` shader in `vitrea::optics`).
+   - Every solo glass widget evaluates the exact 4 `STEP 9` equations from [`iyinchao/liquid-glass-studio/src/shaders/fragment-main.glsl`](https://github.com/iyinchao/liquid-glass-studio/blob/main/src/shaders/fragment-main.glsl):
+     1. Quadratic-Arcsin Snellius Bevel Curve ($\theta_I = \arcsin(x_R^2)$, $f_{\text{edge}} = -\tan(\theta_T - \theta_I)$),
+     2. Chromatic R/G/B Dispersion ($N_R = 0.98, N_G = 1.00, N_B = 1.02$, scaled by $D_{\text{disp}} = 7.0$) with sharp-rim / blurred-core dual sampling and low passive tint opacity (`0.10..0.25`) so **75%–90% of the interior pixel is genuinely refracted background**,
+     3. 5th-Power Localized Fresnel Rim evaluated in **CIE LCH** ($L' = L + 20.0 \cdot f_{\text{fresnel}} \cdot k_F$),
+     4. Double-Frequency $\sin(2\theta)$ Anisotropic Glare + Opposite-Side Caustic Crescent (`glareFarside`, `80%` opposite factor) evaluated in **CIE LCH** ($L' = L + 150.0 \cdot f_{\text{glare}},\; C' = C + 30.0 \cdot f_{\text{glare}}$).
+3. **Block `A2` — Solo Graphical Verification (`Black-Box Framebuffer Oracles` $O_{\text{solo},1..4}$ + 5-Point Visual AI Audit):**
+   - Verifies on rendered `2x` Retina RGBA8 pixels that underlying grid lines bend into an S-curve at the rim while staying calm in the center, R/G/B wavelengths split at the bevel, both the primary top-left glare and the opposite bottom-right caustic crescent peak in CIE LCH Lightness and Chroma, and viscous deformation preserves 2D area ($\det J = 1$).
+4. **Block `B1` — Collective Group Build Specification (`GlassEffectContainer` & All 15 `W1..W6` Specs):**
+   - A group of widgets does **not** add an extra painting layer or a separate group shader. Instead, a group merges its member SDFs via $C^1$ smooth-union $D_{\text{group}}(\vec{p}) = \text{smin}(d_1 \dots d_N, k_{\text{merge}})$ **before** executing the exact same universal `STEP 9` optical pipeline from `A1`.
+   - Defines explicit **Intra-Group** rules (shared `smin` liquid bridge, sub-surface color spill into `A0`, coupled `CASpring`/`DualSpring` kinematics) and **Inter-Group** rules ($k_{\text{merge}} = 0$ between distinct containers so each container keeps a closed Fresnel perimeter, hierarchical Z-order backdrop refraction, and synchronous window/light/focus adaptation).
+5. **Block `B2` — Group Ensemble Verification (`Black-Box Oracles` $O_{\text{group},1..4}$ + Zero-Overdraw Guards):**
+   - Verifies seamless `smin` meniscus bridging, cross-neighbor sub-surface color bleed, inter-group boundary separation with continuous canvas grid visibility, and synchronous window deactivation dimming.
 
 ---
 
-## 2. The 15-Iteration MVC Execution Architecture (`M1..M3` + `W1-V/C..W6-V/C`)
+## 2. Block `A0`: The Structured Backdrop & Recessed Bowl Matrix 1 (`REQ-016-A0`)
 
-To prevent ad-hoc procedural hacks and guarantee mathematical, visual, and behavioral verification at every layer, the Liquid Glass transformation is decomposed into **15 closed-loop COTS iterations** (`Spec Anchor -> RED COTS Test -> GREEN Implementation -> Retina PNG Verification`):
+### 2.1 Why `A0` Is a Mandatory Prerequisite (The Zero-Overdraw Invariant)
 
-| Iteration | Layer / MVC Role | Scope & Widget Family | Primary Verification Oracle |
+A refractive lens is only visible to the human eye if the light rays passing through it originate from a **structured background with spatial contrast** (grid lines, concentric precision rings, underlying UI edges, or color gradients). If a widget first paints an opaque uniform circle (`painter.circle_filled`, `painter.rect_filled`, or an opaque `egui::Mesh` disc) over the canvas, or if Matrix 1 evaluates a featureless uniform color (`[0.98, 0.98, 0.98]`), refracting a coordinate by $\Delta \vec{p} = 6.0\text{ px}$ samples the exact same uniform color and produces zero visible refraction.
+
+Therefore, **Block `A0` enforces three hard invariants (`REQ-016-A0.1..3`)**:
+
+1. **Zero Opaque Pre-Overdraw (`REQ-016-A0.1`):**
+   - No Liquid Glass widget (`MacContextThumbDial`, `MacEdgeThumbwheel`, `MacFreeJoystickBowl`, `MacSegmentedControl`, `MacPopoverSurface`, etc.) may emit an opaque `Shape::Circle`, `Shape::Rect`, or opaque background `Shape::Mesh` over the host canvas prior to or underneath its `2x` Retina `TextureHandle` quad.
+   - Outside the outer housing contour ($D_{\text{housing}}(\vec{p}) > 0$), Matrix 3 pixels MUST have `alpha = 0` (except for the exponential drop shadow), leaving the host canvas 100% unobstructed.
+2. **Structured Dual-Resolution Matrix 1 ($B_{\text{sharp}}(x,y)$ & $B_{\text{blur}}(x,y)$, `REQ-016-A0.2`):**
+   - For every `2x` Retina `GlassEffectContainer` raster (`MacContextThumbDial`, `MacEdgeThumbwheel`, `MacFreeJoystickBowl`, and floating glass surfaces), **Matrix 1** evaluates two coupled buffers at `2x` Retina resolution:
+     - **$B_{\text{sharp}}(x, y)$ (Sharp Structured Backdrop & Bowl Floor):**
+       1. **Continuous World/Canvas Precision Grid:** Evaluates the host canvas major (`64.0 pt`) and minor (`16.0 pt`) coordinate grid hairlines directly in world/screen coordinates $(x_{\text{world}}, y_{\text{world}})$ so the canvas grid runs continuously *into and beneath* the recessed glass bowl without interruption.
+       2. **Recessed Parabolic Bowl Profile & Concentric Micro-Grooves:** Inside a circular bowl housing of radius $R_{\text{bowl}}$, let $r = \|\vec{p} - \vec{c}_{\text{bowl}}\|_2 / R_{\text{bowl}} \in [0, 1]$. The recessed bowl floor modulates the `MacTheme` base surface (`window_background` $\leftrightarrow$ `box_background`) with:
+          - Radial concave depth shading and inner perimeter ambient occlusion near $r \to 1$,
+          - Precision concentric reticle rings / micro-dot rings (`Fine` at $0.45 R$, `Mid` at $0.64 R$, `Fast` at $0.82 R$),
+          - Radial sub-surface color spill $E_{\text{spill}}(\vec{p})$ emitted by active, latched, or hovered glass members above the bowl floor:
+            $$E_{\text{spill}}(\vec{p}) = \sum_{i \in \text{active}} w_i \cdot \exp\!\left(-\frac{\max(d_i(\vec{p}), 0.0)}{r_{\text{spill}}}\right) \cdot C_{\text{accent},i}$$
+       3. **Exponential SDF Drop Shadow ([`fragment-bg.glsl:136-150`](https://github.com/iyinchao/liquid-glass-studio/blob/main/src/shaders/fragment-bg.glsl)):**
+          - Given light-shifted sample point $\vec{p}_{\text{shadow}} = \vec{p} - \vec{\Delta}_{\text{shadow}}$ (default $\vec{\Delta}_{\text{shadow}} = (-3.0\text{ pt}, +6.0\text{ pt})$ in screen coordinates, i.e., shadow cast downward-right from a top-left key light) and composite group SDF $D_{\text{group}}(\vec{p}_{\text{shadow}})$:
+            $$S_{\text{shadow}}(\vec{p}) = \exp\!\left(-\frac{|D_{\text{group}}(\vec{p}_{\text{shadow}})|}{s_{\text{expand}}}\right) \cdot 0.6 \cdot s_{\text{factor}}$$
+          - Default shadow parameters from `Controls.tsx`: $s_{\text{expand}} = 12.5\text{ pt}$ (`shadowExpand = 25` at `2x` Retina), $s_{\text{factor}} = 0.25$ (`shadowFactor = 25%`).
+     - **$B_{\text{blur}}(x, y)$ (Separable Gaussian / Dual-Kawase Blurred Backdrop):**
+       - Computed by applying a separable 2-pass Gaussian / Dual-Kawase blur ($\sigma \in [3.0\text{ px}, 6.0\text{ px}]$ for `Glass.regular`, $\sigma \in [1.0\text{ px}, 2.0\text{ px}]$ for `Glass.clear`) with vibrancy chroma boost ($\times 1.35$) to $B_{\text{sharp}}(x, y)$.
+
+---
+
+## 3. Block `A1`: Individual Widget Build Specification (`Solo SDF Families A..D` + Universal `STEP 9` Optical Pipeline, `REQ-016-A1`)
+
+### 3.1 Strict Separation of Geometry (`vitrea::sdf`) from Optics (`vitrea::optics`)
+
+In both Apple's Metal framework and [`iyinchao/liquid-glass-studio`](https://github.com/iyinchao/liquid-glass-studio), **every widget shape shares the exact same optical fragment pipeline (`STEP 9`)**. Shapes differ *only* in their 2D Signed Distance Field primitive $S(\vec{p}) = \big(d(\vec{p}), \nabla d(\vec{p})\big)$, where $d(\vec{p}) < 0$ inside the glass, $d(\vec{p}) = 0$ on the boundary, $d(\vec{p}) > 0$ outside, and $\nabla d(\vec{p}) = (\partial_x d, \partial_y d)$ is the outward unit gradient ($\|\nabla d\|_2 = 1$).
+
+#### 3.1.1 The Four Universal Shape Families (`vitrea::sdf`)
+
+| Family | Name & Target Widgets | Exact SDF Primitive in `vitrea::sdf` | Analytical Definition |
 | :--- | :--- | :--- | :--- |
-| **Iter 1 (`M1`)** | **Model — Geometry & SDF** | Analytical 2D/3D SDF primitives: `sdf_annular_rounded_sector` (constant-radius pebble cushions + optical centroid), `sdf_curved_stadium_arc` (semicircular Undo/Redo capsules + arc tangent frame), `sdf_rounded_capsule`, `sdf_smooth_union` ($C^1$ polynomial metaball), and 3D dome normal $\vec{N}(\vec{x})$ | `tc_016_m1_sdf_annular_sector_stadium_arc_and_3d_normals` |
-| **Iter 2 (`M2`)** | **Model — Optics & Material** | Snell's Law refraction ($\eta = 1.48$) with chromatic dispersion ($\eta_R=1.47, \eta_G=1.48, \eta_B=1.50$), Schlick Fresnel + Blinn-Phong specular + sub-surface caustic bloom, `ProximityLightField` (cross-widget rim illumination), and quarter-res Dual-Kawase Gaussian blur + $1.5\times$ vibrancy backdrop | `tc_016_m2_snellius_chromatic_fresnel_proximity_and_kawase_backdrop` |
-| **Iter 3 (`M3`)** | **Model — Coupled `CASpring` Dynamics** | `DualSpringMorphBlob` (leading-edge + trailing-edge velocity-stretched liquid droplet transfer), `AnisotropicCushionSpring` (radial/magnetic cushion lift + 2.5D parallax + jelly compression), W3C DTCG token synchronization, and `is_at_rest() -> Duration::MAX` zero-idle-wakeups proof | `tc_016_m3_dual_spring_morph_blob_anisotropic_lift_and_zero_idle` |
-| **Iter 4 (`W1-V`)** | **View — Family 1 (Radial Pie HUD)** | `MacContextThumbDial` View: 8-cushion $360^\circ$ rosette (`N, NE, E, SE, S, SW, W, NW`) in a recessed 3D dish, $10 \times 20$ 2D-grid cushion meshes, mandatory 3-tier typography (`Vector SF Symbol` + `Bold Label` + `Shortcut`) at the SDF optical centroid, 3-layer amber Latch LED, and semicircular stadium `"↶ Undo"` / `"↷ Redo"` capsules with arc-rotated typography (`-30°` / `+30°`) | `tc_016_w1v_thumb_dial_8_cushion_mesh_3_tier_labels_and_rotated_stadium_arcs` |
-| **Iter 5 (`W1-C`)** | **Controller — Family 1 (Radial Pie HUD)** | `MacContextThumbDial` Controller: Exact SDF hit-testing on rounded cushions & curved stadium capsules, polar `DualSpringMorphBlob` gliding between hovered sectors, *Tap-to-Latch* (`< 180 ms`) vs. *Hold-to-Momentary*, `MacTapticEvent` synthesis, and full keyboard/`AccessKit` navigation | `tc_016_w1c_thumb_dial_sdf_hit_polar_morph_latch_and_a11y` |
-| **Iter 6 (`W2-V`)** | **View — Family 2 (Bimanual Drum & Bowl)** | `MacEdgeThumbwheel` (Component B: recessed glass trough, outer cyan/white bloom, illuminated end-caps, 16-band cosine drum + $\cos(\phi)$ ridges) & `MacFreeJoystickBowl` (Stand 2: recessed $360^\circ$ dish, `Fine`/`Fast` dotted rings, vector directional tether, 5-layer refractive crystal marble) | `tc_016_w2v_edge_thumbwheel_drum_and_free_joystick_crystal_marble` |
-| **Iter 7 (`W2-C`)** | **Controller — Family 2 (Bimanual Drum & Bowl)** | `MacEdgeThumbwheel` Free-Spin flywheel inertia + Touch-to-Brake coupled to specular ridge shift, and `MacFreeJoystickBowl` quadratic radial velocity + ring-crossing `MacTapticEvent` + caustic shadow displacement | `tc_016_w2c_flywheel_brake_and_joystick_bowl_physics` |
-| **Iter 8 (`W3-V`)** | **View — Family 3 (Morphing Selection Bars)** | `MacSegmentedControl`, `MacTabView`, and `MacTableActionBar` View: 5-layer 3D Liquid Glass active/hover selection pill rendered via `DualSpringMorphBlob` (stretching between segments) and `.glassEffectUnion` metaball bridging | `tc_016_w3v_segmented_and_tab_morphing_liquid_capsule_view` |
-| **Iter 9 (`W3-C`)** | **Controller — Family 3 (Morphing Selection Bars)** | `MacSegmentedControl`, `MacTabView`, and `MacTableActionBar` Controller: Hover pre-lensing attraction toward neighboring segments, drag-slide scrubbing across segments, and `PressAndHold`/`PullDown` menu triggers | `tc_016_w3c_segmented_and_tab_drag_scrub_and_pre_lensing` |
-| **Iter 10 (`W4-V`)** | **View — Family 4 (Action & Value Primitives)** | `MacButtonCell`, `MacToggle`, `MacSwitch`, `MacCheckbox`, `MacRadioButton`, `MacSlider`, `MacCircularSlider`, `MacStepper`, `MacPopUpButton`, `MacComboBox`, `MacColorWell`, `MacHelpButton`, `MacInlineActionButton`, `MacDisclosureButton`, `MacRatingIndicator` View: 3D Liquid Glass capsule/circle meshes, refractive glass droplet slider/toggle thumbs, and `ProximityLightField` rim illumination | `tc_016_w4v_action_and_value_primitives_liquid_glass_meshes` |
-| **Iter 11 (`W4-C`)** | **Controller — Family 4 (Action & Value Primitives)** | Family 4 Controller: `AnisotropicCushionSpring` `.lift` and jelly-press on click/drag, magnetic thumb tracking on `MacSlider`/`MacToggle`, and strict `LayoutPolicy::ExactAppleNib` Sonoma geometry preservation (`REQ-016-07`) | `tc_016_w4c_action_and_value_primitives_spring_controller` |
-| **Iter 12 (`W5-V`)** | **View — Family 5 (Text, Inspector & Form Controls)** | `MacInputCell`, `MacSearchField`, `MacTokenField`, `MacTextView`, `MacLabel`, `MacOriginMatrix`, `MacTagColorPicker`, `MacRuleEditor`, `MacDatePicker`, `MacPathControl`, `MacForm` View: Glowing 3D Liquid Glass active/focused inspector row capsule (matching `X: 350.0` in `SelectionInfo` mockup), recessed glass input wells, and token pills | `tc_016_w5v_inspector_selection_pill_and_input_wells` |
-| **Iter 13 (`W5-C`)** | **Controller — Family 5 (Text, Inspector & Form Controls)** | Family 5 Controller: Fluid `DualSpringMorphBlob` transfer of the glowing focus/hover capsule from row to row on `Tab`/`Shift+Tab` or pointer traversal, while preserving `2.0 pt` `-[NSTextFieldCell drawingRectForBounds:]` zero-truncation invariant | `tc_016_w5c_inspector_focus_morph_and_zero_truncation` |
-| **Iter 14 (`W6-V`)** | **View — Family 6 (Floating Surfaces, Navigation & Media)** | `MacPopoverSurface`, `MacPopover`, `MacPanel`, `MacCard`, `MacBox`, `MacFloatingInfoBox`, `MacToolbar`, `MacMenuBar`, `NSMenu`, `MacCommandPalette`, `MacCanvasFooter`, `MacContextMenu`, `MacToast`, `MacPlayerView`, `MacTrimScrubber`, `MacLevelIndicator`, `MacProgressIndicator`, `MacTableView`, `MacOutlineView`, `MacCollectionView`, `MacThumbnailCell`, `MacImageView`, `MacScrollView`, `MacSplitView`, `MacStackView`, `MacFixedView`, `MacRow` View: Dual-Kawase blurred vibrancy backdrop sheets, Snellius edge refraction, and scroll-edge luminance contrast adaptation | `tc_016_w6v_floating_surfaces_navigation_and_media_refraction` |
-| **Iter 15 (`W6-C`)** | **Controller — Family 6 (Floating Surfaces, Navigation & Media)** | Family 6 Controller: Cross-surface `register_surface_rect` propagation, `ProximityLightField` propagation from parent toolbar/popover to child controls, `CASpring` sheet/toast transitions, full 31-suite regression, Retina PNG Golden Master comparison, and GitHub Pages WASM deployment | `tc_016_w6c_full_ecosystem_integration_and_golden_master` |
+| **Family A** | **Superellipse / Squircle & Rounded Capsule**<br/>(`MacButtonCell`, `MacSegmentedControl`, `MacTabView`, `MacTableActionBar`, `MacToggle`, `MacSwitch`, `MacCheckbox`, `MacPopUpButton`, `MacComboBox`, `MacColorWell`, `MacInputCell`, `MacSearchField`, `MacTokenField`, `MacPopoverSurface`, `MacPopover`, `MacPanel`, `MacCard`, `MacBox`, `MacFloatingInfoBox`, `MacToast`) | `sdf_rounded_capsule_sample(pt, center, half_extents, r)` & `sdf_superellipse_sample(pt, center, half_extents, n, r)` | Rounded box / $L_p$ superellipse ($n = 4.0$ squircle or $n = 2.0$ stadium capsule):<br/>$\vec{q} = |\vec{p} - \vec{c}| - (\vec{h} - \vec{r})$,<br/>$d(\vec{p}) = \|\max(\vec{q}, 0)\|_p + \min(\max(q_x, q_y), 0) - r$. |
+| **Family B** | **Curved Stadium Arc Capsule**<br/>(`"↶ Undo"` & `"↷ Redo"` crown/skirt capsules, `MacCircularSlider` value arc) | `sdf_curved_stadium_arc_sample(pt, center, (r_in, r_out), (start_rad, end_rad))` | Midline radius $R_{\text{mid}} = \frac{1}{2}(r_{\text{in}} + r_{\text{out}})$, half-thickness $r_{\text{cap}} = \frac{1}{2}(r_{\text{out}} - r_{\text{in}})$:<br/>Distance to circular arc centerline $[\theta_0, \theta_1]$ at radius $R_{\text{mid}}$ minus $r_{\text{cap}}$, yielding hemispherical semicircular end-caps. |
+| **Family C** | **Annular Rounded Pebble Sector**<br/>(`MacContextThumbDial` 8 rosette cushions `N, NE, E, SE, S, SW, W, NW`) | `sdf_annular_rounded_sector_sample(pt, center, (r_in, r_out), (center_rad, half_sweep_rad), r_corner)` | Polar sector box eroded by $r_{\text{corner}}$ on all 4 boundaries (inner arc $r_{\text{in}} + r_c$, outer arc $r_{\text{out}} - r_c$, and radial flanks $\pm\Delta\theta$) minus $r_{\text{corner}}$, guaranteeing constant-radius 3D bevels on all 4 sides. |
+| **Family D** | **Spherical Marble, Cylindrical Roller & Arbitrary Closed Contour**<br/>(`MacFreeJoystickBowl` 3D crystal marble, `MacEdgeThumbwheel` cylindrical roller, `MacRadioButton`, `MacHelpButton`, `MacTagColorPicker`, vector glyphs/icons) | Radial sphere SDF $d(\vec{p}) = \|\vec{p} - \vec{c}\|_2 - R$, cylindrical profile $\phi(y) = \arcsin((y - y_c)/R_{\text{cyl}})$, and `sdf_closed_polyline_sample(pt, contour)` | Exact radial Euclidean distance or signed closest-segment distance to arbitrary flattened 2D Bézier / SVG contours. |
 
 ---
 
-## 3. Complete 52-Widget Environmental Interaction Matrix (*Base Appearance, Outward Emission & Inward Reception*)
+### 3.2 The Universal `STEP 9` Optical Pipeline (`vitrea::optics`, Derived 1:1 from `iyinchao/liquid-glass-studio`)
 
-Every public widget and layout container in `egui-macview` (52 total across the 6 families) is governed by the following three-column behavioral contract:
+For every pixel $\vec{p} = (x, y)$ with SDF distance $d = d(\vec{p})$ (in screen points/pixels) and outward unit gradient $\nabla d = (\nabla_x d, \nabla_y d)$, let $d_{\text{in}} = \max(-d, 0.0)$ be the inward distance from the shape perimeter.
 
-### 3.1 Family 1 & Family 2: Bimanual Radial Studio HUDs (3 Widgets)
+#### Equation 1 — Non-Linear Quadratic-Arcsin Snellius Bevel Curve ([`fragment-main.glsl:470-486`](https://github.com/iyinchao/liquid-glass-studio/blob/main/src/shaders/fragment-main.glsl))
 
-| # | Widget | 1. Base Appearance (*Self / Resting State*) | 2. Outward Emission (*Behavior Toward Environment*) | 3. Inward Reception (*Response From Environment*) |
-| :--- | :--- | :--- | :--- | :--- |
-| **1** | **`MacContextThumbDial`** | Recessed 3D circular glass dish containing an 8-cushion $360^\circ$ pebble rosette (`N, NE, E, SE, S, SW, W, NW`), center reticle hub lens, 3-tier cushion typography (`Icon` + `Bold Label` + `Shortcut`), 3-layer amber Latch LED, and semicircular `"↶ Undo"` / `"↷ Redo"` crown stadium capsules. | Refracts underlying vector canvas lines/backdrop through its 8 curved cushion bevels and hub lens ($\eta = 1.48$); emits `MacTapticEvent` micro-clicks, `effective_mask` modifier chords, and `ProximityLightField` glow onto its neighbor `MacEdgeThumbwheel`. | Tracks 2D pointer via `AnisotropicCushionSpring` (`.lift` radial expansion + $1.25\times$ 2.5D icon parallax); glides polar `DualSpringMorphBlob` highlight from cushion to cushion; adapts glass accent via `resolve_glass_accent_on` against canvas luminance. |
-| **2** | **`MacEdgeThumbwheel`** | Wide horizontal cylindrical roller inside a deep rounded glass trough with soft outer cyan/white bloom, illuminated left/right end-cap rings, 16-band cosine cylindrical shading, and $\cos(\phi)$-foreshortened tactile ridges. | Emits angular delta, Free-Spin flywheel velocity $\omega(t)$, `MacTapticEvent::RotaryDetentTick` / `FlywheelBraked`, and casts a soft specular reflection onto the top crown of `MacContextThumbDial` when paired. | Shifts its cylindrical specular highlight band toward the pointer vector $\vec{p}(t)$; brakes immediately on pointer touch (`Touch-to-Brake`); adapts end-cap neon glow to `.glass_accent(Color32)`. |
-| **3** | **`MacFreeJoystickBowl`** | Unobstructed $360^\circ$ recessed 3D glass dish with concentric `Fine` ($0.45 R$) and `Fast` ($0.82 R$) dotted rings, center origin dot, directional blue vector tether, and a 5-layer 3D refractive crystal marble puck. | Emits continuous quadratic 2D nudge vector $\vec{v}_{\text{nudge}}$, `MacTapticEvent::JoystickRingCrossed`, and casts a moving caustic drop shadow + refractive lens distortion onto the recessed bowl floor beneath the marble. | Marble puck follows pointer drag across $360^\circ$ and snaps back to center origin via underdamped `CASpring` on release; specular pinpoint on marble tracks the pointer light angle. |
+Unlike a linear or cubic smoothstep curve (which either flattens the rim or warps the entire interior), Apple Liquid Glass uses a **quadratic-arcsin incident angle profile** over the bevel width $w_{\text{ref}} = \text{bevel\_width\_pt}$ (default `20.0 px` at `2x` Retina / `10.0 pt`, scaled proportionally to shape minor radius so $w_{\text{ref}} \le 0.45 \cdot R_{\text{minor}}$):
+
+$$x_R = \text{clamp}\!\left(1.0 - \frac{d_{\text{in}}}{w_{\text{ref}}},\; 0.0,\; 1.0\right)$$
+
+$$\theta_I = \arcsin\!\big(x_R^2\big), \qquad \theta_T = \arcsin\!\left(\text{clamp}\!\left(\frac{\sin\theta_I}{\eta_{\text{glass}}},\; -1.0,\; 1.0\right)\right)$$
+
+$$f_{\text{edge}}(d_{\text{in}}) = \begin{cases} -\tan(\theta_T - \theta_I) & \text{if } d_{\text{in}} < w_{\text{ref}} \\ 0.0 & \text{if } d_{\text{in}} \ge w_{\text{ref}} \end{cases}$$
+
+- **Physical & Visual Consequence:**
+  - At the outer boundary ($d_{\text{in}} \to 0 \implies x_R \to 1.0$), $\theta_I \to \frac{\pi}{2}$ (`90°` vertical grazing edge) and $f_{\text{edge}} = -\tan(\theta_T - \theta_I) > 0$ reaches its maximum (`≈ 0.90` for $\eta_{\text{glass}} = 1.50$), bending background grid lines sharply inward along an S-curve.
+  - Because $x_R^2$ is quadratic, the curvature drops rapidly as $d_{\text{in}} \to w_{\text{ref}}$ and vanishes identically ($f_{\text{edge}} = 0.0$) in the interior plateau ($d_{\text{in}} \ge w_{\text{ref}}$), keeping text and icons inside the widget calm and legible.
+  - The 2D inward normal vector in the bevel zone is:
+    $$\hat{N}_{xy} = -\nabla d(\vec{p}), \qquad \vec{N}_{3\text{D}} = \big(\nabla_x d \cdot \sin\theta_I,\; \nabla_y d \cdot \sin\theta_I,\; \cos\theta_I\big)$$
+
+#### Equation 2 — Chromatic R/G/B Dispersion, Dual Sharp/Blur Sampling & Low Base Tint ([`fragment-main.glsl:134-162, 488-513`](https://github.com/iyinchao/liquid-glass-studio/blob/main/src/shaders/fragment-main.glsl))
+
+Let $d_{\text{ref}} = \text{dome\_thickness\_pt} \cdot f_{\text{ref}}$ be the optical refraction depth (default `refFactor = 1.4`, effective displacement scale $d_{\text{ref}} \approx 14.0\text{ px}$ at `2x` Retina), and let the base chromatic indices be:
+
+$$N_R = 0.98, \qquad N_G = 1.00, \qquad N_B = 1.02$$
+
+with chromatic dispersion gain $D_{\text{disp}} = \text{ref\_dispersion}$ (default `7.0` from `Controls.tsx`, yielding $\pm 14\%$ Red/Blue displacement split at the bevel rim):
+
+$$\vec{\Delta}_c(\vec{p}) = \hat{N}_{xy} \cdot f_{\text{edge}}(d_{\text{in}}) \cdot d_{\text{ref}} \cdot \Big(1.0 - (N_c - 1.0) \cdot D_{\text{disp}}\Big), \qquad c \in \{R, G, B\}$$
+
+$$\vec{p}_c = \vec{p} + \vec{\Delta}_c(\vec{p}), \qquad c \in \{R, G, B\}$$
+
+- **Sharp-Rim / Blurred-Core Dual Sampling (`getTextureDispersion`):**
+  Let the normalized bevel depth weight be:
+  $$h_{\text{blur}} = \text{clamp}\!\left(\left(\frac{d_{\text{in}}}{w_{\text{ref}}}\right)^{0.5},\; 0.0,\; 1.0\right)$$
+  For each wavelength $c \in \{R, G, B\}$, the refracted backdrop channel is blended between the **sharp** Matrix 1 backdrop $B_{\text{sharp}}(\vec{p}_c)$ at the outer lens rim ($h_{\text{blur}} \to 0$) and the **blurred** Matrix 1 backdrop $B_{\text{blur}}(\vec{p}_c)$ in the interior ($h_{\text{blur}} \to 1$):
+  $$I_{\text{refr},c}(\vec{p}) = (1.0 - h_{\text{blur}}) \cdot B_{\text{sharp},c}(\vec{p}_c) + h_{\text{blur}} \cdot B_{\text{blur},c}(\vec{p}_c)$$
+
+- **Low Base Tint Mix (Preventing Opaque Plastic Overdraw):**
+  In `fragment-main.glsl:509`:
+  $$\vec{C}_{\text{base}}(\vec{p}) = \text{mix}\!\Big(\vec{I}_{\text{refr}}(\vec{p}),\; \vec{C}_{\text{tint}},\; \alpha_{\text{tint}} \cdot 0.80\Big)$$
+  - For **passive / resting glass**, $\alpha_{\text{tint}} \in [0.10, 0.22]$ (so $\alpha_{\text{tint}} \cdot 0.80 \in [0.08, 0.18]$), guaranteeing that **82%–92% of the interior pixel is the refracted backdrop $\vec{I}_{\text{refr}}(\vec{p})$**!
+  - For **active / hovered / latched accent glass**, $\vec{C}_{\text{tint}}$ MUST be the **unmultiplied** `style.accent_col` RGB (never premultiplied via `.gamma_multiply(a)` before passing to the shader!) with $\alpha_{\text{tint}} \in [0.28, 0.42]$.
+
+#### Equation 3 — 5th-Power Localized Fresnel Rim in CIE LCH ([`fragment-main.glsl:515-537`](https://github.com/iyinchao/liquid-glass-studio/blob/main/src/shaders/fragment-main.glsl))
+
+Given Fresnel range $r_{\text{fresnel}}$ (default `30.0 px` at `2x` Retina, or $1.5 \cdot w_{\text{ref}}$), Fresnel hardness $h_{\text{fresnel}}$ (default `0.20`), and Fresnel factor $k_{\text{fresnel}}$ (default `0.20..0.40`):
+
+$$f_{\text{fresnel}}(\vec{p}) = \text{clamp}\!\left(\left(1.0 + \frac{d(\vec{p})}{r_{\text{fresnel}}} + h_{\text{fresnel}}\right)^5,\; 0.0,\; 1.0\right)$$
+
+Instead of mixing chalky sRGB white (`[1, 1, 1]`), the base color $\vec{C}_{\text{base}}(\vec{p})$ is converted to **CIE LCH** $(L, C, H) = \text{srgb\_to\_lch}(\vec{C}_{\text{base}})$, its perceptual Lightness $L \in [0, 100]$ is boosted by:
+
+$$L_{\text{fresnel}} = \text{clamp}\!\big(L + 20.0 \cdot f_{\text{fresnel}}(\vec{p}) \cdot k_{\text{fresnel}},\; 0.0,\; 100.0\big)$$
+
+$$\vec{C}_{\text{fresnel}}(\vec{p}) = \text{mix}\!\Big(\vec{C}_{\text{base}}(\vec{p}),\; \text{lch\_to\_srgb}(L_{\text{fresnel}}, C, H),\; f_{\text{fresnel}}(\vec{p}) \cdot k_{\text{fresnel}} \cdot 0.70 \cdot \|\hat{N}_{xy}\|_2\Big)$$
+
+#### Equation 4 — Double-Frequency $\sin(2\theta)$ Anisotropic Glare + Opposite-Side Caustic Crescent (`glareFarside`) in CIE LCH ([`fragment-main.glsl:539-578`](https://github.com/iyinchao/liquid-glass-studio/blob/main/src/shaders/fragment-main.glsl))
+
+This equation produces Apple Liquid Glass's signature **dual rim illumination**: a crisp specular highlight on the primary top-left rim AND a warm, chromatic **caustic crescent on the opposite bottom-right rim** (`glareFarside == 1`):
+
+1. **Geometric Rim Decay $f_{\text{glare\_geo}}(\vec{p})$:**
+   Given glare range $r_{\text{glare}}$ (default `30.0 px` at `2x` Retina, or $1.5 \cdot w_{\text{ref}}$) and glare hardness $h_{\text{glare}}$ (default `0.20`):
+   $$f_{\text{glare\_geo}}(\vec{p}) = \text{clamp}\!\left(\left(1.0 + \frac{d(\vec{p})}{r_{\text{glare}}} + h_{\text{glare}}\right)^5,\; 0.0,\; 1.0\right)$$
+2. **Double-Frequency Angular Distribution $f_{\text{glare\_angle}}(\vec{p})$:**
+   Let $\phi(\vec{p}) = \text{atan2}(\nabla_y d, \nabla_x d)$ be the outward normal angle in $[-\pi, \pi]$, and let $\theta_{\text{glare}}$ be the light angle (default $-\frac{\pi}{4} = -45^\circ$ top-left, steered smoothly by pointer proximity):
+   $$\alpha_g(\vec{p}) = 2.0 \cdot \left(\phi(\vec{p}) - \frac{\pi}{4} + \theta_{\text{glare}}\right)$$
+   Because $\alpha_g$ doubles the angle ($2\phi$), $\sin(\alpha_g)$ has **two peaks separated by $180^\circ$**:
+   - **Primary Light Side** ($\phi - \frac{\pi}{4} + \theta_{\text{glare}} \in [0, \pi/2] \cup [-\pi, -\pi/2]$): weight $w_{\text{side}} = 1.2$.
+   - **Opposite Caustic Side (`glareFarside`)**: weight $w_{\text{side}} = 1.2 \cdot k_{\text{opposite}}$, where default $k_{\text{opposite}} = \text{glare\_opposite\_factor} = 0.80$ (`80%` from `Controls.tsx`).
+   With glare factor $k_{\text{glare}}$ (default `0.90`) and glare convergence $c_{\text{conv}}$ (default `0.50`):
+   $$u_{\text{angle}} = \big(0.5 + 0.5\sin\alpha_g(\vec{p})\big) \cdot w_{\text{side}} \cdot k_{\text{glare}}$$
+   $$f_{\text{glare\_angle}}(\vec{p}) = \text{clamp}\!\left(\big(\max(u_{\text{angle}}, 0.0)\big)^{0.1 + 2.0 \cdot c_{\text{conv}}},\; 0.0,\; 1.0\right)$$
+   $$f_{\text{glare}}(\vec{p}) = f_{\text{glare\_geo}}(\vec{p}) \cdot f_{\text{glare\_angle}}(\vec{p}) \cdot \|\hat{N}_{xy}\|_2$$
+3. **CIE LCH Chromatic Caustic Boost (`L + 150`, `C + 30`):**
+   Convert the refracted tinted pixel $\vec{C}_{\text{base}}(\vec{p})$ to CIE LCH $(L_g, C_g, H_g) = \text{srgb\_to\_lch}(\vec{C}_{\text{base}}(\vec{p}))$ and boost **both Lightness and Chroma**:
+   $$L'_g = \text{clamp}\!\big(L_g + 150.0 \cdot f_{\text{glare}}(\vec{p}),\; 0.0,\; 100.0\big), \qquad C'_g = \max\!\big(C_g + 30.0 \cdot f_{\text{glare}}(\vec{p}),\; 0.0\big)$$
+   $$\vec{C}_{\text{final}}(\vec{p}) = \text{mix}\!\Big(\vec{C}_{\text{fresnel}}(\vec{p}),\; \text{lch\_to\_srgb}(L'_g, C'_g, H_g),\; f_{\text{glare}}(\vec{p})\Big)$$
+   - **Why CIE LCH is essential:** On the opposite caustic side (`glareFarside`), boosting Chroma ($C_g + 30 \cdot f_{\text{glare}}$) along with Lightness turns the refracted background/tint color into a **vibrant, saturated caustic rim glow** rather than a flat gray line.
+
+#### Equation 5 — CIE sRGB $\leftrightarrow$ XYZ (D65) $\leftrightarrow$ Lab $\leftrightarrow$ LCH Conversions ([`lib/color.glsl:1-115`](https://github.com/iyinchao/liquid-glass-studio/blob/main/src/shaders/lib/color.glsl))
+
+`vitrea::optics` MUST implement the exact D65 reference white $(X_n, Y_n, Z_n) = (0.95047, 1.00000, 1.08883)$ colour conversions as domain-agnostic colorimetric functions:
+- `srgb_to_cie_lch(rgb: [f32; 3]) -> [f32; 3]` returning `[L, C, H_deg]` with $L \in [0, 100]$, $C = \sqrt{a^2 + b^2}$, $H \in [0^\circ, 360^\circ)$.
+- `cie_lch_to_srgb(lch: [f32; 3]) -> [f32; 3]` clamping output channels to $[0.0, 1.0]$.
+- `compose_dielectric_lch_pixel(sharp_rgb: [f32; 3], blur_rgb: [f32; 3], tint_rgba: [f32; 4], sample: &GlassSurfaceSample, params: &LiquidGlassOpticalParams, fresnel_gain: f32, glare_gain: f32) -> [f32; 4]` executing Equations 2, 3, and 4 in a single deterministic, UI-agnostic, 100% parameter-driven pure function in `vitrea::optics` (with zero hardcoded magic constants in the function body).
 
 ---
 
-### 3.2 Family 3: Fluid Morphing Selection Bars (3 Widgets)
+## 4. Block `A2`: Solo Graphical Verification (`Black-Box Framebuffer Oracles` $O_{\text{solo},1..4}$ & 5-Point Visual AI Audit, `REQ-016-A2`)
 
-| # | Widget | 1. Base Appearance (*Self / Resting State*) | 2. Outward Emission (*Behavior Toward Environment*) | 3. Inward Reception (*Response From Environment*) |
-| :--- | :--- | :--- | :--- | :--- |
-| **4** | **`MacSegmentedControl`** | Recessed translucent glass track housing $N$ segments, with the selected segment covered by a raised 5-layer 3D Liquid Glass capsule (`Fresnel rim + dome gradient + drop shadow`). | Active pill emits a `DualSpringMorphBlob` liquid bridge toward any hovered sibling segment and suppresses adjacent 1px dividers; emits `MacSegmentEvent` and optional `PressAndHold`/`PullDown` popover menus. | Active capsule stretches and flows (`leading/trailing CASpring`) when selection changes; hovered unselected segment pre-illuminates its Fresnel rim via `ProximityLightField`; preserves compact square bezel in `ExactAppleNib`. |
-| **5** | **`MacTabView`** | Top segmented Liquid Glass tab bar sitting above a recessed `MacBox`-style content surface (`Bezel` or `Borderless` style). | Registers its inner tab content rect in the surface registry (`register_surface_rect`) so all child widgets inside the active tab automatically adapt their WCAG foreground contrast; morphs active tab pill across tab headers. | Tab indicator capsule flows via `DualSpringMorphBlob` on tab switch; child `<tabViewItem>` nodes switch visibility declaratively (`VisibilityRule::WhenTabSelected`). |
-| **6** | **`MacTableActionBar`** | Compact bottom-attached or standalone strip of icon action cells (`+`, `-`, `⚙` / action menu) with crisp 1pt hairline borders. | Emits semantic add/remove/action events and triggers green/red semantic pill glow (`semantic_add_hover_colors` / `semantic_remove_hover_colors`) on hover. | Each cell illuminates its local Fresnel border as the pointer approaches and depresses with a crisp `CASpring` micro-scale on click. |
+### 4.1 Why Triangle-Counting Tests Are Forbidden
+
+Legacy tests that count `Mesh::vertices.len()` or `Mesh::indices.len()` test implementation mechanics rather than optical outcomes—and worse, they force production code to keep emitting obsolete opaque triangle layers underneath the `2x` Retina textures. All `SPEC-016` optical tests MUST evaluate the **rendered `2x` Retina RGBA8 framebuffer pixels** as a black box.
+
+### 4.2 The Four Normative Solo Framebuffer Oracles ($O_{\text{solo},1..4}$)
+
+| Oracle ID | Physical Phenomenon Tested | Black-Box Pixel Measurement on `2x` Retina Framebuffer | Pass Criterion |
+| :--- | :--- | :--- | :--- |
+| **$O_{\text{solo},1}$** | **Quadratic-Arcsin Snellius S-Curve Grid Line Bending & Chromatic Dispersion** | Render a solo glass shape (`Family A..D`) over Matrix 1 (`A0`) containing a high-contrast background grid line running beneath the shape. Trace a 1D scanline across the shape boundary ($d \in [-w_{\text{ref}}, 0]$) and across the center plateau ($d < -w_{\text{ref}}$). | 1. **Visibility Through Glass:** The background grid line produces a measurable spatial luminance dip/peak inside the glass interior ($\Delta L_{\text{grid}} \ge 0.08$, proving the interior is NOT opaque white paint).<br/>2. **Snellius Bevel Shift:** In the bevel zone ($0 < d_{\text{in}} < w_{\text{ref}}$), the apparent grid-line crossing coordinate is displaced inward by $\|\vec{\Delta}_G\|_2 \ge 2.5\text{ px}$, while in the center plateau ($d_{\text{in}} \ge w_{\text{ref}}$) displacement drops to $0.0\text{ px}$.<br/>3. **Chromatic Split:** At the bevel rim ($d_{\text{in}} \approx 0.25 w_{\text{ref}}$), $\|\vec{p}_B - \vec{p}_R\|_2 \ge 1.5\text{ px}$ and $|I_R - I_B| > 0.03$ across a high-contrast background edge. |
+| **$O_{\text{solo},2}$** | **Primary Top-Left Glare + Opposite Bottom-Right Caustic Crescent (`glareFarside`) in CIE LCH** | Sample a diagonal 1D cross-section from top-left ($135^\circ$, primary light rim) through the center plateau to bottom-right ($315^\circ$, opposite shadow/caustic rim) of a rendered solo glass shape. | 1. **Dual Rim Peaks:** Both the top-left rim ($d_{\text{in}} \in [0.5\text{ px}, 5\text{ px}]$) AND the opposite bottom-right rim ($d_{\text{in}} \in [0.5\text{ px}, 5\text{ px}]$) exhibit local CIE LCH Lightness peaks significantly brighter than the center plateau ($L_{\text{top\_left}} > L_{\text{center}} + 12.0$ and $L_{\text{bottom\_right}} > L_{\text{center}} + 8.0$).<br/>2. **Chromatic Caustic Saturation:** On a tinted or colored-backdrop shape, CIE Chroma $C$ at the opposite bottom-right caustic crescent exceeds the center plateau chroma ($C_{\text{bottom\_right}} > C_{\text{center}} + 4.0$). |
+| **$O_{\text{solo},3}$** | **Recessed Concave Bowl Depth & Exponential SDF Drop Shadow (`A0`)** | Sample the `A0` bowl matrix along a radial line from bowl center ($r = 0$) to outer housing ($r = 1$) and across the shadow-shifted exterior ($D_{\text{group}}(\vec{p} - \vec{\Delta}_{\text{shadow}}) \in [0, 2 s_{\text{expand}}]$). | 1. **Concave Bowl & Rings:** Concentric precision grooves/dots at $0.45 R$ and $0.82 R$ and canvas grid hairlines are measurably resolved in the bowl floor.<br/>2. **Exponential Shadow Decay:** Exterior shadow attenuation decays monotonically with distance from the shifted SDF contour according to $\exp(-|d|/s_{\text{expand}})$. |
+| **$O_{\text{solo},4}$** | **Isochoric Viscous Area Conservation ($\det J = 1$)** | Numerically integrate the 2D interior pixel area ($d(\vec{p}') \le 0$) of a glass droplet at rest ($A_{\text{rest}}$) and under pure velocity stretch ($A_{\text{stretched}}$, $p_{\text{press}} = 0$). | Longitudinal span increases by $> 8\%$ while total 2D area error satisfies $\|A_{\text{stretched}} - A_{\text{rest}}\| / A_{\text{rest}} \le 0.015$ ($\le 1.5\%$). |
+
+### 4.3 Mandatory 5-Point Visual AI Audit Protocol (`REQ-016-A2.5`)
+
+After any COTS test renders a `2x` Retina PNG verification artifact, the AI orchestrator MUST inspect the PNG via `read_file` and explicitly score five visual criteria (failing the task if any criterion is false):
+1. **Transparency & Refraction Check:** Can I clearly see the underlying canvas grid lines and concentric bowl rings *through* the interior of the glass cushions/capsules, and do those lines visibly bend near the rounded edges?
+2. **Opposite-Side Caustic Crescent Check:** Does every glass cushion, stadium arc, and marble exhibit BOTH a top-left specular highlight AND an opposite bottom-right saturated caustic crescent (no flat matte boundary)?
+3. **Zero Opaque Pre-Overdraw Check:** Is the canvas grid completely continuous up to and inside the glass bowl without any opaque gray/white disc hiding the grid?
+4. **Hover/Active Color Integrity Check:** When a control (such as `"↶ Undo"`, `"↷ Redo"`, or sector `NE`) is hovered or active, is its glass tint a vibrant, translucent sapphire/cyan lens rather than dark navy/black premultiplied mud?
+5. **Typography & Icon Legibility Check:** Are all 3-tier cushion labels (`Icon` + `Bold Label` + `Shortcut`) and arc-rotated `"↶ Undo"` / `"↷ Redo"` captions sharp, centered at the SDF optical centroid, and free of overlap?
 
 ---
 
-### 3.3 Family 4: Action & Value Primitives (15 Widgets)
+## 5. Block `B1`: Collective Group Build Specification (`GlassEffectContainer` & All 15 `W1..W6` Specs, `REQ-016-B1`)
+
+### 5.1 How a Combined Widget Group Works Across Layers (Zero Extra Painting Layers!)
+
+In Apple's `GlassEffectContainer` (WWDC25 Session 219) and [`iyinchao/liquid-glass-studio`](https://github.com/iyinchao/liquid-glass-studio), combining multiple widgets into a group **never adds a fourth optical layer or a separate group shader**. Every `GlassEffectContainer` executes the exact same 3-Matrix pipeline (`Matrix 1: A0 Backdrop/Bowl` $\to$ `Matrix 2: Composite Group SDF` $\to$ `Matrix 3: Universal STEP 9 Optical Composition` + `Vector Foreground Overlay`):
+
+```mermaid
+flowchart LR
+    subgraph M1["Matrix 1 (A0: Shared Structured Backdrop & Bowl)"]
+        G1["Canvas Precision Grid + Concentric Bowl Rings"]
+        G2["Active Sub-Surface Color Spill E_spill(x,y)"]
+        G3["Exponential Group Drop Shadow exp(-|D_group|/s_expand)"]
+    end
+    subgraph M2["Matrix 2 (B1: Shared Group SDF Field)"]
+        S1["Deformed Member SDFs d_1(p') .. d_N(p')"]
+        S2["Transient Morph Droplet d_morph(p)"]
+        S3["Smooth-Union Field D_group(p) = smin(d_1..d_N, k_merge) + grad D_group"]
+        S1 --> S3
+        S2 --> S3
+    end
+    subgraph M3["Matrix 3 (A1: Single Universal STEP 9 Shader)"]
+        O1["Quadratic-Arcsin Snellius f_edge = -tan(theta_T - theta_I)"]
+        O2["Chromatic RGB Dispersion sampling B_sharp / B_blur"]
+        O3["CIE LCH 5th-Power Fresnel (L+20) & sin(2*theta) Caustic Glare (L+150, C+30)"]
+    end
+    M1 --> M3
+    M2 --> M3
+```
+
+### 5.2 Intra-Group Behavior (How Widgets Behave Toward Each Other *Within* a Group)
+
+Within a single `GlassEffectContainer` $\mathcal{C}_A = \{S_1, S_2, \dots, S_N\}$:
+
+1. **Topological SDF Coalescing (`smin` Liquid Bridge, `REQ-016-B1.1`):**
+   - Before any optical evaluation, Matrix 2 combines all member SDFs and any active transit morph droplet $S_{\text{morph}}$ using the $C^1$ polynomial smooth-minimum (`vitrea::sdf_smooth_union_with_grad`):
+     $$h = \text{clamp}\!\left(\frac{1}{2} + \frac{d_B - d_A}{2 k_{\text{merge}}},\; 0.0,\; 1.0\right), \quad d_\cup = (1 - h)d_B + h d_A - k_{\text{merge}} h(1 - h)$$
+     $$\nabla d_\cup = \text{normalize}\!\big((1 - h)\nabla d_B + h\nabla d_A\big)$$
+   - Where two adjacent members approach within $k_{\text{merge}}$ (e.g., an active lifted cushion swelling toward its neighbor, or a `DualSpringMorphBlob` bridging two segments), their internal facing boundaries dissolve ($d_\cup < -w_{\text{ref}}$ at the neck), eliminating the internal Fresnel seam and wrapping **one continuous outer Fresnel rim and caustic crescent** around the merged silhouette.
+2. **Sub-Surface Color Spill & Cross-Neighbor Refraction (`REQ-016-B1.2`):**
+   - When member $S_i$ is active, latched, or hovered with accent color $\vec{C}_{\text{accent},i}$, it injects a radial sub-surface bloom $E_{\text{spill},i}(\vec{p})$ into the group's shared Matrix 1 floor (`A0`).
+   - Because neighboring passive members $S_j$ sample Matrix 1 at Snellius-refracted coordinates $[\vec{p}_R, \vec{p}_G, \vec{p}_B]$ pointing outward from their facing bevels ($\hat{N}_{xy} = -\nabla d_j$), the bevel of passive member $S_j$ facing active member $S_i$ refracts and amplifies that accent glow through Equation 2 and Equation 4 (CIE LCH caustic boost).
+3. **Coupled Multi-Member Spring Kinematics (`REQ-016-B1.3`):**
+   - **Transit Droplet (`DualSpringMorphBlob`):** When selection or hover moves from member $A$ to member $B$, a liquid droplet spans $[a(t), b(t)]$ with a fast leading spring ($T_{\text{lead}} = 0.22\text{ s}$) and softer trailing spring ($T_{\text{trail}} = 0.32\text{ s}$), physically stretching across the gap before coalescing into $B$.
+   - **Pointer Tilt & Magnetic Lift (`AnisotropicCushionSpring`):** Pointer motion inside the container tilts the shared bowl/pointer vector and lifts the nearest member while subtly compressing adjacent members.
+
+### 5.3 Inter-Group Behavior (How One Group Behaves Toward *Other* Groups)
+
+Between two distinct `GlassEffectContainer` instances $\mathcal{C}_A$ and $\mathcal{C}_B$ (for example, `W2.1 MacEdgeThumbwheel` vs. `W1 MacContextThumbDial` vs. `W6 MacPopoverSurface`):
+
+1. **Zero Inter-Group SDF Merging ($k_{\text{merge}}(\mathcal{C}_A, \mathcal{C}_B) = 0$, `REQ-016-B1.4`):**
+   - Separate containers NEVER merge their SDF fields across container boundaries. `MacEdgeThumbwheel`, `MacContextThumbDial`, and a floating `MacPopover` each maintain their own closed $360^\circ$ Fresnel perimeter and independent exponential drop shadow.
+2. **Hierarchical Z-Order Backdrop Refraction (`REQ-016-B1.5`):**
+   - Containers are composited in strict Z-order (`Layer 0: Canvas` $\to$ `Layer 1: Workspace Controls / Triad` $\to$ `Layer 2: Floating HUDs / Popovers / Menus`).
+   - A higher Z-order group (such as a floating `MacPopoverSurface` or `MacContextMenu`) samples the already-composited lower Z-order scene as its Matrix 1 backdrop (`A0`), refracting and blurring underlying controls beneath its perimeter bevel.
+   - Same-tier sibling groups (`MacEdgeThumbwheel` above `MacContextThumbDial`) share the continuous canvas grid (`A0`) without occluding each other's glass housings.
+3. **Global Environmental Synchronization (`REQ-016-B1.6`):**
+   - All groups in a window share:
+     - The global key-light angle $\theta_{\text{glare}} = -45^\circ$ (plus local cursor proximity modulation),
+     - The active `MacGlassRegime` (`Glass.clear` vs. `Glass.regular`) and calculated `.glass_accent(Color32)` palette,
+     - The host window focus state (`is_window_active`): when the window becomes `Inactive`, all groups synchronously de-saturate accented members to neutral graphite (`effective_control_accent`, `BUG-SONOMA-01`) and attenuate caustic chroma boost.
+
+---
+
+### 5.4 The 15 Normative Widget & Group Build Specifications (`M1..M3` + `W1-V/C..W6-V/C`)
+
+All 15 iterations and all 52 widgets from the MVC roadmap are anchored to the unified `A0 → A1 → B1` architecture:
+
+| Iteration | Layer / MVC Role | Scope & Widget Family (`A0 / A1 / B1` Mapping) | Primary Verification Oracle (`A2 / B2`) |
+| :--- | :--- | :--- | :--- |
+| **Iter 1 (`M1`)** | **Model — Geometry & SDF (`vitrea::sdf`)** | Analytical 2D SDF primitives (`Families A..D`): `sdf_rounded_capsule_sample`, `sdf_annular_rounded_sector_sample`, `sdf_curved_stadium_arc_sample`, `sdf_closed_polyline_sample`, and $C^1$ polynomial `sdf_smooth_union_with_grad`. | `tc_016_m1_sdf_annular_sector_stadium_arc_and_3d_normals` |
+| **Iter 2 (`M2`)** | **Model — Parameterized Bevel Optics & CIE LCH (`vitrea::optics`)** | Universal parameter-driven optical evaluator (`snell_bevel_edge_factor`, `refract_bevel_chromatic_rgb`, `anisotropic_bipolar_rim_glare`, `exponential_sdf_attenuation`, `srgb_to_cie_lch`, `cie_lch_to_srgb`, `compose_dielectric_lch_pixel`): non-linear Snellius curve ($\theta_I = \arcsin(x_R^p)$, $f_{\text{edge}} = -\tan(\theta_T - \theta_I)$), chromatic dispersion ($N_R=0.98, N_G=1.0, N_B=1.02, D=7.0$), CIE D65 LCH conversions, 5th-power LCH Fresnel ($L+20$), and $\sin(2\theta)$ LCH Glare + opposite Caustic Crescent ($L+150, C+30$). | `tc_016_m2_bevel_snellius_dispersion_and_lch_caustic_glare` |
+| **Iter 3 (`M3`)** | **Model — Coupled `CASpring` Dynamics (`vitrea::kinematics`)** | `DualSpringMorphBlob` (leading/trailing velocity-stretched liquid droplet transfer), `AnisotropicCushionSpring` (radial cushion lift + 2.5D parallax), isochoric viscous deformation ($\det J = 1$), W3C DTCG token sync, and `is_at_rest() -> Duration::MAX` zero-idle-wakeups proof. | `tc_016_m3_dual_spring_morph_blob_anisotropic_lift_and_zero_idle` |
+| **Iter 4 (`W1-V`)** | **View — Group 1 (`MacContextThumbDial` Rosette & Stadium Arcs)** | **Zero-Overdraw 3-Matrix `GlassEffectContainer`:**<br/>• `A0` Matrix 1: Continuous canvas precision grid + recessed circular bowl + concentric grooves + active sub-surface accent spill + exponential SDF shadow.<br/>• `B1` Matrix 2: Smooth-union (`smin`) of 8 `Family C` pebble cushions (`N..NW`), central hub lens, polar morph droplet, and two `Family B` `"↶ Undo"` / `"↷ Redo"` stadium arcs.<br/>• `A1` Matrix 3: Per-pixel `STEP 9` CIE LCH composition (`2x` Retina `TextureHandle`) + 3-tier vector typography (`SF Symbol` + `Bold Label` + `Shortcut`), amber Latch LED, and arc-rotated (`-30°`/`+30°`) Undo/Redo labels with unmultiplied hover accent tint. | `tc_016_w1v_thumb_dial_step9_zero_overdraw_and_caustic_oracles` |
+| **Iter 5 (`W1-C`)** | **Controller — Group 1 (`MacContextThumbDial`)** | Exact SDF hit-testing on rounded cushions & curved stadium capsules, polar `DualSpringMorphBlob` gliding between hovered sectors, *Tap-to-Latch* (`< 180 ms`) vs. *Hold-to-Momentary*, `MacTapticEvent` synthesis, and keyboard/`AccessKit` navigation. | `tc_016_w1c_thumb_dial_sdf_hit_polar_morph_latch_and_a11y` |
+| **Iter 6 (`W2-V`)** | **View — Group 2 (`MacEdgeThumbwheel` & `MacFreeJoystickBowl`)** | **Zero-Overdraw 3-Matrix `GlassEffectContainer`:**<br/>• `MacEdgeThumbwheel`: Recessed glass trough (`Family A`), cylindrical roller (`Family D` $\phi(y) = \arcsin((y-y_c)/R_{\text{cyl}})$) with pointer-steered Blinn-Phong & CIE LCH specular band and $\cos(\phi)$ ridges, plus illuminated sapphire/accent end-cap rings.<br/>• `MacFreeJoystickBowl`: `A0` recessed bowl with `48` micro-dots on `Fine` ($0.45 R$) & `Fast` ($0.82 R$) rings + canvas grid + blue vector tether + caustic floor glow; `B1/A1` `STEP 9` 3D crystal marble lens (`Family D`) + `"↶ Undo"` / `"↷ Redo"` stadium arcs refracting the underlying dots and grid. | `tc_016_w2v_edge_thumbwheel_and_joystick_bowl_step9_oracles` |
+| **Iter 7 (`W2-C`)** | **Controller — Group 2 (`MacEdgeThumbwheel` & `MacFreeJoystickBowl`)** | `MacEdgeThumbwheel` Free-Spin flywheel inertia + Touch-to-Brake coupled to specular ridge shift, and `MacFreeJoystickBowl` quadratic radial velocity + ring-crossing `MacTapticEvent` + caustic shadow displacement. | `tc_016_w2c_flywheel_brake_and_joystick_bowl_physics` |
+| **Iter 8 (`W3-V`)** | **View — Group 3 (`MacSegmentedControl`, `MacTabView`, `MacTableActionBar`)** | Recessed translucent glass track housing $N$ segments with an elevated `STEP 9` 3D Liquid Glass selection capsule (`Family A` `paint_liquid_glass_capsule` evaluated via `vitrea::evaluate_glass_surface_sample` + CIE LCH Fresnel & opposite caustic rim) and `.glassEffectUnion` smooth-union bridging. | `tc_016_w3v_segmented_and_tab_morphing_liquid_capsule_view` |
+| **Iter 9 (`W3-C`)** | **Controller — Group 3 (`MacSegmentedControl`, `MacTabView`, `MacTableActionBar`)** | 1D `DualSpringMorphBlob` (`step_dual_spring_morph_interval`) stretching the active selection droplet across intermediate segments during index transitions, hover pre-lensing, and `PressAndHold`/`PullDown` menu triggers. | `tc_016_w3c_segmented_and_tab_drag_scrub_and_pre_lensing` |
+| **Iter 10 (`W4-V`)** | **View — Group 4 (`MacButtonCell`, `MacToggle`, `MacSwitch`, `MacCheckbox`, `MacRadioButton`, `MacSlider`, `MacCircularSlider`, `MacStepper`, `MacPopUpButton`, `MacComboBox`, `MacColorWell`, `MacHelpButton`, `MacInlineActionButton`, `MacDisclosureButton`, `MacRatingIndicator`)** | `Family A` & `Family D` 3D Liquid Glass capsules and circular lenses evaluated via `vitrea::evaluate_glass_surface_sample` (`STEP 9` dome profile, LCH Fresnel rim, opposite caustic glow, and refractive slider/toggle thumb droplets). | `tc_016_w4v_action_and_value_primitives_liquid_glass_optics` |
+| **Iter 11 (`W4-C`)** | **Controller — Group 4 (Action & Value Primitives)** | `AnisotropicCushionSpring` lift and press scale on click/drag, magnetic thumb tracking on `MacSlider`/`MacToggle`, synchronous window-active accent de-saturation (`effective_control_accent`, `BUG-SONOMA-01`), and strict `LayoutPolicy::ExactAppleNib` Sonoma geometry preservation (`<= 0.5 pt`, `REQ-016-07`). | `tc_016_w4c_action_and_value_primitives_spring_controller` |
+| **Iter 12 (`W5-V`)** | **View — Group 5 (`MacInputCell`, `MacSearchField`, `MacTokenField`, `MacTextView`, `MacLabel`, `MacOriginMatrix`, `MacTagColorPicker`, `MacRuleEditor`, `MacDatePicker`, `MacPathControl`, `MacForm`)** | Glowing 3D Liquid Glass active/focused inspector row capsule (`MacInputCell::liquid_glass_pill(true)` matching `X: 350.0` in `SelectionInfo`), recessed glass input wells with `1.0 pt` top inset shadow, and 3D glass token pills & tag color spheres. | `tc_016_w5v_inspector_selection_pill_and_input_wells` |
+| **Iter 13 (`W5-C`)** | **Controller — Group 5 (Text, Inspector & Form Controls)** | Coupled `CASpring` focus-ring animation (`paint_animated_focus_ring`, `BUG-SONOMA-02`), fluid focus transfer across form rows on `Tab`/`Shift+Tab`, and `2.0 pt` `-[NSTextFieldCell drawingRectForBounds:]` zero-truncation invariant (`REQ-013-08.2`). | `tc_016_w5c_inspector_focus_morph_and_zero_truncation` |
+| **Iter 14 (`W6-V`)** | **View — Group 6 (`MacPopoverSurface`, `MacPopover`, `MacPanel`, `MacCard`, `MacBox`, `MacFloatingInfoBox`, `MacToolbar`, `MacMenuBar`, `NSMenu`, `MacCommandPalette`, `MacCanvasFooter`, `MacContextMenu`, `MacToast`, `MacPlayerView`, `MacTrimScrubber`, `MacLevelIndicator`, `MacProgressIndicator`, `MacTableView`, `MacOutlineView`, `MacCollectionView`)** | Hierarchical Z-order `GlassEffectContainer` sheets sampling and blurring (`B_sharp` / `B_blur`) underlying canvas/window backdrops with `STEP 9` perimeter Snellius refraction, CIE LCH Fresnel/caustic rims, and adaptive `register_surface_rect_slot` foreground contrast. | `tc_016_w6v_floating_surfaces_navigation_and_media_refraction` |
+| **Iter 15 (`W6-C`)** | **Controller — Group 6 & Full Ecosystem Integration (`MacWebGlSession`)** | Cross-surface `register_surface_rect_slot` propagation, `CASpring` sheet/toast transitions, multi-texture `TextureId::Managed(0..N)` Mega-Atlas packing in `egui_macview::MacWebGlSession` (`REQ-016-09`), full regression suite, and `2x` Retina PNG Golden Master verification. | `tc_016_w6c_full_ecosystem_integration_and_golden_master` |
+
+---
+
+## 6. Complete 52-Widget Environmental Interaction Matrix (*Base Appearance, Outward Emission & Inward Reception*)
+
+Every public widget and layout container in `egui-macview` (52 total across the 6 families) is governed by the following three-column behavioral contract under the `A0 → A1 → B1` architecture:
+
+### 6.1 Family 1 & Family 2: Bimanual Radial Studio HUDs (3 Widgets)
+
+| # | Widget | 1. Base Appearance (*Self / Resting State — `A0 + A1`*) | 2. Outward Emission (*Behavior Toward Environment — `B1`*) | 3. Inward Reception (*Response From Environment — `B1`*) |
+| :--- | :--- | :--- | :--- | :--- |
+| **1** | **`MacContextThumbDial`** | Zero-overdraw recessed 3D circular glass bowl (`A0` Matrix 1 with continuous canvas grid, concentric grooves, and exponential SDF shadow) containing an 8-cushion $360^\circ$ pebble rosette (`Family C`: `N, NE, E, SE, S, SW, W, NW`), center reticle hub lens, 3-tier cushion typography (`Icon` + `Bold Label` + `Shortcut`), 3-layer amber Latch LED, and semicircular `"↶ Undo"` / `"↷ Redo"` crown/skirt stadium capsules (`Family B`). Evaluated per-pixel via `STEP 9` (`A1`) with low passive tint (`10%–22%`), LCH Fresnel rim, and opposite-side caustic crescent. | Refracts underlying canvas grid lines and bowl grooves through its 8 curved cushion bevels, hub lens, and Undo/Redo arcs (`STEP 9` quadratic-arcsin Snellius + $\pm 14\%$ R/B dispersion); active/latched cushions emit radial sub-surface accent spill $E_{\text{spill}}$ into Matrix 1 (`A0`), coloring the facing bevels of adjacent passive cushions; emits `MacTapticEvent` micro-clicks and modifier chords. | Tracks 2D pointer via `AnisotropicCushionSpring` (`.lift` radial expansion + $1.25\times$ 2.5D icon parallax); glides polar `DualSpringMorphBlob` liquid bridge across inter-cushion gaps via `sdf_smooth_union_with_grad`; illuminates hovered `"↶ Undo"` / `"↷ Redo"` arcs with unmultiplied accent tint and LCH caustic boost. |
+| **2** | **`MacEdgeThumbwheel`** | Wide horizontal cylindrical roller (`Family D`) inside a deep rounded glass trough (`Family A`) evaluated at `2x` Retina resolution (`paint_raytraced_edge_thumbwheel_quad`) with soft outer cyan/white bloom, illuminated 3D sapphire/accent left/right end-cap rings, true cylindrical surface normal $\vec{N} = (0, \sin\phi, \cos\phi)$, and $\cos(\phi)$-foreshortened tactile ridges. | Emits angular delta, Free-Spin flywheel velocity $\omega(t)$, and `MacTapticEvent::RotaryDetentTick` / `FlywheelBraked`; maintains a closed container perimeter ($k_{\text{merge}} = 0$ with `MacContextThumbDial`) while casting its own exponential SDF drop shadow onto `A0`. | Shifts its cylindrical Blinn-Phong & CIE LCH specular highlight band toward the pointer vector $\vec{p}(t)$; brakes immediately on pointer touch (`Touch-to-Brake`); adapts end-cap glow to `.glass_accent(Color32)`. |
+| **3** | **`MacFreeJoystickBowl`** | Unobstructed $360^\circ$ recessed 3D glass bowl (`A0` Matrix 1 with continuous canvas grid, `48` circular micro-dots on concentric `Fine` $0.45 R$ and `Fast` $0.82 R$ precision rings, center origin dot, and directional blue vector tether) housing a `STEP 9` 3D refractive crystal marble puck (`Family D`) and semicircular `"↶ Undo"` / `"↷ Redo"` stadium capsules (`Family B`). | Emits continuous quadratic 2D nudge vector $\vec{v}_{\text{nudge}}$, `MacTapticEvent::JoystickRingCrossed`, and casts a moving exponential drop shadow + lower-right CIE LCH sapphire caustic glow onto the bowl floor beneath the marble; refracts and magnifies the `Fine`/`Fast` micro-dots, canvas grid, and tether line through the crystal marble! | Marble puck follows pointer drag across $360^\circ$ with area-preserving viscous stretch ($\det J = 1$) and snaps back to center origin via underdamped `CASpring` on release; primary glare and opposite caustic crescent on the marble track the pointer light angle. |
+
+### 6.2 Family 3: Fluid Morphing Selection Bars (3 Widgets)
 
 | # | Widget | 1. Base Appearance (*Self / Resting State*) | 2. Outward Emission (*Behavior Toward Environment*) | 3. Inward Reception (*Response From Environment*) |
 | :--- | :--- | :--- | :--- | :--- |
-| **7** | **`MacButtonCell`** (`MacButton`) | Raised 3D Liquid Glass capsule (`MacOs26Tahoe`) or rounded AppKit bezel (`MacOs14Sonoma`) with top specular rim, dome gradient, and drop shadow. | Emits `.glassEffectUnion` smooth-min metaball bridge to adjacent buttons in a shared group; casts expanding drop shadow onto parent surface when lifted. | Lifts (`+3%` scale / magnetic pull) and glides its Blinn-Phong specular glint with pointer $\vec{p}(t)$; preserves exact `[x, y, w, h]` alignment rect in `ExactAppleNib`. |
-| **8** | **`MacToggle`** | Pill-shaped track (accent-filled when ON, recessed glass when OFF) containing a raised 3D Liquid Glass circular/oval thumb lens. | Emits boolean state transition and casts a warm accent caustic glow from the track onto the inner rim of the sliding glass thumb. | Thumb stretches horizontally (`anisotropic squash/stretch`) while sliding across the track via `CASpring`; specular rim tracks pointer proximity. |
+| **4** | **`MacSegmentedControl`** | Recessed translucent glass track housing $N$ segments, with the selected segment covered by a raised `STEP 9` 3D Liquid Glass capsule (`Family A`, LCH Fresnel rim + opposite caustic crescent + exponential drop shadow). | Active pill emits a `DualSpringMorphBlob` liquid bridge toward any hovered/newly selected sibling segment and suppresses adjacent 1px dividers; emits `MacSegmentEvent` and optional `PressAndHold`/`PullDown` popover menus. | Active capsule stretches and flows (`leading/trailing CASpring`) when selection changes; hovered unselected segment pre-illuminates its LCH Fresnel rim; preserves compact square bezel in `ExactAppleNib`. |
+| **5** | **`MacTabView`** | Top segmented Liquid Glass tab bar sitting above a recessed `MacBox`-style content surface (`Bezel` or `Borderless` style). | Registers its inner tab content rect in the surface registry (`register_surface_rect_slot`) so all child widgets inside the active tab automatically adapt their WCAG foreground contrast; morphs active tab pill across tab headers. | Tab indicator capsule flows via `DualSpringMorphBlob` on tab switch; child `<tabViewItem>` nodes switch visibility declaratively (`VisibilityRule::WhenTabSelected`). |
+| **6** | **`MacTableActionBar`** | Compact bottom-attached or standalone strip of icon action cells (`+`, `-`, `⚙` / action menu) with crisp 1pt hairline borders. | Emits semantic add/remove/action events and triggers green/red semantic pill glow (`semantic_add_hover_colors` / `semantic_remove_hover_colors`) on hover. | Each cell illuminates its local LCH Fresnel border as the pointer approaches and depresses with a crisp `CASpring` micro-scale on click. |
+
+### 6.3 Family 4: Action & Value Primitives (15 Widgets)
+
+| # | Widget | 1. Base Appearance (*Self / Resting State*) | 2. Outward Emission (*Behavior Toward Environment*) | 3. Inward Reception (*Response From Environment*) |
+| :--- | :--- | :--- | :--- | :--- |
+| **7** | **`MacButtonCell`** (`MacButton`) | Raised `STEP 9` 3D Liquid Glass capsule (`MacOs26Tahoe`) or rounded AppKit bezel (`MacOs14Sonoma`) with top LCH Fresnel rim, opposite lower caustic glow, convex dome profile, and drop shadow (`paint_liquid_glass_capsule`). | Emits `.glassEffectUnion` smooth-min metaball bridge to adjacent buttons in a shared group; casts expanding drop shadow onto parent surface when lifted. | Lifts (`+3%` scale / magnetic pull) and glides its specular glint with pointer $\vec{p}(t)$; de-saturates synchronously when window is inactive (`BUG-SONOMA-01`); preserves exact `[x, y, w, h]` alignment rect in `ExactAppleNib`. |
+| **8** | **`MacToggle`** | Pill-shaped track (accent-filled when ON, recessed glass when OFF) containing a raised `STEP 9` 3D Liquid Glass circular/oval thumb lens (`Family A/D`). | Emits boolean state transition and casts a warm accent caustic glow from the track onto the inner rim of the sliding glass thumb. | Thumb stretches horizontally (`anisotropic squash/stretch`, $\det J = 1$) while sliding across the track via `CASpring`; specular rim tracks pointer proximity. |
 | **9** | **`MacSwitch`** | Compact AppKit switch alias sharing the [`MacToggle`] 3D Liquid Glass track-and-lens architecture across `Regular`, `Small`, and `Mini` sizes. | Emits state change and focus-ring halo onto parent row. | Responds to click, drag-throw, and `Space` key with `CASpring` thumb translation. |
-| **10** | **`MacCheckbox`** | Rounded square glass well (`14×14pt` Regular, `12×12pt` Small, `10×10pt` Mini) with accent fill and crisp analytical vector checkmark when checked. | Emits boolean/indeterminate state and shares hover highlight with its attached `MacLabel` caption. | Illuminates top specular rim on hover; scales checkmark vector stroke in via `CASpring`; resolves label ink via `theme.label_on(active_surface)`. |
-| **11** | **`MacRadioButton`** | Circular 3D glass well with accent fill and raised inner white specular core dot when selected. | Emits mutual-exclusion selection within a radio group. | Core dot blooms radially via `CASpring` on selection; rim brightens under `ProximityLightField`. |
-| **12** | **`MacSlider`** | Recessed glass track (`4.0pt` neutral or accent-filled) with optional tick marks and a raised 3D refractive Liquid Glass capsule/circle thumb. | Emits continuous value changes and casts a subtle refractive caustic highlight onto the track directly beneath the thumb. | Thumb lifts and enlarges slightly into a translucent glass lens while dragged, with its specular highlight tracking the pointer. |
-| **13** | **`MacCircularSlider`** | Circular rotary glass dial with radial value arc and a 3D specular dimple indicator at the current angle. | Emits continuous angular value in `[min..=max]`. | Specular rim and dimple track pointer angle; responds to vertical/circular drag and scroll wheel. |
+| **10** | **`MacCheckbox`** | Rounded square glass well (`14×14pt` Regular, `12×12pt` Small, `10×10pt` Mini) with accent fill and crisp analytical vector checkmark when checked. | Emits boolean/indeterminate state and shares hover highlight with its attached `MacLabel` caption. | Illuminates top LCH Fresnel rim on hover; scales checkmark vector stroke in via `CASpring`; resolves label ink via `theme.label_on(active_surface)`. |
+| **11** | **`MacRadioButton`** | Circular 3D glass well (`Family D`) with accent fill and raised inner white specular core dot when selected. | Emits mutual-exclusion selection within a radio group. | Core dot blooms radially via `CASpring` on selection; rim brightens under pointer proximity. |
+| **12** | **`MacSlider`** | Recessed glass track (`4.0pt` neutral or accent-filled) with optional tick marks and a raised `STEP 9` 3D refractive Liquid Glass capsule/circle thumb. | Emits continuous value changes and casts a subtle refractive caustic highlight onto the track directly beneath the thumb. | Thumb lifts and enlarges slightly into a translucent glass lens while dragged, with its specular highlight and opposite caustic crescent tracking the pointer. |
+| **13** | **`MacCircularSlider`** | Circular rotary glass dial with radial value arc (`Family B`) and a 3D specular dimple indicator at the current angle. | Emits continuous angular value in `[min..=max]`. | Specular rim and dimple track pointer angle; responds to vertical/circular drag and scroll wheel. |
 | **14** | **`MacStepper`** | Vertical dual-chevron (`⌃` / `⌄`) split glass capsule paired beside numeric [`MacInputCell`] fields. | Increments/decrements paired numeric field with `Shift` ($10\times$) and `Cmd` ($0.1\times$) multipliers; caret casts `caret_micro_shadow`. | Pressed half-capsule depresses inward with top/bottom specular inversion while the unpressed half remains raised. |
-| **15** | **`MacPopUpButton`** | Raised glass control bezel with left value label and right accent/neutral dual-chevron (`⌄`/`⌃`) badge (`accent_badge`). | Spawns a floating `MacPopoverSurface` / `MacContextMenu` menu layer clamped to viewport bounds, casting backdrop shadow over underlying controls. | Bezel rim tracks pointer highlight; active open state latches accent glow until menu dismissal. |
-| **16** | **`MacComboBox`** | Hybrid recessed text-input well on the left fused with a raised Liquid Glass dropdown trigger cap on the right. | Opens viewport-clamped autocomplete/option popover list and commits selected string to the edit buffer. | Focus ring wraps the unified capsule; right trigger cap independently highlights under pointer hover. |
-| **17** | **`MacColorWell`** | Framed glass swatch pill displaying a live color tile with diagonal alpha checkerboard and inner specular border. | Opens the non-modal floating 2D Saturation-Value + 1D Hue `egui::epaint::Mesh` color picker popover (`REQ-002-11`) and feeds live `Color32` (e.g. `.glass_accent`) to target widgets. | Unlocks achromatic colors (`unlock_achromatic_hsva`) when hue bar is dragged; swatch bezel lifts on hover. |
-| **18** | **`MacHelpButton`** | Circular 3D Liquid Glass question-mark button (`?` vector stroke or `Inter-SemiBold` glyph) with outer specular rim. | Triggers contextual help popover or documentation callback. | Exhibits circular radial lens highlight and `CASpring` lift on pointer hover. |
+| **15** | **`MacPopUpButton`** | Raised `STEP 9` glass control bezel with left value label and right accent/neutral dual-chevron (`⌄`/`⌃`) badge (`accent_badge`). | Spawns a floating `MacPopoverSurface` / `MacContextMenu` menu layer clamped to viewport bounds, casting backdrop shadow over underlying controls. | Bezel rim tracks pointer highlight; active open state latches accent glow until menu dismissal. |
+| **16** | **`MacComboBox`** | Hybrid recessed text-input well on the left fused with a raised Liquid Glass dropdown trigger cap on the right. | Opens viewport-clamped autocomplete/option popover list and commits selected string to the edit buffer. | Spring-animated focus ring (`BUG-SONOMA-02`) wraps the unified capsule; right trigger cap independently highlights under pointer hover. |
+| **17** | **`MacColorWell`** | Framed glass swatch pill displaying a live color tile with diagonal alpha checkerboard and inner specular border. | Opens the non-modal floating 2D Saturation-Value + 1D Hue color picker popover (`REQ-002-11`) and feeds live `Color32` (e.g. `.glass_accent`) to target widgets. | Unlocks achromatic colors (`unlock_achromatic_hsva`) when hue bar is dragged; swatch bezel lifts on hover. |
+| **18** | **`MacHelpButton`** | Circular `STEP 9` 3D Liquid Glass question-mark button (`?` vector stroke or `Inter-SemiBold` glyph) with outer LCH Fresnel rim. | Triggers contextual help popover or documentation callback. | Exhibits circular radial lens highlight, opposite caustic crescent, and `CASpring` lift on pointer hover. |
 | **19** | **`MacInlineActionButton`** | Borderless or subtle pill-framed micro-action icon (`+`, `-`, `↻`, `✕`, chevron) inside inspector rows and headers. | Emits row action; `+` and `-` variants emit semantic green/red translucent pill halos (`REQ-015-02`). | Transitions from `0%` background fill at rest to `inspector_hover_fill` / semantic tint via `CASpring` on pointer hover. |
 | **20** | **`MacDisclosureButton`** | Standalone pill/circular chevron button (`▶` / `▼`) for expanding/collapsing detail sections. | Drives sibling detail container visibility and rotates chevron angle via `CASpring`. | Pill bezel illuminates on pointer approach; chevron rotates smoothly between $0^\circ$ and $90^\circ$. |
 | **21** | **`MacRatingIndicator`** | Horizontal row of interactive star glyphs (`★` / `☆`) or level dots. | Emits integer/fractional rating value. | Hovered star and all preceding stars ripple-scale upward in sequence via staggered `CASpring` offsets. |
 
----
-
-### 3.4 Family 5: Text, Inspector & Form Controls (11 Widgets)
+### 6.4 Family 5: Text, Inspector & Form Controls (11 Widgets)
 
 | # | Widget | 1. Base Appearance (*Self / Resting State*) | 2. Outward Emission (*Behavior Toward Environment*) | 3. Inward Reception (*Response From Environment*) |
 | :--- | :--- | :--- | :--- | :--- |
-| **22** | **`MacInputCell`** | Recessed glass text well with `1.0pt` `input_top_inset_shadow`, `2.0pt` `NSTextFieldSquareBezel` corner radius (in `.nib`) or concentric capsule (in `SelectionInfo` HUD), transactional edit buffer, and optional unit suffix + stepper. | When focused inside an inspector/form row, emits `focused_row_fill` / glowing 3D blue Liquid Glass selection capsule (matching `X: 350.0` in `SelectionInfo` mockup) and participates in `Tab` / `Shift+Tab` focus chain. | Uses `2.0pt` `-[NSTextFieldCell drawingRectForBounds:]` horizontal inset on compact frames (`height < 21pt` or `width <= 54pt`, `REQ-013-08.2`) for 0% text truncation; receives flowing focus capsule from previously focused field via `DualSpringMorphBlob`. |
+| **22** | **`MacInputCell`** | Recessed glass text well with `1.0pt` `input_top_inset_shadow`, `2.0pt` `NSTextFieldSquareBezel` corner radius (in `.nib`) or concentric capsule (in `SelectionInfo` HUD), transactional edit buffer, and optional unit suffix + stepper. | When focused or enabled with `.liquid_glass_pill(true)`, renders a glowing 3D blue `STEP 9` Liquid Glass selection capsule (matching `X: 350.0` in `SelectionInfo` mockup) and participates in `Tab` / `Shift+Tab` focus chain. | Uses `2.0pt` `-[NSTextFieldCell drawingRectForBounds:]` horizontal inset on compact frames (`height < 21pt` or `width <= 54pt`, `REQ-013-08.2`) for 0% text truncation; animates focus halo via `paint_animated_focus_ring` (`BUG-SONOMA-02`). |
 | **23** | **`MacSearchField`** | Pill-shaped recessed glass search bar with left magnifying-glass icon, placeholder text, and right clear (`⊗`) button when non-empty. | Filters bound scene/collection/command-palette nodes in real time. | Expands outer focus ring with `CASpring` on focus; clear button fades in/out smoothly as query length changes. |
-| **24** | **`MacTokenField`** | Recessed multi-token input well rendering committed items as individual 3D Liquid Glass removable pills (`×`) alongside a live trailing text-edit cursor. | Emits token array mutations on comma/`Enter`/`Backspace`. | Individual token pills lift and highlight their Fresnel rim when hovered or selected. |
+| **24** | **`MacTokenField`** | Recessed multi-token input well rendering committed items as individual `STEP 9` 3D Liquid Glass removable pills (`×`) alongside a live trailing text-edit cursor. | Emits token array mutations on comma/`Enter`/`Backspace`. | Individual token pills lift and highlight their LCH Fresnel rim when hovered or selected. |
 | **25** | **`MacTextView`** | Multi-line scrollable recessed glass document editor with optical typography tracking and selection highlight. | Emits multi-line text buffer changes and scroll telemetry to parent `MacScrollView`. | Focus ring animates around outer scroll frame; adapts text ink to paper/well surface luminance. |
 | **26** | **`MacLabel`** | Resolution-independent typographic label (`Regular`, `Medium`, `Semibold`, `Bold`, `Mono`) with Apple SF Pro optical tracking (`sf_pro_tracking`) and baseline anchoring. | Pure content ink on glass (emits zero bezel clutter); optionally forwards click to paired control. | Queries `theme.active_surface_at(rect.center())` (`SPEC-006`/`002A`) to dynamically compute WCAG 2.1 AA ($\ge 4.5:1$) foreground contrast over any background or Liquid Glass sheet. |
 | **27** | **`MacOriginMatrix`** | $3 \times 3$ grid of interconnected anchor nodes (top-left through bottom-right + center) for bounding-box transform origin selection. | Emits active [`MacOriginAnchor`] and updates transform matrix pivot in host canvas. | Active anchor node glows as a 3D accent LED dot with specular pinpoint; hovered node pre-illuminates along the connecting grid hairlines. |
-| **28** | **`MacTagColorPicker`** | Single- or multi-row matrix of 7 macOS Finder semantic color dots (`Red`, `Orange`, `Yellow`, `Green`, `Blue`, `Purple`, `Gray`). | Emits selected tag color index/mask. | Each color dot renders as a 3D glass sphere with upper-left specular dot and expands radially via `CASpring` on hover/selection. |
+| **28** | **`MacTagColorPicker`** | Single- or multi-row matrix of 7 macOS Finder semantic color dots (`Red`, `Orange`, `Yellow`, `Green`, `Blue`, `Purple`, `Gray`). | Emits selected tag color index/mask. | Each color dot renders as a `STEP 9` 3D glass sphere (`Family D`) with upper-left glare and lower-right LCH caustic crescent, expanding radially via `CASpring` on hover/selection. |
 | **29** | **`MacRuleEditor`** | Multi-row predicate builder (`Any`/`All` header + dynamic criteria rows of `MacPopUpButton`s and `+`/`-` inline action buttons). | Emits predicate row additions, deletions, and criteria changes. | New predicate rows slide and fade into place via `CASpring`; hovered row receives subtle translucent glass highlight band. |
 | **30** | **`MacDatePicker`** | Compact stepper-backed date/time field or expanded calendar matrix + analog clock face (`MacDatePickerStyle`). | Emits [`MacDate`] year/month/day/hour/minute mutations. | Selected calendar day cell renders as a raised 3D Liquid Glass accent pill that glides between clicked dates. |
 | **31** | **`MacPathControl`** | Horizontal breadcrumb bar of clickable folder/node capsules separated by vector chevrons, plus an optional `Choose...` button. | Emits clicked path component index to navigate hierarchy. | Hovered breadcrumb segment elevates into a 3D glass pill via `CASpring`. |
 | **32** | **`MacForm`** (`MacFormUi`) | Two-column right-aligned label / left-aligned control inspector grid engine with baseline alignment. | Coordinates row hover and focus-band geometry across child `MacLabel` and `MacInputCell` pairs. | Propagates active container surface color and glides the active row highlight pill vertically from focused row to focused row. |
 
----
-
-### 3.5 Family 6: Floating Liquid Glass Surfaces, Navigation, Media & Layout Containers (20 Widgets)
+### 6.5 Family 6: Floating Liquid Glass Surfaces, Navigation, Media & Layout Containers (20 Widgets)
 
 | # | Widget | 1. Base Appearance (*Self / Resting State*) | 2. Outward Emission (*Behavior Toward Environment*) | 3. Inward Reception (*Response From Environment*) |
 | :--- | :--- | :--- | :--- | :--- |
-| **33** | **`MacPopoverSurface`** | Floating translucent Liquid Glass sheet with Dual-Kawase blurred backdrop, Snellius edge refraction bevel, `1.0pt` outer specular rim, and deep ambient elevation shadow. | Registers its rect in `register_surface_rect` and blocks pointer/scroll leak-through to background canvas (`SPEC-006`). | Samples underlying canvas backdrop for blur/refraction and illuminates its perimeter Fresnel rim closest to the pointer. |
+| **33** | **`MacPopoverSurface`** | Floating translucent `STEP 9` Liquid Glass sheet (`Family A`) with sharp-rim / blurred-core dual backdrop (`B_sharp` / `B_blur`), quadratic-arcsin Snellius edge refraction bevel, CIE LCH Fresnel & opposite caustic rim, and exponential SDF elevation shadow. | Registers its rect in `register_surface_rect_slot` and blocks pointer/scroll leak-through to background canvas (`SPEC-006`). | Samples underlying canvas/window backdrop (`A0`) for Z-order blur/refraction and illuminates its perimeter LCH Fresnel rim closest to the pointer. |
 | **34** | **`MacPopover`** | Anchor-attached floating [`MacPopoverSurface`] with directional triangular glass arrow (`Top`, `Bottom`, `Left`, `Right`). | Clamps its frame within window bounds and isolates foreground pointer interaction. | Animates open/close scale and opacity from the anchor point via `hud_panel_transition` `CASpring`. |
-| **35** | **`MacPanel`** | Floating utility/HUD window surface (such as `SelectionInfo` in the mockup) with optional title bar and translucent glass body. | Registers panel surface luminance for all child inspector rows and casts soft drop shadow over canvas. | Perimeter glass rim responds to pointer proximity; supports drag-repositioning. |
-| **36** | **`MacCard`** | Rounded elevated content card surface with subtle inner top specular hairline and border stroke. | Registers card background surface (`register_surface_rect`) for child typography contrast. | Lifts shadow depth slightly when interactive card mode is hovered. |
+| **35** | **`MacPanel`** | Floating utility/HUD window surface (such as `SelectionInfo` in the mockup) with optional title bar and translucent glass body. | Registers panel surface luminance for all child inspector rows and casts soft exponential drop shadow over canvas. | Perimeter glass rim responds to pointer proximity; supports drag-repositioning. |
+| **36** | **`MacCard`** | Rounded elevated content card surface with subtle inner top specular hairline and border stroke. | Registers card background surface (`register_surface_rect_slot`) for child typography contrast. | Lifts shadow depth slightly when interactive card mode is hovered. |
 | **37** | **`MacBox`** | AppKit `NSBox` grouping container with recessed/raised glass fill, optional title header badge, and configurable content insets. | Registers `box_background` in the per-pass geometric surface registry so both nested and flat `.fixed_rect` NIB children resolve WCAG AA contrast (`SPEC-002A`). | Adapts fill translucency and border contrast to `Aqua`, `DarkAqua`, and `Anthracite` appearances. |
 | **38** | **`MacFloatingInfoBox`** | Compact non-modal HUD telemetry pill (`SPEC-006 §2.2`) displaying live coordinates, deltas, or status badges over a canvas. | Floats above canvas without stealing keyboard focus from active tool. | Adapts background vibrancy and label contrast to the canvas region directly beneath it (`REQ-016-06`). |
 | **39** | **`MacToolbar`** | Top window toolbar surface with translucent Liquid Glass backdrop, traffic-light/caption-control integration, and grouped toolbar items. | Emits scroll-edge separator luminance and propagates `ProximityLightField` across grouped toolbar buttons (`.glassEffectUnion`). | Dynamically increases backdrop blur and bottom border specular contrast when content scrolls beneath the toolbar. |
@@ -137,254 +370,152 @@ Every public widget and layout container in `egui-macview` (52 total across the 
 
 ---
 
-## 4. Detailed Normative Mathematics for Block A (`Iter 1: M1`, `Iter 2: M2`, `Iter 3: M3`) & Standalone Model/Controller Crate (`vitrea`)
+## 7. Block `B2`: Group Ensemble Verification (`Black-Box Framebuffer Oracles` $O_{\text{group},1..4}$, Zero-Overdraw Guards & Test Hygiene, `REQ-016-B2`)
 
-### 4.0 Architectural Separation: Standalone Model & Controller Crate (`vitrea`) vs. View Layer (`egui-macview`)
+### 7.1 The Four Normative Group Ensemble Oracles ($O_{\text{group},1..4}$)
 
-1. **Zero UI-Framework Coupling & Zero Dependency Bloat in `vitrea` (`REQ-016-00.1`):**
-   - All analytical 2D/3D Signed Distance Field (SDF) geometry, chain-rule gradients, Snellius 3D vector refraction, chromatic dispersion, Schlick-Fresnel reflection, star-convex triangle-fan meniscus triangulation, closed-polyline glyph/icon SDF evaluation, and area-preserving droplet kinematics reside in the standalone Model & Controller (MC) crate **`vitrea`** (`../vitrea`), which has **zero dependency** on `egui`, `egui-macview`, `kurbo`, or `lyon_tessellation`.
-   - `vitrea` depends **exclusively** on ultra-lightweight COTS foundations:
-     - **`glam`**: SIMD `Vec2` / `Vec3`, exact 3D Snellius vector refraction `Vec3::refract(incident, normal, eta)` (including Total Internal Reflection handling) and `Vec3::reflect`.
-     - **`serde`**: Serialization of [`LiquidGlassOpticalParams`] and kinematic droplet controllers.
-2. **Dedicated W3C DTCG Optical Tokens (`LiquidGlassOpticalTokens`, `REQ-016-00.2`):**
-   - Misuse of unrelated UI tokens (such as `rotary_sensitivity`, `active_stroke_width / border_stroke_width`, or linter-evading constant arithmetic like `(2.0 + 1.0)` or `0.5 * 0.5 * 0.5`) is strictly forbidden.
-   - `tokens/design_tokens.json` (`macview.metrics.control.liquid_glass`) defines normative optical physics tokens:
-     - `ior_glass` (`1.48pt`), `ior_red` (`1.474pt`), `ior_green` (`1.480pt`), `ior_blue` (`1.488pt`),
-     - `fresnel_f0` (`0.0375pt`, matching $F_0 = ((\eta - 1)/(\eta + 1))^2$),
-     - `bevel_width_pt` (`8.0pt`), `dome_thickness_pt` (`6.0pt`),
-     - `vibrancy_chroma_boost` (`1.50pt`), `meniscus_merge_k_pt` (`6.0pt`),
-     - `viscous_stretch_gain` (`0.125pt`), and `viscous_press_gain` (`0.0625pt`).
-
-### 4.1 Iteration 1 (`M1` — `vitrea::sdf`): Universal 2D SDF, Analytical/Finite-Difference Gradient $\nabla d(p)$ & Closed-Contour Topology (`REQ-016-01`)
-
-1. **`SdfSample2d { distance: f32, gradient: glam::Vec2 }` (`REQ-016-01.1`):**
-   - Every SDF primitive in `vitrea::sdf` returns both the signed distance $d(p)$ (negative inside, zero on boundary, positive outside) and the outward unit gradient $\nabla d(p) = (\partial_x d, \partial_y d)$:
-     - `sdf_rounded_capsule_sample(pt, center, half_extents, corner_radius) -> SdfSample2d`
-     - `sdf_annular_rounded_sector_sample(pt, center, (r_in, r_out), (center_rad, half_sweep_rad), corner_radius) -> SdfSample2d`
-     - `sdf_curved_stadium_arc_sample(pt, center, (r_in, r_out), (start_rad, end_rad)) -> SdfSample2d`
-     - `sdf_closed_polyline_sample(pt, contour: &[glam::Vec2]) -> SdfSample2d` (evaluates exact closest segment point and signed winding interior for arbitrary flattened 2D Bézier letterforms and SVG contours without requiring `kurbo` inside `vitrea`).
-2. **Smooth-Min Combinators with Exact Chain-Rule Gradient (`REQ-016-01.2`):**
-   - `sdf_smooth_union_with_grad(a: SdfSample2d, b: SdfSample2d, k: f32) -> SdfSample2d`:
-     $$h = \text{clamp}\!\left(\frac{1}{2} + \frac{d_b - d_a}{2k},\; 0,\; 1\right), \quad d_\cup = (1 - h)d_b + h d_a - k h(1 - h), \quad \nabla d_\cup = \frac{\text{normalize}\big((1 - h)\nabla d_b + h\nabla d_a\big)}{\|\cdot\|_2}$$
-   - Plus `sdf_smooth_subtract_with_grad` and `sdf_smooth_intersect_with_grad`.
-3. **Universal 3D Dome Normal from Arbitrary 2D SDF Sample (`dome_normal_3d_from_sdf`, `REQ-016-01.3`):**
-   - Works identically for circular cushions, capsules, merged metaball unions (`sdf_smooth_union_with_grad`), and arbitrary 2D glyph/icon contours (`sdf_closed_polyline_sample`):
-     $$s(p) = \text{clamp}\!\left(\frac{-d(p)}{w_{\text{bevel}}},\; 0.0,\; 1.0\right), \quad u(s) = s^2(3 - 2s), \quad \theta(p) = u(s)\cdot\frac{\pi}{2}, \quad \vec{N}(p) = \big(\nabla_x d(p)\cos\theta(p),\; \nabla_y d(p)\cos\theta(p),\; \sin\theta(p)\big)$$
-   - Guarantees $\|\vec{N}(p)\|_2 = 1$ for all interior and boundary points.
-4. **Area-Preserving Viscous Squash & Stretch Jacobian (`vitrea::kinematics::deform_viscous_droplet_point`, `REQ-016-01.4`):**
-   - For pure velocity deformation ($p_{\text{press}} = 0$), the longitudinal stretch $\lambda_\parallel = 1 + \kappa_{\text{stretch}}\min(\|\vec{v}\|_2 / R_0, 0.35)$ and transverse compression $\lambda_\perp = 1 / \lambda_\parallel$ satisfy the exact 2D area-preservation invariant $\det J = \lambda_\parallel \cdot \lambda_\perp = 1.0$.
-5. **Star-Convex Triangle-Fan Meniscus Triangulation (`vitrea::sdf::tessellate_meniscus_bridge`, `REQ-016-01.5`):**
-   - Evaluates the smooth-union bridge between two adjacent cushions and triangulates the concave hourglass meniscus contour directly via a 24-slice star-convex triangle fan around `bridge_center` (`core_weight = 1.0` at center, radial falloff to perimeter) into an indexed vertex/index buffer (`MeniscusMesh2d`) with zero external tessellation crate overhead.
-
-### 4.2 Iteration 2 (`M2` — `vitrea::optics`): Exact 3D Vector Snellius Refraction (`glam::Vec3::refract`), Chromatic Dispersion & Schlick-Fresnel (`REQ-016-02`)
-
-1. **Exact 3D Vector Snell's Law Refraction (`refract_ray_snell_3d` & `refract_chromatic_rgb`, `REQ-016-02.1`):**
-   - Given incident viewing ray $\vec{I} = (0, 0, -1)$ (`glam::Vec3::NEG_Z`), unit surface normal $\vec{N} = (n_x, n_y, n_z)$ with $n_z \ge 0$, relative refractive index $\eta = n_{\text{air}} / n_{\text{glass}} = 1.0 / \text{ior}$, and optical dome thickness $h_{\text{dome}}$:
-     - Computes the exact 3D refracted transmission vector $\vec{T} = \text{ Vec3::refract}(\vec{I}, \vec{N}, \eta)$ obeying Snell's law $\sin\theta_1 / \sin\theta_2 = n_{\text{glass}}$:
-       $$\vec{T} = \eta\vec{I} + \left(\eta(-\vec{I}\cdot\vec{N}) - \sqrt{1 - \eta^2\big(1 - (-\vec{I}\cdot\vec{N})^2\big)}\right)\vec{N}$$
-     - Projects the refracted ray onto the background plane at depth $h_{\text{dome}}$:
-       $$\vec{p}_{\text{refracted}} = \vec{p} + h_{\text{dome}} \cdot \frac{(T_x, T_y)}{\max(-T_z, 0.25)}$$
-   - `refract_chromatic_rgb` evaluates three distinct refracted coordinates $[\vec{p}_R, \vec{p}_G, \vec{p}_B]$ for $(\eta_R, \eta_G, \eta_B) = (1.474, 1.480, 1.488)$.
-2. **Exact Physical Schlick-Fresnel & Blinn-Phong Proximity Glint (`evaluate_schlick_fresnel_and_blinn_phong`, `REQ-016-02.2`):**
-   - Evaluates the exact physical dielectric reflectance at normal incidence $F_0 = \left(\frac{n_{\text{glass}} - 1}{n_{\text{glass}} + 1}\right)^2$ ($\approx 0.0375$ for $n_{\text{glass}} = 1.48$) and Schlick's fifth-power law:
-     $$F(\cos\theta) = F_0 + (1 - F_0)(1 - \cos\theta)^5, \quad \cos\theta = \text{clamp}(n_z, 0.0, 1.0)$$
-   - Combined with 3D point-light cursor proximity attenuation $1 / (1 + (d_{\text{cursor}} / R_{\text{prox}})^2)$ and Blinn-Phong half-vector specular power $(\vec{N}\cdot\vec{H})^8$.
-3. **Zero Dead Math & View-Adapter Purity (`REQ-016-02.6`):**
-   - `egui-macview/src/controls/liquid_glass.rs` is a thin `egui` View adapter over `vitrea` and `MacTheme::liquid_glass()`, re-exporting all backwards-compatible symbols while delegating 100% of SDF, normal, Snellius, Fresnel, meniscus tessellation, and droplet kinematics to `vitrea`.
-
-### 4.3 Iteration 3 (`M3`): Coupled `CASpring` Dynamics (`DualSpringMorphBlob` & `AnisotropicCushionSpring`, `REQ-016-03..04`)
-
-1. **`DualSpringMorphBlob` (Velocity-Stretched Liquid Droplet Transfer):**
-   - Models a 1D or polar angular interval $[a(t), b(t)]$ (or 2D capsule rect) using two coupled `CASpring` instances:
-     - **Leading edge** (moving toward the new target) uses a fast responsive spring ($T_{\text{lead}} = 0.22\text{s}, \zeta = 0.82$),
-     - **Trailing edge** (following behind) uses a slightly softer trailing spring ($T_{\text{trail}} = 0.32\text{s}, \zeta = 0.76$).
-   - During transit from segment/sector $A$ to $B$, $|b(t) - a(t)|$ automatically **stretches** wider than its resting width and then **coalesces** back to resting width upon arrival, with `is_at_rest()` returning `true` once both springs settle.
-
-### 4.4 The 5-Component Interaction Matrix & 4-Layer 2D Matrix Compositor Pipeline (`REQ-016-01.6`, `REQ-016-02.7`, `REQ-016-03.5`, `REQ-016-04.5`)
-
-1. **Why 3D Voxels and Sparse Gouraud Triangle Meshes (`WHITE_UV`) Are Both Rejected:**
-   - **No 3D Voxel Grids ($X \times Y \times Z$):** Every Liquid Glass control is a **2.5D heightfield** with a single front surface elevation $z(x, y)$ and outward normal $\vec{N}(x, y)$ per 2D screen coordinate $(x, y)$. Full 3D voxel grids add $O(N^3)$ overhead with zero visual benefit.
-   - **No Sparse Gouraud Triangle Meshes (`WHITE_UV`):** Linear vertex-color interpolation across coarse triangles smears fifth-power Schlick-Fresnel curves $(1 - n_z)^5$, high-exponent Blinn-Phong specular rims $(\vec{N}\cdot\vec{H})^{24}$, and wavelength-dependent RGB chromatic dispersion $[\vec{p}_R, \vec{p}_G, \vec{p}_B]$ into flat, opaque plastic slabs.
-   - **Apple's Actual Architecture (`CABackdropLayer` + 2.5D SDF Fragment Compositor):** Mirrors Apple's `QuartzCore` / `SwiftUI` Metal pipeline by splitting computation into **Phase A (Per-Widget Controller Kinematics, $1\times$ per frame)** and **Phase B (Stacked 2D Pixel Matrices evaluated only on state change and cached in a `TextureHandle`)**.
-
-2. **Normative 5-Component Mutual Influence Matrix (Background $\times$ Neighbor Widgets $\times$ Pointer/Thumb Motion):**
-
-| # | Liquid Glass Component | Influence of **Background** (Canvas / Recessed Dish) | Influence of **Neighbor Widgets** (Adjacent Cushions & Hub) | Influence of **Pointer / Thumb Motion** (Hover, Press, Drag) |
-| :--- | :--- | :--- | :--- | :--- |
-| **1** | **Kinematics & Shape State** (`vitrea::kinematics`) | **None** (geometry is independent of backdrop pixels). | **Coupled `DualSpringMorphController`:** Switching from sector $A$ to neighbor $B$ spans a transient polar liquid droplet (`lg_polar_lead`, `lg_polar_trail`) across the inter-cushion gap. | **Direct Driver:** Pointer position and velocity drive the `CASpring` lift $l_i \in [0, 1]$ and area-preserving viscous stretch ($\det J = 1$, `deform_viscous_droplet_point`) toward the thumb vector. |
-| **2** | **Composite 2D Distance Field & Meniscus** (`vitrea::sdf`) | **None** (pure 2D Euclidean signed distance field). | **`.glassEffectUnion` Coalescing:** When adjacent cushions swell or approach within `meniscus_merge_k_pt`, `sdf_smooth_union_with_grad` merges their contours $d_A, d_B$ into a single $C^1$-continuous concave meniscus bridge. | **Indirect via #1:** Thumb lift and viscous stretch reduce the inter-cushion gap, dynamically growing the smooth-minimum meniscus neck toward the neighbor. |
-| **3** | **2.5D Height & Surface Normal Field** $\big(z(x,y), \vec{N}(x,y)\big)$ (`vitrea::optics`) | **None** (derived analytically from $d(x,y)$ and $\nabla d(x,y)$ of #2). | **Normal Continuity:** Across a merged meniscus bridge, the chain-rule gradient $\nabla d_{\cup}$ rotates $\vec{N}(x,y)$ smoothly from cushion $A$ to cushion $B$ without a seam. | **Curvature Modulation:** Active thumb lift elevates the cushion dome and shifts its centroid, tilting the refractive lens relative to the dish below. |
-| **4** | **Backdrop Vibrancy, Shifted Shadow & Snellius Refraction** (`vitrea::optics` + `MacTheme`) | **100% Coupled:** The interior of each glass cushion has no opaque paint; it samples the **Backdrop & Dish Matrix $B(x,y)$** at the Snellius-refracted coordinates $[\vec{p}_R, \vec{p}_G, \vec{p}_B]$. | **Cross-Cushion Subsurface Bleed:** An active/latched cushion (`accent_col`) radiates a radial subsurface glow into the dish matrix $B(x,y)$; adjacent passive cushions pick up and refract that blue glow along their facing bevels. | **Dynamic Parallax & Shadow Shift:** As the cushion lifts or stretches under the thumb, its refractive lens sweeps across $B(x,y)$ and its directional drop shadow $d(p - \vec{\Delta}_{\text{light}})$ shifts across the dish floor. |
-| **5** | **Schlick-Fresnel Rim, Specular Glint & Foreground Contrast** (`vitrea::optics` + `MacTheme`) | **Adaptive Contrast (`label_on`):** The luminance of the refracted surface determines whether foreground SF Symbols and labels use `plusDarker` or `plusLighter` (`>= 4.5:1` WCAG AA). | **Continuous Perimeter Glint:** When two neighbors coalesce, the `1.5 px` fifth-power Schlick-Fresnel specular rim wraps continuously around the outer union boundary. | **3D Proximity Point-Light Glint:** The cursor/thumb acts as a 3D point light $\vec{L}_{\text{cursor}}$; the cushion bevel closest to the pointer brightens via Blinn-Phong $(\vec{N}\cdot\vec{H})^n$. |
-
-3. **Strict Model-Controller (`vitrea`) vs. View (`egui-macview`) Separation, Cross-Repo Read-Only Ownership Boundary & Zero Hardcoded Numbers Invariant (`REQ-016-00.4`, `REQ-016-02.6`):**
-   - **Cross-Repo Read-Only Boundary (`REQ-016-00.4`):** The `egui-macview` repository and session are **strictly read-only consumers** of the external `vitrea` crate (`../vitrea`). `egui-macview` sessions MUST NEVER edit, overwrite, or commit files inside `../vitrea`. Whenever a new mathematical, optical, or kinematic operator is required in `vitrea`, the `egui-macview` session MUST stop and emit a self-contained handoff prompt (specifying the exact Rust function signature, mathematical equations, invariants, and COTS test cases) to be executed in the dedicated `vitrea` / `grafia` session.
-   - **`vitrea` (`MC` Crate Purity):** `vitrea` MUST NOT contain widget-specific scene structs (`RosetteOpticalScene`), dark/light-mode branches (`if is_light_mode`), or hardcoded UI color literals (`0.895`, `0.215`, `0.955`). `vitrea::optics` exposes pure, dimensionless optical evaluators (`dome_normal_3d_from_sdf`, `refract_ray_snell_3d`, `refract_chromatic_rgb`, `evaluate_schlick_fresnel_and_blinn_phong`).
-   - **`egui-macview` (`View` Layer Token Purity):** All colors in the stacked 2D matrices MUST originate exclusively from `&MacTheme` (`window_background()`, `box_background()`, `control_background()`, `specular_rim_top()`, `drop_shadow()`, `resolve_glass_accent_on()`), and all optical/geometric ratios MUST originate exclusively from `&ThumbDialMetrics` (`tokens/design_tokens.json`), enforced by `test_guard_zero_magic_numbers_and_colors_in_ui_components`.
-
-4. **The 3-Phase / 4-Layer 2D Matrix Compositor Pipeline:**
-   - **Phase A — Per-Widget Controller Kinematics ($1\times$ per frame, ~16 floats):**
-     - `step_dial_pointer_springs` advances the 6 `CASpring` cushion lifts, pointer tilt vector, and coupled polar `DualSpringMorphController` angles (`lg_polar_lead`, `lg_polar_trail`), and computes a 64-bit quantized state hash. When the hash is unchanged, Phase B is skipped (`0.0 ms` CPU cost, `0` texture uploads).
-   - **Phase B — Three Stacked 2D Pixel Matrices (Evaluated on cache miss at `2x` Retina resolution):**
-     - **Layer 1: Backdrop & Recessed Dish Matrix $B(x, y)$:**
-       - Constructed from `&MacTheme` surface tokens (`window_background` core $\leftrightarrow$ `box_background` / `control_background` rim) plus the radial subsurface `accent_col` glow emitted by active, latched, or lifted cushions onto the dish floor.
-     - **Layer 2: Composite 2D SDF, Smooth-Union Meniscus & Shifted Shadow Matrix $D(x, y)$:**
-       - At each pixel $\vec{p} = (x, y)$, evaluates `vitrea::deform_viscous_droplet_point` ($\det J = 1$), `vitrea::sdf_annular_rounded_sector_sample`, and `vitrea::sdf_smooth_union_with_grad` across all 8 cushions + polar morph droplet + central hub lens, yielding both the composite surface sample $\big(d(\vec{p}), \nabla d(\vec{p})\big)$ and the directional light-shifted shadow distance $d(\vec{p} - \vec{\Delta}_{\text{light}})$.
-     - **Layer 3: 2.5D Optical Lens & Dielectric Composition Matrix $G(x, y)$:**
-       - For pixels outside the cushions ($d(\vec{p}) > 0$): composites only the directional floor shadow $d(\vec{p} - \vec{\Delta}_{\text{light}})$ and active subsurface dish bloom over Layer 1.
-       - For pixels inside a cushion or hub ($d(\vec{p}) \le 0$): evaluates `vitrea::evaluate_glass_surface_sample` to obtain the 3D unit dome normal $\vec{N}(\vec{p})$, normalized dome elevation $z_{\text{norm}}(\vec{p}) \in [0, 1]$, directional key illumination $\max(\vec{N}\cdot\vec{L}_{\text{key}}, 0)$, fifth-power Schlick-Fresnel + Blinn-Phong rim reflectance $F(\vec{p})$, and chromatic Snellius sample points $[\vec{p}_R, \vec{p}_G, \vec{p}_B]$.
-       - Samples **Layer 1 Matrix $B(x, y)$** at $[\vec{p}_R, \vec{p}_G, \vec{p}_B]$, blends the refracted backdrop with the `&MacTheme` glass material tint (`control_background` / `window_background` / `accent_col`) weighted by `ThumbDialMetrics` opacity tokens, and adds the crisp `1.5 px` Schlick-Fresnel specular rim (`theme.specular_rim_top()`).
-   - **Phase C — Layer 4: Vector Foreground Iconography & Typography ($1.5\times$ 2.5D Parallax):**
-     - Renders resolution-independent Apple SF Symbols (`MacSFSymbol`), 3-tier captions/shortcut hints, the orange latch LED, and the semicircular `"↶ Undo"` / `"↷ Redo"` stadium arcs on top of Layer 3.
-
-### 4.5 Dual-Description Architecture: Generative Build Generalization Across Widget Shape Families vs. Independent Black-Box Physical Image Oracles (`REQ-016-08`)
-
-To prevent circular self-verification ("the butcher grading his own meat"), `SPEC-016` enforces **two orthogonal descriptions**:
-1. **Description I — The Generative Build Description (`vitrea` Shape-Family Generalization):** Defines how every widget group reduces to a 2D [`vitrea::SdfSample2d`] field $S(\vec{p}) = \big(d(\vec{p}), \nabla d(\vec{p})\big)$ and passes through the **exact same 5 shape-agnostic mathematical operators**.
-2. **Description II — The Independent Verification Description (Black-Box Physical & Image Oracles $O_1 \dots O_5$):** Evaluates the **rendered `2x` Retina pixels and black-box physical invariants** without calling the internal composition formulas under test.
-
-#### 4.5.1 Description I — Generative Build Generalization: Level 1 (Individual Shape Primitives) & Level 2 (Collective Group Container $\mathcal{C}_{\text{group}} = \{S_1 \dots S_N\}$)
-
-1. **Level 1 — Individual Widget / Shape-Family Generalization ($S_i(\vec{p})$):**
-   All widget families share 100% of their optical and kinematic operators in `vitrea` and differ **only** in their 2D SDF primitive $S_i(\vec{p}) = \big(d_i(\vec{p}), \nabla d_i(\vec{p})\big)$:
-
-| Shape Family | Target Widgets / Consumers | Shape-Specific 2D Primitive $S_i(\vec{p}) = (d_i, \nabla d_i)$ | Shared Shape-Agnostic Operators in `vitrea` (Identical for All 4 Families) |
+| Oracle ID | Collective Group Phenomenon Tested | Black-Box Pixel / Field Measurement on `2x` Retina Framebuffer | Pass Criterion |
 | :--- | :--- | :--- | :--- |
-| **Family A: Rounded Capsules & Morphing Pills** | `MacButtonCell`, `MacSegmentedControl`, `MacTabView`, `MacTableActionBar`, `MacToggle`, `MacPopUpButton`, `MacSearchField` | `vitrea::sdf_rounded_capsule_sample(p, center, half_extents, r)` | **Op 1 (Isochoric Deformation):** $\vec{p}' = \text{deform\_viscous\_droplet\_point}(\vec{p}, \vec{c}, \vec{v}, R_0, p_{\text{press}}, (\kappa_\parallel, \kappa_p))$ with $\det J = 1$<br/>**Op 2 ($C^1$ Smooth Union):** $S_\cup = \text{sdf\_smooth\_union\_with\_grad}(S_A, S_B, k_{\text{merge}})$<br/>**Op 3 (2D $\to$ 3D Dome Lift):** $\vec{N}(\vec{p}) = \text{dome\_normal\_3d\_from\_sdf}(S_\cup, w_{\text{bevel}})$<br/>**Op 4 (Chromatic Snellius Ray):** $[\vec{p}_R, \vec{p}_G, \vec{p}_B] = \text{refract\_chromatic\_rgb}(\vec{p}, \vec{N}, h_{\text{dome}}, \boldsymbol{\eta}_{\{R,G,B\}})$<br/>**Op 5 (Dielectric Rim & Surface Sample):** `evaluate_glass_surface_sample` $\to$ `(coverage, normal_3d, refracted_rgb_pts, fresnel_specular, dome_elevation, key_illumination)` |
-| **Family B: Polar Annular Pebbles & Curved Stadium Arcs** | `MacContextThumbDial` (8 cushions `N..NW`), `"↶ Undo"` & `"↷ Redo"` crown/skirt capsules | `vitrea::sdf_annular_rounded_sector_sample` & `vitrea::sdf_curved_stadium_arc_sample` | *Exact same 5 operators (`Op 1 .. Op 5`)* |
-| **Family C: Spherical & Cylindrical Lenses** | `MacFreeJoystickBowl` (3D crystal marble), `MacSlider` circular thumb, `MacEdgeThumbwheel` | Radial disc SDF $d(\vec{p}) = \|\vec{p} - \vec{c}\|_2 - R$ & cylindrical projection | *Exact same 5 operators (`Op 1 .. Op 5`)* |
-| **Family D: Arbitrary Closed 2D Bézier / Glyph Contours** | External vector/typography consumers (`/O`, `/a`, SVG icons) | `vitrea::sdf_closed_polyline_sample(p, &contour)` | *Exact same 5 operators (`Op 1 .. Op 5`)* |
-
-2. **Level 2 — Collective Group Container Behavior (`GlassEffectContainer` Ensemble $\mathcal{C}_{\text{group}} = \{S_1 \dots S_N\}$ Across Widget Groups `W1..W6`):**
-   A group of widgets is NEVER rendered as $N$ isolated drawings; the container couples its members across **three shared physical fields** before rasterization:
-   - **Coupling A — Shared Backdrop & Subsurface Emission Field $B_{\text{group}}(x, y)$:** Active or latched members inject their radial `accent_col` subsurface glow and shifted drop shadows into $B_{\text{group}}(x, y)$; neighboring passive members sample and refract that shared $B_{\text{group}}(x, y)$ field through their own curved bevels.
-   - **Coupling B — Shared Topological SDF & Continuous Normal Field $D_{\text{group}}(x, y) = \text{smin}_{i=1..N}(S_i, k_{\text{merge}})$:** Adjacent members within `meniscus_merge_k_pt` coalesce into a single $C^1$-continuous meniscus contour with a seamless 3D surface normal $\vec{N}_{\text{group}}(x, y)$.
-   - **Coupling C — Shared Group Kinematics, Exclusivity & Environmental Synchronization:**
-     - **Group 1 (`MacContextThumbDial` 8-Cushion Rosette):** Exclusive radio latching, coupled polar `DualSpringMorphBlob` (`lg_polar_lead`, `lg_polar_trail`) spanning between sectors during transitions, shared `pointer_pos` 3D point light illuminating all facing rims, and cross-neighbor subsurface blue refraction.
-     - **Group 2 (`MacEdgeThumbwheel` + `MacContextThumbDial` + `MacFreeJoystickBowl` Bimanual Triad):** Shared $1:1$ circular housing footprint, shared `TopCrown` / `BottomSkirt` Undo/Redo stadium capsules, and shared Apple calculated `.glass_accent(Color32)` vibrancy palette.
-     - **Group 3 (`MacSegmentedControl`, `MacTabView`, `MacTableActionBar` Morphing Bars):** 1D `DualSpringMorphBlob` (`step_dual_spring_morph_interval`) stretches the active selection droplet across intermediate segments during index transitions before coalescing onto the target segment.
-     - **Group 4 (`MacButtonCell`, `MacPopUpButton`, `MacToggle`, `MacSlider` Window Ensemble):** Synchronous window-active accent de-saturation (`MacTheme::effective_control_accent`, `BUG-SONOMA-01`) across all accented controls in the window when focus changes.
-     - **Group 5 (`MacInputCell`, `MacComboBox`, `MacSearchField` Form Group):** Coupled `Tab` / `Shift+Tab` focus transfer where the outgoing field's `CASpring` focus ring (`paint_animated_focus_ring`, `BUG-SONOMA-02`) contracts while the incoming field's focus ring expands.
-     - **Group 6 (`MacPopoverSurface`, `MacPopover`, `MacPanel`, `MacBox` Hierarchical Surface Stack):** The parent glass container registers its refracted surface color via `register_surface_rect_slot`, automatically adapting `label_on` (`plusDarker` / `plusLighter`) contrast for every child widget inside the group.
-
-#### 4.5.2 Description II — Independent Black-Box Physical & Image Verification Oracles: Solo Oracles ($O_{\text{solo},1..3}$) vs. Group Ensemble Oracles ($O_{\text{group},1..4}$)
-
-COTS verification tests in `tests/spec016_liquid_glass_optical_engine_tests.rs` and `vitrea/tests/` MUST NOT merely count triangle vertices or re-evaluate the internal blend equation. Every Liquid Glass deliverable is verified against **3 Solo Oracles** (verifying single-widget optics) and **4 Group Ensemble Oracles** (verifying emergent multi-widget behavior):
-
-| Oracle ID & Scope | Physical Phenomenon Under Test | Why Naive / Self-Grading Tests Fail | Independent Black-Box Verification Oracle (Measured on Rendered Pixels / Numerical Integrals) |
-| :--- | :--- | :--- | :--- |
-| **$O_{\text{solo},1}$ (Solo):**<br/>True Lens Backdrop Distortion & Chromatic Dispersion | A single curved glass lens bends underlying background features inward and splits R/G/B wavelengths at the bevel. | If a widget is painted with an opaque fill (`0.85 * white`), calling `refract_chromatic_rgb` internally has zero visible effect on the screen. | Measure on the evaluated surface that the refracted coordinates $[\vec{p}_R, \vec{p}_G, \vec{p}_B]$ satisfy $\|\vec{p}_B - \vec{p}\|_2 > \|\vec{p}_G - \vec{p}\|_2 > \|\vec{p}_R - \vec{p}\|_2 > 0$ on the curved bevel and zero shift ($\vec{p}_R = \vec{p}_G = \vec{p}_B = \vec{p}$) at the flat dome center ($N_z = 1$), and that changing the backdrop matrix $B(x,y)$ visibly alters the rendered interior pixels of the cushion. |
-| **$O_{\text{solo},2}$ (Solo):**<br/>4-Compass-Edge 3D Bevel Rim & Convex Dome Profile | Every closed 2D shape (capsule, annular cushion, or hollow glyph `/O`) curves into a 3D bevel along **all** boundaries (inner, outer, left, right). | 1D radial/vertical strips only shade top/bottom edges and leave radial or lateral sides flat. | Sample a 1D cross-section across all 4 boundary directions of the shape (`inner arc`, `outer arc`, `leading radial edge`, `trailing radial edge`): verify that $N_z \to 0$ and the fifth-power Schlick-Fresnel specular rim peaks within `[-2.5pt, 0pt]` of **every** boundary while the interior plateau approaches $N_z \to 1$ (and `top_luma > bottom_luma` on `paint_liquid_glass_capsule`). |
-| **$O_{\text{solo},3}$ (Solo):**<br/>Monte-Carlo / Pixel Area Conservation Under Viscous Stretch | An individual incompressible liquid droplet stretches along the velocity vector and compresses transversely without gaining or losing 2D area. | Checking $\lambda_\parallel \cdot \lambda_\perp = 1$ at a single point does not prove the whole deformed 2D shape preserves pixel area. | Numerically integrate (count interior pixels $d(\vec{p}') \le 0$ on a fine 2D sampling grid) the total 2D area $A_{\text{rest}}$ of a glass shape at rest and the total area $A_{\text{stretched}}$ under pure velocity stretch ($p_{\text{press}} = 0$): verify that the longitudinal span increases while $\|A_{\text{stretched}} - A_{\text{rest}}\| / A_{\text{rest}} \le 0.015$ ($\le 1.5\%$ discrete grid error). |
-| **$O_{\text{group},1}$ (Group Ensemble):**<br/>Cross-Neighbor Optical Symmetry Breaking on the `2x` Retina Framebuffer | An active glowing blue member (`NorthEast`, `1:1+⊙`) illuminates the shared dish matrix $B_{\text{group}}(x,y)$ and optically bleeds into the facing bevel of its passive neighbor (`North`, `1:1`). | If each member is shaded in isolation with hardcoded gray/white colors, passive member `North` remains bilaterally symmetric. | On the rendered `2x` Retina framebuffer (`RetinaCpuFramebuffer`), sample the **right bevel** of passive cushion `North` (facing active blue `NorthEast`) and the **left bevel** of passive cushion `North` (facing passive `NorthWest`). Verify that the rendered blue channel on the right bevel is measurably higher than on the left bevel (`blue_right > blue_left + 6`). |
-| **$O_{\text{group},2}$ (Group Ensemble):**<br/>Topological Meniscus Bridge Closure Between Neighbors | When two adjacent members in a group approach or swell together, they coalesce into a single connected liquid body across the gap. | Drawing two separate shapes leaves a dark background seam at the midpoint $\vec{p}_{\text{gap}}$. | At the geometric midpoint $\vec{p}_{\text{gap}}$ of the inter-cushion gap between two adjacent sectors, verify that at rest ($l_A = l_B = 0$) the point lies outside glass ($d(\vec{p}_{\text{gap}}) > 0$), and under simultaneous activation/lift ($l_A, l_B > 0$) the smooth-union contour closes across the gap ($d_\cup(\vec{p}_{\text{gap}}) < 0$) with a unit 3D dome normal $\|\vec{N}_{\text{group}}(\vec{p}_{\text{gap}})\|_2 = 1.0$. |
-| **$O_{\text{group},3}$ (Group Ensemble):**<br/>Inter-Widget `DualSpring` Transit Droplet Stretch Across Members | When active selection moves from member $A$ to member $B$, the selection droplet stretches wider than a single member mid-flight before coalescing onto $B$. | Teleporting selection state in 1 frame or moving a rigid pill of constant width exhibits zero liquid stretching. | During a selection transition from segment/sector $A$ to $B$, measure the active droplet span at mid-flight ($t \in [0.04\text{s}, 0.14\text{s}]$) and at rest ($t \ge 0.60\text{s}$): verify that $\text{span}_{\text{mid}} > \text{span}_{\text{rest}}$ during transit and settles back to $\text{span}_{\text{rest}}$ with `0` idle repaints. |
-| **$O_{\text{group},4}$ (Group Ensemble):**<br/>Synchronous Group Response to Shared Window, Light & Surface Environment | All members of a widget group respond synchronously to window deactivation (`BUG-SONOMA-01`), shared cursor point-light (`cursor_pos`), and parent surface vibrancy (`register_surface_rect_slot`). | Independent per-widget hardcoding leaves some controls saturated when unfocused or unreadable on dark/light glass surfaces. | Verify across the rendered widget group that: (a) deactivating window focus drops chroma saturation of all accented group members to neutral graphite ($S < 0.05$), (b) placing `cursor_pos` near the shared gap between two neighbors simultaneously increases rim luminance on **both** facing neighbor bevels, and (c) all child labels inside a floating glass surface maintain WCAG AA contrast ($\ge 4.5:1$). |
+| **$O_{\text{group},1}$** | **Seamless `smin` Liquid Bridge Closure Between Adjacent Group Members** | Evaluate two adjacent members $S_A, S_B$ in a `GlassEffectContainer` at rest ($l_A = l_B = 0$) and under simultaneous lift/morph bridging ($l_A, l_B > 0$ or active `DualSpringMorphBlob` spanning the gap midpoint $\vec{p}_{\text{gap}}$). | At rest, $D_{\text{group}}(\vec{p}_{\text{gap}}) > 0$ (open inter-member gap). Under bridging, $D_{\text{group}}(\vec{p}_{\text{gap}}) < 0$ with a unit 3D surface normal $\|\vec{N}_{\text{group}}(\vec{p}_{\text{gap}})\|_2 = 1.0$, and the internal facing Fresnel seam disappears along the bridge midline. |
+| **$O_{\text{group},2}$** | **Cross-Neighbor Sub-Surface Color Spill & Asymmetric Bevel Refraction** | On the rendered `2x` Retina framebuffer of `MacContextThumbDial` (`NorthEast` active blue `1:1+⊙`, `North` and `NorthWest` passive), sample the **right bevel** of passive cushion `North` (facing active `NorthEast`) and the **left bevel** of passive cushion `North` (facing passive `NorthWest`). | The right bevel of passive cushion `North` refracts the sub-surface blue spill from `A0` Matrix 1 and boosts it via CIE LCH caustic glare, yielding `blue_right > blue_left + 8` and `chroma_right > chroma_left + 4.0`. |
+| **$O_{\text{group},3}$** | **Inter-Group Boundary Separation, Z-Order Refraction & Continuous Canvas Grid (`Zero-Overdraw Guard`)** | Render the complete Bimanual Studio Triad (`MacEdgeThumbwheel` + `MacContextThumbDial` + `MacFreeJoystickBowl`) over the `State 1` vector canvas grid on a `2x` Retina framebuffer, plus a floating `MacPopoverSurface`. | 1. **Zero Opaque Pre-Overdraw:** Inspecting the emitted `egui::ClippedPrimitive` list for the dial/bowl/drum verifies **zero** opaque background `Circle` or `Mesh` primitives behind the `TextureHandle` quads.<br/>2. **Continuous Grid Through All Groups:** Canvas grid lines are measurably visible and Snellius-bent inside the glass cushions of `MacContextThumbDial` AND inside the crystal bowl/marble of `MacFreeJoystickBowl`.<br/>3. **Inter-Group Separation:** `MacEdgeThumbwheel` and `MacContextThumbDial` maintain separate closed Fresnel rims ($D_{\text{drum}} > 0$ and $D_{\text{dial}} > 0$ across the inter-group gap). |
+| **$O_{\text{group},4}$** | **Synchronous Multi-Group Window Focus, Light & Vibrancy Adaptation** | Toggle host window focus from `Active` to `Inactive` (`BUG-SONOMA-01`), sweep `cursor_pos` between two adjacent group members, and verify foreground labels inside a floating glass container. | 1. Window deactivation drops CIE Chroma $C$ of all accented controls across all groups to neutral graphite ($C < 5.0$).<br/>2. Placing `cursor_pos` in the gap between two neighbors simultaneously increases LCH rim lightness on **both** facing bevels.<br/>3. All child labels inside a floating glass surface maintain WCAG 2.1 AA contrast ($\ge 4.5:1$). |
 
 ---
 
-## 5. Detailed Normative Specification for Block B, Family 1 & 2 (`Fase 1 Clean-Room Rebuild` — `MacContextThumbDial`, `MacEdgeThumbwheel` & `MacFreeJoystickBowl`)
+## 8. Cross-Repository Ownership Contract (`vitrea` vs. `egui-macview`) & WebGL2 Mega-Atlas Session (`REQ-016-00`, `REQ-016-09`)
 
-### 5.1 Unified 3-Matrix `GlassEffectContainer` Architecture Across All 3 Triad Controls (`REQ-016-01.6`, `REQ-016-02.7`, `REQ-016-08`)
-
-1. **Zero Legacy `WHITE_UV` Triangle Strips for Glass Bodies:**
-   - Every glass component of the Bimanual Precision Triad (`MacContextThumbDial` 8-cushion rosette, `"↶ Undo"` & `"↷ Redo"` semicircular stadium capsules, `MacFreeJoystickBowl` 3D crystal marble, and `MacEdgeThumbwheel` cylindrical glass/metallic drum & end-cap rings) MUST be rendered via per-pixel `2x` Retina `egui::TextureHandle` matrices evaluated through `vitrea::evaluate_glass_surface_sample` and cached by 64-bit quantized state hash (`0.0 ms` CPU cost at rest).
-2. **`MacContextThumbDial` + `"↶ Undo"` & `"↷ Redo"` Stadium Capsules (`Stand 1` in Golden Reference Mockups `render1_dark_mode_stand1_v3` & `render3_light_mode_aqua_stand1_v2`):**
-   - **Matrix 1 ($B_{\text{group}}(x, y)$):** Recessed `MacTheme` dish floor (`window_background` $\leftrightarrow$ `box_background` / `control_background`) plus radial subsurface `accent_col` glow emitted by active/latched/hovered cushions.
-   - **Matrix 2 ($D_{\text{group}}(x, y)$):** Composite 2D SDF combining all 8 annular pebble cushions (`vitrea::sdf_annular_rounded_sector_sample` deformed by `vitrea::deform_viscous_droplet_point` $\det J = 1$), the coupled polar morph droplet (`lg_polar_lead`, `lg_polar_trail`), the central hub lens, AND the two `"↶ Undo"` / `"↷ Redo"` curved stadium capsules (`vitrea::sdf_curved_stadium_arc_sample`) via `vitrea::sdf_smooth_union_with_grad`, plus directional light-shifted drop shadow $d(\vec{p} - \vec{\Delta}_{\text{light}})$.
-   - **Matrix 3 ($G_{\text{group}}(x, y)$):** Per-pixel evaluation of `vitrea::evaluate_glass_surface_sample` sampling Matrix 1 at chromatic Snellius coordinates $[\vec{p}_R, \vec{p}_G, \vec{p}_B]$, producing identical 3D dome normals, refraction, and crisp `1.5 px` Schlick-Fresnel specular rims across the 8 cushions, the central hub, and the `"↶ Undo"` / `"↷ Redo"` crown/skirt arcs.
-3. **`MacEdgeThumbwheel` (`Component B` in Golden Reference Mockups `render1_dark_mode_stand1_v3` & `render3_light_mode_aqua_stand1_v2`):**
-   - **Per-Pixel 2.5D Cylindrical Drum & Illuminated End-Cap Matrix (`paint_raytraced_edge_thumbwheel_quad`):**
-     - Evaluated at `2x` Retina resolution into a cached `egui::TextureHandle` quad (`texture_id != TextureId::default()`) using `vitrea::sdf_rounded_capsule_sample` + `vitrea::evaluate_glass_surface_sample`:
-       - **Recessed Glass Trough Housing**: Outer capsuleSDF with `evaluate_glass_surface_sample` 3D bevel, top specular rim, and deep recessed inner slot groove shadow.
-       - **Cylindrical Drum Surface**: Evaluates true vertical cylindrical angle $\phi(y) = \arcsin(\text{clamp}((y - y_c)/R_{\text{cyl}}, -1, 1))$ and surface normal $N_y = \sin\phi, N_z = \cos\phi$, producing a pointer-steered upper-center Blinn-Phong specular reflection band, deep curvature falloff at $\phi \to \pm\frac{\pi}{2}$, lower-hemisphere bounce light, and foreshortened tactile ridges at phase angles $\phi_k$.
-       - **Illuminated 3D Sapphire/Accent End-Cap Rings**: Left and right drum end-caps evaluated via `vitrea::sdf_rounded_capsule_sample` + `vitrea::evaluate_glass_surface_sample` with saturated `.glass_accent(Color32)` subsurface core and bright vertical specular glint.
-4. **`MacFreeJoystickBowl` (`Stand 2` in Golden Reference Mockups `screen2_dark_mode_stand2_joystick_bowl` & `screen4_light_mode_aqua_stand2_joystick_bowl_v2`):**
-   - **Per-Pixel 3-Matrix Recessed Bowl, Refracted `Fine`/`Fast` Micro-Dot Rings & 3D Crystal Glass Marble (`paint_raytraced_joystick_bowl_quad`):**
-     - Evaluated at `2x` Retina resolution into a cached `egui::TextureHandle` quad (`texture_id != TextureId::default()`):
-       - **Matrix 1 ($B_{\text{bowl}}(x, y)$):** Includes the concave `MacTheme` dish floor, the `48` circular micro-dots of the concentric `Fine` ($0.45 R$), intermediate, and `Fast` ($0.82 R$) precision rings, the tether vector line from `hub_center` to `marble_center`, and the lower-right subsurface cyan/sapphire caustic floor glow cast by the marble.
-       - **Matrix 2 ($D_{\text{bowl}}(x, y)$):** Combines the `"↶ Undo"` / `"↷ Redo"` curved stadium capsules (`vitrea::sdf_curved_stadium_arc_sample`) and the viscously deformed 3D spherical crystal marble (`vitrea::deform_viscous_droplet_point` $\det J = 1$, radial sphere SDF $d(\vec{p}) = \|\vec{p}' - \vec{c}_{\text{marble}}\|_2 - R_{\text{puck}}$).
-       - **Matrix 3 ($G_{\text{bowl}}(x, y)$):** Evaluates `vitrea::evaluate_glass_surface_sample` on the crystal marble and Undo/Redo arcs, sampling **Matrix 1 ($B_{\text{bowl}}(x, y)$) at the chromatic Snellius coordinates $[\vec{p}_R, \vec{p}_G, \vec{p}_B]$** — so the underlying `Fine`/`Fast` micro-dots and tether line visibly bend and magnify through the curved 3D glass marble!
+1. **Strict Read-Only Consumer Rule for `vitrea` (`REQ-016-00.4`):**
+   - All universal SDF primitives (`vitrea::sdf`), `STEP 9` optical equations and CIE LCH conversions (`vitrea::optics`), and area-preserving droplet kinematics (`vitrea::kinematics`) reside in the standalone, UI-agnostic crate **`vitrea`** (`../vitrea`, depending exclusively on `glam` and `serde`).
+   - Sessions working in `egui-macview` MUST NEVER edit, overwrite, or commit files inside `../vitrea`. Whenever new or updated mathematical functions are required in `vitrea`, the `egui-macview` session MUST emit a self-contained handoff prompt for the dedicated `vitrea` session.
+2. **W3C DTCG Token Purity in `egui-macview` (`REQ-016-00.2`):**
+   - All colors in `egui-macview` originate exclusively from `&MacTheme`, and all optical/geometric ratios originate from `tokens/design_tokens.json` (`macview.metrics.control.liquid_glass` and `thumb_dial`).
+3. **Tool- & App-Agnostic Multi-Texture `MWGL` WebGL2 / WASM Session (`egui_macview::MacWebGlSession`, `REQ-016-09`):**
+   - `egui_macview::web_session::MacWebGlSession` captures **all** `egui::TextureId::Managed(0..N)` textures from `egui::TexturesDelta` (packing `Managed(0)` font/icon atlas alongside all `Managed(k)` ($k \ge 1$) 3-Matrix Liquid Glass `TextureHandle`s into a single RGBA8 WebGL2 Mega-Atlas and remapping mesh UVs).
 
 ---
 
-## 6. Detailed Normative Specification for Block B, Family 3 (`Iter 8: W3-V` & `Iter 9: W3-C` — Morphing Selection Bars: `MacSegmentedControl`, `MacTabView`, `MacTableActionBar`)
+## 9. Exact Agnostic `vitrea` API Contract for Parameterized Dielectric Optics & CIE LCH Colorimetry (`REQ-016-02.8`)
 
-1. **1. Base Appearance (*Self / Resting State*):**
-   - **Recessed Glass Track & 3D Liquid Selection Droplet (`paint_liquid_glass_capsule`):**
-     - The outer track renders a recessed glass groove (`bg_fill` + `separator` inner border).
-     - The active segment indicator renders as an elevated 3D Liquid Glass droplet (`paint_liquid_glass_capsule`) with a multi-band vertical dome gradient (`±4%` vertical bezel sheen + top specular rim + bottom ambient drop shadow).
-2. **2. Outward Emission (*Behavior Toward Environment*):**
-   - Emits `SegmentEvent`, active tab index, and registers the elevated pill surface so child text/icons automatically adapt their vibrancy contrast via `theme.label_on(pill_surface)`.
-3. **3. Inward Reception (*Response From Environment* — `DualSpringMorphBlob`):**
-   - When the active selection index changes from $i$ to $j$, the active capsule transitions via `step_dual_spring_morph_interval(ctx, id, target_min_x, target_max_x, theme)`:
-     - When moving right ($\Delta x > 0$), the right/leading edge uses the faster snappy spring ($T_{\text{lead}} = 0.5 T_0$) while the left/trailing edge uses the standard spring ($T_{\text{trail}} = T_0$).
-     - When moving left ($\Delta x < 0$), the left/leading edge uses $T_{\text{lead}}$ and the right/trailing edge uses $T_{\text{trail}}$.
-     - Consequently, during mid-flight transit ($t \in [0.02\text{s}, 0.12\text{s}]$), the selection capsule **stretches wider than its resting width** like a physical liquid droplet before coalescing smoothly onto the destination segment with `0` idle repaints once settled.
+To support the `A0 → A1 → B1` pipeline with 100% domain-agnostic purity (zero UI jargon, zero `_step9_` identifiers, and zero hardcoded magic numbers inside function bodies), `vitrea::optics` exposes the following normative types and pure functions:
+
+```rust
+/// Normative optical and colorimetric parameters for a 2.5D dielectric lens (`vitrea::optics`).
+/// All equation coefficients live in this struct so function bodies remain 100% free of magic numbers.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct LiquidGlassOpticalParams {
+    /// Refractive index of glass (`eta_glass = 1.48` / `1.50`).
+    pub ior_glass: f32,
+    /// Legacy 3D vector Snellius RGB refractive indices (`[1.474, 1.480, 1.488]`).
+    pub ior_dispersion_rgb: [f32; 3],
+    /// Dielectric normal-incidence reflectance (`F0 ≈ 0.0375`).
+    pub fresnel_f0: f32,
+    /// Bevel refraction width in points (`bevel_width_pt`, `w_bevel`).
+    pub bevel_width_pt: f32,
+    /// Optical dome thickness in points (`dome_thickness_pt`).
+    pub dome_thickness_pt: f32,
+    /// Backdrop vibrancy saturation multiplier (`1.50`).
+    pub vibrancy_chroma_boost: f32,
+    /// Smooth-minimum meniscus merge radius in points (`6.0pt`).
+    pub meniscus_merge_k_pt: f32,
+    /// Exponent `p` in the non-linear bevel incident angle profile `theta_I = arcsin(x_R^p)` (default `2.0`).
+    pub bevel_angle_exponent: f32,
+    /// Multiplier on `dome_thickness_pt` for lateral bevel refraction displacement (default `1.4`).
+    pub refraction_depth_factor: f32,
+    /// Relative per-channel chromatic wavelength ratios `[N_R, N_G, N_B]` (default `[0.98, 1.00, 1.02]`).
+    pub chromatic_channel_ratios: [f32; 3],
+    /// Chromatic dispersion amplification factor `D_disp` (default `7.0`).
+    pub dispersion_gain: f32,
+    /// Exponent mapping normalized inward bevel depth `d_in / bevel_width_pt` to `blur_mix_weight` (default `0.5`).
+    pub blur_transition_exponent: f32,
+    /// Fresnel decay range relative to `bevel_width_pt` (default `1.5`).
+    pub fresnel_range_ratio: f32,
+    /// Baseline rim hardness offset inside the Fresnel power curve (default `0.20`).
+    pub fresnel_hardness: f32,
+    /// Dielectric rim power-law falloff exponent (default `5.0`).
+    pub fresnel_exponent: f32,
+    /// Perceptual CIE L* lightness boost at full Fresnel reflectance (default `20.0`).
+    pub fresnel_lch_lightness_boost: f32,
+    /// Blend gain for the CIE LCH Fresnel highlight (default `0.70`).
+    pub fresnel_mix_gain: f32,
+    /// Primary directional light azimuth in radians (default `-FRAC_PI_4`).
+    pub glare_angle_rad: f32,
+    /// Primary angular glare lobe amplitude (default `1.2`).
+    pub glare_lobe_gain: f32,
+    /// Opposite farside caustic crescent amplitude ratio relative to the primary lobe (default `0.80`).
+    pub glare_opposite_lobe_ratio: f32,
+    /// Angular concentration parameter controlling glare lobe sharpness (default `0.50`).
+    pub glare_convergence: f32,
+    /// Perceptual CIE L* lightness boost for anisotropic glare and opposite caustic crescent (default `150.0`).
+    pub glare_lch_lightness_boost: f32,
+    /// Perceptual CIE C* chroma boost for saturated caustic rim glow (default `30.0`).
+    pub glare_lch_chroma_boost: f32,
+    /// Scaling factor applied to `tint_rgba[3]` when mixing material tint over the refracted backdrop (default `0.80`).
+    pub base_tint_mix_scale: f32,
+    /// Exponential SDF shadow decay scale length in points (default `12.5`).
+    pub shadow_decay_length_pt: f32,
+    /// Peak exponential SDF shadow opacity multiplier (default `0.60`).
+    pub shadow_max_opacity: f32,
+}
+
+/// Evaluates the non-linear Snellius bevel edge refraction factor
+/// `f_edge = max(-tan(theta_T - theta_I), 0.0)` and incident angle `theta_I = arcsin(x_R^p)`
+/// for `d_in = max(-distance, 0.0) < params.bevel_width_pt` and `(0.0, 0.0)` on the interior plateau.
+pub fn snell_bevel_edge_factor(distance: f32, params: &LiquidGlassOpticalParams) -> (f32, f32);
+
+/// Evaluates the wavelength-dispersed 2D background sample coordinates `[p_R, p_G, p_B]`,
+/// the edge refraction factor `f_edge`, and the sharp-to-blur interpolation weight `blur_mix_weight in 0.0..=1.0`.
+pub fn refract_bevel_chromatic_rgb(
+    pt: Vec2,
+    sample: SdfSample2d,
+    params: &LiquidGlassOpticalParams,
+) -> ([Vec2; 3], f32, f32);
+
+/// Evaluates the power-law Fresnel rim factor `f_fresnel` and double-frequency `sin(2*theta)`
+/// bipolar anisotropic glare + opposite-side caustic crescent factor `f_glare`.
+pub fn anisotropic_bipolar_rim_glare(
+    sample: SdfSample2d,
+    params: &LiquidGlassOpticalParams,
+    light_angle_override: Option<f32>,
+) -> (f32, f32);
+
+/// Evaluates the exponential SDF shadow attenuation `exp(-|shifted_distance| / l_decay) * max_opacity * intensity_scale`.
+pub fn exponential_sdf_attenuation(
+    shifted_distance: f32,
+    params: &LiquidGlassOpticalParams,
+    intensity_scale: f32,
+) -> f32;
+
+/// Converts sRGB `[r, g, b]` in `0.0..=1.0` to CIE D65 LCH `[L, C, H_deg]`
+/// (`L in 0.0..=100.0`, `C >= 0.0`, `H_deg in 0.0..360.0`).
+pub fn srgb_to_cie_lch(rgb: [f32; 3]) -> [f32; 3];
+
+/// Converts CIE D65 LCH `[L, C, H_deg]` back to clamped sRGB `[r, g, b]` in `0.0..=1.0`.
+pub fn cie_lch_to_srgb(lch: [f32; 3]) -> [f32; 3];
+
+/// Pure, parameter-driven CIE LCH dielectric pixel compositor:
+/// 1. Interpolates `sharp_rgb` and `blur_rgb` by `sample.blur_mix_weight`,
+/// 2. Mixes `tint_rgba` weighted by `tint_rgba[3] * params.base_tint_mix_scale`,
+/// 3. Boosts CIE LCH Lightness by `params.fresnel_lch_lightness_boost` at the Fresnel rim,
+/// 4. Boosts CIE LCH Lightness by `params.glare_lch_lightness_boost` and Chroma by `params.glare_lch_chroma_boost`
+///    for both the primary glare lobe and the opposite-side caustic crescent.
+pub fn compose_dielectric_lch_pixel(
+    sharp_rgb: [f32; 3],
+    blur_rgb: [f32; 3],
+    tint_rgba: [f32; 4],
+    sample: &GlassSurfaceSample,
+    params: &LiquidGlassOpticalParams,
+    fresnel_gain: f32,
+    glare_gain: f32,
+) -> [f32; 4];
+```
 
 ---
 
-## 7. Detailed Normative Specification for Block B, Family 4 (`Iter 10: W4-V` & `Iter 11: W4-C` — Action & Value Primitives + `BUG-SONOMA-01` & `BUG-SONOMA-03`)
+## 10. `[ARCHIVED]` Historical Architectural Rationale (Superseded Approaches)
 
-1. **1. Base Appearance (*Self / Resting State*) & `BUG-SONOMA-03` Fix:**
-   - **`paint_liquid_glass_capsule` (`±4%` Vertical Dome Bezel Sheen + Top Specular Rim):**
-     - `MacButtonCell`, `MacPopUpButton` (bezel & accent badge), and `MacToggle` render with a genuine 3D convex bezel sheen (`paint_liquid_glass_capsule`) rather than a single flat solid `painter.rect_filled` call (`BUG-SONOMA-03`), while strictly preserving `LayoutPolicy::ExactAppleNib` frame coordinates (`<= 0.5pt` invariant, `REQ-016-07`).
-     - `MacSlider` renders its circular or pill thumb as a 3D convex Liquid Glass droplet with top specular rim, ambient drop shadow, and `CASpring` press scale.
-2. **2. Outward Emission (*Behavior Toward Environment*):**
-   - Emits value mutations, click/toggle responses, and adaptive `MacBackgroundStyle` contrast for inner labels and chevrons.
-3. **3. Inward Reception (*Response From Environment*) & `BUG-SONOMA-01` Fix (`effective_control_accent`):**
-   - **Window-Active Accent De-saturation (`BUG-SONOMA-01`, `MacTheme::effective_control_accent`):**
-     - When the host window is active (`is_window_active(ui.ctx()) == true`), accented controls (`MacButtonCell::selected(true)`, `MacCheckbox`, `MacRadioButton`, `MacSlider` active track, `MacPopUpButton::accent_badge(true)`) render with full `theme.control_accent()` / `theme.selected_control()`.
-     - When the host window becomes inactive/unfocused (`is_window_active(ui.ctx()) == false`), `theme.effective_control_accent(ui.ctx())` automatically de-saturates to neutral graphite (`theme.selected_control_inactive()`), matching native macOS Sonoma / Tahoe window deactivation semantics.
-
-### 7.1 Per-Pixel 2.5D Capsule Evaluation (`paint_liquid_glass_capsule` via `vitrea::sdf_rounded_capsule_sample` & `vitrea::evaluate_glass_surface_sample`)
-
-- Every 3D capsule / pill primitive (`MacSegmentedControl`, `MacTabView`, `MacTableActionBar`, `MacButtonCell`, `MacPopUpButton`, `MacToggle`, `MacSlider`, `MacInputCell::liquid_glass_pill(true)`, `MacPopoverSurface`, `MacPopover`) MUST evaluate `vitrea::sdf_rounded_capsule_sample` and `vitrea::evaluate_glass_surface_sample` along its vertical dome profile (`paint_liquid_glass_capsule`) so that its top-to-bottom convex dome normal, directional key illumination, and fifth-power Schlick-Fresnel specular rim are driven directly by `vitrea` optical mathematics.
-
----
-
-## 8. Detailed Normative Specification for Block B, Family 5 (`Iter 12: W5-V` & `Iter 13: W5-C` — Text, Inspector & Form Controls + `BUG-SONOMA-02`)
-
-1. **1. Base Appearance (*Self / Resting State*):**
-   - `MacInputCell` preserves the exact `2.0pt` `-[NSTextFieldCell drawingRectForBounds:]` horizontal inset and `0%` text truncation guarantee across all NIB dimensions (`REQ-013-08.2`), with a `1.0pt` top inner shadow groove (`input_top_inset_shadow`).
-   - Supports `.liquid_glass_pill(true)` (matching the glowing 3D blue `X: 350.0` active row in the `SelectionInfo` inspector panel of the golden reference mockups): when enabled or focused with `.liquid_glass_pill(true)`, renders a pill-rounded (`corner_radius = height * 0.5`) 3D Liquid Glass capsule (`paint_liquid_glass_capsule`) filled with `theme.effective_control_accent(ui.ctx())` and adaptive `MacBackgroundStyle::from_color` foreground text contrast.
-2. **2. Outward Emission (*Behavior Toward Environment*):**
-   - Emits transactional text/numeric mutations and participates in cyclic `Tab` / `Shift+Tab` focus transfer.
-3. **3. Inward Reception (*Response From Environment*) & `BUG-SONOMA-02` Fix (`paint_animated_focus_ring`):**
-   - **Spring-Animated Focus Ring Halo (`BUG-SONOMA-02`):**
-     - Instead of popping in instantaneously in 1 frame, `MacTheme::paint_animated_focus_ring(ui.ctx(), id, &painter, rect, corner_radius, is_focused)` animates the focus ring expansion and opacity via a fast `CASpring` ($T = 0.5 T_{\text{snappy}} \approx 0.12\text{s}$), contracting smoothly when focus is surrendered and requesting `0` repaints at rest.
-
----
-
-## 9. Detailed Normative Specification for Block B, Family 6 (`Iter 14: W6-V` & `Iter 15: W6-C` — Floating Surfaces, Navigation & Media: `MacPopoverSurface`, `MacPopover`, `MacPanel`, `MacFloatingInfoBox`)
-
-1. **1. Base Appearance (*Self / Resting State*):**
-   - Floating glass surfaces (`MacPopoverSurface`, `MacPopover`, `MacPanel`, `MacFloatingInfoBox`) render a 3D Liquid Glass material layer (`paint_liquid_glass_capsule`) combining `popover_background` / `hud_background`, subtle top-to-bottom convex glass sheen evaluated via `vitrea::evaluate_glass_surface_sample`, and a crisp `1.0pt` `specular_rim_top` inner highlight along the top edge.
-2. **2. Outward Emission (*Behavior Toward Environment*):**
-   - Registers its surface vibrancy slot via `theme.register_surface_rect_slot(ui.ctx(), rect, bg_fill)` so all nested controls inside the popover/panel automatically adapt their foreground contrast and vibrancy.
-3. **3. Inward Reception (*Response From Environment*):**
-   - Samples and refracts any registered background canvas or underlying window surface through the Liquid Glass optical pipeline (`build_liquid_glass_backdrop_image`, Dual-Kawase blur + $1.5\times$ saturation boost + Snellius perimeter refraction).
-   - In `macview_gallery` State 1 (`render_state1_hud_and_popover`), the Compact HUD (`MacFloatingInfoBox`) and Spring Inspector (`MacPopover`) use `MacInputCell::liquid_glass_pill(true)` on the active focused coordinate row (`W:` / `H:` / `R:`) so the floating inspector exhibits the glowing 3D blue Liquid Glass active pill from the Golden Reference Mockups.
-
-
-
-### 9.1 Tool- & App-Agnostic Multi-Texture `MWGL` WebGL2 / WASM Session (`egui_macview::web_session::MacWebGlSession`, `REQ-016-09`)
-
-1. **Public App-Agnostic WebGL2 Session Engine (`src/web_session.rs`):**
-   - `egui_macview::web_session::MacWebGlSession` (re-exported at the `egui_macview` root) MUST provide a 100% tool- and app-agnostic headless WebGL2/WASM session serializer for any `egui-macview` host application (`macview_gallery`, `Patrix`, `Glifo`) via `encode_frame(&mut self, width: f32, height: f32, dpr: f32, batch: &str, render_ui: impl FnMut(&mut egui::Ui)) -> Vec<u8>` and `encode_atlas(&self) -> Vec<u8>`.
-2. **Multi-Texture `TextureId::Managed(0..N)` Mega-Atlas Packing (`REQ-016-09.2`):**
-   - Unlike legacy font-only serializers that dropped every mesh with `m.texture_id != egui::TextureId::Managed(0)`, `MacWebGlSession` MUST capture **all** `TextureId::Managed(id)` textures from `egui::TexturesDelta` (including `Managed(0)` font/symbol atlas AND all `Managed(k)` ($k \ge 1$) 3-Matrix Liquid Glass `TextureHandle`s from `MacContextThumbDial`, `"↶ Undo"` / `"↷ Redo"` stadium capsules, `MacEdgeThumbwheel`, and `MacFreeJoystickBowl`).
-   - All active `TextureId::Managed(id)` textures MUST be packed into a single combined RGBA8 WebGL2 Mega-Atlas (`encode_atlas()`), and every tessellated `egui::epaint::Mesh` MUST have its vertex `(u, v)` coordinates transparently remapped into its assigned sub-rectangle in the Mega-Atlas before emitting the `MWGL` binary frame.
-
----
-
-## 10. `crates.io` & `docs.rs` Publication Readiness for `vitrea` (`REQ-016-00.3`)
-
-1. **`Cargo.toml` Package Metadata & Tarball Hygiene:**
-   - `vitrea/Cargo.toml` SHALL include `readme = "README.md"`, `repository`, `documentation = "https://docs.rs/vitrea"`, `rust-version = "1.80"`, `exclude = ["tests/**"]` (excluding internal COTS test suites from the published `.crate` tarball), `[package.metadata.docs.rs]`, `[lints.rustdoc] broken_intra_doc_links = "deny"`, up to 5 `keywords`, and valid `crates.io` `categories` slugs (`["graphics", "mathematics", "simulation"]`).
-2. **Root Documentation & Dual Licensing:**
-   - `vitrea/` SHALL include a comprehensive `README.md`, `LICENSE-MIT`, and `LICENSE-APACHE` at the crate root.
-3. **Executable Rustdoc Examples & Clean Mathematical Typography:**
-   - `src/lib.rs`, `src/sdf.rs`, `src/optics.rs`, and `src/kinematics.rs` SHALL include executable rustdoc examples (` ``` `) verified by `cargo test --doc` and use clean Unicode/Markdown mathematical notation without raw unrendered `$` LaTeX delimiters.
-4. **View-Layer Closed-Polyline Adapter in `egui-macview`:**
-   - `egui_macview::controls::liquid_glass` SHALL expose `pub fn sdf_closed_polyline(pt: egui::Pos2, contour: &[egui::Pos2]) -> vitrea::SdfSample2d` (re-exported at the `egui_macview` root) and remove any stale doc-comment references to `kurbo::BezPath` or `lyon_tessellation`.
+> **[ARCHIVED — PROCESS HISTORY ONLY, DO NOT IMPLEMENT]**
+> The following notes preserve the engineering rationale for why earlier rendering approaches in `v0.9.0` development were retired in favor of the `A0 → A1 → A2 → B1 → B2` 3-Matrix `STEP 9` pipeline:
+> 1. **Why 3D Voxel Grids ($X \times Y \times Z$) Were Rejected:** Every Apple Liquid Glass widget is a 2.5D heightfield with a single front surface elevation $z(x,y)$ and normal $\vec{N}(x,y)$ per 2D screen coordinate. Voxel grids add $O(N^3)$ cost with zero visual gain.
+> 2. **Why Coarse Gouraud Triangle Meshes (`$10 \times 20$ 2D-grid cushion meshes`, `16-band cosine drum strips`, `5-layer WHITE_UV capsules`) Were Retired:** Linear vertex-color interpolation across triangles smears 5th-power Fresnel curves $(1 + d/r_F)^5$, double-frequency $\sin(2\theta)$ opposite caustic crescents, and per-pixel R/G/B Snellius dispersion into flat plastic slabs, and caused multi-layer opaque overdraw when stacked beneath `TextureHandle` quads.
+> 3. **Why Triangle-Vertex-Count Tests Were Retired:** Early tests asserted `mesh.vertices.len() > 200` on `WHITE_UV` meshes, inadvertently forcing production code to keep rendering hidden opaque triangle meshes underneath the `2x` Retina optical textures. All verification is now performed exclusively through the `A2` and `B2` Black-Box Framebuffer Oracles and the 5-Point Visual AI Audit.

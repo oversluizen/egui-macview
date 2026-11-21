@@ -9,7 +9,7 @@
 use crate::controls::context_thumb_dial::icons::MacTapticEvent;
 use crate::controls::context_thumb_dial::paint::{paint_undo_redo_crescent_arcs, UndoRedoPaintStyle};
 use crate::controls::context_thumb_dial::render::{
-    allocate_docked_thumb_rect, compute_undo_redo_hit_rects, hit_test_undo_redo_arcs, polar_pos, step_joystick_bowl_physics,
+    allocate_docked_thumb_rect, compute_undo_redo_hit_rects, hit_test_undo_redo_arcs, step_joystick_bowl_physics,
 };
 use crate::controls::{MacThumbArcPlacement, MacThumbDockZone};
 use crate::theme::{MacAppearance, MacTheme};
@@ -18,8 +18,11 @@ use egui::{Align2, Color32, ColorImage, FontId, Id, Painter, Pos2, Rect, Respons
 use std::hash::{Hash, Hasher};
 
 pub(crate) struct MarblePaintSpec {
+    pub(crate) id_source: Id,
     pub(crate) hub_center: Pos2,
     pub(crate) marble_center: Pos2,
+    pub(crate) r_outer: f32,
+    pub(crate) r_bowl: f32,
     pub(crate) puck_r: f32,
     pub(crate) scale: f32,
     pub(crate) accent_col: Color32,
@@ -35,30 +38,41 @@ fn eval_bowl_backdrop_at(
     p: vitrea::GlamVec2,
     (hub_c, marble_c, r_bowl, puck_r): (vitrea::GlamVec2, vitrea::GlamVec2, f32, f32),
     (bowl_core, bowl_rim, accent_rgb, dot_rgb): ([f32; 3], [f32; 3], [f32; 3], [f32; 3]),
+    blur_scale: f32,
     m: &ThumbDialMetrics,
 ) -> [f32; 3] {
     let d_vec = p - hub_c;
     let r = d_vec.length();
     let r_norm = (r / r_bowl.max(1.0)).clamp(0.0, 1.0);
-    let mut rgb = [0, 1, 2].map(|ch| bowl_core[ch] + (bowl_rim[ch] - bowl_core[ch]) * r_norm);
+    let well_depth = m.hover_fill_opacity.points() + m.hover_fill_opacity.points() * r_norm;
+    let mut rgb = [0, 1, 2].map(|ch| {
+        let base = bowl_core[ch] + (bowl_rim[ch] - bowl_core[ch]) * r_norm;
+        base * (1.0 - well_depth) + dot_rgb[ch] * well_depth
+    });
+    let grid_step = (puck_r * 0.5).max(2.0);
+    let grid_d = (d_vec.x - (d_vec.x / grid_step).round() * grid_step)
+        .abs()
+        .min((d_vec.y - (d_vec.y / grid_step).round() * grid_step).abs());
     let fine_r = r_bowl * m.joystick_fine_ratio.points();
     let fast_r = r_bowl * m.joystick_fast_ratio.points();
     let slow_r = (fine_r + fast_r) * 0.5;
     let ring_d = (r - fine_r).abs().min((r - slow_r).abs()).min((r - fast_r).abs());
-    let bw = m.border_stroke_width.points() * 2.0;
+    let bw = (m.active_stroke_width.points() * 2.0 * blur_scale).max(1.0);
+    let grid_t = (1.0 - (grid_d / bw).clamp(0.0, 1.0)).powi(2) * ((m.active_fill_opacity.points() + m.hover_fill_opacity.points()) / blur_scale.max(1.0));
+    rgb = [0, 1, 2].map(|ch| rgb[ch] * (1.0 - grid_t) + dot_rgb[ch] * grid_t);
     if ring_d <= bw * 2.0 {
         let ang_deg = d_vec.y.atan2(d_vec.x) * m.half_circle_deg.points() / std::f32::consts::PI;
         let step_d = (m.detent_step_deg.points() * 0.5).max(1.0);
         let rem = (ang_deg.rem_euclid(step_d) - step_d * 0.5).abs();
         let arc_d = rem * (std::f32::consts::PI / m.half_circle_deg.points()) * r;
-        let dot_w = (1.0 - (ring_d * ring_d + arc_d * arc_d).sqrt() / (bw * 2.0)).clamp(0.0, 1.0) * m.active_fill_opacity.points();
+        let dot_w = (1.0 - (ring_d * ring_d + arc_d * arc_d).sqrt() / (bw * 2.0)).clamp(0.0, 1.0) * (m.active_fill_opacity.points() * 2.0);
         rgb = [0, 1, 2].map(|ch| rgb[ch] * (1.0 - dot_w) + dot_rgb[ch] * dot_w);
     }
     let seg = marble_c - hub_c;
     let seg_len_sq = seg.length_squared();
     let t_seg = if seg_len_sq > 0.0 { ((p - hub_c).dot(seg) / seg_len_sq).clamp(0.0, 1.0) } else { 0.0 };
     let d_tether = (p - (hub_c + seg * t_seg)).length();
-    let tether_w = (1.0 - d_tether / (m.active_stroke_width.points() * 2.0).max(1.0)).clamp(0.0, 1.0) * m.glass_fill_alpha.points();
+    let tether_w = (1.0 - d_tether / (m.active_stroke_width.points() * 2.0 * blur_scale).max(1.0)).clamp(0.0, 1.0) * m.glass_fill_alpha.points();
     let caus_off = vitrea::GlamVec2::splat(m.latch_dot_radius.points() * 2.0);
     let caus_t = (1.0 - (p - (marble_c + caus_off)).length() / (puck_r * 2.0).max(1.0)).clamp(0.0, 1.0);
     let glow_w = (tether_w + caus_t * caus_t * m.active_fill_opacity.points()).clamp(0.0, 1.0);
@@ -67,7 +81,7 @@ fn eval_bowl_backdrop_at(
 
 fn synthesize_marble_matrix_rgba(
     tex_dim: usize,
-    (hub_c, marble_c, r_bowl, puck_r, scale): (vitrea::GlamVec2, vitrea::GlamVec2, f32, f32, f32),
+    (hub_c, marble_c, r_outer, r_bowl, puck_r, scale): (vitrea::GlamVec2, vitrea::GlamVec2, f32, f32, f32, f32),
     accent_col: Color32,
     theme: &MacTheme,
     m: &ThumbDialMetrics,
@@ -79,7 +93,6 @@ fn synthesize_marble_matrix_rgba(
     let bowl_rim = color_to_rgb_norm(if is_light { theme.box_background() } else { theme.control_background() });
     let accent_rgb = color_to_rgb_norm(accent_col);
     let dot_rgb = color_to_rgb_norm(theme.secondary_label_on(bowl_core_col));
-    let spec_rgb = color_to_rgb_norm(theme.specular_rim_top());
     let shadow_rgb = color_to_rgb_norm(theme.drop_shadow());
 
     let params = vitrea::LiquidGlassOpticalParams {
@@ -90,14 +103,18 @@ fn synthesize_marble_matrix_rgba(
         dome_thickness_pt: puck_r * 0.5,
         vibrancy_chroma_boost: m.vibrancy_chroma_boost.points(),
         meniscus_merge_k_pt: m.meniscus_merge_k_pt.points() * scale,
+        shadow_decay_length_pt: (puck_r * 0.5).max(2.0),
+        fresnel_range_ratio: 0.5,
+        fresnel_hardness: 0.0,
+        ..Default::default()
     };
     let stretch_gains = (m.viscous_stretch_gain.points(), m.viscous_press_gain.points());
     let vel_off = marble_c - hub_c;
     let press_amt = (vel_off.length() / (puck_r * 2.0).max(1.0)).clamp(0.0, 1.0);
     let dot_px = m.latch_dot_radius.points() * scale;
-    let sh_off = vitrea::GlamVec2::new(dot_px, dot_px * 2.0);
+    let sh_off = vitrea::GlamVec2::new(-dot_px, dot_px * 2.0);
     let cursor_pt = Some(marble_c - vitrea::GlamVec2::splat(dot_px * 2.0));
-    let (fill_a, act_a, hov_a, spec_a) = (m.glass_fill_alpha.points(), m.active_fill_opacity.points(), m.hover_fill_opacity.points(), m.glass_specular_alpha.points());
+    let (fill_a, act_a, hov_a) = (m.glass_fill_alpha.points(), m.active_fill_opacity.points(), m.hover_fill_opacity.points());
     let max_u8 = f32::from(u8::MAX);
     let b_geom = (hub_c, marble_c, r_bowl, puck_r);
     let b_cols = (bowl_core, bowl_rim, accent_rgb, dot_rgb);
@@ -105,50 +122,75 @@ fn synthesize_marble_matrix_rgba(
     for y in 0..tex_dim {
         for x in 0..tex_dim {
             let p = vitrea::GlamVec2::new(x as f32 + 0.5, y as f32 + 0.5);
+            let r_hub_d = (p - hub_c).length();
+            if r_hub_d > r_outer + puck_r {
+                continue;
+            }
             let p_def = vitrea::deform_viscous_droplet_point(p, marble_c, -vel_off, puck_r * 2.0, press_amt * 0.5, stretch_gains);
             let d_vec = p_def - marble_c;
             let dist = d_vec.length();
             let grad = if dist > 0.0 { d_vec / dist } else { vitrea::GlamVec2::X };
             let s_marble = vitrea::SdfSample2d { distance: dist - puck_r, gradient: grad };
-            let sh_t = (1.0 - (((p_def - sh_off - marble_c).length() - puck_r).max(0.0) / (dot_px * 2.0).max(1.0)).clamp(0.0, 1.0)).powi(2);
-            let caus_t = (1.0 - (((p_def - vitrea::GlamVec2::splat(dot_px * 2.0) - marble_c).length() - puck_r).max(0.0) / (dot_px * 2.0).max(1.0)).clamp(0.0, 1.0)).powi(2);
-            let sh_a = (sh_t * hov_a + caus_t * act_a).clamp(0.0, fill_a);
-            let sh_c = [0, 1, 2].map(|ch| (shadow_rgb[ch] * sh_t + accent_rgb[ch] * caus_t) / (sh_t + caus_t).max(params.fresnel_f0));
+            let d_sh = ((p_def - sh_off - marble_c).length() - puck_r).max(0.0);
+            let sh_win = (1.0 - (d_sh / puck_r.max(1.0)).clamp(0.0, 1.0)).powi(2);
+            let exp_sh = vitrea::exponential_sdf_attenuation(d_sh, &params, act_a) * sh_win;
+            let caus_d = ((p_def - vitrea::GlamVec2::splat(dot_px * 2.0) - marble_c).length() - puck_r).max(0.0);
+            let caus_t = (1.0 - (caus_d / (dot_px * 2.0).max(1.0)).clamp(0.0, 1.0)).powi(2) * act_a;
+
+            let dish_here = eval_bowl_backdrop_at(p, b_geom, b_cols, 1.0, m);
+            let mut floor_rgb = [0, 1, 2].map(|ch| dish_here[ch] * (1.0 - exp_sh) + shadow_rgb[ch] * exp_sh);
+            if caus_t > 0.0 {
+                floor_rgb = [0, 1, 2].map(|ch| (floor_rgb[ch] * (1.0 - caus_t) + accent_rgb[ch] * caus_t).clamp(0.0, 1.0));
+            }
+            let outer_cov = ((1.0 - (r_hub_d - r_outer)) * 0.5).clamp(0.0, 1.0);
+            let floor_a = if r_hub_d <= r_outer + 1.0 {
+                let rim_t = ((r_hub_d - r_bowl).max(0.0) / (r_outer - r_bowl).max(1.0)).clamp(0.0, 1.0);
+                ((act_a + hov_a + rim_t * act_a + exp_sh + caus_t) * outer_cov).clamp(0.0, fill_a)
+            } else {
+                let d_ext = ((p - sh_off - hub_c).length() - r_outer).max(0.0);
+                let ext_win = (1.0 - (d_ext / puck_r.max(1.0)).clamp(0.0, 1.0)).powi(2);
+                (vitrea::exponential_sdf_attenuation(d_ext, &params, hov_a) * ext_win).clamp(0.0, hov_a)
+            };
 
             let surf = vitrea::evaluate_glass_surface_sample(p, s_marble, &params, cursor_pt, puck_r * 2.0);
             let idx = (y * tex_dim + x) * 4;
             if surf.coverage <= 0.0 {
-                if sh_a > 0.0 {
+                if floor_a > 0.0 {
                     flat[idx..idx + 4].copy_from_slice(&[
-                        (sh_c[0] * max_u8).round() as u8,
-                        (sh_c[1] * max_u8).round() as u8,
-                        (sh_c[2] * max_u8).round() as u8,
-                        (sh_a * max_u8).round() as u8,
+                        (floor_rgb[0] * max_u8).round() as u8,
+                        (floor_rgb[1] * max_u8).round() as u8,
+                        (floor_rgb[2] * max_u8).round() as u8,
+                        (floor_a * max_u8).round() as u8,
                     ]);
                 }
                 continue;
             }
-            let [p_r, p_g, p_b] = surf.refracted_rgb_pts;
-            let refr_rgb = [
-                eval_bowl_backdrop_at(p_r, b_geom, b_cols, m)[0],
-                eval_bowl_backdrop_at(p_g, b_geom, b_cols, m)[1],
-                eval_bowl_backdrop_at(p_b, b_geom, b_cols, m)[2],
+            let ([p_r, p_g, p_b], _, _) = vitrea::refract_bevel_chromatic_rgb(p, s_marble, &params);
+            let sharp_rgb = [
+                eval_bowl_backdrop_at(p_r, b_geom, b_cols, 1.0, m)[0],
+                eval_bowl_backdrop_at(p_g, b_geom, b_cols, 1.0, m)[1],
+                eval_bowl_backdrop_at(p_b, b_geom, b_cols, 1.0, m)[2],
             ];
-            let caustic_in = ((surf.normal_3d.x + surf.normal_3d.y) * 0.5).clamp(0.0, 1.0) * (1.0 - surf.dome_elevation);
-            let hi_glint = surf.key_illumination * (if is_light { hov_a * 0.5 } else { act_a }) + surf.fresnel_specular * spec_a;
-            let rim_fresnel = (1.0 - surf.dome_elevation).clamp(0.0, 1.0);
-            let tint_w = if is_light {
-                (hov_a + rim_fresnel * act_a + caustic_in * act_a).clamp(0.0, fill_a)
-            } else {
-                (act_a + rim_fresnel * hov_a + caustic_in * act_a).clamp(0.0, fill_a)
-            };
+            let blur_rgb = [
+                eval_bowl_backdrop_at(p_r, b_geom, b_cols, 2.0, m)[0],
+                eval_bowl_backdrop_at(p_g, b_geom, b_cols, 2.0, m)[1],
+                eval_bowl_backdrop_at(p_b, b_geom, b_cols, 2.0, m)[2],
+            ];
+            let lch_rgba = vitrea::compose_dielectric_lch_pixel(
+                sharp_rgb,
+                blur_rgb,
+                [accent_rgb[0], accent_rgb[1], accent_rgb[2], act_a],
+                &surf,
+                &params,
+                1.0,
+                fill_a,
+            );
+            let spec_pin = (surf.key_illumination.powi(2) * surf.dome_elevation * hov_a).clamp(0.0, 1.0);
             let g_rgb = [0, 1, 2].map(|ch| {
-                let tint_c = (refr_rgb[ch] * (1.0 - tint_w) + accent_rgb[ch] * tint_w).clamp(0.0, 1.0);
-                let lit_c = (tint_c + (1.0 - tint_c) * hi_glint * spec_rgb[ch]).clamp(0.0, 1.0);
-                (lit_c * surf.coverage + sh_c[ch] * (1.0 - surf.coverage)).clamp(0.0, 1.0)
+                let c_lit = (lch_rgba[ch] + (1.0 - lch_rgba[ch]) * spec_pin).clamp(0.0, 1.0);
+                (c_lit * surf.coverage + floor_rgb[ch] * (1.0 - surf.coverage)).clamp(0.0, 1.0)
             });
-            let g_alpha = (fill_a + (1.0 - fill_a) * surf.fresnel_specular).clamp(0.0, 1.0);
-            let out_a = (surf.coverage * g_alpha + (1.0 - surf.coverage) * sh_a).clamp(0.0, 1.0);
+            let out_a = (surf.coverage + (1.0 - surf.coverage) * floor_a).clamp(0.0, 1.0);
             flat[idx..idx + 4].copy_from_slice(&[
                 (g_rgb[0] * max_u8).round() as u8,
                 (g_rgb[1] * max_u8).round() as u8,
@@ -160,83 +202,11 @@ fn synthesize_marble_matrix_rgba(
     flat
 }
 
-pub(crate) fn paint_3d_recessed_bowl(painter: &Painter, spec: MarblePaintSpec, r_bowl: f32, theme: &MacTheme, m: &ThumbDialMetrics) {
-    let s = spec.scale;
-    let bw = m.border_stroke_width.points();
+pub(crate) fn paint_3d_recessed_bowl(painter: &Painter, spec: MarblePaintSpec, theme: &MacTheme, m: &ThumbDialMetrics) {
+    let (s, bw, r_bowl, r_outer) = (spec.scale, m.border_stroke_width.points(), spec.r_bowl, spec.r_outer);
     let border_stroke = Stroke::new(bw, theme.separator());
     let specular_col = theme.specular_rim_top();
-    let is_light = theme.appearance == MacAppearance::Aqua;
-    let bowl_core = if is_light { theme.window_background() } else { theme.window_background().gamma_multiply(m.glass_fill_alpha.points()) };
-    let bowl_rim = if is_light { theme.box_background() } else { theme.control_background().gamma_multiply(m.glass_fill_alpha.points()) };
-
-    painter.circle_filled(spec.hub_center, r_bowl + bw, theme.drop_shadow().gamma_multiply(0.5));
-    paint_radial_disc_mesh(painter, spec.hub_center, r_bowl, bowl_core, bowl_rim, m);
-    painter.circle_stroke(spec.hub_center, r_bowl, border_stroke);
-    painter.circle_stroke(
-        spec.hub_center - Vec2::new(0.0, bw),
-        r_bowl - bw,
-        Stroke::new(m.active_stroke_width.points(), theme.drop_shadow().gamma_multiply(0.5)),
-    );
-    painter.circle_stroke(spec.hub_center + Vec2::new(0.0, bw), r_bowl - bw, Stroke::new(bw, specular_col));
-
-    let fine_r = r_bowl * m.joystick_fine_ratio.points();
-    let fast_r = r_bowl * m.joystick_fast_ratio.points();
-    let slow_r = fine_r * 0.5 + fast_r * 0.5;
-    let dot_col = theme.secondary_label_on(bowl_core).gamma_multiply(m.active_fill_opacity.points() * 2.0);
-    let step_deg = (m.detent_step_deg.points() * 0.5).max(1.0);
-    let mut deg = 0.0f32;
-    while deg < m.full_circle_deg.points() {
-        painter.circle_filled(polar_pos(spec.hub_center, fine_r, deg, m), bw, dot_col);
-        painter.circle_filled(polar_pos(spec.hub_center, slow_r, deg, m), bw, dot_col);
-        painter.circle_filled(polar_pos(spec.hub_center, fast_r, deg, m), bw, dot_col);
-        deg += step_deg;
-    }
-
-    for label_spec in [(fine_r, "Fine"), (fast_r, "Fast")] {
-        painter.text(
-            spec.hub_center + Vec2::new(0.0, label_spec.0 - m.hint_vertical_offset.points() * s),
-            Align2::CENTER_CENTER,
-            label_spec.1,
-            FontId::proportional(m.hint_font_size.points() * s),
-            theme.secondary_label_on(bowl_core),
-        );
-    }
-
-    paint_crystal_glass_marble(painter, spec, r_bowl, theme, m);
-}
-
-pub(crate) fn paint_radial_disc_mesh(
-    painter: &Painter,
-    center: Pos2,
-    radius: f32,
-    core_col: Color32,
-    rim_col: Color32,
-    m: &ThumbDialMetrics,
-) {
-    let steps = 32usize;
-    let full_deg = m.full_circle_deg.points();
-    let mut mesh = egui::epaint::Mesh::default();
-    mesh.colored_vertex(center, core_col);
-    for i in 0..=steps {
-        let pt = polar_pos(center, radius, full_deg * (i as f32 / steps as f32), m);
-        mesh.colored_vertex(pt, rim_col);
-    }
-    for i in 0..steps {
-        let idx = (i + 1) as u32;
-        mesh.add_triangle(0, idx, idx + 1);
-    }
-    painter.add(Shape::mesh(mesh));
-}
-
-pub(crate) fn paint_crystal_glass_marble(painter: &Painter, spec: MarblePaintSpec, r_bowl: f32, theme: &MacTheme, m: &ThumbDialMetrics) {
-    let (s, bw, dot_r) = (spec.scale, m.border_stroke_width.points(), m.latch_dot_radius.points() * spec.scale);
-    painter.line_segment(
-        [spec.hub_center, spec.marble_center],
-        Stroke::new(m.active_stroke_width.points() * 2.0, spec.accent_col.gamma_multiply(m.hover_fill_opacity.points())),
-    );
-    painter.line_segment([spec.hub_center, spec.marble_center], Stroke::new(m.active_stroke_width.points(), spec.accent_col));
-    painter.circle_stroke(spec.hub_center, dot_r, Stroke::new(bw, theme.secondary_label()));
-    painter.circle_filled(spec.hub_center, dot_r * 0.5, theme.window_background());
+    let bowl_core = theme.window_background();
 
     let vel_off = spec.marble_center - spec.hub_center;
     let press_amt = (vel_off.length() / (spec.puck_r * 2.0).max(1.0)).clamp(0.0, 1.0);
@@ -245,11 +215,11 @@ pub(crate) fn paint_crystal_glass_marble(painter: &Painter, spec: MarblePaintSpe
     let _ = super::liquid_glass::evaluate_vertex_cursor_fresnel_lighting(probe_pt, probe_n, Some(spec.marble_center), spec.puck_r * 2.0);
 
     let px_scale = 2.0f32;
-    let quad_half = spec.puck_r + dot_r * 2.0 * 2.0;
-    let marble_rect = Rect::from_center_size(spec.marble_center, Vec2::splat(quad_half * 2.0));
-    let tex_dim = ((marble_rect.width() * px_scale).round() as usize).max(2);
+    let pad = m.bevel_width_pt.points() * s;
+    let bowl_rect = Rect::from_center_size(spec.hub_center, Vec2::splat((r_outer + pad) * 2.0));
+    let tex_dim = ((bowl_rect.width() * px_scale).round() as usize).max(2);
     let to_tex = |pt: Pos2| -> vitrea::GlamVec2 {
-        vitrea::GlamVec2::new((pt.x - marble_rect.min.x) * px_scale, (pt.y - marble_rect.min.y) * px_scale)
+        vitrea::GlamVec2::new((pt.x - bowl_rect.min.x) * px_scale, (pt.y - bowl_rect.min.y) * px_scale)
     };
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     tex_dim.hash(&mut hasher);
@@ -258,7 +228,7 @@ pub(crate) fn paint_crystal_glass_marble(painter: &Painter, spec: MarblePaintSpe
     ((vel_off.x * 2.0).round() as i32).hash(&mut hasher);
     ((vel_off.y * 2.0).round() as i32).hash(&mut hasher);
     let state_hash = hasher.finish();
-    let cache_id = Id::NULL.with(("lg_marble_ray_tex", (spec.hub_center.x as i32, spec.hub_center.y as i32)));
+    let cache_id = spec.id_source.with("lg_marble_bowl_ray_tex");
     let ctx = painter.ctx();
     let cached = ctx.data(|d| d.get_temp::<(u64, egui::TextureHandle)>(cache_id));
     let tex_handle = match cached {
@@ -266,7 +236,14 @@ pub(crate) fn paint_crystal_glass_marble(painter: &Painter, spec: MarblePaintSpe
         _ => {
             let flat = synthesize_marble_matrix_rgba(
                 tex_dim,
-                (to_tex(spec.hub_center), to_tex(spec.marble_center), r_bowl * px_scale, spec.puck_r * px_scale, s * px_scale),
+                (
+                    to_tex(spec.hub_center),
+                    to_tex(spec.marble_center),
+                    r_outer * px_scale,
+                    r_bowl * px_scale,
+                    spec.puck_r * px_scale,
+                    s * px_scale,
+                ),
                 spec.accent_col,
                 theme,
                 m,
@@ -279,8 +256,24 @@ pub(crate) fn paint_crystal_glass_marble(painter: &Painter, spec: MarblePaintSpe
     };
     let mut mesh = egui::epaint::Mesh::with_texture(tex_handle.id());
     let tint = Color32::from(egui::epaint::Hsva::new(0.0, 0.0, 1.0, 1.0));
-    mesh.add_rect_with_uv(marble_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), tint);
+    mesh.add_rect_with_uv(bowl_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), tint);
     painter.add(Shape::mesh(mesh));
+
+    painter.circle_stroke(spec.hub_center, r_outer, border_stroke);
+    painter.circle_stroke(spec.hub_center, r_outer - bw, Stroke::new(m.active_stroke_width.points(), specular_col));
+    painter.circle_stroke(spec.hub_center, r_bowl, border_stroke);
+
+    let fine_r = r_bowl * m.joystick_fine_ratio.points();
+    let fast_r = r_bowl * m.joystick_fast_ratio.points();
+    for label_spec in [(fine_r, "Fine"), (fast_r, "Fast")] {
+        painter.text(
+            spec.hub_center + Vec2::new(0.0, label_spec.0 - m.hint_vertical_offset.points() * s),
+            Align2::CENTER_CENTER,
+            label_spec.1,
+            FontId::proportional(m.hint_font_size.points() * s),
+            theme.secondary_label_on(bowl_core),
+        );
+    }
 }
 
 #[derive(Clone, Copy, Default)]
@@ -413,7 +406,6 @@ impl<'a> MacFreeJoystickBowl<'a> {
         let r_clover_out = r_outer - gap * 2.0;
         let r_skirt_in = m.skirt_inner_radius.points() * s;
         let r_skirt_out = m.skirt_outer_radius.points() * s;
-        let bw = m.border_stroke_width.points();
 
         let desired_size = Vec2::new((r_outer + gap) * 2.0, (r_skirt_out + gap) * 2.0);
         let (rect, response) = allocate_docked_thumb_rect(ui, self.id_source, self.dock_target, desired_size, m, s);
@@ -483,26 +475,20 @@ impl<'a> MacFreeJoystickBowl<'a> {
         };
 
         let painter = ui.painter_at(rect.intersect(ui.clip_rect()));
-        let border_stroke = Stroke::new(bw, theme.separator());
-        let specular_col = theme.specular_rim_top();
-        let is_light = theme.appearance == MacAppearance::Aqua;
-        let glass_bg = if is_light {
-            theme.box_background()
-        } else {
-            theme.box_background().gamma_multiply(m.glass_fill_alpha.points())
-        };
-
-        painter.circle_filled(hub_center + Vec2::new(0.0, gap * 2.0), r_outer + bw, theme.drop_shadow());
-        painter.circle_filled(hub_center + Vec2::new(0.0, gap), r_outer, theme.drop_shadow());
-        painter.circle(hub_center, r_outer, glass_bg, border_stroke);
-        painter.circle_stroke(hub_center, r_outer - bw, Stroke::new(m.active_stroke_width.points(), specular_col));
-
         let marble_center = hub_center + animated_offset;
         let puck_r = m.joystick_puck_radius.points() * (s + s * 0.5);
         paint_3d_recessed_bowl(
             &painter,
-            MarblePaintSpec { hub_center, marble_center, puck_r, scale: s, accent_col },
-            r_clover_out,
+            MarblePaintSpec {
+                id_source: self.id_source,
+                hub_center,
+                marble_center,
+                r_outer,
+                r_bowl: r_clover_out,
+                puck_r,
+                scale: s,
+                accent_col,
+            },
             theme,
             m,
         );

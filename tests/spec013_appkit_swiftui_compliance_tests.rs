@@ -250,11 +250,13 @@ fn tc_014_09_liquid_glass_filleted_cushions_16band_drum_mesh_and_keyboard_a11y()
     for cs in &shapes_dial {
         collect_meshes(&cs.shape, &mut dial_meshes);
     }
-    let has_gradient_cushion_mesh =
-        dial_meshes.iter().any(|m| m.vertices.len() >= 32 && m.vertices.windows(2).any(|w| w[0].color != w[1].color));
+    let has_liquid_glass_rosette_mesh = dial_meshes.iter().any(|m| {
+        (m.texture_id != egui::TextureId::default() && m.vertices.len() == 4)
+            || (m.vertices.len() >= 32 && m.vertices.windows(2).any(|w| w[0].color != w[1].color))
+    });
     assert!(
-        has_gradient_cushion_mesh,
-        "BUG-DIAL-01/03: MacContextThumbDial cushions must render per-vertex shaded 3D Liquid Glass gradient meshes"
+        has_liquid_glass_rosette_mesh,
+        "BUG-DIAL-01/03: MacContextThumbDial cushions must render a 2x Retina Liquid Glass TextureHandle quad"
     );
 
     let key_up = RawInput {

@@ -8,6 +8,47 @@ use crate::theme::{MacBackgroundStyle, MacTheme};
 use crate::tokens::ThumbDialMetrics;
 use egui::{Align2, Color32, ColorImage, FontId, Painter, Pos2, Rect, Shape, Stroke, Vec2};
 
+pub(crate) fn eval_shared_dish_matrix_at(
+    p: vitrea::GlamVec2,
+    sc: &RosetteContainerSpec,
+    (dish_core, dish_rim, accent_rgb, grid_rgb): ([f32; 3], [f32; 3], [f32; 3], [f32; 3]),
+    blur_scale: f32,
+    m: &ThumbDialMetrics,
+) -> [f32; 3] {
+    let d_vec = p - sc.hub_center;
+    let r = d_vec.length();
+    let r_norm = (r / sc.r_dish.max(1.0)).clamp(0.0, 1.0);
+    let well_depth = m.hover_fill_opacity.points() + m.hover_fill_opacity.points() * r_norm;
+    let mut rgb = [0, 1, 2].map(|ch| {
+        let base = dish_core[ch] + (dish_rim[ch] - dish_core[ch]) * r_norm;
+        base * (1.0 - well_depth) + grid_rgb[ch] * well_depth
+    });
+    let grid_step = (sc.r_hub * 0.5).max(2.0);
+    let grid_d = (d_vec.x - (d_vec.x / grid_step).round() * grid_step)
+        .abs()
+        .min((d_vec.y - (d_vec.y / grid_step).round() * grid_step).abs());
+    let (r_fine, r_fast) = (sc.r_dish * m.joystick_fine_ratio.points(), sc.r_dish * m.joystick_fast_ratio.points());
+    let ring_d = (r - r_fine).abs().min((r - (r_fine + r_fast) * 0.5).abs()).min((r - r_fast).abs());
+    let line_w = (m.active_stroke_width.points() * sc.scale * blur_scale).max(1.0);
+    let line_t = (1.0 - (grid_d.min(ring_d) / line_w).clamp(0.0, 1.0)).powi(2);
+    let line_gain = (m.active_fill_opacity.points() + m.hover_fill_opacity.points()) / blur_scale.max(1.0);
+    let line_w_mix = (line_t * line_gain).clamp(0.0, 1.0);
+    rgb = [0, 1, 2].map(|ch| rgb[ch] * (1.0 - line_w_mix) + grid_rgb[ch] * line_w_mix);
+    let (boost, bleed_gain) = (m.vibrancy_chroma_boost.points(), m.glass_fill_alpha.points());
+    for mem in &sc.members {
+        let w = (mem.active_weight + mem.lift_weight * 0.5).clamp(0.0, 1.0);
+        if w > 0.0 {
+            let r_mid = (mem.radii.0 + mem.radii.1) * 0.5;
+            let rad = super::render::deg_to_rad(mem.angles_deg.0, m);
+            let c_pos = mem.center + vitrea::GlamVec2::new(rad.cos() * r_mid, rad.sin() * r_mid);
+            let t = (1.0 - (p - c_pos).length() / ((mem.radii.1 - mem.radii.0) * boost).max(1.0)).clamp(0.0, 1.0);
+            let glow = t * t * w * bleed_gain;
+            rgb = [0, 1, 2].map(|ch| (rgb[ch] * (1.0 - glow) + accent_rgb[ch] * glow).clamp(0.0, 1.0));
+        }
+    }
+    rgb
+}
+
 pub(crate) fn paint_raytraced_rosette_quad(
     painter: &Painter,
     id_source: egui::Id,
@@ -98,66 +139,26 @@ pub(super) fn paint_dial_layers(
     let r_skirt_out = m.skirt_outer_radius.points() * s;
     let bw = m.border_stroke_width.points();
     let specular_col = theme.specular_rim_top();
-    let is_light = theme.appearance == crate::theme::MacAppearance::Aqua;
 
     if st.active_layer == MacThumbDialLayer::FreeJoystickBowl {
-        let border_stroke = Stroke::new(bw, theme.separator());
-        let glass_bg = if is_light {
-            theme.box_background()
-        } else {
-            theme.box_background().gamma_multiply(m.glass_fill_alpha.points())
-        };
-        let outer_rim_col = if st.hovered_rotary { st.accent_col } else { specular_col };
-        painter.circle_filled(hub_center + Vec2::new(0.0, gap * 2.0), r_outer + bw * 2.0, theme.drop_shadow());
-        painter.circle_filled(hub_center + Vec2::new(0.0, gap), r_outer + bw, theme.drop_shadow());
-        painter.circle(hub_center, r_outer, glass_bg, border_stroke);
-        painter.circle_stroke(hub_center, r_outer - bw, Stroke::new(m.active_stroke_width.points(), outer_rim_col));
         paint_3d_recessed_bowl(
             painter,
             MarblePaintSpec {
+                id_source: dial.id_source,
                 hub_center,
                 marble_center: hub_center + st.joystick_offset,
+                r_outer,
+                r_bowl: r_clover_out,
                 puck_r: m.joystick_puck_radius.points() * s,
                 scale: s,
                 accent_col: st.accent_col,
             },
-            r_clover_out,
             theme,
             m,
         );
     } else {
         let border_stroke = Stroke::new(bw, theme.separator());
-        let glass_bg = if is_light {
-            theme.box_background()
-        } else {
-            theme.box_background().gamma_multiply(m.glass_fill_alpha.points())
-        };
         let outer_rim_col = if st.hovered_rotary { st.accent_col } else { specular_col };
-        painter.circle_filled(hub_center + Vec2::new(0.0, gap * 2.0), r_outer + bw * 2.0, theme.drop_shadow());
-        painter.circle_filled(hub_center + Vec2::new(0.0, gap), r_outer + bw, theme.drop_shadow());
-        painter.circle(hub_center, r_outer, glass_bg, border_stroke);
-        painter.circle_stroke(hub_center, r_outer - bw, Stroke::new(m.active_stroke_width.points(), outer_rim_col));
-
-        let bowl_core = if is_light {
-            theme.window_background()
-        } else {
-            theme.window_background().gamma_multiply(m.glass_fill_alpha.points())
-        };
-        let bowl_rim = if is_light {
-            theme.box_background()
-        } else {
-            theme.control_background().gamma_multiply(m.glass_fill_alpha.points())
-        };
-        painter.circle_filled(hub_center, r_clover_out + bw, theme.drop_shadow().gamma_multiply(0.5));
-        crate::controls::free_joystick_bowl::paint_radial_disc_mesh(painter, hub_center, r_clover_out, bowl_core, bowl_rim, m);
-        painter.circle_stroke(hub_center, r_clover_out, border_stroke);
-        painter.circle_stroke(
-            hub_center - Vec2::new(0.0, bw),
-            r_clover_out - bw,
-            Stroke::new(m.active_stroke_width.points(), theme.drop_shadow().gamma_multiply(0.5)),
-        );
-        painter.circle_stroke(hub_center + Vec2::new(0.0, bw), r_clover_out - bw, Stroke::new(bw, specular_col));
-
         let half_gap_deg = m.sector_gap_deg.points() * 0.5;
         let r_clover_mid = (r_clover_in + r_clover_out) * 0.5;
         let pad = m.bevel_width_pt.points() * s;
@@ -167,22 +168,6 @@ pub(super) fn paint_dial_layers(
         let to_tex = |pt: Pos2| -> vitrea::GlamVec2 {
             vitrea::GlamVec2::new((pt.x - dial_rect.min.x) * px_scale, (pt.y - dial_rect.min.y) * px_scale)
         };
-
-        for i in 0..MacThumbSector::ALL.len() {
-            let s_a = MacThumbSector::ALL[i];
-            let s_b = MacThumbSector::ALL[(i + 1) % MacThumbSector::ALL.len()];
-            let l_a = st.sector_lifts[s_a as usize];
-            let l_b = st.sector_lifts[s_b as usize];
-            super::super::liquid_glass::paint_meniscus_smooth_union_bridge(
-                painter,
-                hub_center,
-                (r_clover_in, r_clover_out, gap * 2.0, gap * 2.0),
-                (s_a.center_angle_deg(m), s_a.sweep_deg(m) * 0.5 - half_gap_deg, l_a),
-                (s_b.center_angle_deg(m), s_b.sweep_deg(m) * 0.5 - half_gap_deg, l_b),
-                st.accent_col,
-                m,
-            );
-        }
 
         let passive_half_sweep = m.diagonal_sweep_deg.points() * 0.5 - half_gap_deg;
         let fillet_px = gap * 2.0 * px_scale;
@@ -250,6 +235,9 @@ pub(super) fn paint_dial_layers(
             members,
         };
         paint_raytraced_rosette_quad(painter, dial.id_source, dial_rect, &container, tex_dim, theme, m);
+        painter.circle_stroke(hub_center, r_outer, border_stroke);
+        painter.circle_stroke(hub_center, r_outer - bw, Stroke::new(m.active_stroke_width.points(), outer_rim_col));
+        painter.circle_stroke(hub_center, r_clover_out, border_stroke);
 
         for sector in MacThumbSector::ALL {
             let is_latched = st.latched_sector == Some(sector);
@@ -374,13 +362,7 @@ pub(crate) fn paint_undo_redo_crescent_arcs(
         (undo_start, undo_end, crate::symbols::MacSymbol::ArrowCounterClockwise, "Undo", style.can_undo, style.hovered_undo),
         (redo_start, redo_end, crate::symbols::MacSymbol::ArrowClockwise, "Redo", style.can_redo, style.hovered_redo),
     ] {
-        let fill = if hovered && enabled {
-            style.accent_col.gamma_multiply(m.active_fill_opacity.points())
-        } else if is_light {
-            theme.window_background()
-        } else {
-            theme.control_background().gamma_multiply(m.glass_fill_alpha.points())
-        };
+        let fill = if is_light { theme.window_background() } else { theme.control_background() };
         let stroke_col = if hovered && enabled { style.accent_col } else { specular_col };
         super::super::liquid_glass::paint_curved_stadium_capsule(
             painter,

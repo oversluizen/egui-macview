@@ -395,11 +395,11 @@ fn test_guard_zero_dead_code_and_zero_unused_dependencies() {
         "sdf_annular_rounded_sector(",
         "sdf_curved_stadium_arc(",
         "dome_surface_normal_3d(",
+        "dome_surface_normal_3d_from_sample(",
         "refract_point_through_glass(",
         "build_liquid_glass_backdrop_image(",
         "deform_viscous_droplet_point(",
         "evaluate_vertex_cursor_fresnel_lighting(",
-        "paint_meniscus_smooth_union_bridge(",
     ] {
         assert!(
             prod_non_lg.contains(required_math_fn),

@@ -81,10 +81,14 @@ fn synthesize_drum_matrix_rgba(ds: &DrumMatrixSpec, theme: &MacTheme, m: &ThumbD
         dome_thickness_pt: m.dome_thickness_pt.points(),
         vibrancy_chroma_boost: m.vibrancy_chroma_boost.points(),
         meniscus_merge_k_pt: m.meniscus_merge_k_pt.points(),
+        fresnel_range_ratio: 0.5,
+        fresnel_hardness: 0.0,
+        ..Default::default()
     };
     let (fill_a, act_a, hov_a, spec_a) = (m.glass_fill_alpha.points(), m.active_fill_opacity.points(), m.hover_fill_opacity.points(), m.glass_specular_alpha.points());
     let max_u8 = f32::from(u8::MAX);
     let cursor_pt = Some(vitrea::GlamVec2::new(w * 0.5, h * (0.5 + ds.ptr_bias)));
+    let _ = spec_rgb;
 
     for y in 0..ds.tex_h {
         for x in 0..ds.tex_w {
@@ -98,29 +102,32 @@ fn synthesize_drum_matrix_rgba(ds: &DrumMatrixSpec, theme: &MacTheme, m: &ThumbD
             let s_r = vitrea::sdf_rounded_capsule_sample(p, right_c, cap_half, ds.corner_r.min(ds.cap_w * 0.5));
             let s_cap = if s_l.distance < s_r.distance { s_l } else { s_r };
             let surf_cap = vitrea::evaluate_glass_surface_sample(p, s_cap, &params, cursor_pt, ds.r_cyl * 2.0);
-            let [p_r, p_g, p_b] = if surf_cap.coverage > 0.0 { surf_cap.refracted_rgb_pts } else { surf_drum.refracted_rgb_pts };
-            let mut rgb = [
+            let active_s = if surf_cap.coverage > 0.0 { s_cap } else { s_drum };
+            let active_surf = if surf_cap.coverage > 0.0 { &surf_cap } else { &surf_drum };
+            let ([p_r, p_g, p_b], _, _) = vitrea::refract_bevel_chromatic_rgb(p, active_s, &params);
+            let sharp_rgb = [
                 eval_drum_backdrop_at(p_r, ds, (drum_rgb, accent_rgb), m)[0],
                 eval_drum_backdrop_at(p_g, ds, (drum_rgb, accent_rgb), m)[1],
                 eval_drum_backdrop_at(p_b, ds, (drum_rgb, accent_rgb), m)[2],
             ];
-            let drum_rim = surf_drum.fresnel_specular * (if is_light { hov_a } else { act_a });
-            for ch in 0..3 {
-                rgb[ch] = (rgb[ch] + drum_rim * spec_rgb[ch]).clamp(0.0, 1.0);
-            }
-            if surf_cap.coverage > 0.0 {
-                let cap_w_mix = (if ds.is_active { fill_a } else { act_a }) * surf_cap.coverage;
-                let cap_rim = surf_cap.fresnel_specular * spec_a;
-                let cap_dome = surf_cap.key_illumination * hov_a;
-                for ch in 0..3 {
-                    let c_body = (accent_rgb[ch] * (fill_a + surf_cap.dome_elevation * act_a) + cap_dome + cap_rim * spec_rgb[ch]).clamp(0.0, 1.0);
-                    rgb[ch] = (rgb[ch] * (1.0 - cap_w_mix) + c_body * cap_w_mix).clamp(0.0, 1.0);
-                }
-            }
+            let tint_rgba = if surf_cap.coverage > 0.0 {
+                [accent_rgb[0], accent_rgb[1], accent_rgb[2], if ds.is_active { fill_a } else { act_a * 2.0 }]
+            } else {
+                [drum_rgb[0], drum_rgb[1], drum_rgb[2], hov_a * 0.5]
+            };
+            let lch_rgba = vitrea::compose_dielectric_lch_pixel(
+                sharp_rgb,
+                sharp_rgb,
+                tint_rgba,
+                active_surf,
+                &params,
+                if is_light { spec_a + hov_a } else { fill_a },
+                act_a + hov_a,
+            );
             let idx = (y * ds.tex_w + x) * 4;
-            flat[idx] = (rgb[0] * max_u8).round() as u8;
-            flat[idx + 1] = (rgb[1] * max_u8).round() as u8;
-            flat[idx + 2] = (rgb[2] * max_u8).round() as u8;
+            flat[idx] = (lch_rgba[0] * max_u8).round() as u8;
+            flat[idx + 1] = (lch_rgba[1] * max_u8).round() as u8;
+            flat[idx + 2] = (lch_rgba[2] * max_u8).round() as u8;
             flat[idx + 3] = (surf_drum.coverage * max_u8).round() as u8;
         }
     }

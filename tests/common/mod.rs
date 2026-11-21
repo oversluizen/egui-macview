@@ -115,8 +115,10 @@ impl RetinaCpuFramebuffer {
             std::collections::BTreeMap::new();
         let mut shapes_out = Vec::new();
         for _ in 0..2 {
+            let evs = ctx.data(|d| d.get_temp::<Vec<Event>>(egui::Id::NULL.with("retina_events"))).unwrap_or_default();
             let input = RawInput {
                 screen_rect: Some(Rect::from_min_size(Pos2::ZERO, viewport)),
+                events: evs,
                 viewports: std::iter::once((
                     egui::ViewportId::ROOT,
                     egui::ViewportInfo { native_pixels_per_point: Some(scale), ..Default::default() },

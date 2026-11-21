@@ -394,10 +394,6 @@ pub(super) fn show_dial(mut dial: MacContextThumbDial<'_>, ui: &mut Ui) -> MacCo
     let held_sector = if is_down && active_layer == MacThumbDialLayer::CompassModifiers { mem.active_sector } else { None };
     let (cur_key, cur_tip): (u8, &str) = if let Some(sec) = held_sector.or(hovered_sector) {
         ((sec as u8) + 1, dial.sectors.sector(sec).label)
-    } else if hovered_undo {
-        (10, "Undo")
-    } else if hovered_redo {
-        (11, "Redo")
     } else if hovered_rotary {
         (12, "Rotary Ring")
     } else {

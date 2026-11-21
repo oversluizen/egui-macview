@@ -275,32 +275,37 @@ pub(crate) fn paint_curved_stadium_capsule(
                 [f32::from(r) / max_u8, f32::from(g) / max_u8, f32::from(b) / max_u8]
             };
             let (fill_rgb, stroke_rgb, sh_rgb) = (to_rgb(fill), to_rgb(stroke_col), to_rgb(shadow_col));
+            let is_accent_hover = (stroke_rgb[2] - stroke_rgb[0]).abs() > m.fresnel_f0.points()
+                || (stroke_rgb[0] - stroke_rgb[1]).abs() > m.fresnel_f0.points();
             let c_tex = vitrea::GlamVec2::new((center.x - arc_rect.min.x) * px_scale, (center.y - arc_rect.min.y) * px_scale);
             let radii_px = (r_in * px_scale, r_out * px_scale);
             let h_cap_px = h_cap * px_scale;
             let sh_off = vitrea::GlamVec2::new(0.0, bw * 2.0 * px_scale);
             let params = vitrea::LiquidGlassOpticalParams {
-                ior_glass: m.ior_glass.points(),
-                ior_dispersion_rgb: [m.ior_red.points(), m.ior_green.points(), m.ior_blue.points()],
-                fresnel_f0: m.fresnel_f0.points(),
-                bevel_width_pt: h_cap_px * 0.5,
-                dome_thickness_pt: m.dome_thickness_pt.points() * px_scale,
-                vibrancy_chroma_boost: m.vibrancy_chroma_boost.points(),
-                meniscus_merge_k_pt: m.meniscus_merge_k_pt.points() * px_scale,
+                ior_glass: m.ior_glass.points(), ior_dispersion_rgb: [m.ior_red.points(), m.ior_green.points(), m.ior_blue.points()],
+                fresnel_f0: m.fresnel_f0.points(), bevel_width_pt: h_cap_px * 0.5, dome_thickness_pt: m.dome_thickness_pt.points() * px_scale,
+                vibrancy_chroma_boost: m.vibrancy_chroma_boost.points(), meniscus_merge_k_pt: m.meniscus_merge_k_pt.points() * px_scale,
+                shadow_decay_length_pt: h_cap_px * 0.5, fresnel_range_ratio: 0.5, fresnel_hardness: 0.0, ..Default::default()
             };
-            let (fill_a, act_a, hov_a, spec_a) = (
-                m.glass_fill_alpha.points(),
-                m.active_fill_opacity.points(),
-                m.hover_fill_opacity.points(),
-                m.glass_specular_alpha.points(),
-            );
+            let (act_a, hov_a, spec_a) = (m.active_fill_opacity.points(), m.hover_fill_opacity.points(), m.glass_specular_alpha.points());
+            let grid_step = (h_cap_px * 0.5).max(2.0);
+            let grid_col = if fill_rgb[0] < 0.5 { stroke_rgb } else { sh_rgb };
+            let eval_arc_bg = |pt: vitrea::GlamVec2, blur_s: f32| -> [f32; 3] {
+                let d_v = pt - c_tex;
+                let gx = (d_v.x - (d_v.x / grid_step).round() * grid_step).abs();
+                let gy = (d_v.y - (d_v.y / grid_step).round() * grid_step).abs();
+                let lw = (bw * px_scale * blur_s).max(1.0);
+                let lt = (1.0 - (gx.min(gy) / lw).clamp(0.0, 1.0)).powi(2) * ((act_a + hov_a) / blur_s.max(1.0));
+                [0, 1, 2].map(|ch| (fill_rgb[ch] * (1.0 - lt) + grid_col[ch] * lt).clamp(0.0, 1.0))
+            };
             for y in 0..tex_h {
                 for x in 0..tex_w {
                     let p = vitrea::GlamVec2::new(x as f32 + 0.5, y as f32 + 0.5);
                     let s_arc = vitrea::sdf_curved_stadium_arc_sample(p, c_tex, radii_px, (start_deg, end_deg));
                     let s_sh = vitrea::sdf_curved_stadium_arc_sample(p - sh_off, c_tex, radii_px, (start_deg, end_deg));
-                    let sh_t = (1.0 - (s_sh.distance.max(0.0) / (h_cap_px * 0.5).max(1.0)).clamp(0.0, 1.0)).powi(2);
-                    let sh_a = (sh_t * hov_a).clamp(0.0, act_a);
+                    let d_sh = s_sh.distance.max(0.0);
+                    let sh_win = (1.0 - (d_sh / (h_cap_px * 0.5).max(1.0)).clamp(0.0, 1.0)).powi(2);
+                    let sh_a = (vitrea::exponential_sdf_attenuation(d_sh, &params, act_a) * sh_win).clamp(0.0, act_a);
                     let surf = vitrea::evaluate_glass_surface_sample(p, s_arc, &params, None, radii_px.1);
                     let idx = (y * tex_w + x) * 4;
                     if surf.coverage <= 0.0 {
@@ -314,15 +319,21 @@ pub(crate) fn paint_curved_stadium_capsule(
                         }
                         continue;
                     }
-                    let dome_gain = (surf.key_illumination - 0.5) * hov_a;
-                    let rim_gain = (surf.fresnel_specular * spec_a).clamp(0.0, 1.0);
-                    let g_rgb = [0, 1, 2].map(|ch| {
-                        let body = (fill_rgb[ch] + dome_gain).clamp(0.0, 1.0);
-                        let lit = (body * (1.0 - rim_gain) + stroke_rgb[ch] * rim_gain).clamp(0.0, 1.0);
-                        (lit * surf.coverage + sh_rgb[ch] * (1.0 - surf.coverage)).clamp(0.0, 1.0)
-                    });
-                    let g_a = (fill_a + (1.0 - fill_a) * surf.fresnel_specular).clamp(0.0, 1.0);
-                    let out_a = (surf.coverage * g_a + (1.0 - surf.coverage) * sh_a).clamp(0.0, 1.0);
+                    let ([p_r, p_g, p_b], _, _) = vitrea::refract_bevel_chromatic_rgb(p, s_arc, &params);
+                    let sharp_rgb = [eval_arc_bg(p_r, 1.0)[0], eval_arc_bg(p_g, 1.0)[1], eval_arc_bg(p_b, 1.0)[2]];
+                    let blur_rgb = [eval_arc_bg(p_r, 2.0)[0], eval_arc_bg(p_g, 2.0)[1], eval_arc_bg(p_b, 2.0)[2]];
+                    let tint_a = if is_accent_hover { act_a * 2.0 } else { hov_a * 0.5 };
+                    let lch_rgba = vitrea::compose_dielectric_lch_pixel(
+                        sharp_rgb,
+                        blur_rgb,
+                        [stroke_rgb[0], stroke_rgb[1], stroke_rgb[2], tint_a],
+                        &surf,
+                        &params,
+                        1.0,
+                        spec_a + act_a,
+                    );
+                    let g_rgb = [0, 1, 2].map(|ch| (lch_rgba[ch] * surf.coverage + sh_rgb[ch] * (1.0 - surf.coverage)).clamp(0.0, 1.0));
+                    let out_a = (surf.coverage + (1.0 - surf.coverage) * sh_a).clamp(0.0, 1.0);
                     flat[idx..idx + 4].copy_from_slice(&[
                         (g_rgb[0] * max_u8).round() as u8,
                         (g_rgb[1] * max_u8).round() as u8,
@@ -409,12 +420,8 @@ pub(crate) fn paint_liquid_glass_capsule(
     let inset = (corner_radius * 0.5).max(border_stroke.width).min(rect.width() * 0.5).min(rect.height() * 0.5);
     let inner = rect.shrink2(Vec2::new(inset, border_stroke.width));
     if inner.width() > 1.0 && inner.height() > 1.0 {
-        let params = vitrea::LiquidGlassOpticalParams {
-            bevel_width_pt: (rect.height() * 0.5).max(1.0),
-            ..Default::default()
-        };
-        let center_g = glam_pt(rect.center());
-        let half_ext = glam_vec(rect.size() * 0.5);
+        let params = vitrea::LiquidGlassOpticalParams { bevel_width_pt: (rect.height() * 0.5).max(1.0), ..Default::default() };
+        let (center_g, half_ext) = (glam_pt(rect.center()), glam_vec(rect.size() * 0.5));
         let p_top = glam_pt(Pos2::new(rect.center().x, inner.min.y + border_stroke.width.max(1.0)));
         let p_bot = glam_pt(Pos2::new(rect.center().x, inner.max.y));
         let s_top = vitrea::sdf_rounded_capsule_sample(p_top, center_g, half_ext, corner_radius);
@@ -424,12 +431,10 @@ pub(crate) fn paint_liquid_glass_capsule(
         let f0_step = params.fresnel_f0;
         let top_gain = f0_step + surf_top.key_illumination * f0_step;
         let bot_loss = f0_step + (1.0 - surf_bot.dome_elevation) * f0_step * 0.5;
-        let mut top_h = egui::epaint::Hsva::from(fill);
+        let (mut top_h, mut bot_h) = (egui::epaint::Hsva::from(fill), egui::epaint::Hsva::from(fill));
         top_h.v = (top_h.v + top_gain).clamp(0.0, 1.0);
-        let mut bot_h = egui::epaint::Hsva::from(fill);
         bot_h.v = (bot_h.v - bot_loss).clamp(0.0, 1.0);
-        let top_c = Color32::from(top_h);
-        let bot_c = Color32::from(bot_h);
+        let (top_c, bot_c) = (Color32::from(top_h), Color32::from(bot_h));
         let mid_y = inner.center().y;
         let rim_h = border_stroke.width.max(1.0);
         let mut mesh = egui::epaint::Mesh::default();
@@ -452,42 +457,16 @@ pub(crate) fn paint_liquid_glass_capsule(
 
 /// Applies the area-preserving viscous Squash & Stretch Jacobian ($\det J = 1$, `REQ-016-01.4`)
 /// via `vitrea::deform_viscous_droplet_point`.
-pub fn deform_viscous_droplet_point(
-    pt: Pos2,
-    center: Pos2,
-    vel_offset: Vec2,
-    r_ref: f32,
-    press_amount: f32,
-) -> Pos2 {
-    let params = vitrea::LiquidGlassOpticalParams::default();
-    let stretch_g = params.fresnel_f0 * 2.0;
-    let press_g = params.fresnel_f0;
-    egui_pt(vitrea::deform_viscous_droplet_point(
-        glam_pt(pt),
-        glam_pt(center),
-        glam_vec(vel_offset),
-        r_ref,
-        press_amount,
-        (stretch_g, press_g),
-    ))
+pub fn deform_viscous_droplet_point(pt: Pos2, center: Pos2, vel_offset: Vec2, r_ref: f32, press_amount: f32) -> Pos2 {
+    let f0 = vitrea::LiquidGlassOpticalParams::default().fresnel_f0;
+    egui_pt(vitrea::deform_viscous_droplet_point(glam_pt(pt), glam_pt(center), glam_vec(vel_offset), r_ref, press_amount, (f0 * 2.0, f0)))
 }
 
 /// Evaluates the per-vertex 3D point-light physical Schlick-Fresnel & Blinn-Phong proximity glint (`REQ-016-02.2`)
 /// via `vitrea::evaluate_schlick_fresnel_and_blinn_phong`.
-pub fn evaluate_vertex_cursor_fresnel_lighting(
-    vertex_pos: Pos2,
-    normal_3d: [f32; 3],
-    cursor_pos: Option<Pos2>,
-    proximity_radius: f32,
-) -> f32 {
+pub fn evaluate_vertex_cursor_fresnel_lighting(vertex_pos: Pos2, normal_3d: [f32; 3], cursor_pos: Option<Pos2>, proximity_radius: f32) -> f32 {
     let ior = vitrea::LiquidGlassOpticalParams::default().ior_glass;
-    vitrea::evaluate_schlick_fresnel_and_blinn_phong(
-        glam_pt(vertex_pos),
-        vitrea::GlamVec3::from_array(normal_3d),
-        cursor_pos.map(glam_pt),
-        proximity_radius,
-        ior,
-    )
+    vitrea::evaluate_schlick_fresnel_and_blinn_phong(glam_pt(vertex_pos), vitrea::GlamVec3::from_array(normal_3d), cursor_pos.map(glam_pt), proximity_radius, ior)
 }
 
 /// Triangulates and paints the concave smooth-minimum metaball meniscus bridge ($d_{\text{union}}(p) \le 0$)
@@ -501,12 +480,7 @@ pub fn paint_meniscus_smooth_union_bridge(
     bridge_col: Color32,
     m: &ThumbDialMetrics,
 ) {
-    let bridge_mesh = vitrea::tessellate_meniscus_bridge(
-        glam_pt(center),
-        (r_in, r_out, corner_r, smooth_k),
-        (deg_a, half_sweep_a, lift_a),
-        (deg_b, half_sweep_b, lift_b),
-    );
+    let bridge_mesh = vitrea::tessellate_meniscus_bridge(glam_pt(center), (r_in, r_out, corner_r, smooth_k), (deg_a, half_sweep_a, lift_a), (deg_b, half_sweep_b, lift_b));
     if bridge_mesh.positions.is_empty() || bridge_mesh.indices.is_empty() {
         return;
     }
