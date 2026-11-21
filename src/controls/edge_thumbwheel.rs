@@ -159,7 +159,7 @@ fn paint_raytraced_edge_thumbwheel_quad(
     let cached = ctx.data(|d| d.get_temp::<(u64, egui::TextureHandle)>(cache_id));
     let tex_handle = match cached {
         Some((prev_h, handle)) if prev_h == state_hash => handle,
-        _ => {
+        prev_opt => {
             let ds = DrumMatrixSpec {
                 tex_w,
                 tex_h,
@@ -172,7 +172,12 @@ fn paint_raytraced_edge_thumbwheel_quad(
             };
             let flat = synthesize_drum_matrix_rgba(&ds, theme, m);
             let img = ColorImage::from_rgba_unmultiplied([tex_w, tex_h], &flat);
-            let handle = ctx.load_texture("vitrea_drum_lg", img, egui::TextureOptions::LINEAR);
+            let handle = if let Some((_, mut existing)) = prev_opt {
+                existing.set(img, egui::TextureOptions::LINEAR);
+                existing
+            } else {
+                ctx.load_texture("vitrea_drum_lg", img, egui::TextureOptions::LINEAR)
+            };
             ctx.data_mut(|d| d.insert_temp(cache_id, (state_hash, handle.clone())));
             handle
         }

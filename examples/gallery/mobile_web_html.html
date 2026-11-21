@@ -24,7 +24,7 @@
 <canvas id="glcanvas"></canvas>
 <input id="kbinput" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
 <input id="localDiskPicker" type="file" webkitdirectory directory multiple style="display:none">
-<video id="streamVid" src="https://media.w3.org/2010/05/bunny/trailer.mp4" preload="auto" loop playsinline style="display:none; position:fixed; border-radius:6px; border:1px solid rgba(255,255,255,0.22); z-index:9; object-fit:cover; background:#14161a;" controls></video>
+<video id="streamVid" src="https://media.w3.org/2010/05/bunny/trailer.mp4" preload="none" loop playsinline style="display:none; position:fixed; border-radius:6px; border:1px solid rgba(255,255,255,0.22); z-index:9; object-fit:cover; background:#14161a;" controls></video>
 <script>
 const canvas = document.getElementById('glcanvas');
 const kbInput = document.getElementById('kbinput');
@@ -201,9 +201,10 @@ let inFlight = false;
 let dirty = true;
 let wasmExports = null;
 
-fetch('macview_gallery.wasm?v=0801')
-  .then(r => r.ok ? r.arrayBuffer() : Promise.reject())
-  .then(bytes => WebAssembly.instantiate(bytes, {}))
+const wasmReq = fetch('macview_gallery.wasm?v=0801');
+(WebAssembly.instantiateStreaming
+  ? WebAssembly.instantiateStreaming(wasmReq, {}).catch(() => wasmReq.then(r => r.arrayBuffer()).then(b => WebAssembly.instantiate(b, {})))
+  : wasmReq.then(r => r.ok ? r.arrayBuffer() : Promise.reject()).then(b => WebAssembly.instantiate(b, {})))
   .then(res => {
     wasmExports = res.instance.exports;
     if (wasmExports.wasm_init) wasmExports.wasm_init();
@@ -429,7 +430,7 @@ async function tick() {
         const buf = wasmExports.memory.buffer.slice(fPtr, fPtr + fLen);
         renderMwgl(buf, wPts, hPts, dpr);
       }
-    } else {
+    } else if (!location.hostname.endsWith('github.io') && location.protocol !== 'file:') {
       const batch = [`V ${wPts} ${hPts} ${dpr}`, `C ${nowSecs.toFixed(4)}`, ...eventQueue];
       eventQueue = [];
       try {

@@ -20,31 +20,26 @@ pub(crate) fn eval_shared_dish_matrix_at(
     let d_vec = p - sc.hub_center;
     let r = d_vec.length();
     let r_norm = (r / sc.r_dish.max(1.0)).clamp(0.0, 1.0);
-    let well_depth = m.hover_fill_opacity.points() + m.hover_fill_opacity.points() * r_norm;
-    let mut rgb = [0, 1, 2].map(|ch| {
-        let base = dish_core[ch] + (dish_rim[ch] - dish_core[ch]) * r_norm;
-        base * (1.0 - well_depth) + grid_rgb[ch] * well_depth
-    });
+    let rim_mix = r_norm * m.hover_fill_opacity.points();
+    let mut rgb = [0, 1, 2].map(|ch| dish_core[ch] + (dish_rim[ch] - dish_core[ch]) * rim_mix);
     // Chromatic ambient backdrop band passing through the mid-radius of the left-docked glass bowl (REQ-016-A0.3):
     let west_t = ((-d_vec.x) / sc.r_dish.max(1.0)).clamp(0.0, 1.0);
     let band_r = (1.0 - ((r_norm - 0.5).abs() * 2.0).clamp(0.0, 1.0)).clamp(0.0, 1.0);
     let warm_w = (west_t * band_r * (m.active_fill_opacity.points() + m.hover_fill_opacity.points())).clamp(0.0, 1.0);
     rgb = [0, 1, 2].map(|ch| rgb[ch] * (1.0 - warm_w) + warm_rgb[ch] * warm_w);
 
-    // In Glass.regular, high-frequency contour/grid lines appear ONLY in the sharp bevel sample (blur_scale <= 1.0),
-    // while the interior plateau (blur_scale > 1.0) is 100% calm diffused frosted glass!
-    if blur_scale <= 1.0 {
-        let grid_step = sc.r_hub.max(2.0);
-        let grid_d = (d_vec.x - (d_vec.x / grid_step).round() * grid_step)
-            .abs()
-            .min((d_vec.y - (d_vec.y / grid_step).round() * grid_step).abs());
-        let (r_fine, r_fast) = (sc.r_dish * m.joystick_fine_ratio.points(), sc.r_dish * m.joystick_fast_ratio.points());
-        let ring_d = (r - r_fine).abs().min((r - r_fast).abs());
-        let line_w = (m.active_stroke_width.points() * sc.scale).max(1.0);
-        let line_t = (1.0 - (grid_d.min(ring_d) / line_w).clamp(0.0, 1.0)).powi(2);
-        let line_w_mix = (line_t * m.hover_fill_opacity.points()).clamp(0.0, 1.0);
-        rgb = [0, 1, 2].map(|ch| rgb[ch] * (1.0 - line_w_mix) + grid_rgb[ch] * line_w_mix);
-    }
+    // Energy-preserving Gaussian spread for B_sharp (blur_scale = 1.0) vs B_blur (blur_scale > 1.0) (REQ-016-B1.10b):
+    let b_s = blur_scale.max(1.0);
+    let grid_step = sc.r_hub.max(2.0);
+    let grid_d = (d_vec.x - (d_vec.x / grid_step).round() * grid_step)
+        .abs()
+        .min((d_vec.y - (d_vec.y / grid_step).round() * grid_step).abs());
+    let (r_fine, r_fast) = (sc.r_dish * m.joystick_fine_ratio.points(), sc.r_dish * m.joystick_fast_ratio.points());
+    let ring_d = (r - r_fine).abs().min((r - r_fast).abs()).min((r - sc.r_dish).abs()).min((r - sc.r_outer).abs());
+    let line_w = (m.active_stroke_width.points() * sc.scale * b_s).max(1.0);
+    let line_t = (1.0 - (grid_d.min(ring_d) / line_w).clamp(0.0, 1.0)).powi(2);
+    let line_w_mix = (line_t * (m.hover_fill_opacity.points() / (b_s * b_s))).clamp(0.0, 1.0);
+    rgb = [0, 1, 2].map(|ch| rgb[ch] * (1.0 - line_w_mix) + grid_rgb[ch] * line_w_mix);
 
     let (boost, bleed_gain) = (m.vibrancy_chroma_boost.points(), m.glass_fill_alpha.points());
     for mem in &sc.members {
@@ -76,9 +71,13 @@ pub(crate) fn paint_raytraced_rosette_quad(
     tex_dim.hash(&mut hasher);
     (theme.appearance == crate::theme::MacAppearance::Aqua).hash(&mut hasher);
     sc.accent_col.to_array().hash(&mut hasher);
+    ((sc.undo_active_weight * max_u8).round() as i32).hash(&mut hasher);
+    ((sc.redo_active_weight * max_u8).round() as i32).hash(&mut hasher);
+    sc.undo_arc_deg.0.to_bits().hash(&mut hasher);
     if let Some(cp) = sc.cursor_pos {
-        ((cp.x * 2.0).round() as i32).hash(&mut hasher);
-        ((cp.y * 2.0).round() as i32).hash(&mut hasher);
+        let q = (m.bevel_width_pt.points() * sc.scale).max(1.0);
+        ((cp.x / q).round() as i32).hash(&mut hasher);
+        ((cp.y / q).round() as i32).hash(&mut hasher);
     }
     for c in &sc.members {
         ((c.center.x * 2.0).round() as i32).hash(&mut hasher);
@@ -93,10 +92,15 @@ pub(crate) fn paint_raytraced_rosette_quad(
     let cached = ctx.data(|d| d.get_temp::<(u64, egui::TextureHandle)>(cache_id));
     let tex_handle = match cached {
         Some((prev_h, handle)) if prev_h == state_hash => handle,
-        _ => {
+        prev_opt => {
             let flat = super::icons::synthesize_rosette_matrix_rgba(tex_dim, sc, theme, m);
             let img = ColorImage::from_rgba_unmultiplied([tex_dim, tex_dim], &flat);
-            let handle = ctx.load_texture("vitrea_rosette_lg", img, egui::TextureOptions::LINEAR);
+            let handle = if let Some((_, mut existing)) = prev_opt {
+                existing.set(img, egui::TextureOptions::LINEAR);
+                existing
+            } else {
+                ctx.load_texture("vitrea_rosette_lg", img, egui::TextureOptions::LINEAR)
+            };
             ctx.data_mut(|d| d.insert_temp(cache_id, (state_hash, handle.clone())));
             handle
         }
@@ -151,6 +155,9 @@ pub(super) fn paint_dial_layers(
     let r_skirt_out = m.skirt_outer_radius.points() * s;
     let bw = m.border_stroke_width.points();
     let specular_col = theme.specular_rim_top();
+    let arcs = resolve_undo_redo_arcs(dial.arc_placement, m);
+    let undo_act = if st.hovered_undo && dial.can_undo { 1.0 } else { 0.0 };
+    let redo_act = if st.hovered_redo && dial.can_redo { 1.0 } else { 0.0 };
 
     if st.active_layer == MacThumbDialLayer::FreeJoystickBowl {
         paint_3d_recessed_bowl(
@@ -161,6 +168,12 @@ pub(super) fn paint_dial_layers(
                 marble_center: hub_center + st.joystick_offset,
                 r_outer,
                 r_bowl: r_clover_out,
+                r_skirt_in,
+                r_skirt_out,
+                undo_arc_deg: arcs.0,
+                redo_arc_deg: arcs.1,
+                undo_active_weight: undo_act,
+                redo_active_weight: redo_act,
                 puck_r: m.joystick_puck_radius.points() * s,
                 scale: s,
                 accent_col: st.accent_col,
@@ -169,12 +182,11 @@ pub(super) fn paint_dial_layers(
             m,
         );
     } else {
-        let border_stroke = Stroke::new(bw, theme.separator());
-        let outer_rim_col = if st.hovered_rotary { st.accent_col } else { specular_col };
+        let _ = st.hovered_rotary;
         let half_gap_deg = m.sector_gap_deg.points() * 0.5;
         let r_clover_mid = (r_clover_in + r_clover_out) * 0.5;
         let pad = m.bevel_width_pt.points() * s;
-        let dial_rect = Rect::from_center_size(hub_center, Vec2::splat((r_outer + pad) * 2.0));
+        let dial_rect = Rect::from_center_size(hub_center, Vec2::splat((r_skirt_out + pad) * 2.0));
         let px_scale = 2.0f32;
         let tex_dim = ((dial_rect.width() * px_scale).round() as usize).max(2);
         let to_tex = |pt: Pos2| -> vitrea::GlamVec2 {
@@ -232,15 +244,18 @@ pub(super) fn paint_dial_layers(
             r_outer: r_outer * px_scale,
             r_dish: r_clover_out * px_scale,
             r_hub: r_hub * px_scale,
+            r_skirt_in: r_skirt_in * px_scale,
+            r_skirt_out: r_skirt_out * px_scale,
+            undo_arc_deg: arcs.0,
+            redo_arc_deg: arcs.1,
+            undo_active_weight: undo_act,
+            redo_active_weight: redo_act,
             scale: s * px_scale,
             cursor_pos: cursor_tex,
             accent_col: st.accent_col,
             members,
         };
         paint_raytraced_rosette_quad(painter, dial.id_source, dial_rect, &container, tex_dim, theme, m);
-        painter.circle_stroke(hub_center, r_outer, border_stroke);
-        painter.circle_stroke(hub_center, r_outer - bw, Stroke::new(m.active_stroke_width.points(), outer_rim_col));
-        painter.circle_stroke(hub_center, r_clover_out, border_stroke);
 
         for sector in MacThumbSector::ALL {
             let is_latched = st.latched_sector == Some(sector);
@@ -321,7 +336,7 @@ pub(super) fn paint_dial_layers(
         theme,
         m,
         (hub_center, r_skirt_in, r_skirt_out, s),
-        resolve_undo_redo_arcs(dial.arc_placement, m),
+        arcs,
         UndoRedoPaintStyle {
             can_undo: dial.can_undo,
             can_redo: dial.can_redo,
@@ -358,23 +373,12 @@ pub(crate) fn paint_undo_redo_crescent_arcs(
     ((undo_start, undo_end), (redo_start, redo_end)): UndoRedoArcs,
     style: UndoRedoPaintStyle,
 ) {
-    let is_light = theme.appearance == crate::theme::MacAppearance::Aqua;
-    let specular_col = theme.specular_rim_top();
+    let _ = (style.hovered_undo, style.hovered_redo, style.accent_col);
     let r_skirt_mid = (r_skirt_in + r_skirt_out) * 0.5;
-    for (start_d, end_d, sym, word, enabled, hovered) in [
-        (undo_start, undo_end, crate::symbols::MacSymbol::ArrowCounterClockwise, "Undo", style.can_undo, style.hovered_undo),
-        (redo_start, redo_end, crate::symbols::MacSymbol::ArrowClockwise, "Redo", style.can_redo, style.hovered_redo),
+    for (start_d, end_d, sym, word, enabled) in [
+        (undo_start, undo_end, crate::symbols::MacSymbol::ArrowCounterClockwise, "Undo", style.can_undo),
+        (redo_start, redo_end, crate::symbols::MacSymbol::ArrowClockwise, "Redo", style.can_redo),
     ] {
-        let fill = if is_light { theme.window_background() } else { theme.control_background() };
-        let stroke_col = if hovered && enabled { style.accent_col } else { specular_col };
-        super::super::liquid_glass::paint_curved_stadium_capsule(
-            painter,
-            hub_center,
-            (r_skirt_in, r_skirt_out),
-            (start_d, end_d),
-            (fill, stroke_col, theme.drop_shadow()),
-            m,
-        );
         let mid_deg = (start_d + end_d) * 0.5;
         let fg = if enabled { theme.label() } else { theme.tertiary_label() };
         let caption = format!("{} {word}", sym.as_str());

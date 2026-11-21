@@ -314,15 +314,30 @@ impl MacWebGlSession {
                         self.atlas_dirty = true;
                     }
                 } else {
-                    self.textures.insert(
-                        tex_id,
-                        SubTextureEntry {
-                            width: w,
-                            height: h,
-                            rgba: color_img.pixels.iter().flat_map(|p| p.to_array()).collect(),
-                        },
-                    );
-                    self.atlas_dirty = true;
+                    let rgba: Vec<u8> = color_img.pixels.iter().flat_map(|p| p.to_array()).collect();
+                    let in_place = if let (Some(sub), Some(&(ox, oy, tw, th))) = (self.textures.get_mut(&tex_id), self.uv_rects.get(&tex_id)) {
+                        if sub.width == w && sub.height == h && (tw as usize) == w && (th as usize) == h && !self.atlas_dirty {
+                            sub.rgba.copy_from_slice(&rgba);
+                            let mw = self.atlas_width as usize;
+                            for row in 0..h {
+                                let src_s = row * w * 4;
+                                let dst_s = (((oy as usize) + row) * mw + (ox as usize)) * 4;
+                                if dst_s + w * 4 <= self.atlas_rgba.len() {
+                                    self.atlas_rgba[dst_s..dst_s + w * 4].copy_from_slice(&rgba[src_s..src_s + w * 4]);
+                                }
+                            }
+                            self.atlas_version = self.atlas_version.wrapping_add(1).max(1);
+                            true
+                        } else {
+                            false
+                        }
+                    } else {
+                        false
+                    };
+                    if !in_place {
+                        self.textures.insert(tex_id, SubTextureEntry { width: w, height: h, rgba });
+                        self.atlas_dirty = true;
+                    }
                 }
             }
         }

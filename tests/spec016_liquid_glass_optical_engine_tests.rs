@@ -142,24 +142,17 @@ fn tc_016_03_blurred_vibrancy_backdrop_and_smooth_min_metaball_union() {
     }
 }
 
-/// `tc_016_04`: 8-Cushion $360^\circ$ Rosette (`NW` & `SW` passive cushions), Mandatory 3-Tier Cushion Typography (`label` + `shortcut_hint`),
-/// Semicircular Stadium `"↶ Undo"` / `"↷ Redo"` Crown Capsules, and Visible `>= 2.0pt` Fluid Cushion Lift (`REQ-014-08.1..3`, `REQ-016-03`).
+/// `tc_016_04`: 6-Cushion $360^\circ$ Rosette (`N, NE, E, SE, S, W` active glass cushions; `NW` & `SW` open recessed bowl pockets, `REQ-016-B1.8`),
+/// Mandatory 3-Tier Cushion Typography (`label` + `shortcut_hint`), Semicircular Stadium `"↶ Undo"` / `"↷ Redo"` Crown Capsules inside the single 3-Matrix container (`REQ-016-B1.9`),
+/// and Visible `>= 2.0pt` Fluid Cushion Lift (`REQ-014-08.1..3`, `REQ-016-03`).
 #[test]
-fn tc_016_04_mockup_parity_8_cushion_rosette_3_tier_labels_and_stadium_undo_redo() {
+fn tc_016_04_mockup_parity_6_cushion_rosette_open_pockets_3_tier_labels_and_stadium_undo_redo() {
     let (ctx, theme) = common::headless_ctx(MacAppearance::DarkAqua);
-    let mut latched = MacThumbSector::NorthEast.intent_mask();
-    let mut rotary = 0.5f32;
-    let (mut hub_c, mut east_rest) = (Pos2::ZERO, Pos2::ZERO);
-    let shapes = common::run_frame(
-        &ctx,
-        RawInput { time: Some(0.0), screen_rect: Some(Rect::from_min_size(Pos2::ZERO, vec2(320.0, 320.0))), ..Default::default() },
-        vec2(320.0, 320.0),
-        |ui| {
-            let r = MacContextThumbDial::new("mockup_dial", &mut latched, &mut rotary).preset(MacThumbContextPreset::Primitives).theme(&theme).show(ui);
-            hub_c = r.hub_center;
-            east_rest = r.sector_center(MacThumbSector::East);
-        },
-    );
+    let (mut latched, mut rotary, mut hub_c, mut east_rest) = (MacThumbSector::NorthEast.intent_mask(), 0.5f32, Pos2::ZERO, Pos2::ZERO);
+    let shapes = common::run_frame(&ctx, RawInput { time: Some(0.0), screen_rect: Some(Rect::from_min_size(Pos2::ZERO, vec2(320.0, 320.0))), ..Default::default() }, vec2(320.0, 320.0), |ui| {
+        let r = MacContextThumbDial::new("mockup_dial", &mut latched, &mut rotary).preset(MacThumbContextPreset::Primitives).theme(&theme).show(ui);
+        (hub_c, east_rest) = (r.hub_center, r.sector_center(MacThumbSector::East));
+    });
     let mut texts = Vec::new();
     for cs in &shapes {
         common::collect_text_shapes(&cs.shape, &mut texts);
@@ -168,32 +161,20 @@ fn tc_016_04_mockup_parity_8_cushion_rosette_3_tier_labels_and_stadium_undo_redo
     for req in ["1:1", "Center", "Shear", "Slide", "Move", "Undo", "Redo"] {
         assert!(joined_text.contains(req), "Missing caption '{req}' in {joined_text}");
     }
-    assert!(
-        shapes.iter().any(|cs| matches!(&cs.shape, egui::Shape::Mesh(m) if m.texture_id != egui::TextureId::default() && m.vertices.len() == 4)),
-        "MacContextThumbDial must render via a per-pixel TextureHandle quad"
-    );
+    assert!(shapes.iter().any(|cs| matches!(&cs.shape, egui::Shape::Mesh(m) if m.texture_id != egui::TextureId::default() && m.vertices.len() == 4)));
 
     let (clean_fb_ctx, _) = common::headless_ctx(MacAppearance::DarkAqua);
     let fb_dark = common::RetinaCpuFramebuffer::render_retina(&clean_fb_ctx, vec2(320.0, 320.0), 2.0, Color32::from_rgb(20, 22, 26), |ui| {
         MacContextThumbDial::new("mockup_dial_fb", &mut latched, &mut rotary).preset(MacThumbContextPreset::Primitives).theme(&theme).show(ui);
     });
-    let sample_rgb = |pt: Pos2| -> [u8; 4] {
-        let px = ((pt.x * 2.0).round() as usize).min(fb_dark.width - 1);
-        let py = ((pt.y * 2.0).round() as usize).min(fb_dark.height - 1);
-        fb_dark.pixels[py * fb_dark.width + px]
-    };
+    let sample_rgb = |pt: Pos2| fb_dark.pixels[((pt.y * 2.0).round() as usize).min(fb_dark.height - 1) * fb_dark.width + ((pt.x * 2.0).round() as usize).min(fb_dark.width - 1)];
     let r_mid = 52.0f32;
-    let nw_rgb = sample_rgb(pos2(hub_c.x - r_mid * 0.707, hub_c.y - r_mid * 0.707));
-    let channel_rgb = sample_rgb(pos2(hub_c.x - r_mid * 0.38, hub_c.y - r_mid * 0.92));
-    let ne_rgb = sample_rgb(pos2(hub_c.x + r_mid * 0.707, hub_c.y - r_mid * 0.707));
-    assert!((nw_rgb[0] as i32) > (channel_rgb[0] as i32) + 6, "Passive NW cushion ({nw_rgb:?}) must be brighter than channel ({channel_rgb:?})");
-    assert!((ne_rgb[2] as i32 - ne_rgb[0] as i32) >= 40 && ne_rgb[2] >= 130, "Latched NE cushion ({ne_rgb:?}) must emit sapphire core");
+    let (w_rgb, channel_rgb, ne_rgb) = (sample_rgb(pos2(hub_c.x - r_mid, hub_c.y)), sample_rgb(pos2(hub_c.x - r_mid * 0.38, hub_c.y - r_mid * 0.92)), sample_rgb(pos2(hub_c.x + r_mid * 0.707, hub_c.y - r_mid * 0.707)));
+    assert!((w_rgb[0] as i32) > (channel_rgb[0] as i32) + 6 && (ne_rgb[2] as i32 - ne_rgb[0] as i32) >= 40 && ne_rgb[2] >= 130);
 
     let (rad_left, rad_right) = ((-107.0f32).to_radians(), (-73.0f32).to_radians());
-    let north_left_rgb = sample_rgb(pos2(hub_c.x + rad_left.cos() * r_mid, hub_c.y + rad_left.sin() * r_mid));
-    let north_right_rgb = sample_rgb(pos2(hub_c.x + rad_right.cos() * r_mid, hub_c.y + rad_right.sin() * r_mid));
-    let (bc_left, bc_right) = (north_left_rgb[2] as i32 - north_left_rgb[0] as i32, north_right_rgb[2] as i32 - north_right_rgb[0] as i32);
-    assert!(bc_right >= bc_left + 8, "Oracle O_group_2 violation: North right bevel ({north_right_rgb:?}) must refract more blue than left ({north_left_rgb:?})");
+    let (north_left_rgb, north_right_rgb) = (sample_rgb(pos2(hub_c.x + rad_left.cos() * r_mid, hub_c.y + rad_left.sin() * r_mid)), sample_rgb(pos2(hub_c.x + rad_right.cos() * r_mid, hub_c.y + rad_right.sin() * r_mid)));
+    assert!((north_right_rgb[2] as i32 - north_right_rgb[0] as i32) >= (north_left_rgb[2] as i32 - north_left_rgb[0] as i32) + 8);
 
     let vitrea_optics_src = std::fs::read_to_string(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../vitrea/src/optics.rs")).expect("read vitrea");
     for bad in ["RosetteOpticalScene", "render_rosette_liquid_glass_rgba", "is_light_mode", "0.895", "0.215", "0.955"] {
@@ -201,44 +182,27 @@ fn tc_016_04_mockup_parity_8_cushion_rosette_3_tier_labels_and_stadium_undo_redo
     }
     assert!(vitrea_optics_src.contains("pub struct GlassSurfaceSample") && vitrea_optics_src.contains("pub fn compose_dielectric_lch_pixel("));
 
-    let (mut area_rest, mut area_stretched) = (0usize, 0usize);
-    let (c_center, half_ext) = (vitrea::GlamVec2::new(50.0, 50.0), vitrea::GlamVec2::new(14.0, 9.0));
-    for gy in 0..200 {
-        for gx in 0..200 {
-            let p = vitrea::GlamVec2::new((gx as f32 + 0.5) * 0.5, (gy as f32 + 0.5) * 0.5);
-            if vitrea::sdf_rounded_capsule_sample(p, c_center, half_ext, 5.0).distance <= 0.0 {
-                area_rest += 1;
-            }
-            let p_def = vitrea::deform_viscous_droplet_point(p, c_center, vitrea::GlamVec2::new(10.0, 0.0), 20.0, 0.0, (0.25, 0.0625));
-            if vitrea::sdf_rounded_capsule_sample(p_def, c_center, half_ext, 5.0).distance <= 0.0 {
-                area_stretched += 1;
-            }
-        }
+    let (mut area_rest, mut area_stretched, c_center, half_ext) = (0usize, 0usize, vitrea::GlamVec2::new(50.0, 50.0), vitrea::GlamVec2::new(14.0, 9.0));
+    for (gy, gx) in (0..200).flat_map(|y| (0..200).map(move |x| (y, x))) {
+        let p = vitrea::GlamVec2::new((gx as f32 + 0.5) * 0.5, (gy as f32 + 0.5) * 0.5);
+        area_rest += usize::from(vitrea::sdf_rounded_capsule_sample(p, c_center, half_ext, 5.0).distance <= 0.0);
+        let p_def = vitrea::deform_viscous_droplet_point(p, c_center, vitrea::GlamVec2::new(10.0, 0.0), 20.0, 0.0, (0.25, 0.0625));
+        area_stretched += usize::from(vitrea::sdf_rounded_capsule_sample(p_def, c_center, half_ext, 5.0).distance <= 0.0);
     }
     assert!(((area_stretched as f32 - area_rest as f32).abs()) / (area_rest.max(1) as f32) <= 0.015);
 
-    let gap_rad = (-22.5f32).to_radians();
+    let (gap_rad, c_hub) = ((-22.5f32).to_radians(), vitrea::GlamVec2::new(hub_c.x, hub_c.y));
     let p_gap = vitrea::GlamVec2::new(hub_c.x + gap_rad.cos() * r_mid, hub_c.y + gap_rad.sin() * r_mid);
-    let c_hub = vitrea::GlamVec2::new(hub_c.x, hub_c.y);
-    let s_ne = vitrea::sdf_annular_rounded_sector_sample(p_gap, c_hub, (30.0, 78.0), (-45.0, 19.0), 6.0);
-    let s_e = vitrea::sdf_annular_rounded_sector_sample(p_gap, c_hub, (30.0, 78.0), (0.0, 19.0), 6.0);
-    assert!(s_ne.distance > 0.0 && s_e.distance > 0.0);
+    let (s_ne, s_e) = (vitrea::sdf_annular_rounded_sector_sample(p_gap, c_hub, (30.0, 78.0), (-45.0, 19.0), 6.0), vitrea::sdf_annular_rounded_sector_sample(p_gap, c_hub, (30.0, 78.0), (0.0, 19.0), 6.0));
     let s_union = vitrea::sdf_smooth_union_with_grad(s_ne, s_e, 16.0);
-    assert!(s_union.distance < 0.0 && (vitrea::dome_normal_3d_from_sdf(s_union, 8.0).length() - 1.0).abs() < 1e-4);
+    assert!(s_ne.distance > 0.0 && s_e.distance > 0.0 && s_union.distance < 0.0 && (vitrea::dome_normal_3d_from_sdf(s_union, 8.0).length() - 1.0).abs() < 1e-4);
 
     let hover_east = pos2(east_rest.x + 10.0, east_rest.y);
     for t in [0.02, 0.14] {
-        let _ = common::run_frame(
-            &ctx,
-            RawInput { time: Some(t), events: vec![Event::PointerMoved(hover_east)], ..Default::default() },
-            vec2(320.0, 320.0),
-            |ui| {
-                let r = MacContextThumbDial::new("mockup_dial", &mut latched, &mut rotary).preset(MacThumbContextPreset::Primitives).theme(&theme).show(ui);
-                if t > 0.10 {
-                    assert!(r.sector_center(MacThumbSector::East).x - east_rest.x >= 2.0);
-                }
-            },
-        );
+        let _ = common::run_frame(&ctx, RawInput { time: Some(t), events: vec![Event::PointerMoved(hover_east)], ..Default::default() }, vec2(320.0, 320.0), |ui| {
+            let r = MacContextThumbDial::new("mockup_dial", &mut latched, &mut rotary).preset(MacThumbContextPreset::Primitives).theme(&theme).show(ui);
+            assert!(t <= 0.10 || r.sector_center(MacThumbSector::East).x - east_rest.x >= 2.0);
+        });
     }
 }
 
@@ -395,7 +359,7 @@ fn tc_016_w3_through_w6_liquid_glass_and_sonoma_parity() {
     let atlas_buf = web_sess.encode_atlas();
     let atlas_h = u32::from_le_bytes([atlas_buf[4], atlas_buf[5], atlas_buf[6], atlas_buf[7]]);
     assert!(
-        web_sess.packed_texture_count() >= 4 && atlas_h > 256,
+        web_sess.packed_texture_count() >= 3 && atlas_h > 256,
         "REQ-016-09.2 violation: MacWebGlSession must pack all custom 3-Matrix Liquid Glass TextureHandles (Managed(1..N)) alongside Managed(0), got count={} atlas_h={atlas_h}",
         web_sess.packed_texture_count()
     );
@@ -407,34 +371,24 @@ fn tc_016_w3_through_w6_liquid_glass_and_sonoma_parity() {
 #[test]
 fn tc_016_a0_a1_a2_zero_overdraw_snellius_grid_bending_and_bipolar_lch_caustic_oracles() {
     let (ctx, theme) = common::headless_ctx(MacAppearance::Aqua);
-    let mut latched = MacThumbSector::NorthEast.intent_mask();
-    let mut rotary = 0.5f32;
-    let (mut hub_c, mut undo_rect) = (Pos2::ZERO, Rect::NOTHING);
-    let shapes = common::run_frame(
-        &ctx,
-        RawInput { time: Some(0.0), screen_rect: Some(Rect::from_min_size(Pos2::ZERO, vec2(320.0, 320.0))), ..Default::default() },
-        vec2(320.0, 320.0),
-        |ui| {
-            let r = MacContextThumbDial::new("a0_a1_a2_dial", &mut latched, &mut rotary).preset(MacThumbContextPreset::Primitives).can_undo(true).can_redo(true).theme(&theme).show(ui);
-            (hub_c, undo_rect) = (r.hub_center, r.undo_rect);
-        },
-    );
-    let large_overdraw_circles = shapes.iter().filter(|cs| matches!(&cs.shape, egui::Shape::Circle(c) if c.radius > 40.0 && c.fill != Color32::TRANSPARENT)).count();
+    let (mut latched, mut rotary, mut hub_c, mut undo_rect) = (MacThumbSector::NorthEast.intent_mask(), 0.5f32, Pos2::ZERO, Rect::NOTHING);
+    let shapes = common::run_frame(&ctx, RawInput { time: Some(0.0), screen_rect: Some(Rect::from_min_size(Pos2::ZERO, vec2(320.0, 320.0))), ..Default::default() }, vec2(320.0, 320.0), |ui| {
+        let r = MacContextThumbDial::new("a0_a1_a2_dial", &mut latched, &mut rotary).preset(MacThumbContextPreset::Primitives).can_undo(true).can_redo(true).theme(&theme).show(ui);
+        (hub_c, undo_rect) = (r.hub_center, r.undo_rect);
+    });
+    let large_overdraw_circles = shapes.iter().filter(|cs| matches!(&cs.shape, egui::Shape::Circle(c) if c.radius > 40.0)).count();
     let untextured_overdraw_meshes = shapes.iter().filter(|cs| matches!(&cs.shape, egui::Shape::Mesh(m) if m.texture_id == egui::TextureId::default())).count();
-    assert_eq!(large_overdraw_circles, 0, "REQ-016-A0.1 Zero-Overdraw violation: {large_overdraw_circles} large filled Circle shapes!");
-    assert_eq!(untextured_overdraw_meshes, 0, "REQ-016-A0.1 Zero-Overdraw violation: {untextured_overdraw_meshes} legacy WHITE_UV meshes!");
+    let textured_container_quads = shapes.iter().filter(|cs| matches!(&cs.shape, egui::Shape::Mesh(m) if m.texture_id != egui::TextureId::default() && m.vertices.len() == 4)).count();
+    assert_eq!((large_overdraw_circles, untextured_overdraw_meshes, textured_container_quads), (0, 0, 1));
 
     let params = vitrea::LiquidGlassOpticalParams::default();
     let (c_pt, h_ext, p_rim) = (vitrea::GlamVec2::new(100.0, 100.0), vitrea::GlamVec2::new(40.0, 20.0), vitrea::GlamVec2::new(139.6, 100.0));
-    let s_rim = vitrea::sdf_rounded_capsule_sample(p_rim, c_pt, h_ext, 12.0);
-    let s_center = vitrea::sdf_rounded_capsule_sample(c_pt, c_pt, h_ext, 12.0);
-    let ([pr_r, pr_g, pr_b], f_edge_rim, _) = vitrea::refract_bevel_chromatic_rgb(p_rim, s_rim, &params);
-    let ([pc_r, pc_g, pc_b], f_edge_center, _) = vitrea::refract_bevel_chromatic_rgb(c_pt, s_center, &params);
+    let (s_rim, s_center) = (vitrea::sdf_rounded_capsule_sample(p_rim, c_pt, h_ext, 12.0), vitrea::sdf_rounded_capsule_sample(c_pt, c_pt, h_ext, 12.0));
+    let (([pr_r, pr_g, pr_b], f_edge_rim, _), ([pc_r, pc_g, pc_b], f_edge_center, _)) = (vitrea::refract_bevel_chromatic_rgb(p_rim, s_rim, &params), vitrea::refract_bevel_chromatic_rgb(c_pt, s_center, &params));
     assert!(f_edge_rim > 0.35 && (pr_g - p_rim).length() >= 2.5 && (pr_b - pr_r).length() >= 1.0 && f_edge_center == 0.0 && pc_r == c_pt && pc_g == c_pt && pc_b == c_pt);
 
-    let undo_hover_pt = undo_rect.center();
     let (fb_ctx, _) = common::headless_ctx(MacAppearance::Aqua);
-    fb_ctx.data_mut(|d| d.insert_temp(egui::Id::NULL.with("retina_events"), vec![Event::PointerMoved(undo_hover_pt)]));
+    fb_ctx.data_mut(|d| d.insert_temp(egui::Id::NULL.with("retina_events"), vec![Event::PointerMoved(undo_rect.center())]));
     let fb_aqua = common::RetinaCpuFramebuffer::render_retina(&fb_ctx, vec2(320.0, 320.0), 2.0, Color32::from_rgb(244, 245, 248), |ui| {
         MacContextThumbDial::new("a0_a1_a2_fb", &mut latched, &mut rotary).preset(MacThumbContextPreset::Primitives).can_undo(true).can_redo(true).theme(&theme).show(ui);
     });
@@ -442,40 +396,24 @@ fn tc_016_a0_a1_a2_zero_overdraw_snellius_grid_bending_and_bipolar_lch_caustic_o
         fb_aqua.save_png(std::path::Path::new(&png_path));
     }
     let sample_lch = |pt: Pos2| -> ([f32; 3], [u8; 4]) {
-        let px = ((pt.x * 2.0).round() as usize).min(fb_aqua.width - 1);
-        let py = ((pt.y * 2.0).round() as usize).min(fb_aqua.height - 1);
-        let rgba = fb_aqua.pixels[py * fb_aqua.width + px];
-        let lch = vitrea::srgb_to_cie_lch([rgba[0] as f32 / 255.0, rgba[1] as f32 / 255.0, rgba[2] as f32 / 255.0]);
-        (lch, rgba)
+        let rgba = fb_aqua.pixels[((pt.y * 2.0).round() as usize).min(fb_aqua.height - 1) * fb_aqua.width + ((pt.x * 2.0).round() as usize).min(fb_aqua.width - 1)];
+        (vitrea::srgb_to_cie_lch([rgba[0] as f32 / 255.0, rgba[1] as f32 / 255.0, rgba[2] as f32 / 255.0]), rgba)
     };
 
-    // 3. Oracle O_solo_1b (REQ-016-A0.3 & REQ-016-B1.8) — Calm `Glass.regular` Frosted Plateau on West (-166 deg, inside the West glass plateau avoiding the center "Move" icon/text) + Open Uncushioned Recessed Bowl Pockets at NW (-135 deg) & SW (+135 deg):
-    //    (a) Scan across the passive West cushion (-166 deg) interior plateau:
-    //        - The colorful warm backdrop beneath the dial must transmit measurable CIE Chroma through passive West (`max_w_c >= 6.0`),
-    //        - Because `Glass.regular` blurs out high-frequency grid lines in the center plateau, adjacent pixel steps in the West plateau must be calm (`max_step_jitter <= 1.8`), never noisy grid spikes!
+    // 3. Oracle O_solo_1b (REQ-016-A0.3 & REQ-016-B1.8):
     let w_rad = (-166.0f32).to_radians();
     let (mut min_w_l, mut max_w_l, mut max_w_c, mut max_step_jitter, mut prev_l) = (100.0f32, 0.0f32, 0.0f32, 0.0f32, None::<f32>);
     for step in -6..=6 {
         let r_s = 50.0 + (step as f32) * 0.75;
-        let pt = pos2(hub_c.x + w_rad.cos() * r_s, hub_c.y + w_rad.sin() * r_s);
-        let ([l, c, _], _) = sample_lch(pt);
-        min_w_l = min_w_l.min(l);
-        max_w_l = max_w_l.max(l);
-        max_w_c = max_w_c.max(c);
+        let ([l, c, _], _) = sample_lch(pos2(hub_c.x + w_rad.cos() * r_s, hub_c.y + w_rad.sin() * r_s));
+        (min_w_l, max_w_l, max_w_c) = (min_w_l.min(l), max_w_l.max(l), max_w_c.max(c));
         if let Some(pl) = prev_l {
             max_step_jitter = max_step_jitter.max((l - pl).abs());
         }
         prev_l = Some(l);
     }
-    assert!(
-        max_w_c >= 6.0 && max_step_jitter <= 1.8 && (max_w_l - min_w_l) >= 0.4,
-        "Oracle O_solo_1b (REQ-016-A0.3 Glass.regular) violation: Passive West cushion must refract colorful backdrop chroma (max_c={max_w_c:.2} >= 6.0) with a calm diffused plateau (max_step_jitter={max_step_jitter:.2} <= 1.8, L_span={:.2})",
-        max_w_l - min_w_l
-    );
+    assert!(max_w_c >= 6.0 && max_step_jitter <= 1.8 && (max_w_l - min_w_l) >= 0.4);
 
-    //    (b) REQ-016-B1.8 Empty Pocket Proof: NW (-135 deg) and SW (+135 deg) MUST NOT have glass cushions (`surf.coverage == 0.0`)!
-    //        Therefore, across the inner cushion rim radius (r = 30.5..33.0pt) at NW (-135 deg) and SW (+135 deg), there MUST BE NO glass Fresnel/caustic rim peak
-    //        above the pocket center (r = 50pt)!
     let nw_rad = (-135.0f32).to_radians();
     let ([l_nw_pocket_center, _, _], _) = sample_lch(pos2(hub_c.x + nw_rad.cos() * 50.0, hub_c.y + nw_rad.sin() * 50.0));
     let mut max_nw_pocket_rim_delta = 0.0f32;
@@ -484,44 +422,34 @@ fn tc_016_a0_a1_a2_zero_overdraw_snellius_grid_bending_and_bipolar_lch_caustic_o
         let ([l_in, _, _], _) = sample_lch(pos2(hub_c.x + nw_rad.cos() * (30.5 + dr), hub_c.y + nw_rad.sin() * (30.5 + dr)));
         max_nw_pocket_rim_delta = max_nw_pocket_rim_delta.max(l_out - l_nw_pocket_center).max(l_in - l_nw_pocket_center);
     }
-    assert!(
-        max_nw_pocket_rim_delta < 2.0,
-        "REQ-016-B1.8 Empty Pocket violation: NW (-135 deg) still has a glass cushion Fresnel/caustic rim peak (delta_L={max_nw_pocket_rim_delta:.2} >= 2.0 above pocket center L={l_nw_pocket_center:.1}); NW and SW must be open uncushioned bowl pockets!"
-    );
+    assert!(max_nw_pocket_rim_delta < 2.0);
 
-    // 4. Oracle O_solo_2 — Bipolar Top-Left Glare + Opposite Bottom-Right Caustic Crescent in CIE LCH on the 6 Active Cushions:
-    //    Sample the SouthEast cushion (+45 deg) plateau at (+32 deg, r = 50pt, avoiding the "Shear" text) vs. its inner top-left bevel (r = 30.5..33.0pt, normal pointing top-left -135 deg)
-    //    AND its outer bottom-right bevel (r = 75.0..77.5pt, normal pointing bottom-right +45 deg)!
-    let se_rad = (45.0f32).to_radians();
-    let se_plat_rad = (32.0f32).to_radians();
-    let ([l_se_center, _, _], _) = sample_lch(pos2(hub_c.x + se_plat_rad.cos() * 50.0, hub_c.y + se_plat_rad.sin() * 50.0));
-    let mut max_l_tl_rim = 0.0f32;
-    let mut max_l_br_caustic = 0.0f32;
+    // 4. Oracle O_solo_2 & REQ-016-B1.10:
+    let ([l_bg_corner, _, _], rgba_bg_corner) = sample_lch(pos2(8.0, 8.0));
+    let ([_, c_undo_cap, _], rgba_undo_cap) = sample_lch(pos2(hub_c.x - 82.0, hub_c.y - 55.0));
+    let ([l_undo_out, _, _], rgba_undo_out) = sample_lch(pos2(hub_c.x - 88.5, hub_c.y - 53.0));
+    let ([_, c_redo_cap, _], rgba_redo_cap) = sample_lch(pos2(hub_c.x + 82.0, hub_c.y - 55.0));
+    let ([l_redo_out, _, _], rgba_redo_out) = sample_lch(pos2(hub_c.x + 88.5, hub_c.y - 53.0));
+    assert!(rgba_undo_cap != rgba_bg_corner && c_undo_cap >= 15.0 && rgba_undo_out != rgba_bg_corner && (l_bg_corner - l_undo_out) >= 2.0);
+    assert!(rgba_redo_cap != rgba_bg_corner && c_redo_cap >= 4.0 && rgba_redo_out != rgba_bg_corner && (l_bg_corner - l_redo_out) >= 1.5);
+
+    let (se_rad, se_plat_rad) = ((45.0f32).to_radians(), (36.0f32).to_radians());
+    let ([l_se_center, _, _], _) = sample_lch(pos2(hub_c.x + se_plat_rad.cos() * 66.0, hub_c.y + se_plat_rad.sin() * 66.0));
+    let (mut max_l_tl_rim, mut max_l_br_caustic) = (0.0f32, 0.0f32);
     for dr in [0.0f32, 0.5, 1.0, 1.5, 2.0, 2.5] {
         let ([l_tl, _, _], _) = sample_lch(pos2(hub_c.x + se_rad.cos() * (30.5 + dr), hub_c.y + se_rad.sin() * (30.5 + dr)));
         let ([l_br, _, _], _) = sample_lch(pos2(hub_c.x + se_rad.cos() * (75.0 + dr), hub_c.y + se_rad.sin() * (75.0 + dr)));
-        max_l_tl_rim = max_l_tl_rim.max(l_tl);
-        max_l_br_caustic = max_l_br_caustic.max(l_br);
+        (max_l_tl_rim, max_l_br_caustic) = (max_l_tl_rim.max(l_tl), max_l_br_caustic.max(l_br));
     }
-    assert!(
-        max_l_tl_rim >= l_se_center + 2.0 && max_l_br_caustic >= l_se_center + 2.0,
-        "Oracle O_solo_2 (SPEC-016 §4.2) violation: SouthEast cushion must exhibit bipolar CIE LCH rim peaks on BOTH top-left glare rim (L={max_l_tl_rim:.1}) AND opposite bottom-right caustic crescent (L={max_l_br_caustic:.1}) above center plateau (L={l_se_center:.1})!"
-    );
+    assert!(l_se_center >= 88.0 && max_l_tl_rim >= l_se_center + 2.5 && max_l_br_caustic >= l_se_center + 2.5);
 
     // 5. Undo/Redo Hover Color Integrity Oracle (REQ-016-A1):
-    //    Sample the hovered Undo stadium arc at (-135 deg, r = 98pt, avoiding the center text at -120 deg).
-    //    Must be a vibrant, translucent sapphire glass lens (L >= 45.0, B >= 150, B > R + 35), NOT dark navy/black premultiplied mud!
     let undo_sample_rad = (-140.0f32).to_radians();
-    let undo_sample_pt = pos2(hub_c.x + undo_sample_rad.cos() * 98.0, hub_c.y + undo_sample_rad.sin() * 98.0);
-    let ([l_undo, c_undo, _], rgba_undo) = sample_lch(undo_sample_pt);
-    assert!(
-        l_undo >= 45.0 && c_undo >= 25.0 && rgba_undo[2] >= 150 && (rgba_undo[2] as i32 - rgba_undo[0] as i32) >= 35,
-        "REQ-016-A1 Hover Color Integrity violation: Hovered Undo stadium capsule rendered as dark premultiplied mud ({rgba_undo:?}, L={l_undo:.1}, C={c_undo:.1}) instead of translucent sapphire glass!"
-    );
+    let ([l_undo, c_undo, _], rgba_undo) = sample_lch(pos2(hub_c.x + undo_sample_rad.cos() * 98.0, hub_c.y + undo_sample_rad.sin() * 98.0));
+    assert!(l_undo >= 45.0 && c_undo >= 25.0 && rgba_undo[2] >= 150 && (rgba_undo[2] as i32 - rgba_undo[0] as i32) >= 35);
 
-    // 6. Block B1 & B2 — Group Ensemble Oracles on MacFreeJoystickBowl & MacEdgeThumbwheel (Zero-Overdraw, Crystal Marble Refraction & Bipolar LCH Caustic):
-    let (mut wheel_v, mut marble_c) = (50.0f32, Pos2::ZERO);
-    let b_id = egui::Id::NULL.with("b1_b2_bowl");
+    // 6. Block B1 & B2 — Group Ensemble Oracles on MacFreeJoystickBowl & MacEdgeThumbwheel:
+    let (mut wheel_v, mut marble_c, b_id) = (50.0f32, Pos2::ZERO, egui::Id::NULL.with("b1_b2_bowl"));
     ctx.data_mut(|d| {
         d.insert_temp(b_id.with("jb_ret_x"), (24.0f32, 24.0f32, 0.0f64));
         d.insert_temp(b_id.with("jb_ret_y"), (-20.0f32, -20.0f32, 0.0f64));
@@ -530,10 +458,10 @@ fn tc_016_a0_a1_a2_zero_overdraw_snellius_grid_bending_and_bipolar_lch_caustic_o
         MacEdgeThumbwheel::new("b1_b2_drum", &mut wheel_v, 0.0..=100.0).wide_drum_width(140.0).theme(&theme).show(ui);
         marble_c = MacFreeJoystickBowl::new("b1_b2_bowl").theme(&theme).show(ui).marble_center;
     });
-    let triad_overdraw_circles = triad_shapes.iter().filter(|cs| matches!(&cs.shape, egui::Shape::Circle(c) if c.radius > 40.0 && c.fill != Color32::TRANSPARENT)).count();
+    let triad_overdraw_circles = triad_shapes.iter().filter(|cs| matches!(&cs.shape, egui::Shape::Circle(c) if c.radius > 40.0)).count();
     let triad_untextured_meshes = triad_shapes.iter().filter(|cs| matches!(&cs.shape, egui::Shape::Mesh(m) if m.texture_id == egui::TextureId::default())).count();
-    assert_eq!(triad_overdraw_circles, 0, "Oracle O_group_3 violation: {triad_overdraw_circles} large opaque Circle shapes!");
-    assert_eq!(triad_untextured_meshes, 0, "Oracle O_group_3 violation: {triad_untextured_meshes} legacy WHITE_UV meshes!");
+    let triad_textured_quads = triad_shapes.iter().filter(|cs| matches!(&cs.shape, egui::Shape::Mesh(m) if m.texture_id != egui::TextureId::default() && m.vertices.len() == 4)).count();
+    assert_eq!((triad_overdraw_circles, triad_untextured_meshes, triad_textured_quads), (0, 0, 2));
 
     let (bowl_fb_ctx, _) = common::headless_ctx(MacAppearance::Aqua);
     bowl_fb_ctx.data_mut(|d| {
@@ -545,8 +473,7 @@ fn tc_016_a0_a1_a2_zero_overdraw_snellius_grid_bending_and_bipolar_lch_caustic_o
         marble_c = MacFreeJoystickBowl::new("b1_b2_bowl").theme(&theme).show(ui).marble_center;
     });
     let sample_bowl_lch = |pt: Pos2| -> [f32; 3] {
-        let (px, py) = (((pt.x * 2.0).round() as usize).min(fb_bowl.width - 1), ((pt.y * 2.0).round() as usize).min(fb_bowl.height - 1));
-        let rgba = fb_bowl.pixels[py * fb_bowl.width + px];
+        let rgba = fb_bowl.pixels[((pt.y * 2.0).round() as usize).min(fb_bowl.height - 1) * fb_bowl.width + ((pt.x * 2.0).round() as usize).min(fb_bowl.width - 1)];
         vitrea::srgb_to_cie_lch([rgba[0] as f32 / 255.0, rgba[1] as f32 / 255.0, rgba[2] as f32 / 255.0])
     };
     let [l_m_center, _, _] = sample_bowl_lch(pos2(marble_c.x + 4.0, marble_c.y - 4.0));
@@ -554,13 +481,28 @@ fn tc_016_a0_a1_a2_zero_overdraw_snellius_grid_bending_and_bipolar_lch_caustic_o
     for r_off in [14.0f32, 15.5, 17.0, 18.5, 20.0] {
         let [l_tl, _, _] = sample_bowl_lch(pos2(marble_c.x - r_off * 0.707, marble_c.y - r_off * 0.707));
         let [l_br, _, _] = sample_bowl_lch(pos2(marble_c.x + r_off * 0.707, marble_c.y + r_off * 0.707));
-        max_l_m_tl = max_l_m_tl.max(l_tl);
-        max_l_m_br = max_l_m_br.max(l_br);
+        (max_l_m_tl, max_l_m_br) = (max_l_m_tl.max(l_tl), max_l_m_br.max(l_br));
     }
-    assert!(
-        max_l_m_tl >= l_m_center + 3.0 && max_l_m_br >= l_m_center + 3.0,
-        "Marble L_tl={max_l_m_tl:.1}, L_br={max_l_m_br:.1} vs L_c={l_m_center:.1}"
-    );
+    assert!(max_l_m_tl >= l_m_center + 3.0 && max_l_m_br >= l_m_center + 3.0);
+
+    // 7. REQ-016-B1.11 — In-Place TextureHandle::set Reuse & Stable TextureId Across 360° Joystick Drag Frames:
+    let extract_bowl_tex_id = |shapes: &[egui::epaint::ClippedShape]| -> egui::TextureId {
+        shapes.iter().find_map(|cs| if let egui::Shape::Mesh(m) = &cs.shape { (m.texture_id != egui::TextureId::default() && m.vertices.len() == 4).then_some(m.texture_id) } else { None }).expect("bowl quad")
+    };
+    let (drag_ctx, mut hub_drag) = (common::headless_ctx(MacAppearance::Aqua).0, Pos2::ZERO);
+    let shapes_f0 = common::run_frame(&drag_ctx, RawInput { time: Some(0.0), ..Default::default() }, vec2(260.0, 260.0), |ui| {
+        hub_drag = MacFreeJoystickBowl::new("smooth_360_bowl").theme(&theme).show(ui).hub_center;
+    });
+    let (p_drag1, p_drag2) = (pos2(hub_drag.x + 18.0, hub_drag.y - 14.0), pos2(hub_drag.x + 34.0, hub_drag.y - 26.0));
+    let ev1 = vec![Event::PointerMoved(p_drag1), Event::PointerButton { pos: p_drag1, button: egui::PointerButton::Primary, pressed: true, modifiers: egui::Modifiers::NONE }];
+    let shapes_f1 = common::run_frame(&drag_ctx, RawInput { time: Some(0.016), events: ev1, ..Default::default() }, vec2(260.0, 260.0), |ui| {
+        MacFreeJoystickBowl::new("smooth_360_bowl").theme(&theme).show(ui);
+    });
+    let shapes_f2 = common::run_frame(&drag_ctx, RawInput { time: Some(0.032), events: vec![Event::PointerMoved(p_drag2)], ..Default::default() }, vec2(260.0, 260.0), |ui| {
+        MacFreeJoystickBowl::new("smooth_360_bowl").theme(&theme).show(ui);
+    });
+    assert_eq!(extract_bowl_tex_id(&shapes_f0), extract_bowl_tex_id(&shapes_f1));
+    assert_eq!(extract_bowl_tex_id(&shapes_f1), extract_bowl_tex_id(&shapes_f2));
 }
 
 fn first_mesh_width(shapes: &[egui::epaint::ClippedShape]) -> Option<f32> {

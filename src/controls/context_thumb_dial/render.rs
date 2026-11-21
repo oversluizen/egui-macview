@@ -228,8 +228,9 @@ pub(super) fn show_dial(mut dial: MacContextThumbDial<'_>, ui: &mut Ui) -> MacCo
     let r_outer = m.outer_radius.points() * s;
     let r_skirt_in = m.skirt_inner_radius.points() * s;
     let r_skirt_out = m.skirt_outer_radius.points() * s;
+    let pad = m.bevel_width_pt.points() * s;
 
-    let desired_size = Vec2::new((r_outer + gap) * 2.0, (r_skirt_out + gap) * 2.0);
+    let desired_size = Vec2::splat((r_skirt_out + pad) * 2.0);
     let (rect, response) = allocate_docked_thumb_rect(ui, dial.id_source, dial.dock_target, desired_size, m, s);
 
     let hub_center = rect.center();

@@ -184,5 +184,10 @@ dbg_macro = "deny"
 should_implement_trait = "allow"
 iter_over_hash_type = "deny"
 
+[profile.release]
+strip = "symbols"
+lto = "thin"
+
+
 
 

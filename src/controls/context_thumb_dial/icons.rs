@@ -19,12 +19,18 @@ pub(crate) struct RosetteMemberSpec {
     pub(crate) deform_vel: vitrea::GlamVec2,
 }
 
-/// Container descriptor for the 3-Matrix `GlassEffectContainer` rosette pipeline (`SPEC-016 §4.4.4`).
+/// Container descriptor for the 3-Matrix `GlassEffectContainer` rosette pipeline (`SPEC-016 §4.4.4`, `REQ-016-B1.9`).
 pub(crate) struct RosetteContainerSpec {
     pub(crate) hub_center: vitrea::GlamVec2,
     pub(crate) r_outer: f32,
     pub(crate) r_dish: f32,
     pub(crate) r_hub: f32,
+    pub(crate) r_skirt_in: f32,
+    pub(crate) r_skirt_out: f32,
+    pub(crate) undo_arc_deg: (f32, f32),
+    pub(crate) redo_arc_deg: (f32, f32),
+    pub(crate) undo_active_weight: f32,
+    pub(crate) redo_active_weight: f32,
     pub(crate) scale: f32,
     pub(crate) cursor_pos: Option<vitrea::GlamVec2>,
     pub(crate) accent_col: Color32,
@@ -44,7 +50,7 @@ pub(crate) fn synthesize_rosette_matrix_rgba(tex_dim: usize, sc: &RosetteContain
     let is_light = theme.appearance == crate::theme::MacAppearance::Aqua;
     let dish_core = color_to_rgb_norm(theme.window_background());
     let dish_rim = color_to_rgb_norm(if is_light { theme.box_background() } else { theme.control_background() });
-    let passive_tint = color_to_rgb_norm(if is_light { theme.window_background() } else { theme.control_background() });
+    let passive_tint = color_to_rgb_norm(theme.specular_rim_top());
     let (accent_rgb, grid_rgb, shadow_rgb, warm_rgb) = (
         color_to_rgb_norm(sc.accent_col),
         color_to_rgb_norm(theme.secondary_label()),
@@ -56,25 +62,25 @@ pub(crate) fn synthesize_rosette_matrix_rgba(tex_dim: usize, sc: &RosetteContain
         fresnel_f0: m.fresnel_f0.points(), bevel_width_pt: m.bevel_width_pt.points() * sc.scale,
         dome_thickness_pt: m.dome_thickness_pt.points() * sc.scale, vibrancy_chroma_boost: m.vibrancy_chroma_boost.points(),
         meniscus_merge_k_pt: m.meniscus_merge_k_pt.points() * sc.scale, shadow_decay_length_pt: m.bevel_width_pt.points() * sc.scale,
-        fresnel_range_ratio: 0.5, fresnel_hardness: 0.0, glare_angle_rad: std::f32::consts::FRAC_PI_4,
-        ..Default::default()
+        glare_angle_rad: std::f32::consts::FRAC_PI_4, ..Default::default()
     };
     let stretch_gains = (m.viscous_stretch_gain.points(), m.viscous_press_gain.points());
     let sh_off = vitrea::GlamVec2::new(-params.bevel_width_pt * m.hover_fill_opacity.points(), params.bevel_width_pt * m.active_fill_opacity.points());
     let (fill_a, act_a, hov_a, spec_a) = (m.glass_fill_alpha.points(), m.active_fill_opacity.points(), m.hover_fill_opacity.points(), m.glass_specular_alpha.points());
     let (max_u8, dish_cols) = (f32::from(u8::MAX), (dish_core, dish_rim, accent_rgb, grid_rgb, warm_rgb));
+    let skirt_radii = (sc.r_skirt_in, sc.r_skirt_out);
 
     for y in 0..tex_dim {
         for x in 0..tex_dim {
             let p = vitrea::GlamVec2::new(x as f32 + 0.5, y as f32 + 0.5);
             let d_center = p - sc.hub_center;
             let r = d_center.length();
-            if r > sc.r_outer + params.bevel_width_pt {
+            if r > sc.r_skirt_out + params.bevel_width_pt * 2.0 {
                 continue;
             }
             let outer_grad = if r > 0.0 { d_center / r } else { vitrea::GlamVec2::X };
-            let mut best_s = vitrea::SdfSample2d { distance: sc.r_outer, gradient: vitrea::GlamVec2::X };
-            let (mut sh_dist, mut best_act, mut best_lift) = (sc.r_outer, 0.0f32, 0.0f32);
+            let mut best_s = vitrea::SdfSample2d { distance: sc.r_skirt_out, gradient: vitrea::GlamVec2::X };
+            let (mut sh_dist, mut best_act, mut best_lift) = (sc.r_skirt_out, 0.0f32, 0.0f32);
             for (idx, mem) in sc.members.iter().enumerate() {
                 let r_mid = (mem.radii.0 + mem.radii.1) * 0.5;
                 let rad = super::render::deg_to_rad(mem.angles_deg.0, m);
@@ -98,10 +104,21 @@ pub(crate) fn synthesize_rosette_matrix_rgba(tex_dim: usize, sc: &RosetteContain
                     }
                 }
             }
+            for (arc_deg, arc_act) in [(sc.undo_arc_deg, sc.undo_active_weight), (sc.redo_arc_deg, sc.redo_active_weight)] {
+                let s_arc = vitrea::sdf_curved_stadium_arc_sample(p, sc.hub_center, skirt_radii, arc_deg);
+                let s_arc_sh = vitrea::sdf_curved_stadium_arc_sample(p - sh_off, sc.hub_center, skirt_radii, arc_deg);
+                sh_dist = sh_dist.min(s_arc_sh.distance);
+                if s_arc.distance < best_s.distance {
+                    (best_s, best_act, best_lift) = (s_arc, arc_act, 0.0);
+                }
+            }
             sh_dist = sh_dist.min((p - sh_off - sc.hub_center).length() - sc.r_hub);
             let hub_s = vitrea::SdfSample2d { distance: r - sc.r_hub, gradient: outer_grad };
             let (glass_s, act_w, lift_w) = if hub_s.distance < best_s.distance { (hub_s, 0.0, 0.0) } else { (best_s, best_act.clamp(0.0, 1.0), best_lift.clamp(0.0, 1.0)) };
-            let exp_sh = vitrea::exponential_sdf_attenuation(sh_dist.max(0.0), &params, if is_light { act_a } else { fill_a });
+            let ao_w = (m.active_stroke_width.points() * sc.scale).max(1.0);
+            let ao_crease = (1.0 - (glass_s.distance.max(0.0) / ao_w).clamp(0.0, 1.0)).powi(2) * act_a;
+            let sh_win = (1.0 - (sh_dist.max(0.0) / params.bevel_width_pt.max(1.0)).clamp(0.0, 1.0)).powi(2);
+            let exp_sh = (vitrea::exponential_sdf_attenuation(sh_dist.max(0.0), &params, if is_light { act_a } else { fill_a }) * sh_win + ao_crease).clamp(0.0, fill_a);
             let dish_here = eval_shared_dish_matrix_at(p, sc, dish_cols, 1.0, m);
             let mut floor_rgb = [0, 1, 2].map(|ch| dish_here[ch] * (1.0 - exp_sh) + shadow_rgb[ch] * exp_sh);
             let blue_excess = (dish_here[2] - dish_core[2]).max(0.0);
@@ -111,12 +128,18 @@ pub(crate) fn synthesize_rosette_matrix_rgba(tex_dim: usize, sc: &RosetteContain
             }
             let outer_cov = ((1.0 - (r - sc.r_outer)) * 0.5).clamp(0.0, 1.0);
             let floor_a = if r <= sc.r_outer + 1.0 {
+                let outer_rim_s = vitrea::SdfSample2d { distance: r - sc.r_outer, gradient: outer_grad };
+                let (f_rim, g_rim) = vitrea::anisotropic_bipolar_rim_glare(outer_rim_s, &params, None);
+                let rim_glint = ((f_rim * hov_a + g_rim * spec_a) * outer_cov).clamp(0.0, 1.0);
+                floor_rgb = [0, 1, 2].map(|ch| (floor_rgb[ch] + (passive_tint[ch] - floor_rgb[ch]) * rim_glint).clamp(0.0, 1.0));
                 let rim_t = ((r - sc.r_dish).max(0.0) / (sc.r_outer - sc.r_dish).max(1.0)).clamp(0.0, 1.0);
-                ((act_a + hov_a + rim_t * act_a + exp_sh) * outer_cov).clamp(0.0, fill_a)
+                ((act_a + hov_a + rim_t * act_a + exp_sh + rim_glint) * outer_cov).clamp(0.0, fill_a)
             } else {
-                let d_ext = ((p - sh_off - sc.hub_center).length() - sc.r_outer).max(0.0);
-                let ext_win = (1.0 - (d_ext / params.bevel_width_pt.max(1.0)).clamp(0.0, 1.0)).powi(2);
-                (vitrea::exponential_sdf_attenuation(d_ext, &params, hov_a) * ext_win).clamp(0.0, hov_a)
+                let d_ext_bowl = ((p - sh_off - sc.hub_center).length() - sc.r_outer).max(0.0);
+                let ext_win = (1.0 - (d_ext_bowl / params.bevel_width_pt.max(1.0)).clamp(0.0, 1.0)).powi(2);
+                let bowl_sh = (vitrea::exponential_sdf_attenuation(d_ext_bowl, &params, hov_a) * ext_win).clamp(0.0, hov_a);
+                floor_rgb = shadow_rgb;
+                bowl_sh.max(exp_sh.clamp(0.0, act_a))
             };
             let surf = vitrea::evaluate_glass_surface_sample(p, glass_s, &params, sc.cursor_pos, sc.r_outer);
             let idx_px = (y * tex_dim + x) * 4;
@@ -132,8 +155,11 @@ pub(crate) fn synthesize_rosette_matrix_rgba(tex_dim: usize, sc: &RosetteContain
             let active_mix = (act_w + lift_w * 0.5).clamp(0.0, 1.0);
             let tint_rgb = [0, 1, 2].map(|ch| passive_tint[ch] * (1.0 - active_mix) + accent_rgb[ch] * active_mix);
             let tint_a = (hov_a * 0.5) * (1.0 - active_mix) + fill_a * active_mix;
-            let lch_rgba = vitrea::compose_dielectric_lch_pixel(sharp_rgb, blur_rgb, [tint_rgb[0], tint_rgb[1], tint_rgb[2], tint_a], &surf, &params, 1.0, spec_a + hov_a + act_a * active_mix);
-            let g_rgb = [0, 1, 2].map(|ch| (lch_rgba[ch] * surf.coverage + floor_rgb[ch] * (1.0 - surf.coverage)).clamp(0.0, 1.0));
+            let lch_rgba = vitrea::compose_dielectric_lch_pixel(sharp_rgb, blur_rgb, [tint_rgb[0], tint_rgb[1], tint_rgb[2], tint_a], &surf, &params, 1.0, spec_a + act_a + act_a * active_mix);
+            let s_bev = ((-glass_s.distance) / params.bevel_width_pt.max(1.0)).clamp(0.0, 1.0);
+            let rim_crest = (1.0 - (s_bev / (act_a + hov_a)).clamp(0.0, 1.0)).powi(2);
+            let pin_w = ((surf.fresnel_specular * spec_a + surf.bipolar_glare_factor * hov_a) * rim_crest).clamp(0.0, 1.0);
+            let g_rgb = [0, 1, 2].map(|ch| ((lch_rgba[ch] + (1.0 - lch_rgba[ch]) * pin_w).clamp(0.0, 1.0) * surf.coverage + floor_rgb[ch] * (1.0 - surf.coverage)).clamp(0.0, 1.0));
             let out_a = (surf.coverage + (1.0 - surf.coverage) * floor_a).clamp(0.0, 1.0);
             flat[idx_px..idx_px + 4].copy_from_slice(&[(g_rgb[0] * max_u8).round() as u8, (g_rgb[1] * max_u8).round() as u8, (g_rgb[2] * max_u8).round() as u8, (out_a * max_u8).round() as u8]);
         }
