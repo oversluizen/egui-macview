@@ -183,18 +183,9 @@ pub(super) fn paint_dial_layers(
 
         let passive_half_sweep = m.diagonal_sweep_deg.points() * 0.5 - half_gap_deg;
         let fillet_px = gap * 2.0 * px_scale;
-        let mut members = Vec::with_capacity(8);
-        for passive_deg in [m.angle_north_west_deg.points(), m.angle_south_west_deg.points()] {
-            members.push(super::icons::RosetteMemberSpec {
-                center: to_tex(hub_center),
-                radii: (r_clover_in * px_scale, r_clover_out * px_scale),
-                angles_deg: (passive_deg, passive_half_sweep),
-                corner_radius: fillet_px,
-                active_weight: 0.0,
-                lift_weight: 0.0,
-                deform_vel: vitrea::GlamVec2::ZERO,
-            });
-        }
+        // REQ-016-B1.8: Only the 6 active sectors (N, NE, E, SE, S, W) receive 3D Liquid Glass cushions;
+        // NW (-135 deg) and SW (+135 deg) remain intentionally open recessed glass bowl pockets!
+        let mut members = Vec::with_capacity(7);
         let lift_gain = gap + gap * 0.5;
         for sector in MacThumbSector::ALL {
             let is_latched = st.latched_sector == Some(sector);

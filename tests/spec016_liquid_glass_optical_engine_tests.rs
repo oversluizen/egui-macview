@@ -449,45 +449,63 @@ fn tc_016_a0_a1_a2_zero_overdraw_snellius_grid_bending_and_bipolar_lch_caustic_o
         (lch, rgba)
     };
 
-    // 3. Oracle O_solo_1b (REQ-016-A0.3) — Calm `Glass.regular` Frosted Plateau + Chromatic Color-Band Backdrop Refraction:
-    //    Scan across the passive NorthWest cushion (-135 deg) interior plateau:
-    //    (a) The colorful backdrop beneath the dial must transmit measurable CIE Chroma through passive NW (`max_nw_c >= 6.0`),
-    //    (b) Because `Glass.regular` blurs out high-frequency grid lines in the center plateau, adjacent pixel steps in the plateau must be calm (`max_step_jitter <= 1.8`), never noisy grid spikes!
-    let nw_rad = (-135.0f32).to_radians();
-    let (mut min_nw_l, mut max_nw_l, mut max_nw_c, mut max_step_jitter, mut prev_l) = (100.0f32, 0.0f32, 0.0f32, 0.0f32, None::<f32>);
-    for step in -8..=8 {
-        let r_s = 52.0 + (step as f32) * 0.75;
-        let pt = pos2(hub_c.x + nw_rad.cos() * r_s, hub_c.y + nw_rad.sin() * r_s);
+    // 3. Oracle O_solo_1b (REQ-016-A0.3 & REQ-016-B1.8) — Calm `Glass.regular` Frosted Plateau on West (-166 deg, inside the West glass plateau avoiding the center "Move" icon/text) + Open Uncushioned Recessed Bowl Pockets at NW (-135 deg) & SW (+135 deg):
+    //    (a) Scan across the passive West cushion (-166 deg) interior plateau:
+    //        - The colorful warm backdrop beneath the dial must transmit measurable CIE Chroma through passive West (`max_w_c >= 6.0`),
+    //        - Because `Glass.regular` blurs out high-frequency grid lines in the center plateau, adjacent pixel steps in the West plateau must be calm (`max_step_jitter <= 1.8`), never noisy grid spikes!
+    let w_rad = (-166.0f32).to_radians();
+    let (mut min_w_l, mut max_w_l, mut max_w_c, mut max_step_jitter, mut prev_l) = (100.0f32, 0.0f32, 0.0f32, 0.0f32, None::<f32>);
+    for step in -6..=6 {
+        let r_s = 50.0 + (step as f32) * 0.75;
+        let pt = pos2(hub_c.x + w_rad.cos() * r_s, hub_c.y + w_rad.sin() * r_s);
         let ([l, c, _], _) = sample_lch(pt);
-        min_nw_l = min_nw_l.min(l);
-        max_nw_l = max_nw_l.max(l);
-        max_nw_c = max_nw_c.max(c);
+        min_w_l = min_w_l.min(l);
+        max_w_l = max_w_l.max(l);
+        max_w_c = max_w_c.max(c);
         if let Some(pl) = prev_l {
             max_step_jitter = max_step_jitter.max((l - pl).abs());
         }
         prev_l = Some(l);
     }
     assert!(
-        max_nw_c >= 6.0 && max_step_jitter <= 1.8 && (max_nw_l - min_nw_l) >= 0.4,
-        "Oracle O_solo_1b (REQ-016-A0.3 Glass.regular) violation: Passive NW cushion must refract colorful backdrop chroma (max_c={max_nw_c:.2} >= 6.0) with a calm diffused plateau (max_step_jitter={max_step_jitter:.2} <= 1.8, L_span={:.2})",
-        max_nw_l - min_nw_l
+        max_w_c >= 6.0 && max_step_jitter <= 1.8 && (max_w_l - min_w_l) >= 0.4,
+        "Oracle O_solo_1b (REQ-016-A0.3 Glass.regular) violation: Passive West cushion must refract colorful backdrop chroma (max_c={max_w_c:.2} >= 6.0) with a calm diffused plateau (max_step_jitter={max_step_jitter:.2} <= 1.8, L_span={:.2})",
+        max_w_l - min_w_l
     );
 
-    // 4. Oracle O_solo_2 — Bipolar Top-Left Glare + Opposite Bottom-Right Caustic Crescent in CIE LCH:
-    //    On passive NW cushion (-135 deg), sample the center plateau (r = 50pt) vs. the outer top-left bevel (r = 65.5pt, facing top-left key light)
-    //    AND the inner bottom-right bevel (r = 31.5pt, opposite farside caustic rim facing bottom-right)!
-    let ([l_nw_center, _, _], _) = sample_lch(pos2(hub_c.x + nw_rad.cos() * 50.0, hub_c.y + nw_rad.sin() * 50.0));
+    //    (b) REQ-016-B1.8 Empty Pocket Proof: NW (-135 deg) and SW (+135 deg) MUST NOT have glass cushions (`surf.coverage == 0.0`)!
+    //        Therefore, across the inner cushion rim radius (r = 30.5..33.0pt) at NW (-135 deg) and SW (+135 deg), there MUST BE NO glass Fresnel/caustic rim peak
+    //        above the pocket center (r = 50pt)!
+    let nw_rad = (-135.0f32).to_radians();
+    let ([l_nw_pocket_center, _, _], _) = sample_lch(pos2(hub_c.x + nw_rad.cos() * 50.0, hub_c.y + nw_rad.sin() * 50.0));
+    let mut max_nw_pocket_rim_delta = 0.0f32;
+    for dr in [0.0f32, 0.5, 1.0, 1.5, 2.0, 2.5] {
+        let ([l_out, _, _], _) = sample_lch(pos2(hub_c.x + nw_rad.cos() * (75.0 + dr), hub_c.y + nw_rad.sin() * (75.0 + dr)));
+        let ([l_in, _, _], _) = sample_lch(pos2(hub_c.x + nw_rad.cos() * (30.5 + dr), hub_c.y + nw_rad.sin() * (30.5 + dr)));
+        max_nw_pocket_rim_delta = max_nw_pocket_rim_delta.max(l_out - l_nw_pocket_center).max(l_in - l_nw_pocket_center);
+    }
+    assert!(
+        max_nw_pocket_rim_delta < 2.0,
+        "REQ-016-B1.8 Empty Pocket violation: NW (-135 deg) still has a glass cushion Fresnel/caustic rim peak (delta_L={max_nw_pocket_rim_delta:.2} >= 2.0 above pocket center L={l_nw_pocket_center:.1}); NW and SW must be open uncushioned bowl pockets!"
+    );
+
+    // 4. Oracle O_solo_2 — Bipolar Top-Left Glare + Opposite Bottom-Right Caustic Crescent in CIE LCH on the 6 Active Cushions:
+    //    Sample the SouthEast cushion (+45 deg) plateau at (+32 deg, r = 50pt, avoiding the "Shear" text) vs. its inner top-left bevel (r = 30.5..33.0pt, normal pointing top-left -135 deg)
+    //    AND its outer bottom-right bevel (r = 75.0..77.5pt, normal pointing bottom-right +45 deg)!
+    let se_rad = (45.0f32).to_radians();
+    let se_plat_rad = (32.0f32).to_radians();
+    let ([l_se_center, _, _], _) = sample_lch(pos2(hub_c.x + se_plat_rad.cos() * 50.0, hub_c.y + se_plat_rad.sin() * 50.0));
     let mut max_l_tl_rim = 0.0f32;
     let mut max_l_br_caustic = 0.0f32;
     for dr in [0.0f32, 0.5, 1.0, 1.5, 2.0, 2.5] {
-        let ([l_tl, _, _], _) = sample_lch(pos2(hub_c.x + nw_rad.cos() * (75.0 + dr), hub_c.y + nw_rad.sin() * (75.0 + dr)));
-        let ([l_br, _, _], _) = sample_lch(pos2(hub_c.x + nw_rad.cos() * (30.5 + dr), hub_c.y + nw_rad.sin() * (30.5 + dr)));
+        let ([l_tl, _, _], _) = sample_lch(pos2(hub_c.x + se_rad.cos() * (30.5 + dr), hub_c.y + se_rad.sin() * (30.5 + dr)));
+        let ([l_br, _, _], _) = sample_lch(pos2(hub_c.x + se_rad.cos() * (75.0 + dr), hub_c.y + se_rad.sin() * (75.0 + dr)));
         max_l_tl_rim = max_l_tl_rim.max(l_tl);
         max_l_br_caustic = max_l_br_caustic.max(l_br);
     }
     assert!(
-        max_l_tl_rim >= l_nw_center + 3.0 && max_l_br_caustic >= l_nw_center + 2.0,
-        "Oracle O_solo_2 (SPEC-016 §4.2) violation: NW cushion must exhibit bipolar CIE LCH rim peaks on BOTH top-left glare rim (L={max_l_tl_rim:.1}) AND opposite bottom-right caustic crescent (L={max_l_br_caustic:.1}) above center plateau (L={l_nw_center:.1})!"
+        max_l_tl_rim >= l_se_center + 2.0 && max_l_br_caustic >= l_se_center + 2.0,
+        "Oracle O_solo_2 (SPEC-016 §4.2) violation: SouthEast cushion must exhibit bipolar CIE LCH rim peaks on BOTH top-left glare rim (L={max_l_tl_rim:.1}) AND opposite bottom-right caustic crescent (L={max_l_br_caustic:.1}) above center plateau (L={l_se_center:.1})!"
     );
 
     // 5. Undo/Redo Hover Color Integrity Oracle (REQ-016-A1):
