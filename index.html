@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>egui-macview â€” Mobile &amp; Tablet Studio</title>
+<title>egui-macview — Mobile &amp; Tablet Studio</title>
 <style>
   html, body {
     margin: 0; padding: 0; width: 100%; height: 100%;
@@ -201,7 +201,7 @@ let inFlight = false;
 let dirty = true;
 let wasmExports = null;
 
-fetch('macview_gallery.wasm?v=9540a23')
+fetch('macview_gallery.wasm?v=11b6148')
   .then(r => r.ok ? r.arrayBuffer() : Promise.reject())
   .then(bytes => WebAssembly.instantiate(bytes, {}))
   .then(res => {
