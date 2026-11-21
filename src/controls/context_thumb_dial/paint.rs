@@ -8,10 +8,12 @@ use crate::theme::{MacBackgroundStyle, MacTheme};
 use crate::tokens::ThumbDialMetrics;
 use egui::{Align2, Color32, ColorImage, FontId, Painter, Pos2, Rect, Shape, Stroke, Vec2};
 
+pub(crate) type DishBackdropPalette = ([f32; 3], [f32; 3], [f32; 3], [f32; 3], [f32; 3]);
+
 pub(crate) fn eval_shared_dish_matrix_at(
     p: vitrea::GlamVec2,
     sc: &RosetteContainerSpec,
-    (dish_core, dish_rim, accent_rgb, grid_rgb): ([f32; 3], [f32; 3], [f32; 3], [f32; 3]),
+    (dish_core, dish_rim, accent_rgb, grid_rgb, warm_rgb): DishBackdropPalette,
     blur_scale: f32,
     m: &ThumbDialMetrics,
 ) -> [f32; 3] {
@@ -23,17 +25,27 @@ pub(crate) fn eval_shared_dish_matrix_at(
         let base = dish_core[ch] + (dish_rim[ch] - dish_core[ch]) * r_norm;
         base * (1.0 - well_depth) + grid_rgb[ch] * well_depth
     });
-    let grid_step = (sc.r_hub * 0.5).max(2.0);
-    let grid_d = (d_vec.x - (d_vec.x / grid_step).round() * grid_step)
-        .abs()
-        .min((d_vec.y - (d_vec.y / grid_step).round() * grid_step).abs());
-    let (r_fine, r_fast) = (sc.r_dish * m.joystick_fine_ratio.points(), sc.r_dish * m.joystick_fast_ratio.points());
-    let ring_d = (r - r_fine).abs().min((r - (r_fine + r_fast) * 0.5).abs()).min((r - r_fast).abs());
-    let line_w = (m.active_stroke_width.points() * sc.scale * blur_scale).max(1.0);
-    let line_t = (1.0 - (grid_d.min(ring_d) / line_w).clamp(0.0, 1.0)).powi(2);
-    let line_gain = (m.active_fill_opacity.points() + m.hover_fill_opacity.points()) / blur_scale.max(1.0);
-    let line_w_mix = (line_t * line_gain).clamp(0.0, 1.0);
-    rgb = [0, 1, 2].map(|ch| rgb[ch] * (1.0 - line_w_mix) + grid_rgb[ch] * line_w_mix);
+    // Chromatic ambient backdrop band passing through the mid-radius of the left-docked glass bowl (REQ-016-A0.3):
+    let west_t = ((-d_vec.x) / sc.r_dish.max(1.0)).clamp(0.0, 1.0);
+    let band_r = (1.0 - ((r_norm - 0.5).abs() * 2.0).clamp(0.0, 1.0)).clamp(0.0, 1.0);
+    let warm_w = (west_t * band_r * (m.active_fill_opacity.points() + m.hover_fill_opacity.points())).clamp(0.0, 1.0);
+    rgb = [0, 1, 2].map(|ch| rgb[ch] * (1.0 - warm_w) + warm_rgb[ch] * warm_w);
+
+    // In Glass.regular, high-frequency contour/grid lines appear ONLY in the sharp bevel sample (blur_scale <= 1.0),
+    // while the interior plateau (blur_scale > 1.0) is 100% calm diffused frosted glass!
+    if blur_scale <= 1.0 {
+        let grid_step = sc.r_hub.max(2.0);
+        let grid_d = (d_vec.x - (d_vec.x / grid_step).round() * grid_step)
+            .abs()
+            .min((d_vec.y - (d_vec.y / grid_step).round() * grid_step).abs());
+        let (r_fine, r_fast) = (sc.r_dish * m.joystick_fine_ratio.points(), sc.r_dish * m.joystick_fast_ratio.points());
+        let ring_d = (r - r_fine).abs().min((r - r_fast).abs());
+        let line_w = (m.active_stroke_width.points() * sc.scale).max(1.0);
+        let line_t = (1.0 - (grid_d.min(ring_d) / line_w).clamp(0.0, 1.0)).powi(2);
+        let line_w_mix = (line_t * m.hover_fill_opacity.points()).clamp(0.0, 1.0);
+        rgb = [0, 1, 2].map(|ch| rgb[ch] * (1.0 - line_w_mix) + grid_rgb[ch] * line_w_mix);
+    }
+
     let (boost, bleed_gain) = (m.vibrancy_chroma_boost.points(), m.glass_fill_alpha.points());
     for mem in &sc.members {
         let w = (mem.active_weight + mem.lift_weight * 0.5).clamp(0.0, 1.0);

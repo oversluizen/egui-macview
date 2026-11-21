@@ -285,17 +285,21 @@ pub(crate) fn paint_curved_stadium_capsule(
                 ior_glass: m.ior_glass.points(), ior_dispersion_rgb: [m.ior_red.points(), m.ior_green.points(), m.ior_blue.points()],
                 fresnel_f0: m.fresnel_f0.points(), bevel_width_pt: h_cap_px * 0.5, dome_thickness_pt: m.dome_thickness_pt.points() * px_scale,
                 vibrancy_chroma_boost: m.vibrancy_chroma_boost.points(), meniscus_merge_k_pt: m.meniscus_merge_k_pt.points() * px_scale,
-                shadow_decay_length_pt: h_cap_px * 0.5, fresnel_range_ratio: 0.5, fresnel_hardness: 0.0, ..Default::default()
+                shadow_decay_length_pt: h_cap_px * 0.5, fresnel_range_ratio: 0.5, fresnel_hardness: 0.0,
+                glare_angle_rad: std::f32::consts::FRAC_PI_4, ..Default::default()
             };
             let (act_a, hov_a, spec_a) = (m.active_fill_opacity.points(), m.hover_fill_opacity.points(), m.glass_specular_alpha.points());
             let grid_step = (h_cap_px * 0.5).max(2.0);
             let grid_col = if fill_rgb[0] < 0.5 { stroke_rgb } else { sh_rgb };
             let eval_arc_bg = |pt: vitrea::GlamVec2, blur_s: f32| -> [f32; 3] {
+                if blur_s > 1.0 {
+                    return fill_rgb;
+                }
                 let d_v = pt - c_tex;
                 let gx = (d_v.x - (d_v.x / grid_step).round() * grid_step).abs();
                 let gy = (d_v.y - (d_v.y / grid_step).round() * grid_step).abs();
-                let lw = (bw * px_scale * blur_s).max(1.0);
-                let lt = (1.0 - (gx.min(gy) / lw).clamp(0.0, 1.0)).powi(2) * ((act_a + hov_a) / blur_s.max(1.0));
+                let lw = (bw * px_scale).max(1.0);
+                let lt = (1.0 - (gx.min(gy) / lw).clamp(0.0, 1.0)).powi(2) * hov_a;
                 [0, 1, 2].map(|ch| (fill_rgb[ch] * (1.0 - lt) + grid_col[ch] * lt).clamp(0.0, 1.0))
             };
             for y in 0..tex_h {

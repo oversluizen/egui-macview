@@ -48,10 +48,10 @@ impl CenterState {
         self.apply_artboard_thumb_telemetry(content_ui.ctx(), theme, card, args.lock_canvas, telemetry);
     }
 
-    fn render_thumb_mode_strips(&mut self, content_ui: &mut Ui, theme: &MacTheme, canvas_rect: Rect, is_compact: bool) {
+    fn render_thumb_mode_strips(&mut self, content_ui: &mut Ui, theme: &MacTheme, canvas_rect: Rect, _is_compact: bool) {
         let pill_labels = ["Pen (P)", "Select (V)", "Prim (F)", "Knife (E)"];
         let strip_w = 184.0f32;
-        let strip_x = if is_compact { canvas_rect.max.x - strip_w - 8.0 } else { canvas_rect.min.x + 10.0 };
+        let strip_x = canvas_rect.max.x - strip_w - 8.0;
         let strip_rect = Rect::from_min_size(pos2(strip_x, canvas_rect.min.y + 6.0), vec2(strip_w, 18.0));
         let mut preset_idx = self.thumb_dial_preset_idx;
         MacSegmentedControl::new(&pill_labels, preset_idx)
@@ -92,7 +92,7 @@ impl CenterState {
     ) -> ThumbOverlayTelemetry {
         let presets = MacThumbContextPreset::ALL;
         let active_preset = presets[self.thumb_dial_preset_idx.min(presets.len() - 1)];
-        let dock_zone = if is_compact { MacThumbDockZone::BottomLeft } else { MacThumbDockZone::BottomRight };
+        let dock_zone = MacThumbDockZone::BottomLeft;
         let can_undo = args.undo_manager.borrow().can_undo();
         let can_redo = args.undo_manager.borrow().can_redo();
         let rot_str = format!("θ {:.0}°", card.rotation_deg);
@@ -108,12 +108,18 @@ impl CenterState {
 
         match self.thumb_config_mode {
             1 => {
-                let drum_w = (theme.thumb_dial().outer_radius.points() * 2.0 * dial_scale) * 0.72;
+                let dial_w = (theme.thumb_dial().outer_radius.points() + theme.thumb_dial().ring_gap.points()) * 2.0 * dial_scale;
+                let margin = theme.thumb_dial().dock_margin.points() * dial_scale;
+                let left_anchor = Rect::from_min_max(
+                    pos2(canvas_rect.min.x + margin, canvas_rect.min.y + 4.0),
+                    pos2(canvas_rect.min.x + margin + dial_w, canvas_rect.max.y - margin),
+                );
+                let drum_w = dial_w * 0.72;
                 let w_resp = MacEdgeThumbwheel::new("state1_standalone_rotary", &mut self.thumbwheel_angle_deg, -10_000.0..=10_000.0)
                     .wide_drum_width(drum_w)
                     .scale(dial_scale)
                     .glass_accent(self.thumb_glass_color)
-                    .dock_right_edge(canvas_rect)
+                    .dock_right_edge(left_anchor)
                     .theme(theme)
                     .show(content_ui);
                 ThumbOverlayTelemetry {

@@ -45,19 +45,24 @@ pub(crate) fn synthesize_rosette_matrix_rgba(tex_dim: usize, sc: &RosetteContain
     let dish_core = color_to_rgb_norm(theme.window_background());
     let dish_rim = color_to_rgb_norm(if is_light { theme.box_background() } else { theme.control_background() });
     let passive_tint = color_to_rgb_norm(if is_light { theme.window_background() } else { theme.control_background() });
-    let (accent_rgb, grid_rgb, shadow_rgb) = (color_to_rgb_norm(sc.accent_col), color_to_rgb_norm(theme.secondary_label()), color_to_rgb_norm(theme.drop_shadow()));
+    let (accent_rgb, grid_rgb, shadow_rgb, warm_rgb) = (
+        color_to_rgb_norm(sc.accent_col),
+        color_to_rgb_norm(theme.secondary_label()),
+        color_to_rgb_norm(theme.drop_shadow()),
+        color_to_rgb_norm(theme.system_orange()),
+    );
     let params = vitrea::LiquidGlassOpticalParams {
         ior_glass: m.ior_glass.points(), ior_dispersion_rgb: [m.ior_red.points(), m.ior_green.points(), m.ior_blue.points()],
         fresnel_f0: m.fresnel_f0.points(), bevel_width_pt: m.bevel_width_pt.points() * sc.scale,
         dome_thickness_pt: m.dome_thickness_pt.points() * sc.scale, vibrancy_chroma_boost: m.vibrancy_chroma_boost.points(),
         meniscus_merge_k_pt: m.meniscus_merge_k_pt.points() * sc.scale, shadow_decay_length_pt: m.bevel_width_pt.points() * sc.scale,
-        fresnel_range_ratio: 0.5, fresnel_hardness: 0.0,
+        fresnel_range_ratio: 0.5, fresnel_hardness: 0.0, glare_angle_rad: std::f32::consts::FRAC_PI_4,
         ..Default::default()
     };
     let stretch_gains = (m.viscous_stretch_gain.points(), m.viscous_press_gain.points());
     let sh_off = vitrea::GlamVec2::new(-params.bevel_width_pt * m.hover_fill_opacity.points(), params.bevel_width_pt * m.active_fill_opacity.points());
     let (fill_a, act_a, hov_a, spec_a) = (m.glass_fill_alpha.points(), m.active_fill_opacity.points(), m.hover_fill_opacity.points(), m.glass_specular_alpha.points());
-    let (max_u8, dish_cols) = (f32::from(u8::MAX), (dish_core, dish_rim, accent_rgb, grid_rgb));
+    let (max_u8, dish_cols) = (f32::from(u8::MAX), (dish_core, dish_rim, accent_rgb, grid_rgb, warm_rgb));
 
     for y in 0..tex_dim {
         for x in 0..tex_dim {
@@ -81,12 +86,16 @@ pub(crate) fn synthesize_rosette_matrix_rgba(tex_dim: usize, sc: &RosetteContain
                 if idx == 0 {
                     (best_s, best_act, best_lift) = (s_i, mem.active_weight, mem.lift_weight);
                 } else {
-                    let pair_w = (best_lift + mem.lift_weight + (best_act + mem.active_weight) * 0.5).clamp(0.0, 1.0);
-                    let k_m = (params.meniscus_merge_k_pt * pair_w * 0.5).max(params.fresnel_f0);
-                    let h = (0.5 + 0.5 * (s_i.distance - best_s.distance) / k_m).clamp(0.0, 1.0);
-                    best_s = vitrea::sdf_smooth_union_with_grad(best_s, s_i, k_m);
-                    best_act = best_act * h + mem.active_weight * (1.0 - h);
-                    best_lift = best_lift * h + mem.lift_weight * (1.0 - h);
+                    let pair_w = (best_lift * mem.lift_weight + best_act * mem.active_weight).clamp(0.0, 1.0);
+                    if pair_w > 0.0 {
+                        let k_m = (params.meniscus_merge_k_pt * pair_w * 0.5).max(params.fresnel_f0);
+                        let h = (0.5 + 0.5 * (s_i.distance - best_s.distance) / k_m).clamp(0.0, 1.0);
+                        best_s = vitrea::sdf_smooth_union_with_grad(best_s, s_i, k_m);
+                        best_act = best_act * h + mem.active_weight * (1.0 - h);
+                        best_lift = best_lift * h + mem.lift_weight * (1.0 - h);
+                    } else if s_i.distance < best_s.distance {
+                        (best_s, best_act, best_lift) = (s_i, mem.active_weight, mem.lift_weight);
+                    }
                 }
             }
             sh_dist = sh_dist.min((p - sh_off - sc.hub_center).length() - sc.r_hub);
@@ -123,7 +132,7 @@ pub(crate) fn synthesize_rosette_matrix_rgba(tex_dim: usize, sc: &RosetteContain
             let active_mix = (act_w + lift_w * 0.5).clamp(0.0, 1.0);
             let tint_rgb = [0, 1, 2].map(|ch| passive_tint[ch] * (1.0 - active_mix) + accent_rgb[ch] * active_mix);
             let tint_a = (hov_a * 0.5) * (1.0 - active_mix) + fill_a * active_mix;
-            let lch_rgba = vitrea::compose_dielectric_lch_pixel(sharp_rgb, blur_rgb, [tint_rgb[0], tint_rgb[1], tint_rgb[2], tint_a], &surf, &params, 1.0, spec_a + act_a * active_mix);
+            let lch_rgba = vitrea::compose_dielectric_lch_pixel(sharp_rgb, blur_rgb, [tint_rgb[0], tint_rgb[1], tint_rgb[2], tint_a], &surf, &params, 1.0, spec_a + hov_a + act_a * active_mix);
             let g_rgb = [0, 1, 2].map(|ch| (lch_rgba[ch] * surf.coverage + floor_rgb[ch] * (1.0 - surf.coverage)).clamp(0.0, 1.0));
             let out_a = (surf.coverage + (1.0 - surf.coverage) * floor_a).clamp(0.0, 1.0);
             flat[idx_px..idx_px + 4].copy_from_slice(&[(g_rgb[0] * max_u8).round() as u8, (g_rgb[1] * max_u8).round() as u8, (g_rgb[2] * max_u8).round() as u8, (out_a * max_u8).round() as u8]);

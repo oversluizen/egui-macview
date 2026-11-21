@@ -64,8 +64,10 @@ Therefore, **Block `A0` enforces three hard invariants (`REQ-016-A0.1..3`)**:
           - Given light-shifted sample point $\vec{p}_{\text{shadow}} = \vec{p} - \vec{\Delta}_{\text{shadow}}$ (default $\vec{\Delta}_{\text{shadow}} = (-3.0\text{ pt}, +6.0\text{ pt})$ in screen coordinates, i.e., shadow cast downward-right from a top-left key light) and composite group SDF $D_{\text{group}}(\vec{p}_{\text{shadow}})$:
             $$S_{\text{shadow}}(\vec{p}) = \exp\!\left(-\frac{|D_{\text{group}}(\vec{p}_{\text{shadow}})|}{s_{\text{expand}}}\right) \cdot 0.6 \cdot s_{\text{factor}}$$
           - Default shadow parameters from `Controls.tsx`: $s_{\text{expand}} = 12.5\text{ pt}$ (`shadowExpand = 25` at `2x` Retina), $s_{\text{factor}} = 0.25$ (`shadowFactor = 25%`).
-     - **$B_{\text{blur}}(x, y)$ (Separable Gaussian / Dual-Kawase Blurred Backdrop):**
-       - Computed by applying a separable 2-pass Gaussian / Dual-Kawase blur ($\sigma \in [3.0\text{ px}, 6.0\text{ px}]$ for `Glass.regular`, $\sigma \in [1.0\text{ px}, 2.0\text{ px}]$ for `Glass.clear`) with vibrancy chroma boost ($\times 1.35$) to $B_{\text{sharp}}(x, y)$.
+     - **$B_{\text{blur}}(x, y)$ (Calm `Glass.regular` Diffused Backdrop — Zero Interior Grid Clutter, `REQ-016-A0.3`):**
+       - In `Glass.regular` (the default regime for typography-bearing controls such as `MacContextThumbDial`, `"↶ Undo"` / `"↷ Redo"` stadium capsules, and `MacFreeJoystickBowl`), high-frequency grid lines MUST be completely diffused out of $B_{\text{blur}}(x, y)$ (`0%` grid-line contrast in the interior plateau $d_{\text{in}} \ge w_{\text{bevel}}$) so 3-tier typography (`Icon + Bold Label + Shortcut`) rests on a calm, frosted translucent surface.
+       - Sharp spatial refraction (`B_sharp`, $h_{\text{blur}} \to 0$) is confined strictly to the curved perimeter bevel ($0 < d_{\text{in}} < w_{\text{bevel}}$), where underlying color bands and contour edges bend along the Snellius S-curve.
+       - Matrix 1 includes chromatic ambient vector color zones (`theme.control_accent()`, `theme.system_orange()`, `theme.system_purple()`) passing beneath the left-docked glass bowl so both the diffused interior vibrancy and the perimeter CIE LCH caustic crescent visibly refract rich chromatic background transitions.
 
 ---
 
@@ -243,7 +245,10 @@ Within a single `GlassEffectContainer` $\mathcal{C}_A = \{S_1, S_2, \dots, S_N\}
    - Because neighboring passive members $S_j$ sample Matrix 1 at Snellius-refracted coordinates $[\vec{p}_R, \vec{p}_G, \vec{p}_B]$ pointing outward from their facing bevels ($\hat{N}_{xy} = -\nabla d_j$), the bevel of passive member $S_j$ facing active member $S_i$ refracts and amplifies that accent glow through Equation 2 and Equation 4 (CIE LCH caustic boost).
 3. **Coupled Multi-Member Spring Kinematics (`REQ-016-B1.3`):**
    - **Transit Droplet (`DualSpringMorphBlob`):** When selection or hover moves from member $A$ to member $B$, a liquid droplet spans $[a(t), b(t)]$ with a fast leading spring ($T_{\text{lead}} = 0.22\text{ s}$) and softer trailing spring ($T_{\text{trail}} = 0.32\text{ s}$), physically stretching across the gap before coalescing into $B$.
-   - **Pointer Tilt & Magnetic Lift (`AnisotropicCushionSpring`):** Pointer motion inside the container tilts the shared bowl/pointer vector and lifts the nearest member while subtly compressing adjacent members.
+   - **Pointer Tilt, Live Glare Steering & Subtle Transient Coalescing (`AnisotropicCushionSpring`, `REQ-016-B1.3`, `REQ-016-B1.7`):**
+     - At rest ($l_i = 0$), adjacent cushions remain crisply separated ($k_{\text{merge}} \to 0$) without permanent blobbing.
+     - Pointer motion smoothly steers the anisotropic glare azimuth `glare_angle_rad` toward the pointer vector and lifts the hovered cushion; `smin` coalescing occurs only transiently during active lift or `DualSpringMorphBlob` transit.
+     - **Canonical Bimanual Left-Hand Placement (`REQ-016-B1.7`):** In a bimanual studio workspace (`State 1` vector canvas and standalone deployments), the Thumb Pie Menu (`MacContextThumbDial`, `MacFreeJoystickBowl`, and paired `MacEdgeThumbwheel`) docks on the **Left (`MacThumbDockZone::BottomLeft`)** across all inspector modes (`Regular`, `FloatPopover`, `CompactHud`).
 
 ### 5.3 Inter-Group Behavior (How One Group Behaves Toward *Other* Groups)
 

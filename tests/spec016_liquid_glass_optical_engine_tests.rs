@@ -449,24 +449,27 @@ fn tc_016_a0_a1_a2_zero_overdraw_snellius_grid_bending_and_bipolar_lch_caustic_o
         (lch, rgba)
     };
 
-    // 3. Oracle O_solo_1b — Structured Matrix 1 Grid/Ring Visibility Through Passive Glass Cushion Interior:
-    //    Scan across the passive NorthWest cushion (-135 deg) interior (avoiding text labels, since NW is a passive cushion with zero text!).
-    //    If Matrix 1 contains the structured precision grid & concentric grooves and passive tint is translucent (10%..22%),
-    //    scanning across NW's interior must reveal measurable spatial luminance contrast (max_l - min_l >= 3.5) rather than a flat uniform wall!
+    // 3. Oracle O_solo_1b (REQ-016-A0.3) — Calm `Glass.regular` Frosted Plateau + Chromatic Color-Band Backdrop Refraction:
+    //    Scan across the passive NorthWest cushion (-135 deg) interior plateau:
+    //    (a) The colorful backdrop beneath the dial must transmit measurable CIE Chroma through passive NW (`max_nw_c >= 6.0`),
+    //    (b) Because `Glass.regular` blurs out high-frequency grid lines in the center plateau, adjacent pixel steps in the plateau must be calm (`max_step_jitter <= 1.8`), never noisy grid spikes!
     let nw_rad = (-135.0f32).to_radians();
-    let (mut min_nw_l, mut max_nw_l) = (100.0f32, 0.0f32);
-    for step in -12..=12 {
-        let r_s = 48.0 + (step as f32) * 0.8;
+    let (mut min_nw_l, mut max_nw_l, mut max_nw_c, mut max_step_jitter, mut prev_l) = (100.0f32, 0.0f32, 0.0f32, 0.0f32, None::<f32>);
+    for step in -8..=8 {
+        let r_s = 52.0 + (step as f32) * 0.75;
         let pt = pos2(hub_c.x + nw_rad.cos() * r_s, hub_c.y + nw_rad.sin() * r_s);
-        let ([l, _, _], _) = sample_lch(pt);
+        let ([l, c, _], _) = sample_lch(pt);
         min_nw_l = min_nw_l.min(l);
         max_nw_l = max_nw_l.max(l);
+        max_nw_c = max_nw_c.max(c);
+        if let Some(pl) = prev_l {
+            max_step_jitter = max_step_jitter.max((l - pl).abs());
+        }
+        prev_l = Some(l);
     }
     assert!(
-        max_nw_l - min_nw_l >= 3.5,
-        "Oracle O_solo_1 (SPEC-016 §4.2) violation: Passive NW cushion interior is optically flat/opaque (L range {:.2}..{:.2}, delta={:.2} < 3.5); underlying Matrix 1 grid/grooves are hidden!",
-        min_nw_l,
-        max_nw_l,
+        max_nw_c >= 6.0 && max_step_jitter <= 1.8 && (max_nw_l - min_nw_l) >= 0.4,
+        "Oracle O_solo_1b (REQ-016-A0.3 Glass.regular) violation: Passive NW cushion must refract colorful backdrop chroma (max_c={max_nw_c:.2} >= 6.0) with a calm diffused plateau (max_step_jitter={max_step_jitter:.2} <= 1.8, L_span={:.2})",
         max_nw_l - min_nw_l
     );
 

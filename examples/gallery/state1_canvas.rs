@@ -31,14 +31,9 @@ impl CenterState {
 
         if self.show_grid {
             let grid_stroke = Stroke::new(0.5, theme.separator().gamma_multiply(0.4));
-            let is_compact = inspector_mode == crate::InspectorMode::CompactHud;
             let dial_r = theme.thumb_dial().outer_radius.points();
             let dial_margin = theme.thumb_dial().dock_margin.points();
-            let lens_center = if is_compact {
-                pos2(canvas_rect.min.x + dial_r + dial_margin, canvas_rect.max.y - dial_r - dial_margin)
-            } else {
-                pos2(canvas_rect.max.x - dial_r - dial_margin, canvas_rect.max.y - dial_r - dial_margin)
-            };
+            let lens_center = pos2(canvas_rect.min.x + dial_r + dial_margin, canvas_rect.max.y - dial_r - dial_margin);
             let refract_pt = |p: Pos2| -> Pos2 {
                 if (p - lens_center).length() <= dial_r {
                     let n3 = egui_macview::dome_surface_normal_3d(p, lens_center, dial_r, 18.0);
@@ -87,10 +82,8 @@ impl CenterState {
         let card_h = (card.height.parse::<f32>().unwrap_or(140.0 * h_scale) / h_scale).clamp(40.0, 300.0);
         let card_radius = (card.radius.parse::<f32>().unwrap_or(10.0 * r_scale) / r_scale).clamp(0.0, 40.0);
 
-        let is_compact = inspector_mode == crate::InspectorMode::CompactHud;
-        let card_zone_min_x = if is_compact { canvas_rect.min.x + 196.0 } else { canvas_rect.min.x };
-        let card_zone_max_x =
-            if is_compact { canvas_rect.max.x - 16.0 } else { (canvas_rect.max.x - 196.0).max(canvas_rect.min.x + 180.0) };
+        let card_zone_min_x = (canvas_rect.min.x + 196.0).min(canvas_rect.max.x - 180.0);
+        let card_zone_max_x = canvas_rect.max.x - 16.0;
         let card_zone_center_x = (card_zone_min_x + card_zone_max_x) * 0.5;
         let (card_w, base_center_x) = match card.alignment_idx {
             0 => (raw_card_w, card_zone_min_x + 24.0 + raw_card_w * 0.5),

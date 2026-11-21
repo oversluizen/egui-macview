@@ -83,6 +83,7 @@ fn synthesize_drum_matrix_rgba(ds: &DrumMatrixSpec, theme: &MacTheme, m: &ThumbD
         meniscus_merge_k_pt: m.meniscus_merge_k_pt.points(),
         fresnel_range_ratio: 0.5,
         fresnel_hardness: 0.0,
+        glare_angle_rad: std::f32::consts::FRAC_PI_4,
         ..Default::default()
     };
     let (fill_a, act_a, hov_a, spec_a) = (m.glass_fill_alpha.points(), m.active_fill_opacity.points(), m.hover_fill_opacity.points(), m.glass_specular_alpha.points());

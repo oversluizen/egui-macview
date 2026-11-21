@@ -44,22 +44,24 @@ fn eval_bowl_backdrop_at(
     let d_vec = p - hub_c;
     let r = d_vec.length();
     let r_norm = (r / r_bowl.max(1.0)).clamp(0.0, 1.0);
-    let well_depth = m.hover_fill_opacity.points() + m.hover_fill_opacity.points() * r_norm;
+    let well_depth = m.hover_fill_opacity.points() * r_norm;
     let mut rgb = [0, 1, 2].map(|ch| {
         let base = bowl_core[ch] + (bowl_rim[ch] - bowl_core[ch]) * r_norm;
         base * (1.0 - well_depth) + dot_rgb[ch] * well_depth
     });
-    let grid_step = (puck_r * 0.5).max(2.0);
-    let grid_d = (d_vec.x - (d_vec.x / grid_step).round() * grid_step)
-        .abs()
-        .min((d_vec.y - (d_vec.y / grid_step).round() * grid_step).abs());
     let fine_r = r_bowl * m.joystick_fine_ratio.points();
     let fast_r = r_bowl * m.joystick_fast_ratio.points();
     let slow_r = (fine_r + fast_r) * 0.5;
     let ring_d = (r - fine_r).abs().min((r - slow_r).abs()).min((r - fast_r).abs());
     let bw = (m.active_stroke_width.points() * 2.0 * blur_scale).max(1.0);
-    let grid_t = (1.0 - (grid_d / bw).clamp(0.0, 1.0)).powi(2) * ((m.active_fill_opacity.points() + m.hover_fill_opacity.points()) / blur_scale.max(1.0));
-    rgb = [0, 1, 2].map(|ch| rgb[ch] * (1.0 - grid_t) + dot_rgb[ch] * grid_t);
+    if blur_scale <= 1.0 {
+        let grid_step = puck_r.max(2.0);
+        let grid_d = (d_vec.x - (d_vec.x / grid_step).round() * grid_step)
+            .abs()
+            .min((d_vec.y - (d_vec.y / grid_step).round() * grid_step).abs());
+        let grid_t = (1.0 - (grid_d / bw).clamp(0.0, 1.0)).powi(2) * m.hover_fill_opacity.points();
+        rgb = [0, 1, 2].map(|ch| rgb[ch] * (1.0 - grid_t) + dot_rgb[ch] * grid_t);
+    }
     if ring_d <= bw * 2.0 {
         let ang_deg = d_vec.y.atan2(d_vec.x) * m.half_circle_deg.points() / std::f32::consts::PI;
         let step_d = (m.detent_step_deg.points() * 0.5).max(1.0);
@@ -106,6 +108,7 @@ fn synthesize_marble_matrix_rgba(
         shadow_decay_length_pt: (puck_r * 0.5).max(2.0),
         fresnel_range_ratio: 0.5,
         fresnel_hardness: 0.0,
+        glare_angle_rad: std::f32::consts::FRAC_PI_4,
         ..Default::default()
     };
     let stretch_gains = (m.viscous_stretch_gain.points(), m.viscous_press_gain.points());
