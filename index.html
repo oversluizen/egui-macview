@@ -196,14 +196,18 @@ void main() {
   if (v_uv.y > u_cursor_font.z && texel.a > 0.05) {
     vec2 d = v_pos - u_cursor_font.xy;
     float distSq = dot(d, d);
-    float prox = exp(-distSq / (96.0 * 96.0));
-    if (prox > 0.01) {
+    float prox = exp(-distSq / (88.0 * 88.0));
+    if (prox > 0.008) {
       vec2 grad = vec2(dFdx(texel.a), dFdy(texel.a));
-      float rim = clamp(length(grad) * 3.5, 0.0, 1.0);
-      vec3 lch = srgbToLch(texel.rgb);
-      lch.x = clamp(lch.x + (18.0 * rim + 4.5) * prox, 0.0, 100.0);
-      lch.y = max(lch.y + 8.0 * rim * prox, 0.0);
-      texel.rgb = mix(texel.rgb, lchToSrgb(lch), prox * (0.28 + 0.52 * rim));
+      float rim = clamp(length(grad) * 4.0, 0.0, 1.0);
+      vec2 uvShift = normalize(d + vec2(1e-4)) * (0.0018 * prox * (1.0 - 0.5 * rim));
+      float rCh = texture(u_tex, clamp(v_uv - uvShift * 0.86, vec2(0.0), vec2(1.0))).r;
+      float bCh = texture(u_tex, clamp(v_uv + uvShift * 1.14, vec2(0.0), vec2(1.0))).b;
+      vec3 dispRgb = mix(texel.rgb, vec3(rCh, texel.g, bCh), 0.38 * prox);
+      vec3 lch = srgbToLch(dispRgb);
+      lch.x = clamp(lch.x + (22.0 * rim + 5.5) * prox, 0.0, 100.0);
+      lch.y = max(lch.y + 12.0 * rim * prox, 0.0);
+      texel.rgb = mix(dispRgb, lchToSrgb(lch), prox * (0.32 + 0.56 * rim));
     }
   }
   fragColor = v_color * texel;
