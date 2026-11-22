@@ -13,15 +13,14 @@ struct WasmRt {
     session: MobileWebSession,
     cmd_log: String,
     last_frame: Vec<u8>,
-    last_atlas: Vec<u8>,
+    last_dirty_rect: [u32; 4],
 }
 
 fn with_rt<R>(f: impl FnOnce(&mut WasmRt) -> R) -> Option<R> {
     static RT: OnceLock<Mutex<WasmRt>> = OnceLock::new();
     let mtx = RT.get_or_init(|| {
         let session = MobileWebSession::new();
-        let last_atlas = session.encode_atlas();
-        Mutex::new(WasmRt { session, cmd_log: String::new(), last_frame: Vec::new(), last_atlas })
+        Mutex::new(WasmRt { session, cmd_log: String::new(), last_frame: Vec::new(), last_dirty_rect: [0; 4] })
     });
     mtx.lock().ok().map(|mut g| f(&mut g))
 }
@@ -33,7 +32,14 @@ pub extern "C" fn wasm_init() {
 
 #[no_mangle]
 pub extern "C" fn wasm_push_pointer_move(x: f32, y: f32) {
-    let _ = with_rt(|rt| writeln!(rt.cmd_log, "M {x:.1} {y:.1}"));
+    let _ = with_rt(|rt| {
+        if let Some(idx) = rt.cmd_log.rfind("M ") {
+            if !rt.cmd_log[idx..].trim_end().contains('\n') {
+                rt.cmd_log.truncate(idx);
+            }
+        }
+        writeln!(rt.cmd_log, "M {x:.1} {y:.1}")
+    });
 }
 
 #[no_mangle]
@@ -72,10 +78,9 @@ pub extern "C" fn wasm_render_frame(w: f32, h: f32, dpr: f32, time_secs: f64) ->
     with_rt(|rt| {
         let batch = format!("V {w:.1} {h:.1} {dpr:.2}\nC {time_secs:.4}\n{}", rt.cmd_log);
         rt.cmd_log.clear();
-        let prev_ver = rt.session.atlas_version;
         rt.last_frame = rt.session.encode_frame(w, h, dpr, &batch);
-        if rt.session.atlas_version != prev_ver || rt.last_atlas.is_empty() {
-            rt.last_atlas = rt.session.encode_atlas();
+        if let Some((dx, dy, dw, dh)) = rt.session.take_atlas_dirty_rect() {
+            rt.last_dirty_rect = [dx, dy, dw, dh];
         }
         rt.last_frame.len()
     })
@@ -89,12 +94,29 @@ pub extern "C" fn wasm_frame_ptr() -> usize {
 
 #[no_mangle]
 pub extern "C" fn wasm_atlas_ptr() -> usize {
-    with_rt(|rt| rt.last_atlas.as_ptr() as usize).unwrap_or(0)
+    with_rt(|rt| rt.session.atlas_rgba.as_ptr() as usize).unwrap_or(0)
 }
 
 #[no_mangle]
 pub extern "C" fn wasm_atlas_len() -> usize {
-    with_rt(|rt| rt.last_atlas.len()).unwrap_or(0)
+    with_rt(|rt| rt.session.atlas_rgba.len()).unwrap_or(0)
+}
+
+#[no_mangle]
+pub extern "C" fn wasm_atlas_dim(idx: i32) -> u32 {
+    with_rt(|rt| match idx {
+        0 => rt.session.atlas_width,
+        1 => rt.session.atlas_height,
+        2 => rt.session.font_atlas_max_y(),
+        3..=6 => rt.last_dirty_rect[(idx - 3) as usize],
+        _ => 0,
+    })
+    .unwrap_or(0)
+}
+
+#[no_mangle]
+pub extern "C" fn wasm_pointer_xy(idx: i32) -> f32 {
+    with_rt(|rt| if idx == 0 { rt.session.last_pos.x } else { rt.session.last_pos.y }).unwrap_or(0.0)
 }
 
 #[no_mangle]

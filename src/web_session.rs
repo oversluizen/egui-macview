@@ -41,6 +41,8 @@ pub struct MacWebGlSession {
     uv_rects: BTreeMap<TextureId, (u32, u32, u32, u32)>,
     /// Monotonic Mega-Atlas version counter incremented whenever any managed texture changes.
     pub atlas_version: u32,
+    /// Optional dirty sub-rectangle `(x, y, w, h)` in the Mega-Atlas for partial `gl.texSubImage2D` uploads (`REQ-016-B1.12c`).
+    pub atlas_dirty_rect: Option<(u32, u32, u32, u32)>,
     atlas_dirty: bool,
     /// Current session clock in seconds.
     pub time_secs: f64,
@@ -77,6 +79,7 @@ impl MacWebGlSession {
             atlas_height: 0,
             uv_rects: BTreeMap::new(),
             atlas_version: 0,
+            atlas_dirty_rect: None,
             atlas_dirty: false,
             time_secs: 1.0,
             last_pos: pos2(180.0, 200.0),
@@ -98,6 +101,16 @@ impl MacWebGlSession {
     /// Returns the number of distinct `TextureId`s currently packed into the WebGL2 Mega-Atlas.
     pub fn packed_texture_count(&self) -> usize {
         self.textures.len()
+    }
+
+    /// Takes the accumulated Mega-Atlas dirty rectangle `(x, y, width, height)` for `gl.texSubImage2D` (`REQ-016-B1.12c`).
+    pub fn take_atlas_dirty_rect(&mut self) -> Option<(u32, u32, u32, u32)> {
+        self.atlas_dirty_rect.take()
+    }
+
+    /// Returns the maximum Y pixel coordinate occupied by `TextureId::Managed(0)` (the font/icon atlas).
+    pub fn font_atlas_max_y(&self) -> u32 {
+        self.uv_rects.get(&TextureId::Managed(0)).map(|&(_, oy, _, th)| oy + th).unwrap_or(0)
     }
 
     /// Drains any custom `\u{1f}`-prefixed payload lines received via `T \u{1f}...` during `encode_frame`.
@@ -327,6 +340,14 @@ impl MacWebGlSession {
                                 }
                             }
                             self.atlas_version = self.atlas_version.wrapping_add(1).max(1);
+                            self.atlas_dirty_rect = Some(match self.atlas_dirty_rect {
+                                Some((rx, ry, rw, rh)) => {
+                                    let (x0, y0) = (rx.min(ox), ry.min(oy));
+                                    let (x1, y1) = ((rx + rw).max(ox + tw), (ry + rh).max(oy + th));
+                                    (x0, y0, x1 - x0, y1 - y0)
+                                }
+                                None => (ox, oy, tw, th),
+                            });
                             true
                         } else {
                             false
@@ -395,6 +416,7 @@ impl MacWebGlSession {
         self.atlas_height = mega_h;
         self.atlas_rgba = buf;
         self.atlas_dirty = false;
+        self.atlas_dirty_rect = Some((0, 0, mega_w, mega_h));
         self.atlas_version = self.atlas_version.wrapping_add(1).max(1);
     }
 }

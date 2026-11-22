@@ -139,8 +139,15 @@ fn paint_marble_bowl_region_rgba(
         for x in x_range.clone() {
             let p = vitrea::GlamVec2::new(x as f32 + 0.5, y as f32 + 0.5);
             let r_hub_d = (p - hub_c).length();
-            if r_hub_d > skirt_radii.1 + puck_r * 2.0 || (include_marble && (p - marble_c).length() > patch_r && r_hub_d > r_bowl) {
+            if r_hub_d > skirt_radii.1 + puck_r * 2.0 {
                 continue;
+            }
+            if include_marble && (p - marble_c).length() > patch_r {
+                let seg_len_sq = vel_off.length_squared();
+                let t_seg = if seg_len_sq > 0.0 { ((p - hub_c).dot(vel_off) / seg_len_sq).clamp(0.0, 1.0) } else { 0.0 };
+                if (p - (hub_c + vel_off * t_seg)).length() > dot_px * 2.0 {
+                    continue;
+                }
             }
             let (mut glass_s, mut is_marble, mut arc_act_w, mut d_sh) = if include_marble {
                 let p_def = vitrea::deform_viscous_droplet_point(p, marble_c, -vel_off, puck_r * 2.0, press_amt * 0.5, stretch_gains);

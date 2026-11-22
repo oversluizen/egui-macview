@@ -51,6 +51,7 @@ impl MobileWebSession {
         session
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn encode_atlas(&self) -> Vec<u8> {
         self.web.encode_atlas()
     }

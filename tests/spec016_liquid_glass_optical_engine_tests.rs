@@ -503,6 +503,24 @@ fn tc_016_a0_a1_a2_zero_overdraw_snellius_grid_bending_and_bipolar_lch_caustic_o
     });
     assert_eq!(extract_bowl_tex_id(&shapes_f0), extract_bowl_tex_id(&shapes_f1));
     assert_eq!(extract_bowl_tex_id(&shapes_f1), extract_bowl_tex_id(&shapes_f2));
+
+    // 8. REQ-016-B1.12a — Single-Click Return from FreeJoystickBowl to CompassModifiers Across Full `r_hub` (Even Off-Center on Marble at r = 16pt):
+    let mut layer = egui_macview::MacThumbDialLayer::FreeJoystickBowl;
+    let p_off_hub = pos2(hub_c.x + 15.0, hub_c.y - 5.0); // dist = 15.8pt (inside r_hub = 24pt, outside old 12pt r_hub * 0.5!)
+    for (t, down) in [(0.95, None), (1.00, Some(true)), (1.22, Some(false))] {
+        let mut ev = vec![Event::PointerMoved(p_off_hub)];
+        if let Some(pressed) = down {
+            ev.push(Event::PointerButton { pos: p_off_hub, button: egui::PointerButton::Primary, pressed, modifiers: egui::Modifiers::NONE });
+        }
+        let _ = common::run_frame(&ctx, RawInput { time: Some(t), events: ev, ..Default::default() }, vec2(320.0, 320.0), |ui| {
+            MacContextThumbDial::new("a0_a1_a2_dial", &mut latched, &mut rotary).layer(&mut layer).theme(&theme).show(ui);
+        });
+    }
+    assert_eq!(
+        layer,
+        egui_macview::MacThumbDialLayer::CompassModifiers,
+        "REQ-016-B1.12a violation: A single normal click (220ms) on the center marble at r=15.8pt inside r_hub=24pt must toggle FreeJoystickBowl back to CompassModifiers without double-tapping!"
+    );
 }
 
 fn first_mesh_width(shapes: &[egui::epaint::ClippedShape]) -> Option<f32> {

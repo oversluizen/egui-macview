@@ -284,7 +284,7 @@ pub(super) fn show_dial(mut dial: MacContextThumbDial<'_>, ui: &mut Ui) -> MacCo
             let dist = delta.length();
             let angle_deg = rad_to_deg(delta.y.atan2(delta.x), m);
 
-            let eff_hub_r = if mem.stored_layer == MacThumbDialLayer::FreeJoystickBowl { r_hub * 0.5 } else { r_hub };
+            let eff_hub_r = r_hub;
             if mem.press_start_time.is_none() {
                 mem.press_start_time = Some(now);
                 mem.started_in_hub = dist <= eff_hub_r;
@@ -314,7 +314,7 @@ pub(super) fn show_dial(mut dial: MacContextThumbDial<'_>, ui: &mut Ui) -> MacCo
                         }
                     }
                 }
-            } else if mem.stored_layer == MacThumbDialLayer::FreeJoystickBowl && (!mem.started_in_hub || dist > eff_hub_r) {
+            } else if mem.stored_layer == MacThumbDialLayer::FreeJoystickBowl && (!mem.started_in_hub || dist > gap) {
                 let (nudge, tap) = step_joystick_bowl_physics(&mut mem.joystick_offset, delta, dist, r_clover_out, m);
                 joystick_nudge = nudge;
                 taptic_event = tap;
@@ -336,7 +336,7 @@ pub(super) fn show_dial(mut dial: MacContextThumbDial<'_>, ui: &mut Ui) -> MacCo
         } else if hovered_redo && dial.can_redo {
             redo_clicked = true;
             taptic_event = Some(MacTapticEvent::HistoryStep { is_redo: true });
-        } else if is_quick_tap && mem.started_in_hub && mem.active_sector.is_none() && mem.joystick_offset == Vec2::ZERO {
+        } else if mem.started_in_hub && mem.active_sector.is_none() && mem.joystick_offset.length() <= r_hub {
             taptic_event = Some(toggle_hub_layer(&mut mem, dial.latched_mask, &mut dial.layer_binding));
         } else if is_quick_tap && cur_layer == MacThumbDialLayer::CompassModifiers && !mem.started_in_hub && !mem.started_in_rotary {
             if let Some(sec) = mem.active_sector.or(mem.initial_sector) {

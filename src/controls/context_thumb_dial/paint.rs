@@ -80,11 +80,12 @@ pub(crate) fn paint_raytraced_rosette_quad(
         ((cp.y / q).round() as i32).hash(&mut hasher);
     }
     for c in &sc.members {
-        ((c.center.x * 2.0).round() as i32).hash(&mut hasher);
-        ((c.center.y * 2.0).round() as i32).hash(&mut hasher);
-        ((c.radii.1 * 2.0).round() as i32).hash(&mut hasher);
-        ((c.active_weight * max_u8).round() as i32).hash(&mut hasher);
-        ((c.lift_weight * max_u8).round() as i32).hash(&mut hasher);
+        let q = (m.active_stroke_width.points() * sc.scale).max(1.0);
+        ((c.center.x / q).round() as i32).hash(&mut hasher);
+        ((c.center.y / q).round() as i32).hash(&mut hasher);
+        ((c.radii.1 / q).round() as i32).hash(&mut hasher);
+        ((c.active_weight * m.bevel_width_pt.points()).round() as i32).hash(&mut hasher);
+        ((c.lift_weight * m.bevel_width_pt.points()).round() as i32).hash(&mut hasher);
     }
     let state_hash = hasher.finish();
     let cache_id = id_source.with("lg_rosette_ray_tex");
