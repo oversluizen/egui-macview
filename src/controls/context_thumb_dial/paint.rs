@@ -66,36 +66,60 @@ pub(crate) fn paint_raytraced_rosette_quad(
     m: &ThumbDialMetrics,
 ) {
     use std::hash::{Hash, Hasher};
-    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    let mut base_hasher = std::collections::hash_map::DefaultHasher::new();
     let max_u8 = f32::from(u8::MAX);
-    tex_dim.hash(&mut hasher);
-    (theme.appearance == crate::theme::MacAppearance::Aqua).hash(&mut hasher);
-    sc.accent_col.to_array().hash(&mut hasher);
-    ((sc.undo_active_weight * max_u8).round() as i32).hash(&mut hasher);
-    ((sc.redo_active_weight * max_u8).round() as i32).hash(&mut hasher);
-    sc.undo_arc_deg.0.to_bits().hash(&mut hasher);
-    if let Some(cp) = sc.cursor_pos {
-        let q = (m.bevel_width_pt.points() * sc.scale).max(1.0);
-        ((cp.x / q).round() as i32).hash(&mut hasher);
-        ((cp.y / q).round() as i32).hash(&mut hasher);
-    }
+    (tex_dim, theme.appearance == crate::theme::MacAppearance::Aqua, sc.accent_col.to_array()).hash(&mut base_hasher);
+    (((sc.undo_active_weight * max_u8).round() as i32), ((sc.redo_active_weight * max_u8).round() as i32), sc.undo_arc_deg.0.to_bits()).hash(&mut base_hasher);
+    let base_hash = base_hasher.finish();
+    let mut mem_hashes = Vec::with_capacity(sc.members.len());
+    let mut full_hasher = base_hasher;
     for c in &sc.members {
-        let q = (m.active_stroke_width.points() * sc.scale).max(1.0);
-        ((c.center.x / q).round() as i32).hash(&mut hasher);
-        ((c.center.y / q).round() as i32).hash(&mut hasher);
-        ((c.radii.1 / q).round() as i32).hash(&mut hasher);
-        ((c.active_weight * m.bevel_width_pt.points()).round() as i32).hash(&mut hasher);
-        ((c.lift_weight * m.bevel_width_pt.points()).round() as i32).hash(&mut hasher);
+        let mut mh = std::collections::hash_map::DefaultHasher::new();
+        ((c.center.x * 2.0).round() as i32, (c.center.y * 2.0).round() as i32, (c.radii.1 * 2.0).round() as i32).hash(&mut mh);
+        ((c.active_weight * max_u8).round() as i32, (c.lift_weight * max_u8).round() as i32, (c.deform_vel.x).round() as i32, (c.deform_vel.y).round() as i32).hash(&mut mh);
+        let h = mh.finish();
+        h.hash(&mut full_hasher);
+        mem_hashes.push(h);
     }
-    let state_hash = hasher.finish();
+    let state_hash = full_hasher.finish();
     let cache_id = id_source.with("lg_rosette_ray_tex");
+    let buf_cache_id = id_source.with("lg_rosette_rgba_buf");
     let ctx = painter.ctx();
     let cached = ctx.data(|d| d.get_temp::<(u64, egui::TextureHandle)>(cache_id));
     let tex_handle = match cached {
         Some((prev_h, handle)) if prev_h == state_hash => handle,
         prev_opt => {
-            let flat = super::icons::synthesize_rosette_matrix_rgba(tex_dim, sc, theme, m);
+            let prev_buf = ctx.data(|d| d.get_temp::<(u64, Vec<u64>, std::sync::Arc<Vec<u8>>)>(buf_cache_id));
+            let mut flat = match prev_buf {
+                Some((pbh, ref pmh, ref arc)) if pbh == base_hash && arc.len() == tex_dim * tex_dim * 4 && pmh.len() == mem_hashes.len() => {
+                    let mut buf = (**arc).clone();
+                    let pad_px = m.bevel_width_pt.points() * sc.scale * 2.0;
+                    let (mut x0, mut y0, mut x1, mut y1) = (tex_dim, tex_dim, 0usize, 0usize);
+                    for (idx, c) in sc.members.iter().enumerate() {
+                        if pmh[idx] != mem_hashes[idx] {
+                            let rad = super::render::deg_to_rad(c.angles_deg.0, m);
+                            let r_mid = (c.radii.0 + c.radii.1) * 0.5;
+                            let cent = c.center + vitrea::GlamVec2::new(rad.cos() * r_mid, rad.sin() * r_mid);
+                            let reach = (c.radii.1 - c.radii.0) + pad_px;
+                            x0 = x0.min((cent.x - reach).floor().max(0.0) as usize);
+                            y0 = y0.min((cent.y - reach).floor().max(0.0) as usize);
+                            x1 = x1.max(((cent.x + reach).ceil() as usize).min(tex_dim));
+                            y1 = y1.max(((cent.y + reach).ceil() as usize).min(tex_dim));
+                        }
+                    }
+                    if x0 < x1 && y0 < y1 {
+                        super::icons::synthesize_rosette_matrix_rgba(&mut buf, tex_dim, (x0..x1, y0..y1), sc, theme, m);
+                    }
+                    buf
+                }
+                _ => {
+                    let mut buf = vec![0u8; tex_dim * tex_dim * 4];
+                    super::icons::synthesize_rosette_matrix_rgba(&mut buf, tex_dim, (0..tex_dim, 0..tex_dim), sc, theme, m);
+                    buf
+                }
+            };
             let img = ColorImage::from_rgba_unmultiplied([tex_dim, tex_dim], &flat);
+            ctx.data_mut(|d| d.insert_temp(buf_cache_id, (base_hash, mem_hashes, std::sync::Arc::new(std::mem::take(&mut flat)))));
             let handle = if let Some((_, mut existing)) = prev_opt {
                 existing.set(img, egui::TextureOptions::LINEAR);
                 existing
@@ -131,7 +155,7 @@ pub(super) struct DialPaintState {
     pub(super) hovered_redo: bool,
     pub(super) joystick_offset: Vec2,
     pub(super) pointer_norm: Vec2,
-    pub(super) sector_lifts: [f32; 6],
+    pub(super) sector_lifts: [(f32, f32); 6],
     pub(super) polar_morph: Option<(f32, f32)>,
     pub(super) accent_col: Color32,
     pub(super) tooltip_alpha: f32,
@@ -194,27 +218,26 @@ pub(super) fn paint_dial_layers(
             vitrea::GlamVec2::new((pt.x - dial_rect.min.x) * px_scale, (pt.y - dial_rect.min.y) * px_scale)
         };
 
-        let passive_half_sweep = m.diagonal_sweep_deg.points() * 0.5 - half_gap_deg;
         let fillet_px = gap * 2.0 * px_scale;
-        // REQ-016-B1.8: Only the 6 active sectors (N, NE, E, SE, S, W) receive 3D Liquid Glass cushions;
-        // NW (-135 deg) and SW (+135 deg) remain intentionally open recessed glass bowl pockets!
+        // REQ-016-B1.8 & REQ-016-B1.13a..b: Only the 6 active sectors (N, NE, E, SE, S, W) receive 3D Liquid Glass cushions;
+        // Viscous droplet deformation is driven strictly by closed-form analytical spring velocity `lift_vel = dl_dt * T0` (zero static distortion at rest/settled hover!).
         let mut members = Vec::with_capacity(7);
-        let lift_gain = gap + gap * 0.5;
         for sector in MacThumbSector::ALL {
             let is_latched = st.latched_sector == Some(sector);
             let is_held = st.held_sector == Some(sector);
             let is_hovered = st.hovered_sector == Some(sector);
-            let lift = st.sector_lifts[sector as usize].clamp(0.0, 1.0);
+            let (raw_lift, lift_vel) = st.sector_lifts[sector as usize];
+            let lift = raw_lift.clamp(0.0, 1.0);
             let c_deg = sector.center_angle_deg(m);
             let c_rad = super::render::deg_to_rad(c_deg, m);
             let sec_unit = Vec2::new(c_rad.cos(), c_rad.sin());
-            let lift_off = (sec_unit * 0.5 + st.pointer_norm * 0.5) * (lift * lift_gain);
-            let r_out_lifted = r_clover_out + lift * gap;
+            let glass_swell = sec_unit * (lift * gap * 0.5);
+            let r_out_lifted = r_clover_out + lift * gap * 0.5;
             let half_sweep = sector.sweep_deg(m) * 0.5 - half_gap_deg;
-            let vel_px = vitrea::GlamVec2::new(lift_off.x * px_scale, lift_off.y * px_scale) * 2.0;
+            let vel_px = vitrea::GlamVec2::new(sec_unit.x, sec_unit.y) * (lift_vel * gap * px_scale * 2.0);
             let hover_boost = if is_hovered { m.hover_fill_opacity.points() } else { 0.0 };
             members.push(super::icons::RosetteMemberSpec {
-                center: to_tex(hub_center + lift_off),
+                center: to_tex(hub_center + glass_swell),
                 radii: (r_clover_in * px_scale, r_out_lifted * px_scale),
                 angles_deg: (c_deg, half_sweep),
                 corner_radius: fillet_px,
@@ -223,17 +246,18 @@ pub(super) fn paint_dial_layers(
                 deform_vel: vel_px,
             });
         }
+        let max_adj_deg = m.cardinal_sweep_deg.points() + m.sector_gap_deg.points();
         if let Some((lead_deg, trail_deg)) = st.polar_morph {
             let span_diff = (lead_deg - trail_deg).abs();
-            if span_diff > half_gap_deg {
+            if span_diff > half_gap_deg && span_diff <= max_adj_deg {
                 let mid_d = (lead_deg + trail_deg) * 0.5;
-                let half_s = span_diff * 0.5 + passive_half_sweep * 0.5;
+                let half_s = (span_diff * 0.5).min(half_gap_deg * 2.0);
                 members.push(super::icons::RosetteMemberSpec {
                     center: to_tex(hub_center),
                     radii: (r_clover_in * px_scale, r_clover_out * px_scale),
                     angles_deg: (mid_d, half_s),
                     corner_radius: fillet_px,
-                    active_weight: 0.5,
+                    active_weight: (span_diff / max_adj_deg.max(1.0)).clamp(0.0, 0.5),
                     lift_weight: 0.5,
                     deform_vel: vitrea::GlamVec2::ZERO,
                 });
@@ -258,10 +282,11 @@ pub(super) fn paint_dial_layers(
         };
         paint_raytraced_rosette_quad(painter, dial.id_source, dial_rect, &container, tex_dim, theme, m);
 
+        let lift_gain = gap + gap * 0.5;
         for sector in MacThumbSector::ALL {
             let is_latched = st.latched_sector == Some(sector);
             let is_held = st.held_sector == Some(sector);
-            let lift = st.sector_lifts[sector as usize].clamp(0.0, 1.0);
+            let lift = st.sector_lifts[sector as usize].0.clamp(0.0, 1.0);
             let c_deg = sector.center_angle_deg(m);
             let c_rad = super::render::deg_to_rad(c_deg, m);
             let sec_unit = Vec2::new(c_rad.cos(), c_rad.sin());

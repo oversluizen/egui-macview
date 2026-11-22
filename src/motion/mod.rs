@@ -121,10 +121,23 @@ impl CASpring {
     /// Evaluates a stateful `CASpring` transition toward `target` at explicit timestamp `now`,
     /// performing zero spring math or `IdTypeMap` write locks when settled at rest.
     pub fn animate_f32_at(&self, ctx: &egui::Context, id: egui::Id, target: f32, now: f64, frame_paced: bool) -> f32 {
+        self.animate_f32_with_velocity_at(ctx, id, target, now, frame_paced).0
+    }
+
+    /// Evaluates both the position $y(t)$ and the closed-form analytical velocity $\dot{y}(t) = \frac{dy}{dt}$
+    /// for a stateful `CASpring` transition toward `target` at timestamp `now` (`REQ-016-B1.13a`).
+    pub fn animate_f32_with_velocity_at(
+        &self,
+        ctx: &egui::Context,
+        id: egui::Id,
+        target: f32,
+        now: f64,
+        frame_paced: bool,
+    ) -> (f32, f32) {
         let stored = ctx.data(|d| d.get_temp::<(f32, f32, f64)>(id));
         let Some((prev_target, start_val, start_time)) = stored else {
             ctx.data_mut(|d| d.insert_temp(id, (target, target, now)));
-            return target;
+            return (target, 0.0);
         };
 
         let request_next_frame = |ctx: &egui::Context| {
@@ -137,24 +150,26 @@ impl CASpring {
 
         if (prev_target - target).abs() > f32::EPSILON {
             let elapsed = (now - start_time).max(0.0) as f32;
-            let cur = if (prev_target - start_val).abs() > f32::EPSILON && elapsed < self.settling_duration() {
-                start_val + (prev_target - start_val) * self.position_at(elapsed)
+            let (cur, vel) = if (prev_target - start_val).abs() > f32::EPSILON && elapsed < self.settling_duration() {
+                let delta = prev_target - start_val;
+                (start_val + delta * self.position_at(elapsed), delta * self.velocity(elapsed))
             } else {
-                prev_target
+                (prev_target, 0.0)
             };
             ctx.data_mut(|d| d.insert_temp(id, (target, cur, now)));
             request_next_frame(ctx);
-            cur
+            (cur, vel)
         } else {
             let elapsed = (now - start_time).max(0.0) as f32;
-            if (target - start_val).abs() > f32::EPSILON && elapsed < self.settling_duration() {
+            let delta = target - start_val;
+            if delta.abs() > f32::EPSILON && elapsed < self.settling_duration() {
                 request_next_frame(ctx);
-                start_val + (target - start_val) * self.position_at(elapsed)
+                (start_val + delta * self.position_at(elapsed), delta * self.velocity(elapsed))
             } else {
-                if (target - start_val).abs() > f32::EPSILON {
+                if delta.abs() > f32::EPSILON {
                     ctx.data_mut(|d| d.insert_temp(id, (target, target, now)));
                 }
-                target
+                (target, 0.0)
             }
         }
     }

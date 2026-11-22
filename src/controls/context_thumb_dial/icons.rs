@@ -45,18 +45,14 @@ fn color_to_rgb_norm(c: Color32) -> [f32; 3] {
 
 use super::paint::eval_shared_dish_matrix_at;
 
-pub(crate) fn synthesize_rosette_matrix_rgba(tex_dim: usize, sc: &RosetteContainerSpec, theme: &MacTheme, m: &ThumbDialMetrics) -> Vec<u8> {
-    let mut flat = vec![0u8; tex_dim * tex_dim * 4];
+pub(crate) fn synthesize_rosette_matrix_rgba(flat: &mut [u8], tex_dim: usize, (x_range, y_range): (std::ops::Range<usize>, std::ops::Range<usize>), sc: &RosetteContainerSpec, theme: &MacTheme, m: &ThumbDialMetrics) {
     let is_light = theme.appearance == crate::theme::MacAppearance::Aqua;
-    let dish_core = color_to_rgb_norm(theme.window_background());
-    let dish_rim = color_to_rgb_norm(if is_light { theme.box_background() } else { theme.control_background() });
-    let passive_tint = color_to_rgb_norm(theme.specular_rim_top());
-    let (accent_rgb, grid_rgb, shadow_rgb, warm_rgb) = (
-        color_to_rgb_norm(sc.accent_col),
-        color_to_rgb_norm(theme.secondary_label()),
-        color_to_rgb_norm(theme.drop_shadow()),
-        color_to_rgb_norm(theme.system_orange()),
+    let (dish_core, dish_rim, passive_tint) = (
+        color_to_rgb_norm(theme.window_background()),
+        color_to_rgb_norm(if is_light { theme.box_background() } else { theme.control_background() }),
+        color_to_rgb_norm(theme.specular_rim_top()),
     );
+    let (accent_rgb, grid_rgb, shadow_rgb, warm_rgb) = (color_to_rgb_norm(sc.accent_col), color_to_rgb_norm(theme.secondary_label()), color_to_rgb_norm(theme.drop_shadow()), color_to_rgb_norm(theme.system_orange()));
     let params = vitrea::LiquidGlassOpticalParams {
         ior_glass: m.ior_glass.points(), ior_dispersion_rgb: [m.ior_red.points(), m.ior_green.points(), m.ior_blue.points()],
         fresnel_f0: m.fresnel_f0.points(), bevel_width_pt: m.bevel_width_pt.points() * sc.scale,
@@ -73,7 +69,7 @@ pub(crate) fn synthesize_rosette_matrix_rgba(tex_dim: usize, sc: &RosetteContain
     let render_rows = |y_start: usize, rows_buf: &mut [u8]| {
         for (dy, row_px) in rows_buf.chunks_exact_mut(tex_dim * 4).enumerate() {
             let y = y_start + dy;
-            for x in 0..tex_dim {
+            for x in x_range.clone() {
                 let p = vitrea::GlamVec2::new(x as f32 + 0.5, y as f32 + 0.5);
                 let d_center = p - sc.hub_center;
                 let r = d_center.length();
@@ -97,7 +93,7 @@ pub(crate) fn synthesize_rosette_matrix_rgba(tex_dim: usize, sc: &RosetteContain
                             (best_s, best_act, best_lift) = (s_i, mem.active_weight, mem.lift_weight);
                         } else {
                             let pair_w = (best_lift * mem.lift_weight + best_act * mem.active_weight).clamp(0.0, 1.0);
-                            if pair_w > 0.0 {
+                            if pair_w > 0.0 && best_s.distance <= params.meniscus_merge_k_pt && s_i.distance <= params.meniscus_merge_k_pt {
                                 let k_m = (params.meniscus_merge_k_pt * pair_w * 0.5).max(params.fresnel_f0);
                                 let h = (0.5 + 0.5 * (s_i.distance - best_s.distance) / k_m).clamp(0.0, 1.0);
                                 best_s = vitrea::sdf_smooth_union_with_grad(best_s, s_i, k_m);
@@ -165,20 +161,22 @@ pub(crate) fn synthesize_rosette_matrix_rgba(tex_dim: usize, sc: &RosetteContain
             }
         }
     };
+    let y0_base = y_range.start.min(tex_dim);
+    let y1_base = y_range.end.min(tex_dim).max(y0_base);
+    let sub_flat = &mut flat[y0_base * tex_dim * 4..y1_base * tex_dim * 4];
     #[cfg(not(target_arch = "wasm32"))]
     {
         let n_threads = std::thread::available_parallelism().map(usize::from).unwrap_or(4).clamp(1, 16);
-        let rows_per_chunk = tex_dim.div_ceil(n_threads).max(1);
+        let rows_per_chunk = (y1_base - y0_base).div_ceil(n_threads).max(1);
         std::thread::scope(|s| {
-            for (c_idx, chunk) in flat.chunks_mut(rows_per_chunk * tex_dim * 4).enumerate() {
-                let y0 = c_idx * rows_per_chunk;
+            for (c_idx, chunk) in sub_flat.chunks_mut(rows_per_chunk * tex_dim * 4).enumerate() {
+                let y0 = y0_base + c_idx * rows_per_chunk;
                 s.spawn(move || render_rows(y0, chunk));
             }
         });
     }
     #[cfg(target_arch = "wasm32")]
-    render_rows(0, &mut flat);
-    flat
+    render_rows(y0_base, sub_flat);
 }
 
 /// Official Apple SF Symbols identifiers rendered as resolution-independent vector strokes (`REQ-014-07`).

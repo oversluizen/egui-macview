@@ -521,6 +521,36 @@ fn tc_016_a0_a1_a2_zero_overdraw_snellius_grid_bending_and_bipolar_lch_caustic_o
         egui_macview::MacThumbDialLayer::CompassModifiers,
         "REQ-016-B1.12a violation: A single normal click (220ms) on the center marble at r=15.8pt inside r_hub=24pt must toggle FreeJoystickBowl back to CompassModifiers without double-tapping!"
     );
+
+    // 9. REQ-016-B1.13a & REQ-016-B1.13b — Analytical Spring Velocity Lifecycle (`animate_f32_with_velocity_at`: non-zero during motion, zero at settled hover)
+    //    AND Zero Non-Adjacent Ghost Wedge Across Open NW Pocket When Jumping from Latched NE (-45 deg) to Hovered West (180 deg):
+    let sp = egui_macview::CASpring::new(0.25, 0.85);
+    let sp_id = egui::Id::NULL.with("req_016_b1_13_vel_test");
+    let (v0, vel0) = sp.animate_f32_with_velocity_at(&ctx, sp_id, 0.0, 10.0, false);
+    let _ = sp.animate_f32_with_velocity_at(&ctx, sp_id, 1.0, 10.01, false);
+    let (v_mid, vel_mid) = sp.animate_f32_with_velocity_at(&ctx, sp_id, 1.0, 10.05, false);
+    let (v_set, vel_set) = sp.animate_f32_with_velocity_at(&ctx, sp_id, 1.0, 11.50, false);
+    assert!(v0 == 0.0 && vel0 == 0.0 && v_mid > 0.05 && vel_mid > 1.0 && (v_set - 1.0).abs() < 1e-3 && vel_set == 0.0);
+
+    let west_hover_pt = pos2(hub_c.x - 54.0, hub_c.y);
+    let (ghost_ctx, _) = common::headless_ctx(MacAppearance::Aqua);
+    let _ = common::run_frame(&ghost_ctx, RawInput { time: Some(0.0), ..Default::default() }, vec2(320.0, 320.0), |ui| {
+        MacContextThumbDial::new("ghost_check_dial", &mut latched, &mut rotary).preset(MacThumbContextPreset::Primitives).theme(&theme).show(ui);
+    });
+    ghost_ctx.data_mut(|d| d.insert_temp(egui::Id::NULL.with("retina_events"), vec![Event::PointerMoved(west_hover_pt)]));
+    let fb_ghost = common::RetinaCpuFramebuffer::render_retina(&ghost_ctx, vec2(320.0, 320.0), 2.0, Color32::from_rgb(244, 245, 248), |ui| {
+        MacContextThumbDial::new("ghost_check_dial", &mut latched, &mut rotary).preset(MacThumbContextPreset::Primitives).theme(&theme).show(ui);
+    });
+    let sample_ghost_l = |pt: Pos2| -> f32 {
+        let rgba = fb_ghost.pixels[((pt.y * 2.0).round() as usize).min(fb_ghost.height - 1) * fb_ghost.width + ((pt.x * 2.0).round() as usize).min(fb_ghost.width - 1)];
+        vitrea::srgb_to_cie_lch([rgba[0] as f32 / 255.0, rgba[1] as f32 / 255.0, rgba[2] as f32 / 255.0])[0]
+    };
+    let l_nw_mid = sample_ghost_l(pos2(hub_c.x + nw_rad.cos() * 50.0, hub_c.y + nw_rad.sin() * 50.0));
+    let l_nw_edge = sample_ghost_l(pos2(hub_c.x + nw_rad.cos() * 31.5, hub_c.y + nw_rad.sin() * 31.5));
+    assert!(
+        (l_nw_edge - l_nw_mid).abs() < 2.0,
+        "REQ-016-B1.13b Non-Adjacent Ghost Wedge violation: Hovering West (180 deg) while NE (-45 deg) is latched spawned a polar_morph ghost wedge across the open NW (-135 deg) pocket (L_edge={l_nw_edge:.1} vs L_mid={l_nw_mid:.1})!"
+    );
 }
 
 fn first_mesh_width(shapes: &[egui::epaint::ClippedShape]) -> Option<f32> {

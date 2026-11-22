@@ -157,6 +157,8 @@ pub fn build_liquid_glass_backdrop_image(source: &ColorImage, theme: &MacTheme) 
     ColorImage { size: [dw, dh], source_size: Vec2::new(dw as f32, dh as f32), pixels: out_pixels }
 }
 
+pub(crate) type DialSpringTelemetry = (Vec2, [(f32, f32); 6], Option<(f32, f32)>);
+
 pub(crate) fn step_dial_pointer_springs(
     ctx: &egui::Context,
     theme: &MacTheme,
@@ -171,7 +173,7 @@ pub(crate) fn step_dial_pointer_springs(
         f64,
     ),
     sector_centers: &mut [Pos2; 6],
-) -> (Vec2, [f32; 6], Option<(f32, f32)>) {
+) -> DialSpringTelemetry {
     let base_spring = theme.tokens().macview.motion.swiftui_snappy.to_spring();
     let fast_ratio = m.viscous_stretch_gain.points();
     let spring = crate::motion::CASpring::new(base_spring.response * fast_ratio, 1.0);
@@ -202,29 +204,39 @@ pub(crate) fn step_dial_pointer_springs(
     let lift_gain = gap * m.vibrancy_chroma_boost.points();
     let sector_lifts = super::MacThumbSector::ALL.map(|sec| {
         let target_lift = if held_sector == Some(sec) || eff_hover == Some(sec) { 1.0 } else { 0.0 };
-        let l = spring.animate_f32_at(ctx, id_source.with(("lg_sec_lift", sec as u8)), target_lift, now, false);
+        let (l, dl_dt) = spring.animate_f32_with_velocity_at(ctx, id_source.with(("lg_sec_lift", sec as u8)), target_lift, now, false);
         let c_deg = sec.center_angle_deg(m);
         let c_rad = super::context_thumb_dial::render::deg_to_rad(c_deg, m);
         let sec_unit = Vec2::new(c_rad.cos(), c_rad.sin());
         let lift_off = (sec_unit * 0.5 + pointer_norm * 0.5) * (l * lift_gain);
         sector_centers[sec as usize] =
             super::context_thumb_dial::render::polar_pos(hub_center + lift_off, r_clover_mid + l * gap, c_deg, m);
-        l
+        (l, dl_dt * spring.response)
     });
 
-    // Iter P3 (`REQ-016-03.5`): Coupled Polar DualSpringMorphBlob (`lg_polar_lead_deg`, `lg_polar_trail_deg`)
+    // Iter P3 (`REQ-016-03.5` & `REQ-016-B1.13b`): Coupled Polar DualSpringMorphBlob (`lg_polar_lead_deg`, `lg_polar_trail_deg`)
+    // Only bridges across adjacent sectors (|diff| <= cardinal_sweep_deg + sector_gap_deg); non-adjacent jumps snap directly!
     let target_sec = held_sector.or(eff_hover).or(latched_sector);
+    let max_adj_deg = m.cardinal_sweep_deg.points() + m.sector_gap_deg.points();
     let polar_morph = target_sec.map(|sec| {
         let raw_deg = sec.center_angle_deg(m);
         let cont_id = id_source.with("lg_polar_cont_deg");
+        let lead_id = id_source.with("lg_polar_lead");
+        let trail_id = id_source.with("lg_polar_trail");
         let prev_cont = ctx.data(|d| d.get_temp::<f32>(cont_id)).unwrap_or(raw_deg);
         let diff = super::context_thumb_dial::render::shortest_angle_diff_deg(raw_deg, prev_cont, m);
         let cont_target = prev_cont + diff;
-        ctx.data_mut(|d| d.insert_temp(cont_id, cont_target));
+        ctx.data_mut(|d| {
+            d.insert_temp(cont_id, cont_target);
+            if diff.abs() > max_adj_deg {
+                d.insert_temp(lead_id, (cont_target, cont_target, now));
+                d.insert_temp(trail_id, (cont_target, cont_target, now));
+            }
+        });
         let lead_s = crate::motion::CASpring::new(base_spring.response * 0.5, base_spring.damping_ratio);
         let trail_s = base_spring;
-        let lead_deg = lead_s.animate_f32_at(ctx, id_source.with("lg_polar_lead"), cont_target, now, false);
-        let trail_deg = trail_s.animate_f32_at(ctx, id_source.with("lg_polar_trail"), cont_target, now, false);
+        let lead_deg = lead_s.animate_f32_at(ctx, lead_id, cont_target, now, false);
+        let trail_deg = trail_s.animate_f32_at(ctx, trail_id, cont_target, now, false);
         (lead_deg, trail_deg)
     });
     (pointer_norm, sector_lifts, polar_morph)
