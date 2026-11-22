@@ -257,7 +257,7 @@ let inFlight = false;
 let dirty = true;
 let wasmExports = null;
 
-const wasmReq = fetch('macview_gallery.wasm?v=e20c35e');
+const wasmReq = fetch('macview_gallery.wasm?v=26246d6');
 (WebAssembly.instantiateStreaming
   ? WebAssembly.instantiateStreaming(wasmReq, {}).catch(() => wasmReq.then(r => r.arrayBuffer()).then(b => WebAssembly.instantiate(b, {})))
   : wasmReq.then(r => r.ok ? r.arrayBuffer() : Promise.reject()).then(b => WebAssembly.instantiate(b, {})))
