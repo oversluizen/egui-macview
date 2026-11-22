@@ -145,20 +145,68 @@ layout(location = 2) in vec4 a_color;
 uniform vec2 u_screen;
 out vec2 v_uv;
 out vec4 v_color;
+out vec2 v_pos;
 void main() {
   gl_Position = vec4(2.0 * a_pos.x / u_screen.x - 1.0, 1.0 - 2.0 * a_pos.y / u_screen.y, 0.0, 1.0);
   v_uv = a_uv;
   v_color = a_color / 255.0;
+  v_pos = a_pos;
 }`;
 
 const fsSrc = `#version 300 es
 precision highp float;
 in vec2 v_uv;
 in vec4 v_color;
+in vec2 v_pos;
 uniform sampler2D u_tex;
+uniform vec3 u_cursor_font;
 out vec4 fragColor;
+
+vec3 srgbToLch(vec3 c) {
+  vec3 lin = mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(vec3(0.04045), c));
+  vec3 xyz = vec3(
+    dot(lin, vec3(0.4124564, 0.3575761, 0.1804375)) / 0.95047,
+    dot(lin, vec3(0.2126729, 0.7151522, 0.0721750)),
+    dot(lin, vec3(0.0193339, 0.1191920, 0.9503041)) / 1.08883
+  );
+  vec3 f = mix((903.3 * xyz + 16.0) / 116.0, pow(max(xyz, vec3(0.0)), vec3(1.0 / 3.0)), step(vec3(0.008856), xyz));
+  float L = clamp(116.0 * f.y - 16.0, 0.0, 100.0);
+  float a = 500.0 * (f.x - f.y);
+  float b = 200.0 * (f.y - f.z);
+  float C = sqrt(a * a + b * b);
+  float H = atan(b, a);
+  return vec3(L, C, H);
+}
+
+vec3 lchToSrgb(vec3 lch) {
+  float fy = (lch.x + 16.0) / 116.0;
+  vec3 u = vec3(fy + lch.y * cos(lch.z) / 500.0, fy, fy - lch.y * sin(lch.z) / 200.0);
+  vec3 u3 = u * u * u;
+  vec3 xyz = mix(max((116.0 * u - 16.0) / 903.3, vec3(0.0)), u3, step(vec3(0.008856), u3)) * vec3(0.95047, 1.0, 1.08883);
+  vec3 lin = max(vec3(
+    dot(xyz, vec3( 3.2404542, -1.5371385, -0.4985314)),
+    dot(xyz, vec3(-0.9692660,  1.8760108,  0.0415560)),
+    dot(xyz, vec3( 0.0556434, -0.2040259,  1.0572252))
+  ), vec3(0.0));
+  return clamp(mix(12.92 * lin, 1.055 * pow(lin, vec3(1.0 / 2.4)) - 0.055, step(vec3(0.0031308), lin)), 0.0, 1.0);
+}
+
 void main() {
-  fragColor = v_color * texture(u_tex, v_uv);
+  vec4 texel = texture(u_tex, v_uv);
+  if (v_uv.y > u_cursor_font.z && texel.a > 0.05) {
+    vec2 d = v_pos - u_cursor_font.xy;
+    float distSq = dot(d, d);
+    float prox = exp(-distSq / (96.0 * 96.0));
+    if (prox > 0.01) {
+      vec2 grad = vec2(dFdx(texel.a), dFdy(texel.a));
+      float rim = clamp(length(grad) * 3.5, 0.0, 1.0);
+      vec3 lch = srgbToLch(texel.rgb);
+      lch.x = clamp(lch.x + (18.0 * rim + 4.5) * prox, 0.0, 100.0);
+      lch.y = max(lch.y + 8.0 * rim * prox, 0.0);
+      texel.rgb = mix(texel.rgb, lchToSrgb(lch), prox * (0.28 + 0.52 * rim));
+    }
+  }
+  fragColor = v_color * texel;
 }`;
 
 function compileShader(type, src) {
@@ -174,6 +222,10 @@ gl.linkProgram(prog);
 gl.useProgram(prog);
 
 const uScreen = gl.getUniformLocation(prog, 'u_screen');
+const uCursorFont = gl.getUniformLocation(prog, 'u_cursor_font');
+let gpuAtlasW = 0;
+let gpuAtlasH = 0;
+let fontVMax = 1.0;
 const vao = gl.createVertexArray();
 gl.bindVertexArray(vao);
 const vbo = gl.createBuffer();
@@ -201,7 +253,7 @@ let inFlight = false;
 let dirty = true;
 let wasmExports = null;
 
-const wasmReq = fetch('macview_gallery.wasm?v=bae6fa3');
+const wasmReq = fetch('macview_gallery.wasm?v=e20c35e');
 (WebAssembly.instantiateStreaming
   ? WebAssembly.instantiateStreaming(wasmReq, {}).catch(() => wasmReq.then(r => r.arrayBuffer()).then(b => WebAssembly.instantiate(b, {})))
   : wasmReq.then(r => r.ok ? r.arrayBuffer() : Promise.reject()).then(b => WebAssembly.instantiate(b, {})))
@@ -256,8 +308,8 @@ function stepWasmOnGesture() {
   const fLen = wasmExports.wasm_render_frame(wPts, hPts, dpr, performance.now() / 1000.0);
   if (fLen >= 20) {
     const fPtr = wasmExports.wasm_frame_ptr();
-    const buf = wasmExports.memory.buffer.slice(fPtr, fPtr + fLen);
-    renderMwgl(buf, wPts, hPts, dpr);
+    const view = new Uint8Array(wasmExports.memory.buffer, fPtr, fLen);
+    renderMwgl(view, wPts, hPts, dpr);
   }
 }
 
@@ -332,17 +384,45 @@ window.addEventListener('keydown', e => {
 });
 window.addEventListener('resize', () => { dirty = true; });
 
-async function syncAtlas() {
-  let buf;
-  if (wasmExports) {
-    const ptr = wasmExports.wasm_atlas_ptr();
-    const len = wasmExports.wasm_atlas_len();
-    if (len < 8) return;
-    buf = wasmExports.memory.buffer.slice(ptr, ptr + len);
+function syncAtlasWasm() {
+  if (!wasmExports || !wasmExports.wasm_atlas_dim) return;
+  const ptr = wasmExports.wasm_atlas_ptr();
+  const len = wasmExports.wasm_atlas_len();
+  const w = wasmExports.wasm_atlas_dim(0);
+  const h = wasmExports.wasm_atlas_dim(1);
+  if (w < 1 || h < 1 || len < w * h * 4) return;
+  fontVMax = wasmExports.wasm_atlas_dim(2) / Math.max(1, h);
+  const dx = wasmExports.wasm_atlas_dim(3);
+  const dy = wasmExports.wasm_atlas_dim(4);
+  const dw = wasmExports.wasm_atlas_dim(5);
+  const dh = wasmExports.wasm_atlas_dim(6);
+  const pixels = new Uint8Array(wasmExports.memory.buffer, ptr, w * h * 4);
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  if (w !== gpuAtlasW || h !== gpuAtlasH || dw === 0 || dh === 0 || (dx === 0 && dy === 0 && dw === w && dh === h)) {
+    gl.pixelStorei(gl.UNPACK_ROW_LENGTH, 0);
+    gl.pixelStorei(gl.UNPACK_SKIP_PIXELS, 0);
+    gl.pixelStorei(gl.UNPACK_SKIP_ROWS, 0);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+    gpuAtlasW = w;
+    gpuAtlasH = h;
   } else {
-    const res = await fetch('/atlas.bin');
-    buf = await res.arrayBuffer();
+    gl.pixelStorei(gl.UNPACK_ROW_LENGTH, w);
+    gl.pixelStorei(gl.UNPACK_SKIP_PIXELS, dx);
+    gl.pixelStorei(gl.UNPACK_SKIP_ROWS, dy);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, dx, dy, dw, dh, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+    gl.pixelStorei(gl.UNPACK_ROW_LENGTH, 0);
+    gl.pixelStorei(gl.UNPACK_SKIP_PIXELS, 0);
+    gl.pixelStorei(gl.UNPACK_SKIP_ROWS, 0);
   }
+}
+
+async function syncAtlas() {
+  if (wasmExports) {
+    syncAtlasWasm();
+    return;
+  }
+  const res = await fetch('/atlas.bin');
+  const buf = await res.arrayBuffer();
   if (buf.byteLength < 8) return;
   const dv = new DataView(buf);
   const w = dv.getUint32(0, true);
@@ -353,7 +433,7 @@ async function syncAtlas() {
 }
 
 function renderMwgl(buf, wPts, hPts, dpr) {
-  const dv = new DataView(buf);
+  const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
   if (buf.byteLength < 20) return;
   const rawVer = dv.getUint32(4, true);
   const srvAtlasVer = rawVer & 0x0FFFFFFF;
@@ -368,7 +448,11 @@ function renderMwgl(buf, wPts, hPts, dpr) {
   const meshCount = dv.getUint32(16, true);
   if (srvAtlasVer !== atlasVer) {
     atlasVer = srvAtlasVer;
-    syncAtlas().then(() => { dirty = true; });
+    if (wasmExports) {
+      syncAtlasWasm();
+    } else {
+      syncAtlas().then(() => { dirty = true; });
+    }
   }
   gl.viewport(0, 0, canvas.width, canvas.height);
   gl.disable(gl.SCISSOR_TEST);
@@ -379,6 +463,9 @@ function renderMwgl(buf, wPts, hPts, dpr) {
   gl.enable(gl.SCISSOR_TEST);
   gl.useProgram(prog);
   gl.uniform2f(uScreen, wPts, hPts);
+  const cx = (wasmExports && wasmExports.wasm_pointer_xy) ? wasmExports.wasm_pointer_xy(0) : -1000.0;
+  const cy = (wasmExports && wasmExports.wasm_pointer_xy) ? wasmExports.wasm_pointer_xy(1) : -1000.0;
+  gl.uniform3f(uCursorFont, cx, cy, fontVMax);
   gl.bindVertexArray(vao);
 
   let off = 20;
@@ -402,11 +489,11 @@ function renderMwgl(buf, wPts, hPts, dpr) {
     gl.scissor(sx, sy, sw, sh);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
-    gl.bufferData(gl.ARRAY_BUFFER, new Uint8Array(buf, off, vBytes), gl.STREAM_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, new Uint8Array(buf.buffer, buf.byteOffset + off, vBytes), gl.STREAM_DRAW);
     off += vBytes;
 
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint8Array(buf, off, iBytes), gl.STREAM_DRAW);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint8Array(buf.buffer, buf.byteOffset + off, iBytes), gl.STREAM_DRAW);
     off += iBytes;
 
     gl.drawElements(gl.TRIANGLES, iCount, gl.UNSIGNED_INT, 0);
@@ -427,16 +514,16 @@ async function tick() {
       const fLen = wasmExports.wasm_render_frame(wPts, hPts, dpr, nowSecs);
       if (fLen >= 20) {
         const fPtr = wasmExports.wasm_frame_ptr();
-        const buf = wasmExports.memory.buffer.slice(fPtr, fPtr + fLen);
-        renderMwgl(buf, wPts, hPts, dpr);
+        const view = new Uint8Array(wasmExports.memory.buffer, fPtr, fLen);
+        renderMwgl(view, wPts, hPts, dpr);
       }
     } else if (!location.hostname.endsWith('github.io') && location.protocol !== 'file:') {
       const batch = [`V ${wPts} ${hPts} ${dpr}`, `C ${nowSecs.toFixed(4)}`, ...eventQueue];
       eventQueue = [];
       try {
         const res = await fetch(`/frame?w=${wPts}&h=${hPts}&dpr=${dpr}`, { method: 'POST', body: batch.join('\n') });
-        const buf = await res.arrayBuffer();
-        renderMwgl(buf, wPts, hPts, dpr);
+        const ab = await res.arrayBuffer();
+        renderMwgl(new Uint8Array(ab), wPts, hPts, dpr);
       } catch (_) {}
     }
     inFlight = false;
