@@ -212,7 +212,7 @@ impl<'a> Widget for MacLabel<'a> {
             (subpixel_snap_rect(r, ppp), resp)
         };
 
-        let clip = if matches!(self.alignment, Align::Center | Align::Max) { ui.clip_rect() } else { rect.intersect(ui.clip_rect()) };
+        let clip = ui.clip_rect();
         let painter = ui.painter_at(clip);
         let text_y = theme.baseline_text_y(rect, baseline_from_top, ascender, ppp);
         let text_x = match self.alignment {

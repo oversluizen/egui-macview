@@ -178,6 +178,10 @@ pub fn normalize_nib_alignment_rect(
             x += 2.0;
             w = (w - 2.0).max(chk_min_w);
         }
+        SceneNodeKind::Label if (-2.0..0.0).contains(&x) => {
+            w = (w + x).max(1.0);
+            x = 0.0;
+        }
         _ => {}
     }
     [x, y, w, h]
@@ -434,9 +438,7 @@ impl MacSceneIR {
         let q = query.trim().to_lowercase();
         let mut mask = SceneFilterMask::default();
         if q.is_empty() {
-            for n in &self.nodes {
-                mask.matched_nodes.insert(n.id);
-            }
+            mask.matched_nodes.extend(self.nodes.iter().map(|n| n.id));
             return mask;
         }
         for (id, text) in &self.search_index {
@@ -456,17 +458,12 @@ impl MacSceneIR {
 
     /// Reverse Z-order canvas hit-testing for Studio selection (`REQ-013-02I`).
     pub fn hit_test(&self, pos: egui::Pos2, solved_rects: &BTreeMap<NodeId, egui::Rect>) -> Option<NodeId> {
-        for n in self.nodes.iter().rev() {
-            if matches!(n.kind, SceneNodeKind::Container { .. }) {
-                continue;
-            }
-            if let Some(rect) = solved_rects.get(&n.id) {
-                if rect.contains(pos) {
-                    return Some(n.id);
-                }
-            }
-        }
-        None
+        self.nodes
+            .iter()
+            .rev()
+            .filter(|n| !matches!(n.kind, SceneNodeKind::Container { .. }))
+            .find(|n| solved_rects.get(&n.id).is_some_and(|r| r.contains(pos)))
+            .map(|n| n.id)
     }
 
     /// Appends a child [`SceneNode`] under `parent_id` during `awakeFromNib` / `windowDidLoad` (`REQ-013-10.7`),
@@ -497,13 +494,7 @@ pub(crate) fn add_scene_anchor_constraint(
     constant: f32,
 ) -> bool {
     let Some(first_id) = scene.resolve_node_id(first_id_or_outlet) else { return false };
-    let second_id = match second_id_or_outlet {
-        Some(s) => {
-            let Some(sid) = scene.resolve_node_id(s) else { return false };
-            Some(sid)
-        }
-        None => None,
-    };
+    let Some(second_id) = second_id_or_outlet.map_or(Some(None), |s| scene.resolve_node_id(s).map(Some)) else { return false };
     scene.nib_constraints.push(crate::scene::constraints::LayoutConstraintSpec {
         first_item: Some(first_id),
         first_attr: attr1,

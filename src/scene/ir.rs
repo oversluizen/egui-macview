@@ -465,19 +465,7 @@ impl MacSceneIR {
         }
         let (labeled_pairs, field_rows, semantic_sections) = run_spatial_semantic_normalizer(&mut nodes);
         let nib_constraints = constraints.steps().to_vec();
-        let mut ir = Self {
-            root,
-            design_size,
-            nodes,
-            outlets: BTreeMap::new(),
-            button_menus: BTreeMap::new(),
-            nib_constraints,
-            labeled_pairs,
-            field_rows,
-            semantic_sections,
-            constraints,
-            search_index: BTreeMap::new(),
-        };
+        let mut ir = Self { root, design_size, nodes, outlets: BTreeMap::new(), button_menus: BTreeMap::new(), nib_constraints, labeled_pairs, field_rows, semantic_sections, constraints, search_index: BTreeMap::new() };
         ir.rebuild_search_index();
         ir
     }

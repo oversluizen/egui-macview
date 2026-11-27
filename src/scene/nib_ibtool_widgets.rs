@@ -391,7 +391,8 @@ fn decode_ibtool_button_and_value_kind(
         let add_btn = rattrs.and_then(|m| m.get("trailingAddButton")).is_some_and(|v| v == "YES");
         return (SceneNodeKind::DisclosureGroup { trailing_add_button: add_btn }, explicit_icon);
     }
-    if base_cls.contains("VisualEffectView") || effective_cls.contains("VisualEffectView") || g.obj_inherits(obj_i, "VisualEffectView") {
+    let has_subviews = g.prop_val(obj_i, "NSSubviews").and_then(IbVal::as_obj_ref).is_some_and(|a| !g.resolve_array_refs(a).is_empty());
+    if has_subviews || base_cls.contains("VisualEffectView") || effective_cls.contains("VisualEffectView") || g.obj_inherits(obj_i, "VisualEffectView") {
         return (SceneNodeKind::Container { is_flipped: false }, explicit_icon);
     }
     (SceneNodeKind::CustomCanvasSlot { class_name: effective_cls.to_string() }, explicit_icon)
