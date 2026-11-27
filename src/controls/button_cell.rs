@@ -30,6 +30,7 @@ use egui::{Color32, Rect, Response, Stroke, Ui, Vec2, Widget};
 /// ```
 pub struct MacButtonCell<'a> {
     text: &'a str,
+    id_salt: Option<egui::Id>,
     selected: bool,
     enabled: bool,
     theme: Option<&'a MacTheme>,
@@ -48,6 +49,7 @@ impl<'a> MacButtonCell<'a> {
     pub fn new(text: &'a str) -> Self {
         Self {
             text,
+            id_salt: None,
             selected: false,
             enabled: true,
             theme: None,
@@ -62,6 +64,12 @@ impl<'a> MacButtonCell<'a> {
     /// Sets the AppKit control size (`Regular` `22pt`, `Small` `18pt`, or `Mini` `15pt`).
     pub fn control_size(mut self, size: MacControlSize) -> Self {
         self.control_size = size;
+        self
+    }
+
+    /// Sets an explicit ID salt so fixed-rect buttons stay frame-stable across tree mutations.
+    pub fn id_salt(mut self, salt: impl std::hash::Hash + std::fmt::Debug) -> Self {
+        self.id_salt = Some(egui::Id::NULL.with(salt));
         self
     }
 
@@ -143,8 +151,14 @@ impl<'a> Widget for MacButtonCell<'a> {
         let ppp = ui.ctx().pixels_per_point();
         let (rect, response) = if let Some(fixed) = self.fixed_rect {
             let snapped = subpixel_snap_rect(fixed, ppp);
-            let id = ui.next_auto_id().with("mac_button_cell_fixed");
-            ui.skip_ahead_auto_ids(1);
+            let id = match self.id_salt {
+                Some(s) => ui.scope_id().with(("mac_button_cell_fixed", s)),
+                None => {
+                    let auto = ui.next_auto_id().with("mac_button_cell_fixed");
+                    ui.skip_ahead_auto_ids(1);
+                    auto
+                }
+            };
             let resp = ui.interact(snapped, id, sense);
             (snapped, resp)
         } else {

@@ -6,7 +6,7 @@ use egui::{Pos2, Vec2};
 use egui_macview::{
     scene::{
         BindingId, CompiledConstraintSchedule, LayoutPolicy, MacSceneDataSource, MacSceneIR, NodeId, SceneExporter, SceneNode,
-        SceneNodeKind, SwiftUiFrontend, ValueTransformer, VisibilityRule, XibXmlFrontend,
+        SceneNodeKind, SwiftUiFrontend, XibXmlFrontend,
     },
     MacAppearance,
 };
@@ -43,51 +43,24 @@ impl MacSceneDataSource for DummyStore {
 
 #[test]
 fn tc_013_14_appkit_and_swiftui_100_percent_compliance_and_zero_ghost_widgets() {
-    let mk = |id: u32, kind: SceneNodeKind, title: &str, path: &str, y: f32| SceneNode {
-        id: NodeId(id),
-        ib_object_id: format!("n-{id}"),
-        parent: Some(NodeId(1)),
-        children: vec![],
-        kind,
-        title: title.into(),
-        tooltip: String::new(),
-        control_size: "regular".into(),
-        nib_frame: [24.0, y, 160.0, 22.0],
-        alignment_rect: [24.0, y, 160.0, 22.0],
-        autoresizing_mask: 0,
-        enabled: true,
-        value_binding: Some(BindingId(id)),
-        binding_path: Some(path.into()),
-        value_transformer: ValueTransformer::Identity,
-        action: None,
-        action_selector: None,
-        icon_name: None,
-        visibility: VisibilityRule::Always,
-        labeled_by: None,
+    let mk = |id: u32, kind: SceneNodeKind, title: &str, path: &str, y: f32| {
+        let mut n = SceneNode::new(NodeId(id), kind);
+        n.ib_object_id = format!("n-{id}");
+        n.parent = Some(NodeId(1));
+        n.title = title.into();
+        n.nib_frame = [24.0, y, 160.0, 22.0];
+        n.alignment_rect = [24.0, y, 160.0, 22.0];
+        n.value_binding = Some(BindingId(id));
+        n.binding_path = Some(path.into());
+        n
     };
 
-    let root = SceneNode {
-        id: NodeId(1),
-        ib_object_id: "root".into(),
-        parent: None,
-        children: (2..=9).map(NodeId).collect(),
-        kind: SceneNodeKind::Container { is_flipped: true },
-        title: "Window".into(),
-        tooltip: String::new(),
-        control_size: "regular".into(),
-        nib_frame: [0.0, 0.0, 480.0, 360.0],
-        alignment_rect: [0.0, 0.0, 480.0, 360.0],
-        autoresizing_mask: 0,
-        enabled: true,
-        value_binding: None,
-        binding_path: None,
-        value_transformer: ValueTransformer::Identity,
-        action: None,
-        action_selector: None,
-        icon_name: None,
-        visibility: VisibilityRule::Always,
-        labeled_by: None,
-    };
+    let mut root = SceneNode::new(NodeId(1), SceneNodeKind::Container { is_flipped: true });
+    root.ib_object_id = "root".into();
+    root.children = (2..=9).map(NodeId).collect();
+    root.title = "Window".into();
+    root.nib_frame = [0.0, 0.0, 480.0, 360.0];
+    root.alignment_rect = [0.0, 0.0, 480.0, 360.0];
 
     let nodes = vec![
         root,
@@ -232,10 +205,7 @@ fn tc_014_09_liquid_glass_filleted_cushions_16band_drum_mesh_and_keyboard_a11y()
     let vp = Vec2::new(800.0, 600.0);
 
     let shapes_dial = common::run_frame(&ctx, RawInput::default(), vp, |ui| {
-        let r = MacContextThumbDial::new("mockup_parity_dial", &mut latched, &mut rotary_val)
-            .layer(&mut layer)
-            .theme(&dark_theme)
-            .show(ui);
+        let r = MacContextThumbDial::new("mockup_parity_dial", &mut latched, &mut rotary_val).layer(&mut layer).theme(&dark_theme).show(ui);
         r.response.request_focus();
     });
 
@@ -370,20 +340,10 @@ fn tc_013_15_domain_agnostic_nib_class_hierarchy_menu_toolbar_and_splitview_deco
     use egui_macview::scene::{CustomClassMapper, NibArchiveFrontend};
 
     let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
-    for rel in [
-        "src/scene/normalizer.rs",
-        "src/scene/nib_ibtool.rs",
-        "src/scene/nib_ibtool_widgets.rs",
-        "src/scene/xib_exporter.rs",
-    ] {
+    for rel in ["src/scene/normalizer.rs", "src/scene/nib_ibtool.rs", "src/scene/nib_ibtool_widgets.rs", "src/scene/xib_exporter.rs"] {
         let src = std::fs::read_to_string(manifest_dir.join(rel)).expect("read scene source");
-        for forbidden_gs in [
-            "GSSteppingTextField",
-            "GSOriginPointControl",
-            "GSTransformGrid",
-            "GSMouseOverButton",
-            "GSInlineActionButton",
-        ] {
+        for forbidden_gs in ["GSSteppingTextField", "GSOriginPointControl", "GSTransformGrid", "GSMouseOverButton", "GSInlineActionButton"]
+        {
             assert!(
                 !src.contains(forbidden_gs),
                 "REQ-013-09.1 domain-agnostic violation: {rel} still contains host-specific class string `{forbidden_gs}`"
@@ -401,4 +361,233 @@ fn tc_013_15_domain_agnostic_nib_class_hierarchy_menu_toolbar_and_splitview_deco
 
     let menus = NibArchiveFrontend::decode_menu_bar_from_path(&vec_nib_path).unwrap_or_default();
     let _ = menus;
+}
+
+#[test]
+fn tc_013_17_declarative_enabled_binding_borderless_number_field_icon_button_and_horizontal_stack_oracle() {
+    use egui::{pos2, vec2, RawInput, Rect};
+    use egui_macview::scene::{
+        BindingId, CompiledConstraintSchedule, LayoutPolicy, MacSceneDataSource, MacSceneIR, NodeId, SceneNode, SceneNodeKind,
+        ValueTransformer,
+    };
+    use egui_macview::{MacAppearance, MacTheme};
+
+    #[derive(Default)]
+    struct PaletteTestHost {
+        proportional: bool,
+    }
+    impl MacSceneDataSource for PaletteTestHost {
+        fn get_bool(&self, id: BindingId) -> bool {
+            if id.0 == 7 {
+                self.proportional
+            } else {
+                false
+            }
+        }
+        fn set_bool(&mut self, _id: BindingId, _val: bool) {}
+        fn get_f64(&self, _id: BindingId) -> f64 {
+            0.0
+        }
+        fn set_f64(&mut self, _id: BindingId, _val: f64) {}
+        fn get_i64(&self, _id: BindingId) -> i64 {
+            0
+        }
+        fn set_i64(&mut self, _id: BindingId, _val: i64) {}
+        fn get_str(&self, id: BindingId) -> &str {
+            if id.0 == 8 {
+                "110%"
+            } else {
+                ""
+            }
+        }
+        fn set_str(&mut self, _id: BindingId, _val: &str) {}
+        fn get_options(&self, _id: BindingId) -> &[String] {
+            &[]
+        }
+        fn on_action(&mut self, _action: egui_macview::scene::ActionId, _sender: NodeId) {}
+        fn render_custom_slot(&mut self, _ui: &mut egui::Ui, _theme: &MacTheme, _slot_class: &str, _rect: Rect) {}
+    }
+
+    let mut root = SceneNode::new(NodeId(1), SceneNodeKind::Container { is_flipped: false });
+    root.ib_object_id = "_NS:1".into();
+    root.nib_frame = [0.0, 0.0, 200.0, 120.0];
+    root.children = vec![NodeId(2), NodeId(6), NodeId(7)];
+
+    let mut hstack = SceneNode::new(NodeId(2), SceneNodeKind::Container { is_flipped: false });
+    hstack.ib_object_id = "_NS:8".into();
+    hstack.parent = Some(NodeId(1));
+    hstack.nib_frame = [0.0, 80.0, 157.0, 34.0];
+    hstack.stack_orientation = Some(0);
+    hstack.stack_spacing = 0.0;
+    hstack.detaches_hidden_views = true;
+    hstack.children = vec![NodeId(3), NodeId(4), NodeId(5), NodeId(8)];
+
+    let mut c1 = SceneNode::new(NodeId(3), SceneNodeKind::OriginMatrix);
+    c1.ib_object_id = "_NS:10".into();
+    c1.parent = Some(NodeId(2));
+    c1.nib_frame = [0.0, 0.0, 34.0, 34.0];
+
+    let mut c2 = SceneNode::new(NodeId(4), SceneNodeKind::InlineActionButton);
+    c2.ib_object_id = "_NS:21".into();
+    c2.parent = Some(NodeId(2));
+    c2.nib_frame = [0.0, 2.5, 29.0, 29.0];
+
+    let mut c3 = SceneNode::new(NodeId(5), SceneNodeKind::InlineActionButton);
+    c3.ib_object_id = "_NS:28".into();
+    c3.parent = Some(NodeId(2));
+    c3.nib_frame = [0.0, 2.0, 56.0, 30.0];
+
+    let mut c4_hidden = SceneNode::new(NodeId(8), SceneNodeKind::InlineActionButton);
+    c4_hidden.ib_object_id = "_NS:40".into();
+    c4_hidden.parent = Some(NodeId(2));
+    c4_hidden.nib_frame = [128.0, 2.5, 29.0, 29.0];
+    c4_hidden.is_hidden = true;
+
+    let mut dim_field = SceneNode::new(NodeId(6), SceneNodeKind::NumberField { step: 1.0, shift_step: 10.0, min: None, max: None });
+    dim_field.ib_object_id = "HV".into();
+    dim_field.parent = Some(NodeId(1));
+    dim_field.title = "--".into();
+    dim_field.nib_frame = [10.0, 40.0, 32.0, 14.0];
+    dim_field.draws_background = false;
+    dim_field.is_bezeled = false;
+    dim_field.is_bordered = false;
+
+    let mut scale_y = SceneNode::new(NodeId(7), SceneNodeKind::NumberField { step: 1.0, shift_step: 10.0, min: None, max: None });
+    scale_y.ib_object_id = "_NS:540".into();
+    scale_y.parent = Some(NodeId(1));
+    scale_y.nib_frame = [33.0, 10.0, 75.0, 21.0];
+    scale_y.value_binding = Some(BindingId(8));
+    scale_y.enabled_binding = Some(BindingId(7));
+    scale_y.enabled_path = Some("GSTransformScaleProportional".into());
+    scale_y.enabled_transformer = ValueTransformer::NegateBoolean;
+
+    let mut scene = MacSceneIR::from_nodes(
+        NodeId(1),
+        [200.0, 120.0],
+        vec![root, hstack, c1, c2, c3, dim_field, scale_y, c4_hidden],
+        CompiledConstraintSchedule::default(),
+    );
+    scene.solve_autolayout();
+
+    let solved = scene.solve_exact_nib_layout();
+    let r1 = solved[&NodeId(3)];
+    let r2 = solved[&NodeId(4)];
+    let r3 = solved[&NodeId(5)];
+    assert!(
+        r1.min.x < r2.min.x && r2.min.x >= r1.max.x + 15.0 && r3.min.x >= r2.max.x + 15.0,
+        "REQ-013-10.9: Horizontal NSStackView must distribute visible children left-to-right without overlap: r1={r1:?}, r2={r2:?}, r3={r3:?}"
+    );
+
+    let (ctx, theme) = common::headless_ctx(MacAppearance::Aqua);
+    let mut host = PaletteTestHost { proportional: true };
+    let shapes = common::run_frame(&ctx, RawInput::default(), vec2(200.0, 120.0), |ui| {
+        scene.show_in_rect(
+            ui,
+            Rect::from_min_size(pos2(0.0, 0.0), vec2(200.0, 120.0)),
+            &theme,
+            &mut host,
+            LayoutPolicy::ExactAppleNib,
+            u64::MAX,
+            "",
+        );
+    });
+    let mut texts = Vec::new();
+    for cs in &shapes {
+        common::collect_text_shapes(&cs.shape, &mut texts);
+    }
+    assert!(
+        texts.iter().any(|t| t.galley.text() == "--"),
+        "REQ-013-10.9: Borderless NumberField with draws_background=false must render placeholder `--`"
+    );
+}
+
+#[test]
+fn tc_013_18_exhaustive_six_stage_nib_pipeline_completeness_oracle() {
+    use egui::{pos2, vec2, RawInput, Rect};
+    use egui_macview::scene::{
+        BindingId, CompiledConstraintSchedule, LayoutPolicy, MacSceneDataSource, MacSceneIR, NodeId, SceneNode, SceneNodeKind,
+    };
+    use egui_macview::{MacAppearance, MacTheme};
+    #[derive(Default)]
+    struct PatternTestHost;
+    impl MacSceneDataSource for PatternTestHost {
+        fn get_bool(&self, _id: BindingId) -> bool {
+            false
+        }
+        fn set_bool(&mut self, _id: BindingId, _val: bool) {}
+        fn get_f64(&self, _id: BindingId) -> f64 {
+            0.0
+        }
+        fn set_f64(&mut self, _id: BindingId, _val: f64) {}
+        fn get_i64(&self, _id: BindingId) -> i64 {
+            0
+        }
+        fn set_i64(&mut self, _id: BindingId, _val: i64) {}
+        fn get_str(&self, id: BindingId) -> &str {
+            match id.0 {
+                1 => "1",
+                2 => "6",
+                3 => "6",
+                _ => "",
+            }
+        }
+        fn set_str(&mut self, _id: BindingId, _val: &str) {}
+        fn get_options(&self, _id: BindingId) -> &[String] {
+            &[]
+        }
+        fn on_action(&mut self, _action: egui_macview::scene::ActionId, _sender: NodeId) {}
+        fn render_custom_slot(&mut self, _ui: &mut egui::Ui, _theme: &MacTheme, _slot_class: &str, _rect: Rect) {}
+    }
+    let mut root = SceneNode::new(NodeId(1), SceneNodeKind::Container { is_flipped: false });
+    root.ib_object_id = "_NS:1".into();
+    root.nib_frame = [0.0, 0.0, 240.0, 40.0];
+    root.children = vec![NodeId(2)];
+    let mut status_lbl = SceneNode::new(NodeId(2), SceneNodeKind::Label);
+    status_lbl.ib_object_id = "_NS:688".into();
+    status_lbl.parent = Some(NodeId(1));
+    status_lbl.nib_frame = [10.0, 8.0, 220.0, 17.0];
+    status_lbl.value_binding = Some(BindingId(1));
+    status_lbl.binding_path = Some("selectedObjects.@count".into());
+    status_lbl.display_pattern = Some("%{value1}@ selected %{value2}@/%{value3}@ glyphs".into());
+    status_lbl.display_pattern_bindings = vec![
+        (1, BindingId(1), "selectedObjects.@count".into()),
+        (2, BindingId(2), "arrangedObjects.@count".into()),
+        (3, BindingId(3), "content.@count".into()),
+    ];
+    let scene = MacSceneIR::from_nodes(NodeId(1), [240.0, 40.0], vec![root, status_lbl], CompiledConstraintSchedule::default());
+    let (ctx, theme) = common::headless_ctx(MacAppearance::Aqua);
+    let mut host = PatternTestHost;
+    let shapes = common::run_frame(&ctx, RawInput::default(), vec2(240.0, 40.0), |ui| {
+        scene.show_in_rect(ui, Rect::from_min_size(pos2(0.0, 0.0), vec2(240.0, 40.0)), &theme, &mut host, LayoutPolicy::ExactAppleNib, u64::MAX, "");
+    });
+    let mut texts = Vec::new();
+    for cs in &shapes {
+        common::collect_text_shapes(&cs.shape, &mut texts);
+    }
+    assert!(
+        texts.iter().any(|t| t.galley.text() == "1 selected 6/6 glyphs"),
+        "REQ-013-10.10: Label with display_pattern and display_pattern_bindings must substitute %{{value1}}@..%{{value3}}@"
+    );
+    let rw_src = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/src/scene/runtime_widgets.rs")).unwrap();
+    let rt_src = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/src/scene/runtime_tabs.rs")).unwrap();
+    assert!(
+        rw_src.contains("node.image_scaling") && rw_src.contains("node.symbol_point_size") && rt_src.contains("node.symbol_point_size"),
+        "REQ-013-10.10: SceneNode::image_scaling and symbol_point_size must be read by the scene runtime renderers (zero dead IR fields)"
+    );
+    let mut measure_img = |scaling: u8, sym_pt: Option<f32>| -> f32 {
+        let mut r = SceneNode::new(NodeId(1), SceneNodeKind::Container { is_flipped: false });
+        r.nib_frame = [0.0, 0.0, 64.0, 64.0];
+        r.children = vec![NodeId(2)];
+        let mut img = SceneNode::new(NodeId(2), SceneNodeKind::ImageView { icon_name: "tag".into(), is_template: true });
+        img.parent = Some(NodeId(1));
+        img.nib_frame = [0.0, 0.0, 64.0, 64.0];
+        img.image_scaling = scaling;
+        img.symbol_point_size = sym_pt;
+        let sc = MacSceneIR::from_nodes(NodeId(1), [64.0, 64.0], vec![r, img], CompiledConstraintSchedule::default());
+        let sh = common::run_frame(&ctx, RawInput::default(), vec2(64.0, 64.0), |ui| {
+            sc.show_in_rect(ui, Rect::from_min_size(pos2(0.0, 0.0), vec2(64.0, 64.0)), &theme, &mut host, LayoutPolicy::ExactAppleNib, u64::MAX, "");
+        });
+        sh.iter().map(|cs| cs.shape.visual_bounding_rect().width()).fold(0.0_f32, f32::max)
+    };
+    assert!(measure_img(3, None) > measure_img(0, Some(10.0)) + 8.0, "NSScale=3 must render wider than NSScale=0@10pt");
 }

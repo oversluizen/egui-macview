@@ -115,6 +115,10 @@ pub struct MacAppearanceColors {
     pub popover_background: ColorValue,
     /// `NSPopover` container subtle perimeter border color (`#D2D2D7` in Aqua, `#48484C` in DarkAqua).
     pub popover_border: ColorValue,
+    /// `NSVisualEffectMaterialSidebar` (`code = 7`, `withinWindow`) surface background color (`#F8F8F8` in Aqua, `#484848` in DarkAqua).
+    pub sidebar_background: ColorValue,
+    /// `NSVisualEffectMaterialSidebar` (`code = 7`, `behindWindow`) vibrant sidebar surface background color (`#D6D6D6` in Aqua, `#383838` in DarkAqua).
+    pub sidebar_behind_window_background: ColorValue,
 }
 
 /// Semantic system color tokens for Aqua, Anthracite, and DarkAqua.

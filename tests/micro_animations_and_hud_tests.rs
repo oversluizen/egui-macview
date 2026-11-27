@@ -243,3 +243,203 @@ fn test_mac_floating_infobox_widget_rendering_oracle() {
     });
     out.textures_delta.clear();
 }
+
+#[test]
+fn test_mac_toolbar_unified_compact_38pt_three_zone_and_two_line_subtitle_layout_oracle() {
+    let ctx = Context::default();
+    let theme = MacTheme::new(MacAppearance::Aqua).with_window_controls_style(WindowControlsStyle::AppleTrafficLights);
+
+    let mut lead_sidebar_rect = egui::Rect::NOTHING;
+    let mut lead_info_rect = egui::Rect::NOTHING;
+    let mut center_tools_rect = egui::Rect::NOTHING;
+    let mut trail_sidebar_rect = egui::Rect::NOTHING;
+    let mut tb_resp_rect = egui::Rect::NOTHING;
+    let mut title_rect_out = egui::Rect::NOTHING;
+    let mut subtitle_rect_out = egui::Rect::NOTHING;
+
+    let raw = RawInput { screen_rect: Some(egui::Rect::from_min_size(Pos2::ZERO, egui::vec2(1440.0, 875.0))), ..Default::default() };
+    let mut out = ctx.run_ui(raw, |ui| {
+        egui::CentralPanel::default().frame(egui::Frame::NONE).show(ui, |ui| {
+            let resp = MacToolbar::new("Document.ext").subtitle("Subtitle").height(38.0).theme(&theme).show_unified_zones(
+                ui,
+                |nav_ui| {
+                    let (r1, _) = nav_ui.allocate_exact_size(egui::vec2(36.0, 25.0), egui::Sense::click());
+                    lead_sidebar_rect = r1;
+                    nav_ui.add_space(6.0);
+                    let (r2, _) = nav_ui.allocate_exact_size(egui::vec2(24.0, 25.0), egui::Sense::click());
+                    lead_info_rect = r2;
+                },
+                |center_ui| {
+                    let (rc, _) = center_ui.allocate_exact_size(egui::vec2(234.0, 24.0), egui::Sense::click());
+                    center_tools_rect = rc;
+                },
+                |trail_ui| {
+                    let (rt, _) = trail_ui.allocate_exact_size(egui::vec2(36.0, 25.0), egui::Sense::click());
+                    trail_sidebar_rect = rt;
+                },
+            );
+            tb_resp_rect = resp.rect;
+            title_rect_out = resp.title_rect;
+            subtitle_rect_out = resp.subtitle_rect;
+        });
+    });
+    out.textures_delta.clear();
+
+    // 1. Unified compact height == 38.0pt
+    assert!((tb_resp_rect.height() - 38.0).abs() <= 0.1, "Unified compact toolbar height must be 38.0pt");
+
+    // 2. Leading navigational items match AppKit NSToolbarView x=79.0 and x=121.0 within <= 0.5pt
+    assert!(
+        (lead_sidebar_rect.min.x - 79.0).abs() <= 0.5 && (lead_sidebar_rect.min.y - 6.5).abs() <= 0.5,
+        "Leading sidebar button must sit at x=79.0 (+/-0.5pt), got {lead_sidebar_rect:?}"
+    );
+    assert!((lead_info_rect.min.x - 121.0).abs() <= 0.5, "Leading info button must sit at x=121.0 (+/-0.5pt), got {lead_info_rect:?}");
+
+    // 3. Two-line title/subtitle stack sits after leading nav items at x=161.0 (+/-0.5pt)
+    assert!(
+        (title_rect_out.min.x - 161.0).abs() <= 0.5 && (title_rect_out.min.y - 4.0).abs() <= 0.5,
+        "Primary title must start at (161.0, 4.0) (+/-0.5pt), got {title_rect_out:?}"
+    );
+    assert!(
+        (subtitle_rect_out.min.x - 161.0).abs() <= 0.5 && (subtitle_rect_out.min.y - 20.0).abs() <= 0.5,
+        "Subtitle must start at (161.0, 20.0) (+/-0.5pt), got {subtitle_rect_out:?}"
+    );
+
+    // 4. Center principal tools control (234x24) sits at x=603.0, y=7.0 in a 1440pt window (+/-0.5pt)
+    assert!(
+        (center_tools_rect.min.x - 603.0).abs() <= 0.5 && (center_tools_rect.min.y - 7.0).abs() <= 0.5,
+        "Center tools segment control must sit at (603.0, 7.0) (+/-0.5pt), got {center_tools_rect:?}"
+    );
+
+    // 5. Trailing sidebar button (36x25) sits at x=1397.0 (1440 - 43) (+/-0.5pt)
+    assert!(
+        (trail_sidebar_rect.min.x - 1397.0).abs() <= 0.5 && (trail_sidebar_rect.max.x - 1433.0).abs() <= 0.5,
+        "Trailing sidebar button must sit at x=1397..1433 (+/-0.5pt), got {trail_sidebar_rect:?}"
+    );
+}
+
+#[test]
+fn test_nswindow_template_unified_toolbar_scene_ir_and_icon_segmented_control_oracle() {
+    use egui_macview::scene::{
+        ActionId, BindingId, CompiledConstraintSchedule, ConstraintAttr, LayoutPolicy, MacSceneDataSource, MacSceneIR, NodeId, SceneNode,
+        SceneNodeKind,
+    };
+
+    struct WindowTestDs {
+        selected_tool: i64,
+        painted_icons: Vec<(String, egui::Rect)>,
+        last_action: Option<ActionId>,
+    }
+    impl MacSceneDataSource for WindowTestDs {
+        fn get_bool(&self, _id: BindingId) -> bool {
+            false
+        }
+        fn set_bool(&mut self, _id: BindingId, _val: bool) {}
+        fn get_f64(&self, _id: BindingId) -> f64 {
+            0.0
+        }
+        fn set_f64(&mut self, _id: BindingId, _val: f64) {}
+        fn get_i64(&self, _id: BindingId) -> i64 {
+            self.selected_tool
+        }
+        fn set_i64(&mut self, _id: BindingId, val: i64) {
+            self.selected_tool = val;
+        }
+        fn get_str(&self, id: BindingId) -> &str {
+            if id.0 == 1 {
+                "GoldenV3.glyphs"
+            } else {
+                "GoldenV3"
+            }
+        }
+        fn set_str(&mut self, _id: BindingId, _val: &str) {}
+        fn get_options(&self, _id: BindingId) -> &[String] {
+            &[]
+        }
+        fn on_action(&mut self, action: ActionId, _sender: NodeId) {
+            self.last_action = Some(action);
+        }
+        fn render_custom_slot(&mut self, _ui: &mut egui::Ui, _theme: &MacTheme, _slot_class: &str, _rect: egui::Rect) {}
+        fn paint_scene_icon(
+            &mut self,
+            ui: &mut egui::Ui,
+            _theme: &MacTheme,
+            icon_name: &str,
+            rect: egui::Rect,
+            tint: egui::Color32,
+        ) -> bool {
+            if rect.width() > 0.0 && rect.height() > 0.0 {
+                ui.painter().rect_filled(rect.shrink(4.0), egui::CornerRadius::ZERO, tint);
+                self.painted_icons.push((icon_name.to_string(), rect));
+            }
+            true
+        }
+    }
+
+    let mut root = SceneNode::new(NodeId(1), SceneNodeKind::Container { is_flipped: true });
+    root.ib_object_id = "_NS:30".to_string();
+    root.title = "Window".to_string();
+    root.nib_frame = [0.0, 0.0, 960.0, 38.0];
+    root.alignment_rect = [0.0, 0.0, 960.0, 38.0];
+    root.autoresizing_mask = 18;
+    root.custom_class = Some("NSWindowTemplate".to_string());
+    let mut scene = MacSceneIR::from_nodes(NodeId(1), [960.0, 38.0], vec![root], CompiledConstraintSchedule::default());
+
+    let mut tools = SceneNode::new(
+        NodeId(2),
+        SceneNodeKind::SegmentedControl {
+            segments: vec![
+                "SelectIconTemplate".to_string(),
+                "TextIconTemplate".to_string(),
+                "DrawIconTemplate|menu".to_string(),
+                "KnifeIconTemplate|menu".to_string(),
+                "ShapeIconTemplate|menu".to_string(),
+                "FlexIconTemplate|menu".to_string(),
+                "HandIconTemplate|menu".to_string(),
+            ],
+        },
+    );
+    tools.ib_object_id = "GSToolbarTools".to_string();
+    tools.nib_frame = [363.0, 7.0, 234.0, 24.0];
+    tools.alignment_rect = [363.0, 7.0, 234.0, 24.0];
+    tools.autoresizing_mask = 5;
+    tools.value_binding = Some(BindingId(3));
+    tools.action = Some(ActionId(10));
+    let tools_id = scene.append_child_node(NodeId(1), tools);
+    assert_eq!(tools_id, NodeId(2));
+    assert!(scene.add_anchor_constraint("GSToolbarTools", ConstraintAttr::CenterX, Some("_NS:30"), ConstraintAttr::CenterX, 0.0));
+    scene.solve_autolayout();
+
+    let solved_1440 = scene.solve_layout(egui::vec2(1440.0, 38.0), LayoutPolicy::ExactAppleNib, u64::MAX, "");
+    let r_tools = solved_1440[&tools_id];
+    assert!(
+        (r_tools.min.x - 603.0).abs() <= 0.5 && (r_tools.min.y - 7.0).abs() <= 0.5 && (r_tools.width() - 234.0).abs() <= 0.5,
+        "Solved 7-segment toolbar control in 1440pt window must sit at (603.0, 7.0, 234.0, 24.0), got {r_tools:?}"
+    );
+
+    let ctx = Context::default();
+    let theme = MacTheme::new(MacAppearance::Aqua);
+    let mut ds = WindowTestDs { selected_tool: 0, painted_icons: Vec::new(), last_action: None };
+    let raw = RawInput { screen_rect: Some(egui::Rect::from_min_size(Pos2::ZERO, egui::vec2(1440.0, 38.0))), ..Default::default() };
+    let mut out = ctx.run_ui(raw, |ui| {
+        egui::CentralPanel::default().frame(egui::Frame::NONE).show(ui, |ui| {
+            let rect = egui::Rect::from_min_size(Pos2::ZERO, egui::vec2(1440.0, 38.0));
+            scene.show_in_rect(ui, rect, &theme, &mut ds, LayoutPolicy::ExactAppleNib, u64::MAX, "");
+        });
+    });
+    out.textures_delta.clear();
+
+    assert_eq!(ds.painted_icons.len(), 7, "All 7 icon segments must be painted through MacSceneDataSource::paint_scene_icon");
+    assert_eq!(ds.painted_icons[0].0, "SelectIconTemplate");
+    assert_eq!(ds.painted_icons[2].0, "DrawIconTemplate");
+    assert_eq!(ds.painted_icons[6].0, "HandIconTemplate");
+
+    let cached_f1 = scene.solve_layout_cached(&ctx, egui::vec2(1440.0, 38.0), LayoutPolicy::ExactAppleNib, u64::MAX, "");
+    let cached_f2 = scene.solve_layout_cached(&ctx, egui::vec2(1440.0, 38.0), LayoutPolicy::ExactAppleNib, u64::MAX, "");
+    assert!(
+        std::sync::Arc::ptr_eq(&cached_f1, &cached_f2),
+        "solve_layout_cached must reuse the exact same Arc<BTreeMap<NodeId, Rect>> allocation across frames when viewport is unchanged"
+    );
+    let cached_resized = scene.solve_layout_cached(&ctx, egui::vec2(1280.0, 38.0), LayoutPolicy::ExactAppleNib, u64::MAX, "");
+    assert!(!std::sync::Arc::ptr_eq(&cached_f1, &cached_resized), "solve_layout_cached must recompute when viewport size changes");
+}

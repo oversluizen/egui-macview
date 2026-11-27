@@ -49,6 +49,18 @@ pub struct ToolbarMetrics {
     pub traffic_light_glyph_half: DimensionValue,
     /// Minimum available width to render window title in toolbar center zone.
     pub min_title_width: DimensionValue,
+    /// Leading inset from traffic lights to first navigational toolbar item (`79.0pt`).
+    pub unified_nav_leading_inset: DimensionValue,
+    /// Gap between leading navigational toolbar items and the title/subtitle stack (`16.0pt`).
+    pub unified_title_gap: DimensionValue,
+    /// Trailing inset from right toolbar edge to last trailing toolbar item (`7.0pt`).
+    pub unified_trailing_inset: DimensionValue,
+    /// Top inset of the primary title line in a two-line unified toolbar title stack (`4.0pt`).
+    pub unified_title_top: DimensionValue,
+    /// Top inset of the subtitle line in a two-line unified toolbar title stack (`20.0pt`).
+    pub unified_subtitle_top: DimensionValue,
+    /// Font size of the subtitle line in a two-line unified toolbar title stack (`11.0pt`).
+    pub unified_subtitle_font_size: DimensionValue,
 }
 
 /// NSPopover and floating HUD panel metrics.

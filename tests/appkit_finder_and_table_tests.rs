@@ -248,3 +248,86 @@ fn test_cots_calculate_pan_weights_and_window_active_deduplication() {
     assert!(hard_right_l.abs() < 1e-6);
     assert!((hard_right_r - 1.0).abs() < 1e-6);
 }
+
+#[test]
+fn tc_phase2_mini_iter_2_1_2_outline_view_source_list_header_action_icon_and_badge_count() {
+    use egui_macview::MacOutlineView;
+
+    let ctx = Context::default();
+    let theme = MacTheme::default();
+    let viewport = Vec2::new(250.0, 200.0);
+
+    let run_outline = |events: Vec<Event>, exp_letter: &mut bool, hdr_act_clicked: &mut bool| -> Vec<String> {
+        let mut texts = Vec::new();
+        for _ in 0..2 {
+            let raw = RawInput {
+                screen_rect: Some(Rect::from_min_size(Pos2::ZERO, viewport)),
+                events: events.clone(),
+                ..Default::default()
+            };
+            let mut full = ctx.run_ui(raw, |ui| {
+                egui::CentralPanel::default().frame(egui::Frame::NONE).show(ui, |ui| {
+                    MacOutlineView::new("source_list_test")
+                        .theme(&theme)
+                        .row_height(22.0)
+                        .indent_step(14.0)
+                        .show_in_rect(ui, Rect::from_min_size(Pos2::ZERO, viewport), |tree| {
+                            let hdr_resp = tree.section_header("hdr_langs", "Languages", true);
+                            if hdr_resp.accessory_clicked {
+                                *hdr_act_clicked = true;
+                            }
+                            tree.row("row_letter", 0, true, exp_letter, true, |row| {
+                                row.badge("7");
+                                row.leading_icon(theme.effective_control_accent(row.ui.ctx()), |painter, ic_rect, tint| {
+                                    painter.circle_filled(ic_rect.center(), 4.0, tint);
+                                });
+                                row.label("Letter");
+                            });
+                            if *exp_letter {
+                                let mut leaf_exp = false;
+                                tree.row("row_upper", 1, false, &mut leaf_exp, false, |row| {
+                                    row.badge("6");
+                                    row.label("Uppercase");
+                                });
+                            }
+                        });
+                });
+            });
+            texts.clear();
+            fn collect_texts(shape: &egui::Shape, out: &mut Vec<String>) {
+                match shape {
+                    egui::Shape::Text(t) => out.push(t.galley.text().to_string()),
+                    egui::Shape::Vec(v) => v.iter().for_each(|s| collect_texts(s, out)),
+                    _ => {}
+                }
+            }
+            for cs in &full.shapes {
+                collect_texts(&cs.shape, &mut texts);
+            }
+            full.textures_delta.clear();
+        }
+        texts
+    };
+
+    let mut exp_letter = true;
+    let mut hdr_act_clicked = false;
+    let texts = run_outline(Vec::new(), &mut exp_letter, &mut hdr_act_clicked);
+    assert!(texts.iter().any(|t| t == "Languages"), "Section header must render mixed-case title `Languages`, got: {texts:?}");
+    assert!(texts.iter().any(|t| t == "Letter"), "Top-level row must render `Letter`, got: {texts:?}");
+    assert!(texts.iter().any(|t| t == "7"), "Top-level row must render right-aligned badge `7`, got: {texts:?}");
+    assert!(texts.iter().any(|t| t == "Uppercase"), "Expanded child row must render `Uppercase`, got: {texts:?}");
+    assert!(texts.iter().any(|t| t == "6"), "Expanded child row must render right-aligned badge `6`, got: {texts:?}");
+
+    // Click the trailing `...` action button on the `Languages` section header (`x = 238.0, y = 11.0`):
+    let click_pt = Pos2::new(238.0, 11.0);
+    let _ = run_outline(
+        vec![
+            Event::PointerMoved(click_pt),
+            Event::PointerButton { pos: click_pt, button: egui::PointerButton::Primary, pressed: true, modifiers: Modifiers::NONE },
+            Event::PointerButton { pos: click_pt, button: egui::PointerButton::Primary, pressed: false, modifiers: Modifiers::NONE },
+        ],
+        &mut exp_letter,
+        &mut hdr_act_clicked,
+    );
+    assert!(hdr_act_clicked, "Clicking trailing `...` action button on `Languages` header must set `accessory_clicked = true`");
+}

@@ -269,3 +269,319 @@ fn wrap_storyboard_scene_as_xib(scene_xml: &str, title: &str) -> String {
         )
     }
 }
+
+impl MacSceneIR {
+    /// Returns the ordered set of all interactive `BindingId`s in the scene.
+    pub fn interactive_binding_ids(&self) -> Vec<crate::scene::ir::BindingId> {
+        let mut set = std::collections::BTreeSet::new();
+        for n in &self.nodes {
+            if let Some(b) = n.value_binding {
+                set.insert(b);
+            }
+        }
+        set.into_iter().collect()
+    }
+
+    /// Dynamically mounts a child `MacSceneIR` under `parent_or_slot` (`addSubview:` equivalent).
+    pub fn mount_subscene(&mut self, parent_or_slot: crate::scene::ir::NodeId, child_scene: &MacSceneIR) {
+        use crate::scene::ir::NodeId;
+        let id_offset = self.nodes.iter().map(|n| n.id.0).max().unwrap_or(0) + 100;
+        let child_root_new = NodeId(child_scene.root.0 + id_offset);
+        if let Some(p) = self.nodes.iter_mut().find(|n| n.id == parent_or_slot) {
+            p.children.push(child_root_new);
+        }
+        for cn in &child_scene.nodes {
+            let mut cloned = cn.clone();
+            cloned.id = NodeId(cn.id.0 + id_offset);
+            cloned.parent = cn.parent.map(|p| NodeId(p.0 + id_offset)).or(Some(parent_or_slot));
+            cloned.children = cn.children.iter().map(|c| NodeId(c.0 + id_offset)).collect();
+            self.nodes.push(cloned);
+        }
+        self.rebuild_search_index();
+    }
+}
+
+pub(crate) fn resolve_horizontal_stack_views(scene: &mut MacSceneIR) {
+    if scene.nodes.first().and_then(|n| n.stack_orientation) == Some(1) {
+        return;
+    }
+    let h_stacks: Vec<(usize, f32, f32, bool, Vec<crate::scene::ir::NodeId>)> = scene.nodes.iter().enumerate()
+        .filter(|&(i, n)| {
+            i > 0 && n.stack_orientation == Some(0) && n.children.len() >= 2
+                && n.children.iter().filter_map(|cid| scene.nodes.iter().find(|cn| cn.id == *cid))
+                    .filter(|cn| !cn.is_hidden && (cn.nib_frame[0] - n.nib_frame[0]).abs() <= 0.5).count() >= 2
+        })
+        .map(|(i, n)| (i, n.nib_frame[0], n.nib_frame[2], n.detaches_hidden_views, n.children.clone()))
+        .collect();
+    for (st_i, st_x, st_w, detaches, children) in h_stacks {
+        let base_x = if scene.nodes[st_i].parent.is_some() { st_x } else { 0.0 };
+        let vis_indices: Vec<usize> = children.iter().filter_map(|cid| scene.nodes.iter().position(|n| n.id == *cid))
+            .filter(|&ci| !(detaches && scene.nodes[ci].is_hidden)).collect();
+        if vis_indices.len() >= 2 {
+            let sum_w: f32 = vis_indices.iter().map(|&ci| scene.nodes[ci].nib_frame[2]).sum();
+            let sp = if scene.nodes[st_i].stack_spacing > 0.0 { scene.nodes[st_i].stack_spacing }
+                else if st_w > sum_w { (st_w - sum_w) / ((vis_indices.len() - 1) as f32) } else { 2.0 };
+            let mut cur_x = base_x;
+            for ci in vis_indices {
+                scene.nodes[ci].nib_frame[0] = cur_x.round();
+                scene.nodes[ci].alignment_rect =
+                    crate::scene::normalizer::normalize_nib_alignment_rect(&scene.nodes[ci].kind, scene.nodes[ci].mac_control_size(), scene.nodes[ci].nib_frame, scene.design_size[1], false);
+                cur_x += scene.nodes[ci].nib_frame[2] + sp;
+            }
+        }
+    }
+}
+
+pub(crate) fn solve_scene_autolayout_2d(scene: &mut MacSceneIR) {
+    use crate::scene::constraints::{ConstraintAttr, ConstraintRelation};
+    use crate::scene::ir::{NodeId, SceneNode, SceneNodeKind};
+    use crate::scene::normalizer::normalize_nib_alignment_rect;
+    use std::collections::BTreeMap;
+
+    if scene.nib_constraints.is_empty()
+        && scene.nodes.first().and_then(|n| n.stack_orientation).is_none()
+        && !scene.nodes.iter().skip(1).any(|n| n.stack_orientation == Some(0))
+    {
+        return;
+    }
+
+    let root_w = scene.design_size[0].max(1.0);
+    let is_stack_root = scene.nodes.first().and_then(|n| n.stack_orientation).is_some();
+    let id_to_idx: BTreeMap<NodeId, usize> = scene.nodes.iter().enumerate().map(|(i, n)| (n.id, i)).collect();
+    let is_super = |child: NodeId, other: NodeId, nodes: &[SceneNode]| -> bool {
+        id_to_idx.get(&child).and_then(|&ci| nodes[ci].parent) == Some(other)
+    };
+    let h_insets = |node: &SceneNode| -> (f32, f32) {
+        if matches!(node.kind, SceneNodeKind::Label)
+            && !is_stack_root
+            && !scene.nib_constraints.iter().any(|c| c.first_item == Some(node.id))
+        {
+            return (0.0, 0.0);
+        }
+        let [_, l, _, r] = node.node_alignment_rect_insets();
+        (l, r)
+    };
+    let align_x = |node: &SceneNode| node.nib_frame[0] + h_insets(node).0;
+    let align_w = |node: &SceneNode| (node.nib_frame[2] - h_insets(node).0 - h_insets(node).1).max(0.0);
+    let set_ax = |node: &mut SceneNode, ax: f32| node.nib_frame[0] = (ax - h_insets(node).0).max(0.0);
+    let set_aw = |node: &mut SceneNode, aw: f32| {
+        let (l, r) = h_insets(node);
+        node.nib_frame[2] = aw.max(0.0) + l + r;
+    };
+
+    if is_stack_root {
+        let old_w = scene.nodes.first().map(|n| n.nib_frame[2]).unwrap_or(root_w);
+        for n in &mut scene.nodes {
+            let spans_full_w = n.nib_frame[0].abs() <= 0.5 && (n.nib_frame[2] - old_w).abs() <= 1.0;
+            if matches!(n.kind, SceneNodeKind::Container { .. } | SceneNodeKind::TabView { .. })
+                || n.stack_orientation.is_some()
+                || spans_full_w
+            {
+                n.nib_frame[0] = 0.0;
+                n.nib_frame[2] = root_w;
+            }
+        }
+    }
+
+    let mut width_consts: BTreeMap<NodeId, f32> = BTreeMap::new();
+    let mut equal_width_pairs: Vec<(NodeId, NodeId)> = Vec::new();
+    let mut centerx_consts: BTreeMap<NodeId, (NodeId, f32)> = BTreeMap::new();
+    let mut leading_consts: BTreeMap<NodeId, (Option<NodeId>, f32)> = BTreeMap::new();
+    let mut trailing_consts: BTreeMap<NodeId, f32> = BTreeMap::new();
+    let mut equal_lead_pairs: Vec<(NodeId, NodeId)> = Vec::new();
+    let mut equal_trail_pairs: Vec<(NodeId, NodeId)> = Vec::new();
+
+    for c in &scene.nib_constraints {
+        let Some(f_id) = c.first_item else { continue };
+        let s_opt = c.second_item;
+        let (a1, a2, c_val) = (c.first_attr, c.second_attr, c.constant);
+        if a1 == ConstraintAttr::Width && s_opt.is_none() && c.relation == ConstraintRelation::Equal {
+            width_consts.insert(f_id, c_val);
+        } else if a1 == ConstraintAttr::Width && a2 == ConstraintAttr::Width && c.relation == ConstraintRelation::Equal {
+            if let Some(s_id) = s_opt.filter(|_| c_val.abs() <= 0.5) {
+                equal_width_pairs.push((f_id, s_id));
+            }
+        } else if a1 == ConstraintAttr::CenterX && a2 == ConstraintAttr::CenterX && c.relation == ConstraintRelation::Equal {
+            if let Some(s_id) = s_opt {
+                if is_super(f_id, s_id, &scene.nodes) {
+                    centerx_consts.insert(f_id, (s_id, c_val));
+                } else if is_super(s_id, f_id, &scene.nodes) {
+                    centerx_consts.insert(s_id, (f_id, -c_val));
+                }
+            }
+        } else if matches!(a1, ConstraintAttr::Left | ConstraintAttr::Leading)
+            && matches!(a2, ConstraintAttr::Left | ConstraintAttr::Leading)
+            && c.relation == ConstraintRelation::Equal
+        {
+            if let Some(s_id) = s_opt {
+                if is_super(f_id, s_id, &scene.nodes) {
+                    leading_consts.insert(f_id, (None, c_val));
+                } else if is_super(s_id, f_id, &scene.nodes) {
+                    leading_consts.insert(s_id, (None, -c_val));
+                } else if c_val.abs() <= 0.5 {
+                    equal_lead_pairs.push((f_id, s_id));
+                }
+            } else {
+                leading_consts.insert(f_id, (None, c_val));
+            }
+        } else if matches!(a1, ConstraintAttr::Left | ConstraintAttr::Leading)
+            && matches!(a2, ConstraintAttr::Right | ConstraintAttr::Trailing)
+            && c.relation == ConstraintRelation::Equal
+        {
+            if let Some(s_id) = s_opt {
+                leading_consts.insert(f_id, (Some(s_id), c_val));
+            }
+        } else if matches!(a1, ConstraintAttr::Right | ConstraintAttr::Trailing)
+            && matches!(a2, ConstraintAttr::Right | ConstraintAttr::Trailing)
+            && (c.relation == ConstraintRelation::Equal || is_stack_root)
+        {
+            if let Some(s_id) = s_opt {
+                if is_super(f_id, s_id, &scene.nodes) {
+                    trailing_consts.insert(f_id, if c_val <= 0.0 { -c_val } else { c_val });
+                } else if is_super(s_id, f_id, &scene.nodes) {
+                    trailing_consts.insert(s_id, if c_val >= 0.0 { c_val } else { -c_val });
+                } else if c_val.abs() <= 0.5 {
+                    equal_trail_pairs.push((f_id, s_id));
+                }
+            } else {
+                trailing_consts.insert(f_id, c_val.abs());
+            }
+        }
+    }
+
+    if is_stack_root || !equal_lead_pairs.is_empty() {
+        for (&nid, &w) in &width_consts {
+            if let Some(&idx) = id_to_idx.get(&nid) {
+                if !matches!(scene.nodes[idx].kind, SceneNodeKind::Container { .. }) {
+                    set_aw(&mut scene.nodes[idx], w);
+                }
+            }
+        }
+        for (&nid, &(p_id, c_off)) in &centerx_consts {
+            if let Some(&idx) = id_to_idx.get(&nid) {
+                let (p_x, p_w) = id_to_idx
+                    .get(&p_id)
+                    .map(|&pi| {
+                        if scene.nodes[pi].parent.is_some() {
+                            (scene.nodes[pi].nib_frame[0], scene.nodes[pi].nib_frame[2])
+                        } else {
+                            (0.0, root_w)
+                        }
+                    })
+                    .unwrap_or((0.0, root_w));
+                let aw = align_w(&scene.nodes[idx]);
+                set_ax(&mut scene.nodes[idx], (p_x + (p_w - aw) * 0.5 + c_off).round());
+            }
+        }
+        for (&nid, &(sib_opt, lead)) in &leading_consts {
+            if let Some(&idx) = id_to_idx.get(&nid).filter(|&&i| {
+                sib_opt.is_none() && !matches!(scene.nodes[i].kind, SceneNodeKind::Container { .. } | SceneNodeKind::TabView { .. })
+            }) {
+                let p_x = scene.nodes[idx]
+                    .parent
+                    .and_then(|pid| id_to_idx.get(&pid).map(|&pi| &scene.nodes[pi]))
+                    .map(|pn| if pn.parent.is_some() { pn.nib_frame[0] } else { 0.0 })
+                    .unwrap_or(0.0);
+                set_ax(&mut scene.nodes[idx], p_x + lead);
+            }
+        }
+        for (&nid, &(sib_opt, gap)) in &leading_consts {
+            if let Some(sib_id) = sib_opt {
+                if let (Some(&n_idx), Some(&s_idx)) = (id_to_idx.get(&nid), id_to_idx.get(&sib_id)) {
+                    if centerx_consts.contains_key(&nid) {
+                        let target_right = align_x(&scene.nodes[n_idx]) - gap;
+                        if width_consts.contains_key(&sib_id) || !leading_consts.contains_key(&sib_id) {
+                            let sib_aw = align_w(&scene.nodes[s_idx]);
+                            set_ax(&mut scene.nodes[s_idx], target_right - sib_aw);
+                        } else {
+                            let sib_ax = align_x(&scene.nodes[s_idx]);
+                            set_aw(&mut scene.nodes[s_idx], (target_right - sib_ax).max(0.0));
+                        }
+                    } else {
+                        let sib_ar_right = align_x(&scene.nodes[s_idx]) + align_w(&scene.nodes[s_idx]);
+                        set_ax(&mut scene.nodes[n_idx], sib_ar_right + gap);
+                    }
+                }
+            }
+        }
+        for _ in 0..equal_lead_pairs.len() {
+            for &(f_id, s_id) in &equal_lead_pairs {
+                if let (Some(&f_idx), Some(&s_idx)) = (id_to_idx.get(&f_id), id_to_idx.get(&s_id)) {
+                    let max_ax = align_x(&scene.nodes[f_idx]).max(align_x(&scene.nodes[s_idx]));
+                    set_ax(&mut scene.nodes[f_idx], max_ax);
+                    set_ax(&mut scene.nodes[s_idx], max_ax);
+                }
+            }
+        }
+        for (&nid, &(sib_opt, gap)) in &leading_consts {
+            if let Some(sib_id) = sib_opt {
+                if !centerx_consts.contains_key(&nid) {
+                    if let (Some(&n_idx), Some(&s_idx)) = (id_to_idx.get(&nid), id_to_idx.get(&sib_id)) {
+                        let req_sib_w = align_x(&scene.nodes[n_idx]) - gap - align_x(&scene.nodes[s_idx]);
+                        if req_sib_w > align_w(&scene.nodes[s_idx]) {
+                            set_aw(&mut scene.nodes[s_idx], req_sib_w);
+                        }
+                    }
+                }
+            }
+        }
+        for &(f_id, s_id) in &equal_width_pairs {
+            if let (Some(&f_idx), Some(&s_idx)) = (id_to_idx.get(&f_id), id_to_idx.get(&s_id)) {
+                if let (Some(&(Some(lead_sib), gap)), Some(&trail)) = (leading_consts.get(&f_id), trailing_consts.get(&f_id)) {
+                    if lead_sib == s_id {
+                        let s_ax = align_x(&scene.nodes[s_idx]);
+                        let each_aw = ((root_w - trail - s_ax - gap) * 0.5).round();
+                        set_aw(&mut scene.nodes[s_idx], each_aw);
+                        set_ax(&mut scene.nodes[f_idx], s_ax + each_aw + gap);
+                        set_aw(&mut scene.nodes[f_idx], each_aw);
+                    }
+                }
+            }
+        }
+        for (&nid, &trail) in &trailing_consts {
+            if let Some(&n_idx) = id_to_idx.get(&nid) {
+                let solved_by_adj_equal_width = equal_width_pairs.iter().any(|&(f, s)| {
+                    f == nid && leading_consts.get(&f).is_some_and(|&(sib, _)| sib == Some(s)) && trailing_consts.contains_key(&f)
+                });
+                if matches!(scene.nodes[n_idx].kind, SceneNodeKind::Container { .. } | SceneNodeKind::TabView { .. })
+                    || solved_by_adj_equal_width
+                {
+                    continue;
+                }
+                let p_right = scene.nodes[n_idx]
+                    .parent
+                    .and_then(|pid| id_to_idx.get(&pid).map(|&pi| &scene.nodes[pi]))
+                    .map(|pn| if pn.parent.is_some() { pn.nib_frame[0] + pn.nib_frame[2] } else { root_w })
+                    .unwrap_or(root_w);
+                if width_consts.contains_key(&nid) || !leading_consts.contains_key(&nid) {
+                    let aw = align_w(&scene.nodes[n_idx]);
+                    set_ax(&mut scene.nodes[n_idx], p_right - trail - aw);
+                } else {
+                    let new_aw = p_right - trail - align_x(&scene.nodes[n_idx]);
+                    if new_aw >= 16.0 {
+                        set_aw(&mut scene.nodes[n_idx], new_aw);
+                    }
+                }
+            }
+        }
+        for (f_id, s_id) in equal_trail_pairs {
+            if let (Some(&f_idx), Some(&s_idx)) = (id_to_idx.get(&f_id), id_to_idx.get(&s_id)) {
+                let s_ar_right = align_x(&scene.nodes[s_idx]) + align_w(&scene.nodes[s_idx]);
+                let new_aw = s_ar_right - align_x(&scene.nodes[f_idx]);
+                if new_aw >= 16.0 {
+                    set_aw(&mut scene.nodes[f_idx], new_aw);
+                }
+            }
+        }
+    }
+
+    crate::scene::keyed_archiver::resolve_scene_vertical_stack_layout(scene);
+    crate::scene::stack_reflow::derive_autoresizing_masks_from_constraints(scene);
+
+    let root_flipped = scene.nodes.first().is_some_and(|n| matches!(n.kind, SceneNodeKind::Container { is_flipped: true }));
+    let design_h = scene.design_size[1];
+    for node in &mut scene.nodes {
+        let flip = if matches!(node.kind, SceneNodeKind::Container { .. }) { true } else { root_flipped };
+        node.alignment_rect = normalize_nib_alignment_rect(&node.kind, node.mac_control_size(), node.nib_frame, design_h, flip);
+    }
+}

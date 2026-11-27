@@ -8,9 +8,9 @@ mod common;
 use egui::{pos2, vec2, Color32, ColorImage, Event, Pos2, RawInput, Rect};
 use egui_macview::{
     build_liquid_glass_backdrop_image, contrast_ratio, dome_surface_normal_3d, refract_point_through_glass, sdf_rounded_capsule,
-    sdf_smooth_union, MacAppearance, MacButtonCell, MacCheckbox, MacContextThumbDial, MacEdgeThumbwheel, MacFreeJoystickBowl,
-    MacInputCell, MacPopoverSurface, MacSegmentedControl, MacSlider, MacTabView, MacTheme, MacThumbContextPreset, MacThumbIntentMask,
-    MacThumbSector, MacToggle,
+    sdf_smooth_union, MacAppearance, MacButtonCell, MacCheckbox, MacContextThumbDial, MacEdgeThumbwheel, MacFreeJoystickBowl, MacInputCell,
+    MacPopoverSurface, MacSegmentedControl, MacSlider, MacTabView, MacTheme, MacThumbContextPreset, MacThumbIntentMask, MacThumbSector,
+    MacToggle,
 };
 
 /// `tc_016_01`: Analytical 3D Dome Normals (`REQ-016-01`) & Snellius 3D Lens Refraction ($\eta = 1.48$, `REQ-016-02`).
@@ -44,7 +44,8 @@ fn tc_016_02_pointer_reactive_caspring_lift_highlight_and_zero_idle_wakeups() {
 
     let mut north_center_rest = Pos2::ZERO;
     let _ = common::run_frame(&ctx, RawInput { time: Some(0.0), ..Default::default() }, vec2(320.0, 320.0), |ui| {
-        let r = MacContextThumbDial::new("lg_dial", &mut latched, &mut rotary).preset(MacThumbContextPreset::Primitives).theme(&theme).show(ui);
+        let r =
+            MacContextThumbDial::new("lg_dial", &mut latched, &mut rotary).preset(MacThumbContextPreset::Primitives).theme(&theme).show(ui);
         north_center_rest = r.sector_center(MacThumbSector::North);
     });
 
@@ -67,9 +68,7 @@ fn tc_016_02_pointer_reactive_caspring_lift_highlight_and_zero_idle_wakeups() {
     });
     out_north.textures_delta.clear();
     let sample_fb_luma = |fb: &common::RetinaCpuFramebuffer, pt: Pos2| -> f32 {
-        let px = ((pt.x * 2.0).round() as usize).min(fb.width - 1);
-        let py = ((pt.y * 2.0).round() as usize).min(fb.height - 1);
-        let [r, g, b, _] = fb.pixels[py * fb.width + px];
+        let [r, g, b, _] = fb.pixels[((pt.y * 2.0).round() as usize).min(fb.height - 1) * fb.width + ((pt.x * 2.0).round() as usize).min(fb.width - 1)];
         0.2126 * r as f32 + 0.7152 * g as f32 + 0.0722 * b as f32
     };
     let fb_north = common::RetinaCpuFramebuffer::render_retina(&ctx, vec2(320.0, 320.0), 2.0, Color32::BLACK, |ui| {
@@ -121,24 +120,16 @@ fn tc_016_03_blurred_vibrancy_backdrop_and_smooth_min_metaball_union() {
 
     // 2. Quarter-resolution Dual-Kawase Gaussian Blur + 1.5x Vibrancy Boost
     let mut src = ColorImage::filled([32, 32], Color32::from_rgb(40, 60, 90));
-    for y in 12..20 {
-        for x in 12..20 {
-            src.pixels[y * 32 + x] = Color32::from_rgb(60, 140, 220);
-        }
+    for (y, x) in (12..20).flat_map(|y| (12..20).map(move |x| (y, x))) {
+        src.pixels[y * 32 + x] = Color32::from_rgb(60, 140, 220);
     }
     let blurred = build_liquid_glass_backdrop_image(&src, &theme);
-    assert_eq!(blurred.size, [16, 16], "Backdrop blur must downsample by 1/2 per axis (1/4 area) for high-speed Kawase filtering");
-    let edge_px = blurred.pixels[5 * 16 + 5];
-    assert!(
-        edge_px != Color32::from_rgb(40, 60, 90),
-        "Gaussian blur + vibrancy boost must diffuse and saturate the central feature across neighboring texels"
-    );
+    assert_eq!(blurred.size, [16, 16]);
+    assert_ne!(blurred.pixels[5 * 16 + 5], Color32::from_rgb(40, 60, 90));
 
     // 3. Dynamic Under-Glass Contrast Adaptation (REQ-016-06)
     for bg in [Color32::from_rgb(18, 18, 22), Color32::from_rgb(242, 242, 247)] {
-        let fg = theme.label_on(bg);
-        let ratio = contrast_ratio(fg, bg);
-        assert!(ratio >= 4.5, "REQ-016-06: Liquid Glass foreground label contrast on {bg:?} must be >= 4.5:1, got {ratio:.2}");
+        assert!(contrast_ratio(theme.label_on(bg), bg) >= 4.5);
     }
 }
 
@@ -268,9 +259,20 @@ fn tc_016_w2_edge_thumbwheel_drum_and_free_joystick_crystal_marble_physics() {
                     ui.vertical(|ui| {
                         ui.painter().rect_filled(Rect::from_min_size(ui.cursor().min, vec2(250.0, 560.0)), 12.0, th.window_background());
                         MacEdgeThumbwheel::new(id_s, &mut wheel_v, 0.0..=100.0).wide_drum_width(140.0).theme(&th).show(ui);
-                        MacContextThumbDial::new(id_s, &mut latched, &mut rotary).preset(MacThumbContextPreset::Primitives).undo_arc_placement(egui_macview::MacThumbArcPlacement::TopCrown).can_undo(true).can_redo(true).theme(&th).show(ui);
+                        MacContextThumbDial::new(id_s, &mut latched, &mut rotary)
+                            .preset(MacThumbContextPreset::Primitives)
+                            .undo_arc_placement(egui_macview::MacThumbArcPlacement::TopCrown)
+                            .can_undo(true)
+                            .can_redo(true)
+                            .theme(&th)
+                            .show(ui);
                         ui.add_space(10.0);
-                        MacFreeJoystickBowl::new(id_s).undo_arc_placement(egui_macview::MacThumbArcPlacement::TopCrown).can_undo(true).can_redo(true).theme(&th).show(ui);
+                        MacFreeJoystickBowl::new(id_s)
+                            .undo_arc_placement(egui_macview::MacThumbArcPlacement::TopCrown)
+                            .can_undo(true)
+                            .can_redo(true)
+                            .theme(&th)
+                            .show(ui);
                     });
                 }
             });
@@ -289,7 +291,8 @@ fn tc_016_w3_through_w6_liquid_glass_and_sonoma_parity() {
         MacSegmentedControl::new(&["Design", "Prototype", "Inspect"], seg_idx).theme(&theme).show(ui, |i| seg_idx = i);
         MacTabView::new(&mut tab_idx).theme(&theme).tab("Canvas", |_| {}).tab("Layers", |_| {}).show(ui);
     });
-    let w3_verts: usize = shapes_w3_t0.iter().filter_map(|cs| if let egui::Shape::Mesh(m) = &cs.shape { Some(m.vertices.len()) } else { None }).sum();
+    let w3_verts: usize =
+        shapes_w3_t0.iter().filter_map(|cs| if let egui::Shape::Mesh(m) = &cs.shape { Some(m.vertices.len()) } else { None }).sum();
     assert!(w3_verts >= 12, "Iter 8 (W3-V) violation: expected >= 12 3D capsule mesh vertices, got {w3_verts}");
 
     seg_idx = 2;
@@ -300,15 +303,19 @@ fn tc_016_w3_through_w6_liquid_glass_and_sonoma_parity() {
         MacSegmentedControl::new(&["Design", "Prototype", "Inspect"], seg_idx).theme(&theme).show(ui, |i| seg_idx = i);
     });
     let (pill_w_t0, pill_w_mid) = (first_mesh_width(&shapes_w3_t0).unwrap_or(0.0), first_mesh_width(&shapes_w3_mid).unwrap_or(0.0));
-    assert!(pill_w_mid > pill_w_t0 + 4.0, "Iter 9 (W3-C) violation: DualSpringMorphBlob must stretch (t0={pill_w_t0:.1}, mid={pill_w_mid:.1})");
+    assert!(
+        pill_w_mid > pill_w_t0 + 4.0,
+        "Iter 9 (W3-C) violation: DualSpringMorphBlob must stretch (t0={pill_w_t0:.1}, mid={pill_w_mid:.1})"
+    );
 
     let (mut chk, mut tog, mut sld) = (true, true, 60.0f32);
-    let shapes_w4_inactive = common::run_frame(&ctx, RawInput { time: Some(0.20), focused: false, ..Default::default() }, vec2(400.0, 200.0), |ui| {
-        MacButtonCell::new("Apply").selected(true).theme(&theme).show(ui);
-        MacCheckbox::new(&mut chk, "Snap").theme(&theme).show(ui);
-        MacToggle::new(&mut tog).theme(&theme).show(ui);
-        MacSlider::new(&mut sld, 0.0..=100.0).theme(&theme).show(ui);
-    });
+    let shapes_w4_inactive =
+        common::run_frame(&ctx, RawInput { time: Some(0.20), focused: false, ..Default::default() }, vec2(400.0, 200.0), |ui| {
+            MacButtonCell::new("Apply").selected(true).theme(&theme).show(ui);
+            MacCheckbox::new(&mut chk, "Snap").theme(&theme).show(ui);
+            MacToggle::new(&mut tog).theme(&theme).show(ui);
+            MacSlider::new(&mut sld, 0.0..=100.0).theme(&theme).show(ui);
+        });
     let has_saturated_blue = shapes_w4_inactive.iter().any(|cs| match &cs.shape {
         egui::Shape::Rect(r) => r.fill == theme.control_accent(),
         egui::Shape::Mesh(m) => m.vertices.iter().any(|v| v.color == theme.control_accent()),
@@ -327,14 +334,22 @@ fn tc_016_w3_through_w6_liquid_glass_and_sonoma_parity() {
             MacInputCell::with_id(cell_id, &mut txt).liquid_glass_pill(true).theme(&theme).show(p_ui);
         });
     });
-    let w6_verts: usize = shapes_w5_mid.iter().filter_map(|cs| if let egui::Shape::Mesh(m) = &cs.shape { Some(m.vertices.len()) } else { None }).sum();
+    let w6_verts: usize =
+        shapes_w5_mid.iter().filter_map(|cs| if let egui::Shape::Mesh(m) = &cs.shape { Some(m.vertices.len()) } else { None }).sum();
     assert!(w6_verts >= 14, "Iter 14 (W6-V) violation: MacPopoverSurface + MacInputCell::liquid_glass_pill(true) must emit >= 14 3D dome sheen mesh vertices (got {w6_verts})");
 
-    let lg_src = std::fs::read_to_string(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/controls/liquid_glass.rs")).expect("read liquid_glass.rs");
+    let lg_src = std::fs::read_to_string(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/controls/liquid_glass.rs"))
+        .expect("read liquid_glass.rs");
     for bad in ["rotary_sensitivity", "2.0 + 1.0", "0.5 * 0.5 * 0.5", "kurbo", "lyon_tessellation"] {
         assert!(!lg_src.contains(bad), "REQ-016-00.2 violation: forbidden hack or stale dependency reference `{bad}` in liquid_glass.rs");
     }
-    for req in ["vitrea::dome_normal_3d_from_sdf", "vitrea::refract_ray_snell_3d", "vitrea::tessellate_meniscus_bridge", "vitrea::evaluate_schlick_fresnel_and_blinn_phong", "vitrea::sdf_closed_polyline_sample"] {
+    for req in [
+        "vitrea::dome_normal_3d_from_sdf",
+        "vitrea::refract_ray_snell_3d",
+        "vitrea::tessellate_meniscus_bridge",
+        "vitrea::evaluate_schlick_fresnel_and_blinn_phong",
+        "vitrea::sdf_closed_polyline_sample",
+    ] {
         assert!(lg_src.contains(req), "REQ-016-00.1 violation: missing `{req}` in liquid_glass.rs");
     }
     let contour = [pos2(80.0, 80.0), pos2(120.0, 80.0), pos2(120.0, 120.0), pos2(80.0, 120.0)];
@@ -504,9 +519,9 @@ fn tc_016_a0_a1_a2_zero_overdraw_snellius_grid_bending_and_bipolar_lch_caustic_o
     assert_eq!(extract_bowl_tex_id(&shapes_f0), extract_bowl_tex_id(&shapes_f1));
     assert_eq!(extract_bowl_tex_id(&shapes_f1), extract_bowl_tex_id(&shapes_f2));
 
-    // 8. REQ-016-B1.12a — Single-Click Return from FreeJoystickBowl to CompassModifiers Across Full `r_hub` (Even Off-Center on Marble at r = 16pt):
+    // 8. REQ-016-B1.12a — Single-Click Return from FreeJoystickBowl to CompassModifiers Across Full `r_hub`:
     let mut layer = egui_macview::MacThumbDialLayer::FreeJoystickBowl;
-    let p_off_hub = pos2(hub_c.x + 15.0, hub_c.y - 5.0); // dist = 15.8pt (inside r_hub = 24pt, outside old 12pt r_hub * 0.5!)
+    let p_off_hub = pos2(hub_c.x + 15.0, hub_c.y - 5.0);
     for (t, down) in [(0.95, None), (1.00, Some(true)), (1.22, Some(false))] {
         let mut ev = vec![Event::PointerMoved(p_off_hub)];
         if let Some(pressed) = down {
@@ -516,14 +531,9 @@ fn tc_016_a0_a1_a2_zero_overdraw_snellius_grid_bending_and_bipolar_lch_caustic_o
             MacContextThumbDial::new("a0_a1_a2_dial", &mut latched, &mut rotary).layer(&mut layer).theme(&theme).show(ui);
         });
     }
-    assert_eq!(
-        layer,
-        egui_macview::MacThumbDialLayer::CompassModifiers,
-        "REQ-016-B1.12a violation: A single normal click (220ms) on the center marble at r=15.8pt inside r_hub=24pt must toggle FreeJoystickBowl back to CompassModifiers without double-tapping!"
-    );
+    assert_eq!(layer, egui_macview::MacThumbDialLayer::CompassModifiers);
 
-    // 9. REQ-016-B1.13a & REQ-016-B1.13b — Analytical Spring Velocity Lifecycle (`animate_f32_with_velocity_at`: non-zero during motion, zero at settled hover)
-    //    AND Zero Non-Adjacent Ghost Wedge Across Open NW Pocket When Jumping from Latched NE (-45 deg) to Hovered West (180 deg):
+    // 9. REQ-016-B1.13a & REQ-016-B1.13b — Analytical Spring Velocity Lifecycle AND Zero Non-Adjacent Ghost Wedge Across Open NW Pocket:
     let sp = egui_macview::CASpring::new(0.25, 0.85);
     let sp_id = egui::Id::NULL.with("req_016_b1_13_vel_test");
     let (v0, vel0) = sp.animate_f32_with_velocity_at(&ctx, sp_id, 0.0, 10.0, false);
@@ -547,18 +557,14 @@ fn tc_016_a0_a1_a2_zero_overdraw_snellius_grid_bending_and_bipolar_lch_caustic_o
     };
     let l_nw_mid = sample_ghost_l(pos2(hub_c.x + nw_rad.cos() * 50.0, hub_c.y + nw_rad.sin() * 50.0));
     let l_nw_edge = sample_ghost_l(pos2(hub_c.x + nw_rad.cos() * 31.5, hub_c.y + nw_rad.sin() * 31.5));
-    assert!(
-        (l_nw_edge - l_nw_mid).abs() < 2.0,
-        "REQ-016-B1.13b Non-Adjacent Ghost Wedge violation: Hovering West (180 deg) while NE (-45 deg) is latched spawned a polar_morph ghost wedge across the open NW (-135 deg) pocket (L_edge={l_nw_edge:.1} vs L_mid={l_nw_mid:.1})!"
-    );
+    assert!((l_nw_edge - l_nw_mid).abs() < 2.0);
 }
 
 fn first_mesh_width(shapes: &[egui::epaint::ClippedShape]) -> Option<f32> {
     shapes.iter().find_map(|cs| match &cs.shape {
         egui::Shape::Mesh(m) if m.vertices.len() >= 6 => {
             let min_x = m.vertices.iter().map(|v| v.pos.x).fold(f32::INFINITY, f32::min);
-            let max_x = m.vertices.iter().map(|v| v.pos.x).fold(f32::NEG_INFINITY, f32::max);
-            Some(max_x - min_x)
+            Some(m.vertices.iter().map(|v| v.pos.x).fold(f32::NEG_INFINITY, f32::max) - min_x)
         }
         _ => None,
     })

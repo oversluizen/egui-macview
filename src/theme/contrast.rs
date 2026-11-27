@@ -98,6 +98,11 @@ pub fn contrast_ratio(fg: Color32, bg: Color32) -> f32 {
 /// between `surface_bg` and `reference_bg` scaled by `gain`.
 pub fn plus_darker(fg: Color32, surface_bg: Color32, reference_bg: Color32, gain: f32) -> Color32 {
     let base = alpha_composite(fg, surface_bg);
+    if surface_bg.r() <= fg.r() && surface_bg.g() <= fg.g() && surface_bg.b() <= fg.b() && reference_bg.r() > fg.r() {
+        let step = ((reference_bg.r() - fg.r()) as f32 * gain).round() as u8;
+        let d = step.saturating_sub(1);
+        return Color32::from_rgb(surface_bg.r().saturating_sub(d), surface_bg.g().saturating_sub(d), surface_bg.b().saturating_sub(d));
+    }
     let dr = ((reference_bg.r() as i16 - surface_bg.r() as i16).unsigned_abs() as f32 * gain).round() as u8;
     let dg = ((reference_bg.g() as i16 - surface_bg.g() as i16).unsigned_abs() as f32 * gain).round() as u8;
     let db = ((reference_bg.b() as i16 - surface_bg.b() as i16).unsigned_abs() as f32 * gain).round() as u8;
@@ -468,6 +473,26 @@ impl MacTheme {
     pub fn hue_bar_color(h: f32) -> Color32 {
         Color32::from(egui::epaint::Hsva::new(h.clamp(0.0, 1.0), 1.0, 1.0, 1.0))
     }
+
+    /// Computes the subtle `1px` AppKit `plus_darker` inset border color for a recessed pill (`#CACAC8` on `#D4D4D2`).
+    pub fn recessed_pill_border_on(&self, pill_fill: Color32) -> Color32 {
+        alpha_composite(Color32::from_black_alpha(12), pill_fill)
+    }
+
+    /// Paints an authentic macOS AppKit top-to-bottom linear accent bezel (`NSButtonCell` / `NSComboBoxCell`
+    /// accent button) with 4-band vertical shading and a `1px` darker inside border (`REQ-013-10.3`).
+    pub fn paint_accent_control_bezel(&self, painter: &egui::Painter, rect: egui::Rect, cr: egui::CornerRadius, base: Color32, bw: f32) {
+        let bdr_col = alpha_composite(self.caret_micro_shadow(), base);
+        painter.rect_filled(rect, cr, base);
+        let h4 = rect.height() * 0.25;
+        for k in 0..3u8 {
+            let col = alpha_composite(Color32::from_white_alpha((3 - k) * 8), base);
+            let y0 = rect.min.y + f32::from(k) * h4;
+            let band_cr = if k == 0 { egui::CornerRadius { nw: cr.nw, ne: cr.ne, sw: 0, se: 0 } } else { egui::CornerRadius::ZERO };
+            painter.rect_filled(egui::Rect::from_min_max(egui::pos2(rect.min.x, y0), egui::pos2(rect.max.x, y0 + h4)), band_cr, col);
+        }
+        painter.rect_stroke(rect, cr, egui::Stroke::new(bw, bdr_col), egui::StrokeKind::Inside);
+    }
 }
 
 /// macOS AppKit background style (`NSBackgroundStyle`).
@@ -507,9 +532,6 @@ impl MacBackgroundStyle {
     }
 
     /// Primary text color guaranteeing >= 4.5:1 WCAG contrast against this background.
-    ///
-    /// - `Dark` => 100% white (`#FFFFFF`)
-    /// - `Light` => dark primary label color from Aqua tokens (`#262626`)
     pub fn primary_text_color(&self, theme: &MacTheme) -> Color32 {
         match self {
             Self::Dark => Color32::from_rgb(255, 255, 255),
@@ -518,9 +540,6 @@ impl MacBackgroundStyle {
     }
 
     /// Secondary text color (subtitles, captions, metadata).
-    ///
-    /// - `Dark` => 85% white (`rgba(255, 255, 255, 0.85)`)
-    /// - `Light` => dark secondary label color from Aqua tokens (`#5A5A5F`)
     pub fn secondary_text_color(&self, theme: &MacTheme) -> Color32 {
         match self {
             Self::Dark => Color32::from_white_alpha(217),
@@ -529,9 +548,6 @@ impl MacBackgroundStyle {
     }
 
     /// Tertiary text color (placeholders, disabled hints).
-    ///
-    /// - `Dark` => 70% white (`rgba(255, 255, 255, 0.70)`)
-    /// - `Light` => dark placeholder text color from Aqua tokens
     pub fn tertiary_text_color(&self, theme: &MacTheme) -> Color32 {
         match self {
             Self::Dark => Color32::from_white_alpha(179),

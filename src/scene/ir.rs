@@ -1,24 +1,22 @@
 //! Layer 2: Strongly Typed `MacSceneIR`, `SpatialSemanticNormalizer`, `SceneSearchIndex`,
 //! `VisibilityRule`, and `SceneContractVerifier` (`SPEC-013 §3`).
 
-use crate::controls::MacControlSize;
-use crate::scene::constraints::{CompiledConstraintSchedule, ValueTransformer};
+use crate::controls::{MacControlSize, MacFontWeight, MacLabelColor};
+use crate::scene::constraints::{CompiledConstraintSchedule, ConstraintAttr, LayoutConstraintSpec, ValueTransformer};
 use crate::scene::normalizer::run_spatial_semantic_normalizer;
 pub use crate::scene::normalizer::{
     normalize_nib_alignment_rect, ContractAuditReport, CustomClassMapper, HostContractSchema, SceneFilterMask,
 };
-use egui::{Pos2, Rect, Vec2};
+use egui::{Rect, Vec2};
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
-/// Arena node identifier inside [`MacSceneIR`].
+/// Arena node, binding, and action identifiers inside [`MacSceneIR`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct NodeId(pub u32);
-
 /// Pre-interned binding handle for zero-allocation `MacSceneDataSource` lookups.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct BindingId(pub u32);
-
 /// Pre-interned action selector handle for zero-allocation `MacSceneDataSource` dispatch.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct ActionId(pub u32);
@@ -119,7 +117,7 @@ pub enum SceneNodeKind {
     },
     /// Single-line editable text field (`NSTextField`).
     TextField,
-    /// Numeric input field with stepping and inline arithmetic evaluation (`GSSteppingTextField` / `NSNumberFormatter`).
+    /// Numeric input field with stepping and inline arithmetic evaluation (`NSNumberFormatter`).
     NumberField {
         /// Arrow-key step increment.
         step: f64,
@@ -159,7 +157,7 @@ pub enum SceneNodeKind {
     HelpButton,
     /// Compact inline action badge button (`+`, `-`, `i`, `⚙`).
     InlineActionButton,
-    /// `3x3` 9-point transform origin matrix (`GSOriginPointControl`).
+    /// `3x3` 9-point transform origin matrix (`OriginPointControl`).
     OriginMatrix,
     /// Finder / AppKit tag color swatch picker (`ColorLabelView`).
     TagColorPicker,
@@ -199,6 +197,22 @@ pub enum SceneNodeKind {
         /// Custom class identifier.
         class_name: String,
     },
+}
+
+/// AppKit `NSTextAlignment` (`REQ-013-10.1` §3.8.3).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum MacTextAlignment {
+    /// Left-aligned (`NSTextAlignmentLeft = 0`).
+    #[default]
+    Left,
+    /// Right-aligned (`NSTextAlignmentRight = 1`).
+    Right,
+    /// Center-aligned (`NSTextAlignmentCenter = 2`).
+    Center,
+    /// Justified (`NSTextAlignmentJustified = 3`).
+    Justified,
+    /// Natural reading-direction alignment (`NSTextAlignmentNatural = 4`).
+    Natural,
 }
 
 /// Lowered scene node in [`MacSceneIR`].
@@ -244,9 +258,109 @@ pub struct SceneNode {
     pub visibility: VisibilityRule,
     /// Paired semantic label node inferred by `SpatialSemanticNormalizer`.
     pub labeled_by: Option<NodeId>,
+    /// Strongly typed AppKit text alignment (`NSCellFlags2` bits `26..=28` / `alignment="..."`).
+    #[serde(default)]
+    pub text_alignment: MacTextAlignment,
+    /// AppKit `NSBezelStyle` / `NSTextBezelStyle` (`0 = None`, `1 = Rounded/Pill`, `10 = SmallSquare`, `11 = Recessed`, etc.).
+    #[serde(default)]
+    pub bezel_style: u8,
+    /// Whether the cell draws its background fill (`NSDrawsBackground`).
+    #[serde(default)]
+    pub draws_background: bool,
+    /// Whether the cell draws a 1pt border (`NSCellFlags` bit 23).
+    #[serde(default)]
+    pub is_bordered: bool,
+    /// Whether the cell is bezeled (`NSCellFlags` bit 22).
+    #[serde(default)]
+    pub is_bezeled: bool,
+    /// Whether the control is editable (`NSCellFlags` bit 19).
+    #[serde(default)]
+    pub is_editable: bool,
+    /// Whether the control text is selectable (`NSCellFlags` bit 18).
+    #[serde(default)]
+    pub is_selectable: bool,
+    /// Explicit point size from `NSSupport` (`NSFont.NSSize`), if archived.
+    #[serde(default)]
+    pub font_size_pt: Option<f32>,
+    /// Explicit PostScript / family name from `NSSupport` (`NSFont.NSName`) or `.xib` `<font name="...">`, if archived.
+    #[serde(default)]
+    pub font_name: Option<String>,
+    /// Font weight tier decoded from `NSSupport` / `NSFont` (`Light`, `Regular`, `Medium`, `Semibold`, `Bold`).
+    #[serde(default)]
+    pub font_weight: MacFontWeight,
+    /// Semantic label text color tier decoded from `NSTextColor` (`Primary`, `Secondary`, `Tertiary`).
+    #[serde(default)]
+    pub label_color: MacLabelColor,
+    /// Custom `NSView` subclass name (`NSClassName` / `customClass`), if any.
+    #[serde(default)]
+    pub custom_class: Option<String>,
+    /// Custom `NSCell` subclass name (`NSCell.NSClassName` / `<*Cell customClass="...">`), if any.
+    #[serde(default)]
+    pub cell_class: Option<String>,
+    /// Whether the view is hidden (`NSvFlags` bit 31 / `hidden="YES"`).
+    #[serde(default)]
+    pub is_hidden: bool,
+    /// Optional dynamic `hidden` binding handle (`NSNibBindingConnector` `NSBinding == "hidden"` / `<binding name="hidden">`).
+    #[serde(default)]
+    pub hidden_binding: Option<BindingId>,
+    /// Optional dynamic `hidden` binding key path (`NSKeyPath` / `keyPath`).
+    #[serde(default)]
+    pub hidden_path: Option<String>,
+    /// Optional dynamic `enabled` binding handle (`NSNibBindingConnector` `NSBinding == "enabled"`, `REQ-013-10.9`).
+    #[serde(default)]
+    pub enabled_binding: Option<BindingId>,
+    /// Optional dynamic `enabled` binding key path (`NSKeyPath` / `keyPath`, `REQ-013-10.9`).
+    #[serde(default)]
+    pub enabled_path: Option<String>,
+    /// Value transformer attached to `enabled_binding` (`REQ-013-10.9`).
+    #[serde(default)]
+    pub enabled_transformer: ValueTransformer,
+    /// Optional `NSStackView` orientation (`0 = Horizontal`, `1 = Vertical`, `REQ-013-10.1` §3.8.4).
+    #[serde(default)]
+    pub stack_orientation: Option<u8>,
+    /// Optional `NSStackView` inter-item spacing in points (`NSStackViewSpacing`, default `2.0`).
+    #[serde(default)]
+    pub stack_spacing: f32,
+    /// Whether an `NSStackView` detaches hidden arranged subviews from layout (`detachesHiddenViews`).
+    #[serde(default)]
+    pub detaches_hidden_views: bool,
+    /// Optional AppKit `NSDisplayPattern` format string (e.g. `"%{value1}@ selected %{value2}@/%{value3}@ glyphs"`, `REQ-013-10.10`).
+    #[serde(default)]
+    pub display_pattern: Option<String>,
+    /// Multi-slot `(slot_index 1..=9, BindingId, normalized_key_path)` bindings for `displayPatternValue1..9` (`REQ-013-10.10`).
+    #[serde(default)]
+    pub display_pattern_bindings: Vec<(u8, BindingId, String)>,
+    /// AppKit `NSImageScaling` (`NSScale`: `0 = ProportionallyDown`, `1 = AxesIndependently`, `2 = None`, `3 = ProportionallyUpOrDown`, `REQ-013-10.10`).
+    #[serde(default)]
+    pub image_scaling: u8,
+    /// Optional SF Symbol point size from `IBNSShadowedSymbolConfiguration` / `NSImageSymbolConfiguration` (`NSPointSize`, `REQ-013-10.10`).
+    #[serde(default)]
+    pub symbol_point_size: Option<f32>,
 }
 
 impl SceneNode {
+    /// Constructs a new [`SceneNode`] with default AppKit cell/view flags.
+    pub fn new(id: NodeId, kind: SceneNodeKind) -> Self {
+        let mut n = crate::scene::nib_frontend::mk_node(
+            id.0,
+            "",
+            None,
+            vec![],
+            kind,
+            "",
+            "",
+            "regular",
+            [0.0, 0.0, 100.0, 22.0],
+            0,
+            None,
+            None,
+            None,
+            VisibilityRule::Always,
+        );
+        n.ib_object_id.clear();
+        n
+    }
+
     /// Returns the parsed [`MacControlSize`] of this node.
     pub fn mac_control_size(&self) -> MacControlSize {
         match self.control_size.as_str() {
@@ -256,6 +370,26 @@ impl SceneNode {
             "large" | "Large" => MacControlSize::Large,
             _ => MacControlSize::Regular,
         }
+    }
+
+    /// Returns the AppKit `NSVisualEffectMaterial` code (`7 = Sidebar`, `18 = ContentBackground`, etc.)
+    /// when this container represents an `NSVisualEffectView` (`REQ-013-10.3`).
+    pub fn visual_effect_material(&self) -> Option<u32> {
+        (matches!(self.kind, SceneNodeKind::Container { .. })
+            && self.custom_class.as_deref().is_some_and(|c| c.contains("VisualEffectView")))
+        .then(|| {
+            let mat = self.bezel_style & 0x7F;
+            if mat > 0 {
+                u32::from(mat)
+            } else {
+                7
+            }
+        })
+    }
+
+    /// Returns `true` when this `NSVisualEffectView` uses `NSVisualEffectBlendingModeBehindWindow`.
+    pub fn visual_effect_is_behind_window(&self) -> bool {
+        self.visual_effect_material().is_some() && (self.bezel_style & 0x80) != 0
     }
 }
 
@@ -289,14 +423,18 @@ pub struct SemanticSectionGroup {
 /// Compilation error emitted by Layer 1 frontends.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SceneCompileError(pub String);
-
 impl std::fmt::Display for SceneCompileError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "SceneCompileError: {}", self.0)
     }
 }
-
 impl std::error::Error for SceneCompileError {}
+
+/// Attached `NSMenu` entry `(ib_object_id, title, value_binding, binding_path)` decoded from `NSNibOutletConnector` (`NSLabel = "menu"`).
+pub type AttachedButtonMenuItem = (String, String, Option<BindingId>, Option<String>);
+
+/// Map from button [`NodeId`] to its attached `NSMenu` entries.
+pub type ButtonMenuMap = BTreeMap<NodeId, Vec<AttachedButtonMenuItem>>;
 
 /// Canonical Typed Intermediate Representation (`MacSceneIR`, `SPEC-013 §3`).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -304,6 +442,12 @@ pub struct MacSceneIR {
     pub(crate) root: NodeId,
     pub(crate) design_size: [f32; 2],
     pub(crate) nodes: Vec<SceneNode>,
+    #[serde(default)]
+    pub(crate) outlets: BTreeMap<String, NodeId>,
+    #[serde(default)]
+    pub(crate) button_menus: ButtonMenuMap,
+    #[serde(default)]
+    pub(crate) nib_constraints: Vec<LayoutConstraintSpec>,
     pub(crate) labeled_pairs: Vec<LabeledFieldPair>,
     pub(crate) field_rows: Vec<FieldRowGroup>,
     pub(crate) semantic_sections: Vec<SemanticSectionGroup>,
@@ -320,120 +464,122 @@ impl MacSceneIR {
             node.alignment_rect = normalize_nib_alignment_rect(&node.kind, node.mac_control_size(), node.nib_frame, design_size[1], flip);
         }
         let (labeled_pairs, field_rows, semantic_sections) = run_spatial_semantic_normalizer(&mut nodes);
-        let mut ir =
-            Self { root, design_size, nodes, labeled_pairs, field_rows, semantic_sections, constraints, search_index: BTreeMap::new() };
+        let nib_constraints = constraints.steps().to_vec();
+        let mut ir = Self {
+            root,
+            design_size,
+            nodes,
+            outlets: BTreeMap::new(),
+            button_menus: BTreeMap::new(),
+            nib_constraints,
+            labeled_pairs,
+            field_rows,
+            semantic_sections,
+            constraints,
+            search_index: BTreeMap::new(),
+        };
         ir.rebuild_search_index();
         ir
     }
 
+    /// Returns the attached `NSMenu` items `(ib_object_id, title, value_binding, binding_path)` decoded from `NSNibOutletConnector` (`NSLabel = "menu"`).
+    pub fn button_menus(&self) -> &ButtonMenuMap {
+        &self.button_menus
+    }
+
+    /// Returns the persistent raw `NSLayoutConstraint` specifications (`REQ-013-10.1` §3.8.4).
+    pub fn nib_constraints(&self) -> &[LayoutConstraintSpec] {
+        &self.nib_constraints
+    }
+    /// Appends a programmatic `NSLayoutConstraint` specification and re-solves layout (`REQ-013-10.1` §3.8.4).
+    pub fn add_layout_constraint(&mut self, spec: LayoutConstraintSpec) {
+        self.nib_constraints.push(spec);
+        self.solve_autolayout();
+    }
+    /// Appends a programmatic `first.leading == second.leading` constraint and re-solves layout (`REQ-013-10.1` §3.8.4).
+    pub fn add_equal_leading_constraint(&mut self, first_id_or_outlet: &str, second_id_or_outlet: &str) -> bool {
+        self.add_anchor_constraint(first_id_or_outlet, ConstraintAttr::Leading, Some(second_id_or_outlet), ConstraintAttr::Leading, 0.0)
+    }
+    /// Appends a programmatic anchor constraint (`first.attr1 == second.attr2 + constant`) and re-solves layout (`REQ-013-10.1` §3.8.4).
+    pub fn add_anchor_constraint(
+        &mut self,
+        first: &str,
+        attr1: ConstraintAttr,
+        second: Option<&str>,
+        attr2: ConstraintAttr,
+        constant: f32,
+    ) -> bool {
+        crate::scene::normalizer::add_scene_anchor_constraint(self, first, attr1, second, attr2, constant)
+    }
+    /// Pins `child_id_or_outlet` to its parent container's 4 edges (`Leading`, `Trailing`, `Top`, `Bottom`, `constant = 0.0`).
+    pub fn pin_to_superview_edges(&mut self, child_id_or_outlet: &str) -> bool {
+        crate::scene::normalizer::pin_scene_node_to_superview_edges(self, child_id_or_outlet)
+    }
+    /// Updates `node.is_hidden` and triggers `solve_autolayout()` (`REQ-013-10.1` §3.8.4).
+    pub fn set_node_hidden(&mut self, id_or_outlet: &str, hidden: bool) -> bool {
+        let Some(nid) = self.resolve_node_id(id_or_outlet) else { return false };
+        let Some(node) = self.nodes.iter_mut().find(|n| n.id == nid) else { return false };
+        node.is_hidden = hidden;
+        self.solve_autolayout();
+        true
+    }
+    /// Upgrades `node.kind` during `awakeFromNib` and triggers `solve_autolayout()` (`REQ-013-10.1` §3.8.4).
+    pub fn set_node_kind(&mut self, id_or_outlet: &str, kind: SceneNodeKind) -> bool {
+        let Some(nid) = self.resolve_node_id(id_or_outlet) else { return false };
+        let Some(node) = self.nodes.iter_mut().find(|n| n.id == nid) else { return false };
+        node.kind = kind;
+        self.solve_autolayout();
+        true
+    }
+    /// Extracts a view subtree identified by `id_or_outlet` into a standalone [`MacSceneIR`] (`REQ-013-10.1` §3.8.4).
+    pub fn extract_outlet_subscene(&self, id_or_outlet: &str) -> Option<MacSceneIR> {
+        crate::scene::normalizer::extract_scene_outlet_subscene(self, id_or_outlet)
+    }
+    /// Executes the 2D `alignmentRect`-space Auto Layout and `NSStackView` solver across the scene (`REQ-013-10.1` §3.8.4).
+    pub fn solve_autolayout(&mut self) {
+        crate::scene::normalizer::solve_scene_autolayout(self);
+    }
+    /// Returns the controller `IBOutlet` mapping table (`NSLabel -> NodeId`, `REQ-013-10.1` §3.8.2).
+    pub fn outlets(&self) -> &BTreeMap<String, NodeId> {
+        &self.outlets
+    }
+    /// Registers a controller `IBOutlet` mapping (`outlet_name -> node_id`).
+    pub fn insert_outlet(&mut self, outlet_name: impl Into<String>, node_id: NodeId) {
+        self.outlets.insert(outlet_name.into(), node_id);
+    }
+    /// Resolves a controller `IBOutlet` name to its target [`NodeId`].
+    pub fn outlet_node(&self, outlet_name: &str) -> Option<NodeId> {
+        self.outlets.get(outlet_name).copied()
+    }
+    /// Resolves either a controller `IBOutlet` name (e.g. `"productionField"`) or an `ib_object_id` (e.g. `"_NS:376"`) to its [`NodeId`].
+    pub fn resolve_node_id(&self, id_or_outlet: &str) -> Option<NodeId> {
+        self.outlets.get(id_or_outlet).copied().or_else(|| self.nodes.iter().find(|n| n.ib_object_id == id_or_outlet).map(|n| n.id))
+    }
     /// Returns the root `NodeId`.
     pub fn root_id(&self) -> NodeId {
         self.root
     }
-
     /// Returns all nodes in the scene arena.
     pub fn nodes(&self) -> &[SceneNode] {
         &self.nodes
     }
-
     /// Solves the 1:1 Apple `.nib` layout at the scene's exact `design_size` (`LayoutPolicy::ExactAppleNib`, `REQ-013-08.1`).
     pub fn solve_exact_nib_layout(&self) -> BTreeMap<NodeId, egui::Rect> {
         let vp = egui::vec2(self.design_size[0].max(1.0), self.design_size[1].max(1.0));
         self.solve_layout(vp, LayoutPolicy::ExactAppleNib, u64::MAX, "")
     }
-
     /// Returns the inferred `LabeledFieldPair` relationships.
     pub fn labeled_pairs(&self) -> &[LabeledFieldPair] {
         &self.labeled_pairs
     }
-
     /// Returns the inferred `FieldRowGroup` horizontal rows.
     pub fn field_rows(&self) -> &[FieldRowGroup] {
         &self.field_rows
     }
-
     /// Returns the inferred `SemanticSectionGroup` blocks.
     pub fn semantic_sections(&self) -> &[SemanticSectionGroup] {
         &self.semantic_sections
     }
-
-    /// Returns the ordered set of all interactive `BindingId`s in the scene.
-    pub fn interactive_binding_ids(&self) -> Vec<BindingId> {
-        let mut set = BTreeSet::new();
-        for n in &self.nodes {
-            if let Some(b) = n.value_binding {
-                set.insert(b);
-            }
-        }
-        set.into_iter().collect()
-    }
-
-    /// Rebuilds the lowercase `SceneSearchIndex` (`REQ-013-02` §3.3).
-    pub fn rebuild_search_index(&mut self) {
-        self.search_index.clear();
-        let mut label_text_by_control = BTreeMap::new();
-        for pair in &self.labeled_pairs {
-            if let Some(lbl) = self.nodes.iter().find(|n| n.id == pair.label_node) {
-                label_text_by_control.insert(pair.control_node, lbl.title.to_lowercase());
-            }
-        }
-        for n in &self.nodes {
-            let mut tokens = format!(
-                "{} {} {}",
-                n.title.to_lowercase(),
-                n.tooltip.to_lowercase(),
-                n.binding_path.as_deref().unwrap_or("").to_lowercase()
-            );
-            if let Some(paired_lbl) = label_text_by_control.get(&n.id) {
-                tokens.push(' ');
-                tokens.push_str(paired_lbl);
-            }
-            self.search_index.insert(n.id, tokens);
-        }
-    }
-
-    /// Queries the built-in `SceneSearchIndex` (`< 5 us`).
-    pub fn filter_by_search(&self, query: &str) -> SceneFilterMask {
-        let q = query.trim().to_lowercase();
-        let mut mask = SceneFilterMask::default();
-        if q.is_empty() {
-            for n in &self.nodes {
-                mask.matched_nodes.insert(n.id);
-            }
-            return mask;
-        }
-        for (id, text) in &self.search_index {
-            if text.contains(&q) {
-                mask.matched_nodes.insert(*id);
-            }
-        }
-        for pair in &self.labeled_pairs {
-            if mask.matched_nodes.contains(&pair.label_node) {
-                mask.matched_nodes.insert(pair.control_node);
-            } else if mask.matched_nodes.contains(&pair.control_node) {
-                mask.matched_nodes.insert(pair.label_node);
-            }
-        }
-        mask
-    }
-
-    /// Dynamically mounts a child `MacSceneIR` under `parent_or_slot` (`addSubview:` equivalent).
-    pub fn mount_subscene(&mut self, parent_or_slot: NodeId, child_scene: &MacSceneIR) {
-        let id_offset = self.nodes.iter().map(|n| n.id.0).max().unwrap_or(0) + 100;
-        let child_root_new = NodeId(child_scene.root.0 + id_offset);
-        if let Some(p) = self.nodes.iter_mut().find(|n| n.id == parent_or_slot) {
-            p.children.push(child_root_new);
-        }
-        for cn in &child_scene.nodes {
-            let mut cloned = cn.clone();
-            cloned.id = NodeId(cn.id.0 + id_offset);
-            cloned.parent = cn.parent.map(|p| NodeId(p.0 + id_offset)).or(Some(parent_or_slot));
-            cloned.children = cn.children.iter().map(|c| NodeId(c.0 + id_offset)).collect();
-            self.nodes.push(cloned);
-        }
-        self.rebuild_search_index();
-    }
-
     /// Solves node rectangles for `viewport_size` under `policy`, `workspace_flags`, and `search_query`.
     pub fn solve_layout(
         &self,
@@ -443,73 +589,5 @@ impl MacSceneIR {
         search_query: &str,
     ) -> BTreeMap<NodeId, Rect> {
         crate::scene::runtime::solve_scene_layout(self, viewport_size, policy, workspace_flags, search_query)
-    }
-
-    /// Reverse Z-order canvas hit-testing for Studio selection (`REQ-013-02I`).
-    pub fn hit_test(&self, pos: Pos2, solved_rects: &BTreeMap<NodeId, Rect>) -> Option<NodeId> {
-        for n in self.nodes.iter().rev() {
-            if matches!(n.kind, SceneNodeKind::Container { .. }) {
-                continue;
-            }
-            if let Some(rect) = solved_rects.get(&n.id) {
-                if rect.contains(pos) {
-                    return Some(n.id);
-                }
-            }
-        }
-        None
-    }
-
-    /// Updates a node's `nib_frame` and live-renormalizes `alignment_rect`, `SemanticSectionGroup`s, and `SceneSearchIndex` (`REQ-013-02I`).
-    pub fn set_node_nib_frame(&mut self, id: NodeId, new_nib_frame: [f32; 4]) -> bool {
-        let h_parent = self.design_size[1];
-        let root_flipped = self.nodes.first().is_some_and(|n| matches!(n.kind, SceneNodeKind::Container { is_flipped: true }));
-        let Some(node) = self.nodes.iter_mut().find(|n| n.id == id) else {
-            return false;
-        };
-        node.nib_frame = new_nib_frame;
-        node.alignment_rect = normalize_nib_alignment_rect(&node.kind, node.mac_control_size(), new_nib_frame, h_parent, root_flipped);
-        self.recompute_semantics();
-        true
-    }
-
-    /// Inserts a new node under `parent` and re-normalizes semantic groups (`REQ-013-02I`).
-    pub fn insert_node(&mut self, parent: NodeId, mut node: SceneNode) -> NodeId {
-        let root_flipped = self.nodes.first().is_some_and(|n| matches!(n.kind, SceneNodeKind::Container { is_flipped: true }));
-        node.parent = Some(parent);
-        node.alignment_rect =
-            normalize_nib_alignment_rect(&node.kind, node.mac_control_size(), node.nib_frame, self.design_size[1], root_flipped);
-        let id = node.id;
-        if let Some(p) = self.nodes.iter_mut().find(|n| n.id == parent) {
-            p.children.push(id);
-        }
-        self.nodes.push(node);
-        self.recompute_semantics();
-        id
-    }
-
-    /// Removes a node from the scene and re-normalizes semantic groups (`REQ-013-02I`).
-    pub fn remove_node(&mut self, id: NodeId) -> bool {
-        let len_before = self.nodes.len();
-        self.nodes.retain(|n| n.id != id);
-        if self.nodes.len() == len_before {
-            return false;
-        }
-        for n in &mut self.nodes {
-            n.children.retain(|c| *c != id);
-        }
-        self.recompute_semantics();
-        true
-    }
-
-    fn recompute_semantics(&mut self) {
-        for n in &mut self.nodes {
-            n.labeled_by = None;
-        }
-        let (pairs, rows, sections) = run_spatial_semantic_normalizer(&mut self.nodes);
-        self.labeled_pairs = pairs;
-        self.field_rows = rows;
-        self.semantic_sections = sections;
-        self.rebuild_search_index();
     }
 }

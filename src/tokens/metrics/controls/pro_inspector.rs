@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 /// Geometry tokens for `MacOriginMatrix` (`3x3` 9-point transform origin / anchor pin grid).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct OriginMatrixMetrics {
-    /// Regular square bounding box size (`34.0pt`, matching `TransformView.nib` `GSTransformGrid`).
+    /// Regular square bounding box size (`34.0pt`, matching `TransformView.nib` origin grid).
     pub grid_size: DimensionValue,
     /// Small / CompactInfobox square bounding box size (`28.0pt`).
     pub small_grid_size: DimensionValue,

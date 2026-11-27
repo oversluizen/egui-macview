@@ -298,7 +298,8 @@ impl CenterState {
                     .collect();
                 vp.add(egui::Shape::line(pts, egui::Stroke::new(theme.box_view().border_width.points(), theme.control_accent())));
                 let hud_h = theme.player_view().hud_height.points();
-                let hud_rect = egui::Rect::from_min_max(egui::pos2(vid_rect.min.x, (vid_rect.max.y - hud_h).max(vid_rect.min.y)), vid_rect.max);
+                let hud_rect =
+                    egui::Rect::from_min_max(egui::pos2(vid_rect.min.x, (vid_rect.max.y - hud_h).max(vid_rect.min.y)), vid_rect.max);
                 let mut hud_ui = tab_ui.new_child(egui::UiBuilder::new().id_salt("s6_av_hud_child").max_rect(hud_rect));
                 hud_ui.add(
                     MacPlayerView::new()
@@ -310,7 +311,11 @@ impl CenterState {
             }
             1 => {
                 tab_ui.horizontal(|hdr_ui| {
-                    MacLabel::new(format!("#{grid_count}")).control_size(MacControlSize::Small).color(MacLabelColor::Secondary).theme(theme).show(hdr_ui);
+                    MacLabel::new(format!("#{grid_count}"))
+                        .control_size(MacControlSize::Small)
+                        .color(MacLabelColor::Secondary)
+                        .theme(theme)
+                        .show(hdr_ui);
                     if MacInlineActionButton::new("+").theme(theme).show(hdr_ui).clicked() {
                         grid_count = grid_count.saturating_add(1);
                     }
@@ -343,7 +348,10 @@ impl CenterState {
                                             let (ctr, rad) = (r.center(), r.width() * 0.38);
                                             p.circle_stroke(ctr, rad, egui::Stroke::new(1.0, sep));
                                             let end_a = -std::f32::consts::FRAC_PI_2 + frac * std::f32::consts::TAU;
-                                            p.line_segment([ctr, ctr + egui::vec2(end_a.cos() * rad, end_a.sin() * rad)], egui::Stroke::new(1.8, accent));
+                                            p.line_segment(
+                                                [ctr, ctr + egui::vec2(end_a.cos() * rad, end_a.sin() * rad)],
+                                                egui::Stroke::new(1.8, accent),
+                                            );
                                             p.circle_filled(ctr + egui::vec2(end_a.cos() * rad, end_a.sin() * rad), 2.2, accent);
                                         })
                                         .show(c)

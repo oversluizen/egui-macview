@@ -105,11 +105,7 @@ impl<'a> Widget for MacToggle<'a> {
 
         let alpha_factor = if self.enabled { 1.0 } else { theme.disabled_opacity() };
         let painter = ui.painter_at(rect);
-        let active_green = if crate::layout::is_window_active(ui.ctx()) {
-            theme.system_green()
-        } else {
-            theme.selected_control_inactive()
-        };
+        let active_green = if crate::layout::is_window_active(ui.ctx()) { theme.system_green() } else { theme.selected_control_inactive() };
         let bg_color = theme.control().lerp_to_gamma(active_green, anim_progress).gamma_multiply(alpha_factor);
 
         super::liquid_glass::paint_liquid_glass_capsule(

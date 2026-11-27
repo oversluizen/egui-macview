@@ -141,7 +141,8 @@ pub(crate) fn hit_test_undo_redo_arcs(
     let d_undo = super::super::liquid_glass::sdf_curved_stadium_arc(pos, hub_center, (r_outer, r_skirt_out), (undo_start, undo_end), m);
     let d_redo = super::super::liquid_glass::sdf_curved_stadium_arc(pos, hub_center, (r_outer, r_skirt_out), (redo_start, redo_end), m);
     let hov_undo = d_undo <= 0.0 || undo_rect.contains(pos) || (in_skirt && angle_in_arc(angle_deg, undo_start, undo_end, m));
-    let hov_redo = !hov_undo && (d_redo <= 0.0 || redo_rect.contains(pos) || (in_skirt && angle_in_arc(angle_deg, redo_start, redo_end, m)));
+    let hov_redo =
+        !hov_undo && (d_redo <= 0.0 || redo_rect.contains(pos) || (in_skirt && angle_in_arc(angle_deg, redo_start, redo_end, m)));
     (hov_undo, hov_redo)
 }
 
@@ -246,9 +247,7 @@ pub(super) fn show_dial(mut dial: MacContextThumbDial<'_>, ui: &mut Ui) -> MacCo
     mem.latched_sector = infer_latched_sector(*dial.latched_mask, mem.latched_sector);
 
     let now = ui.input(|i| i.time);
-    let pointer_pos = response
-        .interact_pointer_pos()
-        .or_else(|| ui.input(|i| i.pointer.hover_pos().or_else(|| i.pointer.latest_pos())));
+    let pointer_pos = response.interact_pointer_pos().or_else(|| ui.input(|i| i.pointer.hover_pos().or_else(|| i.pointer.latest_pos())));
 
     let mut hovered_sector = None;
     let mut hovered_undo = false;

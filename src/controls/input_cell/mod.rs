@@ -55,6 +55,7 @@ pub struct MacInputCell<'a> {
     pub(super) width: Option<f32>,
     pub(super) height: Option<f32>,
     pub(super) font_size: Option<f32>,
+    pub(super) font_weight: crate::controls::MacFontWeight,
     pub(super) corner_radius: Option<f32>,
     pub(super) control_size: MacControlSize,
     pub(super) explicit_control_size: bool,
@@ -66,6 +67,9 @@ pub struct MacInputCell<'a> {
     pub(super) placeholder: Option<&'a str>,
     pub(super) numeric_config: Option<(RangeInclusive<f64>, f64)>,
     pub(super) liquid_glass_pill: bool,
+    pub(super) recessed_pill: bool,
+    pub(super) monospace: bool,
+    pub(super) stylistic_alt: bool,
 }
 
 impl<'a> MacInputCell<'a> {
@@ -84,6 +88,7 @@ impl<'a> MacInputCell<'a> {
             width: None,
             height: None,
             font_size: None,
+            font_weight: crate::controls::MacFontWeight::Regular,
             corner_radius: None,
             control_size: MacControlSize::Regular,
             explicit_control_size: false,
@@ -95,7 +100,28 @@ impl<'a> MacInputCell<'a> {
             placeholder: None,
             numeric_config: None,
             liquid_glass_pill: false,
+            recessed_pill: false,
+            monospace: false,
+            stylistic_alt: false,
         }
+    }
+
+    /// Selects the monospace `FontFamily::Monospace` slot (`REQ-013-10.4`).
+    pub fn monospace(mut self, mono: bool) -> Self {
+        self.monospace = mono;
+        self
+    }
+
+    /// Selects the High-Legibility (`CTFeature 35,12` / `ss06`) proportional font slot (`REQ-013-10.4`).
+    pub fn stylistic_alt(mut self, alt: bool) -> Self {
+        self.stylistic_alt = alt;
+        self
+    }
+
+    /// Enables AppKit `NSTextFieldRoundedBezel` (`bezelStyle == 1` & `drawsBackground == 0`) recessed sidebar pill styling.
+    pub fn recessed_pill(mut self, recessed: bool) -> Self {
+        self.recessed_pill = recessed;
+        self
     }
 
     /// Enables 3D Liquid Glass pill styling (`SPEC-016 §8`) matching the glowing blue active row in the `SelectionInfo` inspector.
@@ -182,6 +208,12 @@ impl<'a> MacInputCell<'a> {
     /// Overrides font size in points.
     pub fn font_size(mut self, font_size: f32) -> Self {
         self.font_size = Some(font_size);
+        self
+    }
+
+    /// Sets the AppKit font weight (`Regular`, `Medium`, `Semibold`, `Bold`) for the cell text (`REQ-013-10.4`).
+    pub fn font_weight(mut self, weight: crate::controls::MacFontWeight) -> Self {
+        self.font_weight = weight;
         self
     }
 

@@ -149,6 +149,51 @@ impl MacTheme {
     pub fn window_background(&self) -> Color32 {
         self.colors().window_background.to_color32()
     }
+    /// Resolves `NSVisualEffectMaterialSidebar` (`code = 7`, `withinWindow`) surface color (`#F8F8F8` in Aqua, `#484848` in DarkAqua).
+    pub fn sidebar_background(&self) -> Color32 {
+        self.colors().sidebar_background.to_color32()
+    }
+    /// Resolves `NSVisualEffectMaterialSidebar` (`code = 7`, `behindWindow`) vibrant sidebar surface color (`#D6D6D6` in Aqua, `#383838` in DarkAqua).
+    pub fn sidebar_behind_window_background(&self) -> Color32 {
+        self.colors().sidebar_behind_window_background.to_color32()
+    }
+    /// Resolves an AppKit `NSVisualEffectMaterial` code (`7/21 -> sidebar_background`, `3/10/18 -> control_background`, `6 -> popover_background`, `13 -> hud_background`, `_ -> window_background`).
+    pub fn visual_effect_material_color(&self, material_code: u32) -> Color32 {
+        self.visual_effect_surface_color(material_code, false)
+    }
+    /// Resolves an AppKit `NSVisualEffectMaterial` code and `NSVisualEffectBlendingMode` (`behind_window = true` for `NSVisualEffectBlendingModeBehindWindow = 0`).
+    pub fn visual_effect_surface_color(&self, material_code: u32, behind_window: bool) -> Color32 {
+        match material_code {
+            7 | 21 => {
+                if behind_window {
+                    self.sidebar_behind_window_background()
+                } else {
+                    self.sidebar_background()
+                }
+            }
+            3 | 10 | 18 => self.control_background(),
+            6 => self.colors().popover_background.to_color32(),
+            13 => self.hud_background(),
+            _ => self.window_background(),
+        }
+    }
+    /// Returns `true` when `surface_bg` is a sidebar `NSVisualEffectView` surface (`withinWindow` or `behindWindow`).
+    pub fn is_sidebar_surface(&self, surface_bg: Color32) -> bool {
+        surface_bg == self.sidebar_background() || surface_bg == self.sidebar_behind_window_background()
+    }
+    /// Computes the AppKit `kCGBlendModePlusDarker` (`Aqua`) / `kCGBlendModePlusLighter` (`DarkAqua`) recessed-pill interior fill on `surface_bg`.
+    pub fn recessed_pill_fill_on(&self, surface_bg: Color32) -> Color32 {
+        match self.appearance {
+            MacAppearance::Aqua => {
+                if surface_bg == self.window_background() || surface_bg == self.control_background() {
+                    self.control()
+                } else {
+                    plus_darker(self.control(), surface_bg, self.sidebar_background(), 1.0)
+                }
+            }
+            MacAppearance::Anthracite | MacAppearance::DarkAqua => self.control(),
+        }
+    }
     /// Resolves `controlBackgroundColor` (NSColor) for the active appearance.
     pub fn control_background(&self) -> Color32 {
         self.colors().control_background.to_color32()

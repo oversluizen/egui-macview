@@ -158,6 +158,36 @@ pub fn check_scene_and_test_purity(manifest_dir: &std::path::Path) -> Vec<String
             }
         }
     }
+    for scene_rel in [
+        "src/scene/mod.rs",
+        "src/scene/ir.rs",
+        "src/scene/nib_ibtool.rs",
+        "src/scene/nib_ibtool_widgets.rs",
+        "src/scene/runtime.rs",
+        "src/scene/runtime_widgets.rs",
+        "src/scene/storyboard.rs",
+    ] {
+        let src = fs::read_to_string(manifest_dir.join(scene_rel)).expect("read scene pipeline file");
+        for bad_heuristic in [
+            "== \"1\"",
+            "!= \"1\"",
+            "10_000 +",
+            "\"statusText\"",
+            "\"GSFontViewWidth\"",
+            "starts_with(\"remove\")",
+            "starts_with(\"delete\")",
+            "starts_with(\"add\")",
+            "is_bot_parent",
+            "frame[1] + frame[3] <= 40.0",
+            "design_size[1] > 420.0",
+        ] {
+            if src.contains(bad_heuristic) {
+                violations.push(format!(
+                    "{scene_rel} contains forbidden non-SSOT heuristic `{bad_heuristic}` (REQ-013-10.2 Pure Pipeline Guard)"
+                ));
+            }
+        }
+    }
     if let Ok(entries) = fs::read_dir(manifest_dir.join("assets/nib_showcase")) {
         for entry in entries.flatten() {
             let p = entry.path();
@@ -263,4 +293,3 @@ pub fn check_scene_and_test_purity(manifest_dir: &std::path::Path) -> Vec<String
     }
     violations
 }
-

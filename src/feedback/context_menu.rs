@@ -213,9 +213,8 @@ impl<'a> MacContextMenu<'a> {
         let area_id = ui.scope_id().with("mac_context_menu_area");
 
         Area::new(area_id).order(Order::Foreground).fixed_pos(menu_rect.min).show(ui.ctx(), |menu_ui| {
-            let _ = menu_ui.allocate_rect(menu_rect, Sense::click());
+            let _ = menu_ui.interact(menu_rect, area_id.with("bg_hit"), Sense::click());
             let painter = menu_ui.painter();
-
             painter.rect(
                 menu_rect,
                 CornerRadius::same(corner_r),
@@ -224,68 +223,78 @@ impl<'a> MacContextMenu<'a> {
                 StrokeKind::Inside,
             );
 
-            for ((idx, item), galleys) in self.items.iter().enumerate().zip(item_galleys) {
-                let item_y = menu_rect.top() + padding + (idx as f32) * item_height;
-                let item_rect = Rect::from_min_size(
-                    Pos2::new(menu_rect.left() + padding, item_y),
-                    Vec2::new(menu_rect.width() - padding * 2.0, item_height),
-                );
+            let inner_rect = menu_rect.shrink(padding);
+            let mut host_ui = menu_ui.new_child(
+                egui::UiBuilder::new()
+                    .id_salt("mac_context_menu_scroll_host")
+                    .max_rect(inner_rect)
+                    .layout(egui::Layout::top_down(egui::Align::Min)),
+            );
+            host_ui.set_clip_rect(inner_rect);
+            let row_w = inner_rect.width();
 
-                let Some((title_galley, trailing_galley)) = galleys else {
-                    painter.line_segment(
-                        [Pos2::new(item_rect.left(), item_rect.center().y), Pos2::new(item_rect.right(), item_rect.center().y)],
-                        Stroke::new(border_w, theme.separator()),
-                    );
-                    continue;
-                };
+            crate::MacScrollView::new(area_id.with("scroll"))
+                .theme(theme)
+                .max_height(inner_rect.height())
+                .show(&mut host_ui, |scroll_ui| {
+                    scroll_ui.spacing_mut().item_spacing.y = 0.0;
+                    for ((idx, item), galleys) in self.items.iter().enumerate().zip(item_galleys) {
+                        let (item_rect, resp) = scroll_ui.allocate_exact_size(Vec2::new(row_w, item_height), Sense::click());
+                        let row_painter = scroll_ui.painter();
 
-                let is_highlighted = *self.selected_idx == Some(idx);
-                let resp = menu_ui.interact(item_rect, area_id.with(idx), Sense::click());
+                        let Some((title_galley, trailing_galley)) = galleys else {
+                            row_painter.line_segment(
+                                [Pos2::new(item_rect.left(), item_rect.center().y), Pos2::new(item_rect.right(), item_rect.center().y)],
+                                Stroke::new(border_w, theme.separator()),
+                            );
+                            continue;
+                        };
 
-                if resp.hovered() && item.enabled {
-                    *self.selected_idx = Some(idx);
-                }
+                        let is_highlighted = *self.selected_idx == Some(idx);
+                        if resp.hovered() && item.enabled {
+                            *self.selected_idx = Some(idx);
+                        }
+                        if is_highlighted && item.enabled {
+                            row_painter.rect(item_rect, CornerRadius::same(item_corner_r), theme.control_accent(), Stroke::NONE, StrokeKind::Inside);
+                        }
 
-                if is_highlighted && item.enabled {
-                    painter.rect(item_rect, CornerRadius::same(item_corner_r), theme.control_accent(), Stroke::NONE, StrokeKind::Inside);
-                }
+                        let fg = if !item.enabled {
+                            theme.placeholder_text()
+                        } else if is_highlighted {
+                            on_accent
+                        } else {
+                            theme.label()
+                        };
 
-                let fg = if !item.enabled {
-                    theme.placeholder_text()
-                } else if is_highlighted {
-                    on_accent
-                } else {
-                    theme.label()
-                };
+                        if item.checked {
+                            row_painter.text(
+                                Pos2::new(item_rect.left() + lead_offset * 0.5, item_rect.center().y),
+                                Align2::CENTER_CENTER,
+                                MacSymbol::Checkmark.as_str(),
+                                font_id.clone(),
+                                fg,
+                            );
+                        }
 
-                if item.checked {
-                    painter.text(
-                        Pos2::new(item_rect.left() + lead_offset * 0.5, item_rect.center().y),
-                        Align2::CENTER_CENTER,
-                        MacSymbol::Checkmark.as_str(),
-                        font_id.clone(),
-                        fg,
-                    );
-                }
+                        let title_pos = Align2::LEFT_CENTER
+                            .anchor_size(Pos2::new(item_rect.left() + lead_offset, item_rect.center().y), title_galley.size())
+                            .min;
+                        row_painter.galley(title_pos, title_galley, fg);
 
-                let title_pos = Align2::LEFT_CENTER
-                    .anchor_size(Pos2::new(item_rect.left() + lead_offset, item_rect.center().y), title_galley.size())
-                    .min;
-                painter.galley(title_pos, title_galley, fg);
+                        if let Some(tg) = trailing_galley {
+                            let tr_pos =
+                                Align2::RIGHT_CENTER.anchor_size(Pos2::new(item_rect.right() - padding_h, item_rect.center().y), tg.size()).min;
+                            row_painter.galley(tr_pos, tg, fg);
+                        }
 
-                if let Some(tg) = trailing_galley {
-                    let tr_pos =
-                        Align2::RIGHT_CENTER.anchor_size(Pos2::new(item_rect.right() - padding_h, item_rect.center().y), tg.size()).min;
-                    painter.galley(tr_pos, tg, fg);
-                }
-
-                if resp.clicked() && item.enabled {
-                    if let MacMenuItemKind::Action { id, .. } = &item.kind {
-                        triggered = Some(id.clone());
-                        self.close();
+                        if resp.clicked() && item.enabled {
+                            if let MacMenuItemKind::Action { id, .. } = &item.kind {
+                                triggered = Some(id.clone());
+                                self.close();
+                            }
+                        }
                     }
-                }
-            }
+                });
         });
 
         triggered

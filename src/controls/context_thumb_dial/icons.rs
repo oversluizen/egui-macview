@@ -45,24 +45,41 @@ fn color_to_rgb_norm(c: Color32) -> [f32; 3] {
 
 use super::paint::eval_shared_dish_matrix_at;
 
-pub(crate) fn synthesize_rosette_matrix_rgba(flat: &mut [u8], tex_dim: usize, (x_range, y_range): (std::ops::Range<usize>, std::ops::Range<usize>), sc: &RosetteContainerSpec, theme: &MacTheme, m: &ThumbDialMetrics) {
+pub(crate) fn synthesize_rosette_matrix_rgba(
+    flat: &mut [u8],
+    tex_dim: usize,
+    (x_range, y_range): (std::ops::Range<usize>, std::ops::Range<usize>),
+    sc: &RosetteContainerSpec,
+    theme: &MacTheme,
+    m: &ThumbDialMetrics,
+) {
     let is_light = theme.appearance == crate::theme::MacAppearance::Aqua;
-    let (dish_core, dish_rim, passive_tint) = (
-        color_to_rgb_norm(theme.window_background()),
-        color_to_rgb_norm(if is_light { theme.box_background() } else { theme.control_background() }),
-        color_to_rgb_norm(theme.specular_rim_top()),
-    );
-    let (accent_rgb, grid_rgb, shadow_rgb, warm_rgb) = (color_to_rgb_norm(sc.accent_col), color_to_rgb_norm(theme.secondary_label()), color_to_rgb_norm(theme.drop_shadow()), color_to_rgb_norm(theme.system_orange()));
+    let dish_core = color_to_rgb_norm(theme.window_background());
+    let dish_rim = color_to_rgb_norm(if is_light { theme.box_background() } else { theme.control_background() });
+    let passive_tint = color_to_rgb_norm(theme.specular_rim_top());
+    let accent_rgb = color_to_rgb_norm(sc.accent_col);
+    let grid_rgb = color_to_rgb_norm(theme.secondary_label());
+    let shadow_rgb = color_to_rgb_norm(theme.drop_shadow());
+    let warm_rgb = color_to_rgb_norm(theme.system_orange());
     let params = vitrea::LiquidGlassOpticalParams {
-        ior_glass: m.ior_glass.points(), ior_dispersion_rgb: [m.ior_red.points(), m.ior_green.points(), m.ior_blue.points()],
-        fresnel_f0: m.fresnel_f0.points(), bevel_width_pt: m.bevel_width_pt.points() * sc.scale,
-        dome_thickness_pt: m.dome_thickness_pt.points() * sc.scale, vibrancy_chroma_boost: m.vibrancy_chroma_boost.points(),
-        meniscus_merge_k_pt: m.meniscus_merge_k_pt.points() * sc.scale, shadow_decay_length_pt: m.bevel_width_pt.points() * sc.scale,
-        glare_angle_rad: std::f32::consts::FRAC_PI_4, ..Default::default()
+        ior_glass: m.ior_glass.points(),
+        ior_dispersion_rgb: [m.ior_red.points(), m.ior_green.points(), m.ior_blue.points()],
+        fresnel_f0: m.fresnel_f0.points(),
+        bevel_width_pt: m.bevel_width_pt.points() * sc.scale,
+        dome_thickness_pt: m.dome_thickness_pt.points() * sc.scale,
+        vibrancy_chroma_boost: m.vibrancy_chroma_boost.points(),
+        meniscus_merge_k_pt: m.meniscus_merge_k_pt.points() * sc.scale,
+        shadow_decay_length_pt: m.bevel_width_pt.points() * sc.scale,
+        glare_angle_rad: std::f32::consts::FRAC_PI_4,
+        ..Default::default()
     };
     let stretch_gains = (m.viscous_stretch_gain.points(), m.viscous_press_gain.points());
-    let sh_off = vitrea::GlamVec2::new(-params.bevel_width_pt * m.hover_fill_opacity.points(), params.bevel_width_pt * m.active_fill_opacity.points());
-    let (fill_a, act_a, hov_a, spec_a) = (m.glass_fill_alpha.points(), m.active_fill_opacity.points(), m.hover_fill_opacity.points(), m.glass_specular_alpha.points());
+    let sh_off = vitrea::GlamVec2::new(
+        -params.bevel_width_pt * m.hover_fill_opacity.points(),
+        params.bevel_width_pt * m.active_fill_opacity.points(),
+    );
+    let (fill_a, act_a, hov_a, spec_a) =
+        (m.glass_fill_alpha.points(), m.active_fill_opacity.points(), m.hover_fill_opacity.points(), m.glass_specular_alpha.points());
     let (max_u8, dish_cols) = (f32::from(u8::MAX), (dish_core, dish_rim, accent_rgb, grid_rgb, warm_rgb));
     let skirt_radii = (sc.r_skirt_in, sc.r_skirt_out);
     let sh_cull = params.bevel_width_pt * 2.0;
@@ -108,11 +125,17 @@ pub(crate) fn synthesize_rosette_matrix_rgba(flat: &mut [u8], tex_dim: usize, (x
                 if r >= sc.r_skirt_in - sh_cull {
                     for (arc_deg, arc_act) in [(sc.undo_arc_deg, sc.undo_active_weight), (sc.redo_arc_deg, sc.redo_active_weight)] {
                         let s_arc = vitrea::sdf_curved_stadium_arc_sample(p, sc.hub_center, skirt_radii, arc_deg);
-                        if s_arc.distance <= sh_cull { sh_dist = sh_dist.min(vitrea::sdf_curved_stadium_arc_sample(p - sh_off, sc.hub_center, skirt_radii, arc_deg).distance); }
-                        if s_arc.distance < best_s.distance { (best_s, best_act, best_lift) = (s_arc, arc_act, 0.0); }
+                        if s_arc.distance <= sh_cull {
+                            sh_dist = sh_dist.min(vitrea::sdf_curved_stadium_arc_sample(p - sh_off, sc.hub_center, skirt_radii, arc_deg).distance);
+                        }
+                        if s_arc.distance < best_s.distance {
+                            (best_s, best_act, best_lift) = (s_arc, arc_act, 0.0);
+                        }
                     }
                 }
-                if r <= sc.r_hub + sh_cull { sh_dist = sh_dist.min((p - sh_off - sc.hub_center).length() - sc.r_hub); }
+                if r <= sc.r_hub + sh_cull {
+                    sh_dist = sh_dist.min((p - sh_off - sc.hub_center).length() - sc.r_hub);
+                }
                 let hub_s = vitrea::SdfSample2d { distance: r - sc.r_hub, gradient: outer_grad };
                 let (glass_s, act_w, lift_w) = if hub_s.distance < best_s.distance { (hub_s, 0.0, 0.0) } else { (best_s, best_act.clamp(0.0, 1.0), best_lift.clamp(0.0, 1.0)) };
                 let ao_crease = (1.0 - (glass_s.distance.max(0.0) / (m.active_stroke_width.points() * sc.scale).max(1.0)).clamp(0.0, 1.0)).powi(2) * act_a;
@@ -314,63 +337,37 @@ fn paint_sf_symbol_vector(painter: &Painter, sf: MacSFSymbol, rect: Rect, color:
         MacSFSymbol::AspectRatio => {
             let b = Rect::from_center_size(c, Vec2::splat(r * 2.0));
             painter.rect_stroke(b, 2, stroke, egui::StrokeKind::Inside);
-            let p_tl = b.min + Vec2::new(q * 0.5, q * 0.5);
-            let p_br = b.max - Vec2::new(q * 0.5, q * 0.5);
-            painter.line_segment([p_tl, p_tl + Vec2::new(q, 0.0)], stroke);
-            painter.line_segment([p_tl, p_tl + Vec2::new(0.0, q)], stroke);
-            painter.line_segment([p_br, p_br - Vec2::new(q, 0.0)], stroke);
-            painter.line_segment([p_br, p_br - Vec2::new(0.0, q)], stroke);
+            let (p_tl, p_br) = (b.min + Vec2::splat(q * 0.5), b.max - Vec2::splat(q * 0.5));
+            for seg in [[p_tl, p_tl + Vec2::new(q, 0.0)], [p_tl, p_tl + Vec2::new(0.0, q)], [p_br, p_br - Vec2::new(q, 0.0)], [p_br, p_br - Vec2::new(0.0, q)]] {
+                painter.line_segment(seg, stroke);
+            }
         }
         MacSFSymbol::Scope => {
             painter.circle_stroke(c, r, stroke);
             painter.circle_filled(c, q * 0.5, color);
-            painter.line_segment([c - Vec2::new(r + q * 0.5, 0.0), c - Vec2::new(q, 0.0)], thin);
-            painter.line_segment([c + Vec2::new(q, 0.0), c + Vec2::new(r + q * 0.5, 0.0)], thin);
-            painter.line_segment([c - Vec2::new(0.0, r + q * 0.5), c - Vec2::new(0.0, q)], thin);
-            painter.line_segment([c + Vec2::new(0.0, q), c + Vec2::new(0.0, r + q * 0.5)], thin);
+            for seg in [[c - Vec2::new(r + q * 0.5, 0.0), c - Vec2::new(q, 0.0)], [c + Vec2::new(q, 0.0), c + Vec2::new(r + q * 0.5, 0.0)], [c - Vec2::new(0.0, r + q * 0.5), c - Vec2::new(0.0, q)], [c + Vec2::new(0.0, q), c + Vec2::new(0.0, r + q * 0.5)]] {
+                painter.line_segment(seg, thin);
+            }
         }
         MacSFSymbol::Viewfinder => {
-            let b = Rect::from_center_size(c, Vec2::splat(r * 2.0));
-            painter.rect_stroke(b, 2, stroke, egui::StrokeKind::Inside);
+            painter.rect_stroke(Rect::from_center_size(c, Vec2::splat(r * 2.0)), 2, stroke, egui::StrokeKind::Inside);
             painter.circle_stroke(c, q, thin);
             painter.circle_filled(c, q * 0.5, color);
         }
         MacSFSymbol::PlusSquareOnSquare => {
-            let off = Vec2::new(q * 0.5, q * 0.5);
-            let b1 = Rect::from_center_size(c - off, Vec2::splat(r + q));
-            let b2 = Rect::from_center_size(c + off, Vec2::splat(r + q));
-            painter.rect_stroke(b1, 1, thin, egui::StrokeKind::Inside);
-            painter.rect_stroke(b2, 1, stroke, egui::StrokeKind::Inside);
+            let off = Vec2::splat(q * 0.5);
+            painter.rect_stroke(Rect::from_center_size(c - off, Vec2::splat(r + q)), 1, thin, egui::StrokeKind::Inside);
+            painter.rect_stroke(Rect::from_center_size(c + off, Vec2::splat(r + q)), 1, stroke, egui::StrokeKind::Inside);
         }
         MacSFSymbol::Skew => {
-            let pts = vec![
-                c + Vec2::new(-r + q, -r + q * 0.5),
-                c + Vec2::new(r, -r + q * 0.5),
-                c + Vec2::new(r - q, r - q * 0.5),
-                c + Vec2::new(-r, r - q * 0.5),
-            ];
-            painter.add(Shape::closed_line(pts, stroke));
+            painter.add(Shape::closed_line(vec![c + Vec2::new(-r + q, -r + q * 0.5), c + Vec2::new(r, -r + q * 0.5), c + Vec2::new(r - q, r - q * 0.5), c + Vec2::new(-r, r - q * 0.5)], stroke));
         }
         MacSFSymbol::Scribble => {
-            let p0 = c + Vec2::new(-r, r - q * 0.5);
-            let p1 = c + Vec2::new(-q * 0.5, -r + q * 0.5);
-            let p2 = c + Vec2::new(q * 0.5, r - q * 0.5);
-            let p3 = c + Vec2::new(r, -r + q * 0.5);
-            painter.add(Shape::line(vec![p0, p1, p2, p3], stroke));
+            painter.add(Shape::line(vec![c + Vec2::new(-r, r - q * 0.5), c + Vec2::new(-q * 0.5, -r + q * 0.5), c + Vec2::new(q * 0.5, r - q * 0.5), c + Vec2::new(r, -r + q * 0.5)], stroke));
             painter.circle_filled(c, q * 0.5 + m.border_stroke_width.points(), color);
         }
         MacSFSymbol::Sparkles => {
-            let pts = vec![
-                c + Vec2::new(0.0, -r),
-                c + Vec2::new(q * 0.5, -q * 0.5),
-                c + Vec2::new(r, 0.0),
-                c + Vec2::new(q * 0.5, q * 0.5),
-                c + Vec2::new(0.0, r),
-                c + Vec2::new(-q * 0.5, q * 0.5),
-                c + Vec2::new(-r, 0.0),
-                c + Vec2::new(-q * 0.5, -q * 0.5),
-            ];
-            painter.add(Shape::convex_polygon(pts, color, thin));
+            painter.add(Shape::convex_polygon(vec![c + Vec2::new(0.0, -r), c + Vec2::new(q * 0.5, -q * 0.5), c + Vec2::new(r, 0.0), c + Vec2::new(q * 0.5, q * 0.5), c + Vec2::new(0.0, r), c + Vec2::new(-q * 0.5, q * 0.5), c + Vec2::new(-r, 0.0), c + Vec2::new(-q * 0.5, -q * 0.5)], color, thin));
         }
         MacSFSymbol::PlusCircle => {
             painter.circle_stroke(c, r, stroke);

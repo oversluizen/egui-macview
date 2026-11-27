@@ -126,66 +126,24 @@ fn test_v065_input_cell_control_sizes_fixed_rect_and_alignment() {
     let theme = MacTheme::new(MacAppearance::Aqua);
     let tf = theme.text_field();
 
-    assert_eq!(
-        (
-            tf.regular.height.points(),
-            tf.regular.font_size.points(),
-            tf.regular.corner_radius.points(),
-            tf.regular.padding_horizontal.points()
-        ),
-        (22.0, 13.0, 2.0, 7.0)
-    );
-    assert_eq!(
-        (
-            tf.regular.padding_vertical.as_ref().unwrap().points(),
-            tf.regular.first_baseline_offset_from_top.points(),
-            tf.regular.baseline_offset_from_bottom.points()
-        ),
-        (2.0, 15.0, 6.0)
-    );
-    assert_eq!(
-        (tf.small.height.points(), tf.small.font_size.points(), tf.small.corner_radius.points(), tf.small.padding_horizontal.points()),
-        (19.0, 11.0, 2.0, 5.0)
-    );
+    assert_eq!((tf.regular.height.points(), tf.regular.font_size.points(), tf.regular.corner_radius.points(), tf.regular.padding_horizontal.points()), (22.0, 13.0, 2.0, 7.0));
+    assert_eq!((tf.regular.padding_vertical.as_ref().unwrap().points(), tf.regular.first_baseline_offset_from_top.points(), tf.regular.baseline_offset_from_bottom.points()), (2.0, 15.0, 6.0));
+    assert_eq!((tf.small.height.points(), tf.small.font_size.points(), tf.small.corner_radius.points(), tf.small.padding_horizontal.points()), (19.0, 11.0, 2.0, 5.0));
     assert_eq!((tf.mini.font_size.points(), tf.mini.corner_radius.points(), tf.mini.padding_horizontal.points()), (9.0, 1.5, 4.0));
-    assert_eq!(
-        (tf.compact_infobox.height.points(), tf.compact_infobox.corner_radius.points(), theme.popup_button().corner_radius.points()),
-        (18.0, 2.0, 5.0)
-    );
+    assert_eq!((tf.compact_infobox.height.points(), tf.compact_infobox.corner_radius.points(), theme.popup_button().corner_radius.points()), (18.0, 2.0, 5.0));
 
     let mut v_default = "Default22".to_string();
-    let (mut v_reg, mut v_sm, mut v_hud, mut v_mini) =
-        ("AutoReg".to_string(), "AutoSm".to_string(), "AutoHud".to_string(), "AutoMini".to_string());
+    let (mut v_reg, mut v_sm, mut v_hud, mut v_mini) = ("AutoReg".to_string(), "AutoSm".to_string(), "AutoHud".to_string(), "AutoMini".to_string());
     let (mut v_left, mut v_right, mut default_h) = ("42.0".to_string(), "42.0".to_string(), 0.0);
 
     let shapes = run_pass(&ctx, RawInput::default(), |ui| {
         default_h = MacInputCell::new("def_cell", &mut v_default).theme(&theme).show(ui).rect.height();
-        MacInputCell::new("r_reg", &mut v_reg)
-            .theme(&theme)
-            .fixed_rect(Rect::from_min_size(Pos2::new(10.0, 40.0), Vec2::new(100.0, 22.0)))
-            .show(ui);
-        MacInputCell::new("r_sm", &mut v_sm)
-            .theme(&theme)
-            .fixed_rect(Rect::from_min_size(Pos2::new(10.0, 70.0), Vec2::new(100.0, 19.0)))
-            .show(ui);
-        MacInputCell::new("r_hud", &mut v_hud)
-            .theme(&theme)
-            .fixed_rect(Rect::from_min_size(Pos2::new(10.0, 100.0), Vec2::new(100.0, 18.0)))
-            .show(ui);
-        MacInputCell::new("r_mini", &mut v_mini)
-            .theme(&theme)
-            .fixed_rect(Rect::from_min_size(Pos2::new(10.0, 130.0), Vec2::new(100.0, 16.0)))
-            .show(ui);
-        MacInputCell::new("align_l", &mut v_left)
-            .theme(&theme)
-            .fixed_rect(Rect::from_min_size(Pos2::new(140.0, 40.0), Vec2::new(100.0, 22.0)))
-            .text_align(Align::LEFT)
-            .show(ui);
-        MacInputCell::new("align_r", &mut v_right)
-            .theme(&theme)
-            .fixed_rect(Rect::from_min_size(Pos2::new(140.0, 70.0), Vec2::new(100.0, 22.0)))
-            .text_align(Align::RIGHT)
-            .show(ui);
+        MacInputCell::new("r_reg", &mut v_reg).theme(&theme).fixed_rect(Rect::from_min_size(Pos2::new(10.0, 40.0), Vec2::new(100.0, 22.0))).show(ui);
+        MacInputCell::new("r_sm", &mut v_sm).theme(&theme).fixed_rect(Rect::from_min_size(Pos2::new(10.0, 70.0), Vec2::new(100.0, 19.0))).show(ui);
+        MacInputCell::new("r_hud", &mut v_hud).theme(&theme).fixed_rect(Rect::from_min_size(Pos2::new(10.0, 100.0), Vec2::new(100.0, 18.0))).show(ui);
+        MacInputCell::new("r_mini", &mut v_mini).theme(&theme).fixed_rect(Rect::from_min_size(Pos2::new(10.0, 130.0), Vec2::new(100.0, 16.0))).show(ui);
+        MacInputCell::new("align_l", &mut v_left).theme(&theme).fixed_rect(Rect::from_min_size(Pos2::new(140.0, 40.0), Vec2::new(100.0, 22.0))).text_align(Align::LEFT).show(ui);
+        MacInputCell::new("align_r", &mut v_right).theme(&theme).fixed_rect(Rect::from_min_size(Pos2::new(140.0, 70.0), Vec2::new(100.0, 22.0))).text_align(Align::RIGHT).show(ui);
     });
 
     assert_eq!(default_h, 22.0);
@@ -455,21 +413,33 @@ fn test_v066_help_button_sizes_popup_accent_badge_and_zero_idle_repaint() {
 
     assert_eq!(last_repaint_after, std::time::Duration::MAX);
 
-    let inline_circles: Vec<_> =
-        shapes.iter().filter_map(|cs| if let egui::Shape::Circle(c) = &cs.shape { ((c.center.x - 312.0).abs() < 1.0).then_some(c.radius) } else { None }).collect();
+    let inline_circles: Vec<_> = shapes
+        .iter()
+        .filter_map(|cs| if let egui::Shape::Circle(c) = &cs.shape { ((c.center.x - 312.0).abs() < 1.0).then_some(c.radius) } else { None })
+        .collect();
     assert_eq!(inline_circles, vec![8.0]);
 
-    let help_circles: Vec<_> =
-        shapes.iter().filter_map(|cs| if let egui::Shape::Circle(c) = &cs.shape { ((c.center.x - 357.0).abs() < 1.0).then_some(c.radius) } else { None }).collect();
+    let help_circles: Vec<_> = shapes
+        .iter()
+        .filter_map(|cs| if let egui::Shape::Circle(c) = &cs.shape { ((c.center.x - 357.0).abs() < 1.0).then_some(c.radius) } else { None })
+        .collect();
     assert!(help_circles.iter().all(|&r| (r - 7.0).abs() < 0.01));
 
     let badge_rect = shapes
         .iter()
-        .find_map(|cs| if let egui::Shape::Rect(r) = &cs.shape { (r.fill == theme.control_accent() && (r.rect.width() - 16.0).abs() < 1.5).then_some(r.rect) } else { None })
+        .find_map(|cs| {
+            if let egui::Shape::Rect(r) = &cs.shape {
+                (r.fill == theme.control_accent() && (r.rect.width() - 16.0).abs() < 1.5).then_some(r.rect)
+            } else {
+                None
+            }
+        })
         .expect("MacPopUpButton accent badge rect");
     let popup_text_clip = shapes
         .iter()
-        .find_map(|cs| if let egui::Shape::Text(t) = &cs.shape { t.galley.job.text.contains("1080p").then_some(cs.clip_rect) } else { None })
+        .find_map(
+            |cs| if let egui::Shape::Text(t) = &cs.shape { t.galley.job.text.contains("1080p").then_some(cs.clip_rect) } else { None },
+        )
         .expect("MacPopUpButton text shape");
     assert!(popup_text_clip.max.x <= badge_rect.min.x);
 }
@@ -508,9 +478,7 @@ fn test_v067_mac_box_automatic_vibrancy_on_child_controls() {
         let line_color_in = |target: Rect| -> egui::Color32 {
             fn find_in(s: &egui::Shape, r: Rect) -> Option<egui::Color32> {
                 match s {
-                    egui::Shape::LineSegment { points, stroke } => {
-                        r.expand(2.0).contains(points[0]).then_some(stroke.color)
-                    }
+                    egui::Shape::LineSegment { points, stroke } => r.expand(2.0).contains(points[0]).then_some(stroke.color),
                     egui::Shape::Vec(v) => v.iter().find_map(|x| find_in(x, r)),
                     _ => None,
                 }
@@ -519,14 +487,22 @@ fn test_v067_mac_box_automatic_vibrancy_on_child_controls() {
         };
         let (win_sec, box_sec, win_btn, box_btn, box_chk) =
             (color_of("WinSec"), color_of("BoxSec"), line_color_in(win_btn_rect), line_color_in(box_btn_rect), color_of("BoxChk"));
-        assert_eq!((win_sec, box_sec), (theme.secondary_label_on(theme.window_background()), theme.secondary_label_on(theme.box_background())));
-        assert_eq!((win_btn, box_btn), (theme.secondary_label_on(theme.window_background()), theme.secondary_label_on(theme.box_background())));
+        assert_eq!(
+            (win_sec, box_sec),
+            (theme.secondary_label_on(theme.window_background()), theme.secondary_label_on(theme.box_background()))
+        );
+        assert_eq!(
+            (win_btn, box_btn),
+            (theme.secondary_label_on(theme.window_background()), theme.secondary_label_on(theme.box_background()))
+        );
         assert_eq!(color_of("BoxStackHdr"), theme.secondary_label_on(theme.box_background()));
         assert!(win_sec != box_sec && win_btn != box_btn);
-        assert!(egui_macview::contrast_ratio(box_sec, theme.box_background()) >= 4.5 && egui_macview::contrast_ratio(box_chk, theme.box_background()) >= 3.0);
+        assert!(
+            egui_macview::contrast_ratio(box_sec, theme.box_background()) >= 4.5
+                && egui_macview::contrast_ratio(box_chk, theme.box_background()) >= 3.0
+        );
     }
     let (aqua, dark) = (MacTheme::new(MacAppearance::Aqua), MacTheme::new(MacAppearance::DarkAqua));
     aqua.apply_to_egui(&ctx);
     let _ = run_pass(&ctx, RawInput::default(), |ui| assert_eq!(dark.active_surface(ui), dark.window_background()));
 }
-

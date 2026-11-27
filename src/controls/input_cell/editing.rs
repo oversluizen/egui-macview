@@ -38,14 +38,13 @@ pub(super) fn show_input_cell(cell: MacInputCell<'_>, ui: &mut Ui) -> Response {
     let theme = MacTheme::resolve(cell.theme, ui.ctx());
     let tf_tokens = &theme.control_metrics().text_field;
     let max_r = ui.max_rect();
-    let candidate_h = effective_fixed
-        .map(|r| r.height())
-        .or(cell.height)
-        .or_else(|| (max_r.height().is_finite() && max_r.height() < tf_tokens.auto_size_regular_min_height.points()).then(|| max_r.height()));
+    let candidate_h = effective_fixed.map(|r| r.height()).or(cell.height).or_else(|| {
+        (max_r.height().is_finite() && max_r.height() < tf_tokens.auto_size_regular_min_height.points()).then(|| max_r.height())
+    });
     let mut resolved_size = cell.resolved_control_size();
     if let Some(h) = candidate_h {
-        if h < tf_tokens.auto_size_regular_min_height.points() && resolved_size == MacControlSize::Regular {
-            resolved_size = if !cell.explicit_control_size && h < tf_tokens.auto_size_small_min_height.points() {
+        if !cell.explicit_control_size && h < tf_tokens.auto_size_regular_min_height.points() && resolved_size == MacControlSize::Regular {
+            resolved_size = if h < tf_tokens.auto_size_small_min_height.points() {
                 if h >= tf_tokens.auto_size_compact_min_height.points() {
                     MacControlSize::CompactInfobox
                 } else {
@@ -78,7 +77,13 @@ pub(super) fn show_input_cell(cell: MacInputCell<'_>, ui: &mut Ui) -> Response {
             metrics.font_size.points()
         }
     });
-    let corner_radius = cell.corner_radius.unwrap_or_else(|| metrics.corner_radius.points());
+    let corner_radius = cell.corner_radius.unwrap_or_else(|| {
+        if cell.recessed_pill {
+            metrics.baseline_offset_from_bottom.points()
+        } else {
+            metrics.corner_radius.points()
+        }
+    });
     let enabled = cell.enabled && ui.is_enabled();
     let sense = if enabled { egui::Sense::click_and_drag() } else { egui::Sense::hover() };
     let ppp = ui.ctx().pixels_per_point();
@@ -247,13 +252,18 @@ pub(super) fn show_input_cell(cell: MacInputCell<'_>, ui: &mut Ui) -> Response {
         theme.paint_focus_ring(&painter, rect, corner_radius);
     }
 
+    let surface_bg = theme.active_surface_at(ui, rect.center());
     let bg_color = if cell.liquid_glass_pill {
         theme.effective_control_accent(ui.ctx()).gamma_multiply(alpha_factor)
+    } else if cell.recessed_pill && !show_focus {
+        theme.recessed_pill_fill_on(surface_bg).gamma_multiply(alpha_factor)
     } else {
         theme.control_background().gamma_multiply(alpha_factor)
     };
     let border_stroke = if show_focus || cell.liquid_glass_pill {
         Stroke::new(metrics.border_width.points(), theme.effective_control_accent(ui.ctx()))
+    } else if cell.recessed_pill {
+        Stroke::new(metrics.border_width.points(), theme.recessed_pill_border_on(bg_color))
     } else {
         Stroke::new(metrics.border_width.points(), theme.separator().gamma_multiply(alpha_factor))
     };
@@ -269,10 +279,12 @@ pub(super) fn show_input_cell(cell: MacInputCell<'_>, ui: &mut Ui) -> Response {
         );
     } else {
         painter.rect(rect, CornerRadius::same(corner_radius as u8), bg_color, border_stroke, StrokeKind::Inside);
-        painter.line_segment(
-            [Pos2::new(rect.min.x + 1.0, rect.min.y + 1.0), Pos2::new(rect.max.x - 1.0, rect.min.y + 1.0)],
-            Stroke::new(1.0, theme.input_top_inset_shadow().gamma_multiply(alpha_factor)),
-        );
+        if !cell.recessed_pill {
+            painter.line_segment(
+                [Pos2::new(rect.min.x + 1.0, rect.min.y + 1.0), Pos2::new(rect.max.x - 1.0, rect.min.y + 1.0)],
+                Stroke::new(1.0, theme.input_top_inset_shadow().gamma_multiply(alpha_factor)),
+            );
+        }
     }
 
     let shrink_pad = if effective_fixed.is_some()
@@ -298,7 +310,21 @@ pub(super) fn show_input_cell(cell: MacInputCell<'_>, ui: &mut Ui) -> Response {
         cell.value.clone()
     };
 
-    let font_id = FontId::proportional(font_size);
+    let is_heavy = matches!(
+        cell.font_weight,
+        crate::controls::MacFontWeight::Medium | crate::controls::MacFontWeight::Semibold | crate::controls::MacFontWeight::Bold
+    );
+    let (font_id, has_semibold_family) = if cell.monospace {
+        (FontId::monospace(font_size), false)
+    } else if cell.stylistic_alt {
+        (theme.stylistic_alt_font_id(ui, font_size), false)
+    } else if is_heavy {
+        theme.semibold_font_id(ui, font_size)
+    } else if cell.font_weight == crate::controls::MacFontWeight::Light {
+        (theme.light_font_id(ui, font_size), false)
+    } else {
+        (FontId::proportional(font_size), false)
+    };
     let text_color = if cell.liquid_glass_pill {
         theme.background_style(bg_color).primary_text_color(&theme).gamma_multiply(alpha_factor)
     } else {
@@ -310,8 +336,24 @@ pub(super) fn show_input_cell(cell: MacInputCell<'_>, ui: &mut Ui) -> Response {
         let display_str = if cell.value.is_empty() { cell.placeholder.unwrap_or("") } else { cell.value.as_str() };
         if !display_str.is_empty() {
             let draw_color = if cell.value.is_empty() { hint_color } else { text_color };
-            let galley = theme.layout_tracked_galley(ui, display_str, font_id.clone(), draw_color, f32::INFINITY);
             let lm = theme.label_metrics();
+            let galley = if let Some(split_idx) = (!cell.value.is_empty()
+                && (display_str.starts_with('=') || cell.numeric_config.is_some()))
+            .then(|| display_str.rfind(" ("))
+            .flatten()
+            .filter(|&i| i > 0 && display_str.ends_with(')') && display_str[i + 2..display_str.len() - 1].trim().parse::<f64>().is_ok())
+            {
+                let (prefix, suffix) = display_str.split_at(split_idx);
+                let sec_color = theme.secondary_label().gamma_multiply(alpha_factor);
+                let sec_font = FontId::proportional(lm.small_font_size.points());
+                let mut job = egui::text::LayoutJob::default();
+                job.wrap.max_width = f32::INFINITY;
+                job.append(prefix, 0.0, theme.tracked_text_format(font_id.clone(), draw_color));
+                job.append(suffix, 0.0, theme.tracked_text_format(sec_font, sec_color));
+                ui.painter().layout_job(job)
+            } else {
+                theme.layout_tracked_galley(ui, display_str, font_id.clone(), draw_color, f32::INFINITY)
+            };
             let ascender = match resolved_size {
                 MacControlSize::Regular | MacControlSize::Large => lm.regular_ascender.points(),
                 MacControlSize::Small | MacControlSize::CompactInfobox => lm.small_ascender.points(),
@@ -325,7 +367,18 @@ pub(super) fn show_input_cell(cell: MacInputCell<'_>, ui: &mut Ui) -> Response {
                 Align::Center => inner_rect.center().x - galley.size().x * 0.5,
                 Align::Min => inner_rect.left(),
             };
-            painter.with_clip_rect(inner_rect).galley(Pos2::new(text_x, text_y), galley, draw_color);
+            let clip_p = painter.with_clip_rect(inner_rect);
+            clip_p.galley(Pos2::new(text_x, text_y), galley.clone(), draw_color);
+            if is_heavy && !has_semibold_family {
+                let boost = match cell.font_weight {
+                    crate::controls::MacFontWeight::Bold => lm.bold_stroke_boost.points(),
+                    crate::controls::MacFontWeight::Medium | crate::controls::MacFontWeight::Semibold => lm.semibold_stroke_boost.points(),
+                    crate::controls::MacFontWeight::Light | crate::controls::MacFontWeight::Regular => 0.0,
+                };
+                if boost > 0.0 {
+                    clip_p.galley(Pos2::new(text_x + boost, text_y), galley, draw_color);
+                }
+            }
         }
     }
 

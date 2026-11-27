@@ -34,15 +34,7 @@ pub(crate) struct MarblePaintSpec {
     pub(crate) accent_col: Color32,
 }
 
-type MarbleTexGeom = (
-    vitrea::GlamVec2,
-    vitrea::GlamVec2,
-    f32,
-    f32,
-    (f32, f32),
-    ((f32, f32), (f32, f32), f32, f32),
-    (f32, f32),
-);
+type MarbleTexGeom = (vitrea::GlamVec2, vitrea::GlamVec2, f32, f32, (f32, f32), ((f32, f32), (f32, f32), f32, f32), (f32, f32));
 
 fn color_to_rgb_norm(c: Color32) -> [f32; 3] {
     let [r, g, b, _] = c.to_array();
@@ -69,10 +61,7 @@ fn eval_bowl_backdrop_at(
     let b_s = blur_scale.max(1.0);
     let bw = (m.active_stroke_width.points() * 2.0 * b_s).max(1.0);
     let grid_step = puck_r.max(2.0);
-    let grid_d = (d_vec.x - (d_vec.x / grid_step).round() * grid_step)
-        .abs()
-        .min((d_vec.y - (d_vec.y / grid_step).round() * grid_step).abs())
-        .min((r - r_bowl).abs());
+    let grid_d = (d_vec.x - (d_vec.x / grid_step).round() * grid_step).abs().min((d_vec.y - (d_vec.y / grid_step).round() * grid_step).abs()).min((r - r_bowl).abs());
     let grid_t = (1.0 - (grid_d / bw).clamp(0.0, 1.0)).powi(2) * (m.hover_fill_opacity.points() / (b_s * b_s));
     rgb = [0, 1, 2].map(|ch| rgb[ch] * (1.0 - grid_t) + dot_rgb[ch] * grid_t);
     if ring_d <= bw * 2.0 {
@@ -105,19 +94,23 @@ fn paint_marble_bowl_region_rgba(
 ) {
     let is_light = theme.appearance == MacAppearance::Aqua;
     let bowl_core_col = theme.window_background();
-    let (bowl_core, bowl_rim, passive_tint, accent_rgb, dot_rgb, shadow_rgb) = (
-        color_to_rgb_norm(bowl_core_col),
-        color_to_rgb_norm(if is_light { theme.box_background() } else { theme.control_background() }),
-        color_to_rgb_norm(theme.specular_rim_top()),
-        color_to_rgb_norm(accent_col),
-        color_to_rgb_norm(theme.secondary_label_on(bowl_core_col)),
-        color_to_rgb_norm(theme.drop_shadow()),
-    );
+    let bowl_core = color_to_rgb_norm(bowl_core_col);
+    let bowl_rim = color_to_rgb_norm(if is_light { theme.box_background() } else { theme.control_background() });
+    let passive_tint = color_to_rgb_norm(theme.specular_rim_top());
+    let accent_rgb = color_to_rgb_norm(accent_col);
+    let dot_rgb = color_to_rgb_norm(theme.secondary_label_on(bowl_core_col));
+    let shadow_rgb = color_to_rgb_norm(theme.drop_shadow());
     let params = vitrea::LiquidGlassOpticalParams {
-        ior_glass: m.ior_glass.points(), ior_dispersion_rgb: [m.ior_red.points(), m.ior_green.points(), m.ior_blue.points()],
-        fresnel_f0: m.fresnel_f0.points(), bevel_width_pt: puck_r, dome_thickness_pt: puck_r * 0.5,
-        vibrancy_chroma_boost: m.vibrancy_chroma_boost.points(), meniscus_merge_k_pt: m.meniscus_merge_k_pt.points() * scale,
-        shadow_decay_length_pt: (puck_r * 0.5).max(2.0), glare_angle_rad: std::f32::consts::FRAC_PI_4, ..Default::default()
+        ior_glass: m.ior_glass.points(),
+        ior_dispersion_rgb: [m.ior_red.points(), m.ior_green.points(), m.ior_blue.points()],
+        fresnel_f0: m.fresnel_f0.points(),
+        bevel_width_pt: puck_r,
+        dome_thickness_pt: puck_r * 0.5,
+        vibrancy_chroma_boost: m.vibrancy_chroma_boost.points(),
+        meniscus_merge_k_pt: m.meniscus_merge_k_pt.points() * scale,
+        shadow_decay_length_pt: (puck_r * 0.5).max(2.0),
+        glare_angle_rad: std::f32::consts::FRAC_PI_4,
+        ..Default::default()
     };
     let stretch_gains = (m.viscous_stretch_gain.points(), m.viscous_press_gain.points());
     let vel_off = marble_c - hub_c;
@@ -134,7 +127,6 @@ fn paint_marble_bowl_region_rgba(
     } else {
         (0..tex_dim, 0..tex_dim)
     };
-
     for y in y_range {
         for x in x_range.clone() {
             let p = vitrea::GlamVec2::new(x as f32 + 0.5, y as f32 + 0.5);
@@ -175,7 +167,6 @@ fn paint_marble_bowl_region_rgba(
             } else {
                 0.0
             };
-
             let dish_here = eval_bowl_backdrop_at(p, b_geom, b_cols, 1.0, m);
             let mut floor_rgb = [0, 1, 2].map(|ch| dish_here[ch] * (1.0 - exp_sh) + shadow_rgb[ch] * exp_sh);
             if caus_t > 0.0 {
@@ -196,7 +187,6 @@ fn paint_marble_bowl_region_rgba(
                 floor_rgb = shadow_rgb;
                 bowl_sh.max(exp_sh.clamp(0.0, act_a))
             };
-
             let surf = vitrea::evaluate_glass_surface_sample(p, glass_s, &params, if is_marble { cursor_pt } else { None }, puck_r * 2.0);
             let idx = (y * tex_dim + x) * 4;
             if surf.coverage <= 0.0 {
@@ -216,7 +206,11 @@ fn paint_marble_bowl_region_rgba(
             let lch_rgba = vitrea::compose_dielectric_lch_pixel(sharp_rgb, blur_rgb, [tint_rgb[0], tint_rgb[1], tint_rgb[2], tint_a], &surf, &params, 1.0, glare_g);
             let s_bev = ((-glass_s.distance) / params.bevel_width_pt.max(1.0)).clamp(0.0, 1.0);
             let rim_crest = (1.0 - (s_bev / (act_a + hov_a)).clamp(0.0, 1.0)).powi(2);
-            let spec_pin = if is_marble { (surf.key_illumination.powi(2) * surf.dome_elevation * hov_a + surf.fresnel_specular * spec_a * rim_crest).clamp(0.0, 1.0) } else { ((surf.fresnel_specular * spec_a + surf.bipolar_glare_factor * hov_a) * rim_crest).clamp(0.0, 1.0) };
+            let spec_pin = if is_marble {
+                (surf.key_illumination.powi(2) * surf.dome_elevation * hov_a + surf.fresnel_specular * spec_a * rim_crest).clamp(0.0, 1.0)
+            } else {
+                ((surf.fresnel_specular * spec_a + surf.bipolar_glare_factor * hov_a) * rim_crest).clamp(0.0, 1.0)
+            };
             let g_rgb = [0, 1, 2].map(|ch| ((lch_rgba[ch] + (1.0 - lch_rgba[ch]) * spec_pin).clamp(0.0, 1.0) * surf.coverage + floor_rgb[ch] * (1.0 - surf.coverage)).clamp(0.0, 1.0));
             let out_a = (surf.coverage + (1.0 - surf.coverage) * floor_a).clamp(0.0, 1.0);
             flat[idx..idx + 4].copy_from_slice(&[(g_rgb[0] * max_u8).round() as u8, (g_rgb[1] * max_u8).round() as u8, (g_rgb[2] * max_u8).round() as u8, (out_a * max_u8).round() as u8]);
@@ -229,7 +223,8 @@ pub(crate) fn paint_3d_recessed_bowl(painter: &Painter, spec: MarblePaintSpec, t
 
     let vel_off = spec.marble_center - spec.hub_center;
     let press_amt = (vel_off.length() / (spec.puck_r * 2.0).max(1.0)).clamp(0.0, 1.0);
-    let probe_pt = super::liquid_glass::deform_viscous_droplet_point(spec.marble_center, spec.marble_center, vel_off, spec.puck_r * 2.0, press_amt);
+    let probe_pt =
+        super::liquid_glass::deform_viscous_droplet_point(spec.marble_center, spec.marble_center, vel_off, spec.puck_r * 2.0, press_amt);
     let probe_n = super::liquid_glass::dome_surface_normal_3d(probe_pt, spec.marble_center, spec.puck_r, spec.puck_r);
     let _ = super::liquid_glass::evaluate_vertex_cursor_fresnel_lighting(probe_pt, probe_n, Some(spec.marble_center), spec.puck_r * 2.0);
 
@@ -240,18 +235,32 @@ pub(crate) fn paint_3d_recessed_bowl(painter: &Painter, spec: MarblePaintSpec, t
     let to_tex = |pt: Pos2| vitrea::GlamVec2::new((pt.x - bowl_rect.min.x) * px_scale, (pt.y - bowl_rect.min.y) * px_scale);
     let mut static_hasher = std::collections::hash_map::DefaultHasher::new();
     (tex_dim, theme.appearance == MacAppearance::Aqua, spec.accent_col.to_array()).hash(&mut static_hasher);
-    (((spec.undo_active_weight * max_u8).round() as i32), ((spec.redo_active_weight * max_u8).round() as i32), spec.undo_arc_deg.0.to_bits()).hash(&mut static_hasher);
+    (
+        ((spec.undo_active_weight * max_u8).round() as i32),
+        ((spec.redo_active_weight * max_u8).round() as i32),
+        spec.undo_arc_deg.0.to_bits(),
+    )
+        .hash(&mut static_hasher);
     let static_hash = static_hasher.finish();
     let mut frame_hasher = static_hasher;
     (((vel_off.x * 2.0).round() as i32), ((vel_off.y * 2.0).round() as i32)).hash(&mut frame_hasher);
     let state_hash = frame_hasher.finish();
 
-    let (base_cache_id, cache_id, ctx) = (spec.id_source.with("lg_marble_bowl_static_base"), spec.id_source.with("lg_marble_bowl_ray_tex"), painter.ctx());
+    let (base_cache_id, cache_id, ctx) =
+        (spec.id_source.with("lg_marble_bowl_static_base"), spec.id_source.with("lg_marble_bowl_ray_tex"), painter.ctx());
     let tex_handle = match ctx.data(|d| d.get_temp::<(u64, egui::TextureHandle)>(cache_id)) {
         Some((prev_h, handle)) if prev_h == state_hash => handle,
         prev_opt => {
             let hub_tex = to_tex(spec.hub_center);
-            let geom_base = (hub_tex, hub_tex, r_outer * px_scale, r_bowl * px_scale, (spec.r_skirt_in * px_scale, spec.r_skirt_out * px_scale), (spec.undo_arc_deg, spec.redo_arc_deg, spec.undo_active_weight, spec.redo_active_weight), (spec.puck_r * px_scale, s * px_scale));
+            let geom_base = (
+                hub_tex,
+                hub_tex,
+                r_outer * px_scale,
+                r_bowl * px_scale,
+                (spec.r_skirt_in * px_scale, spec.r_skirt_out * px_scale),
+                (spec.undo_arc_deg, spec.redo_arc_deg, spec.undo_active_weight, spec.redo_active_weight),
+                (spec.puck_r * px_scale, s * px_scale),
+            );
             let base_arc = match ctx.data(|d| d.get_temp::<(u64, std::sync::Arc<Vec<u8>>)>(base_cache_id)) {
                 Some((bh, arc)) if bh == static_hash && arc.len() == tex_dim * tex_dim * 4 => arc,
                 _ => {
@@ -267,13 +276,22 @@ pub(crate) fn paint_3d_recessed_bowl(painter: &Painter, spec: MarblePaintSpec, t
             geom_dyn.1 = to_tex(spec.marble_center);
             paint_marble_bowl_region_rgba(&mut flat, tex_dim, true, geom_dyn, spec.accent_col, theme, m);
             let img = ColorImage::from_rgba_unmultiplied([tex_dim, tex_dim], &flat);
-            let handle = if let Some((_, mut existing)) = prev_opt { existing.set(img, egui::TextureOptions::LINEAR); existing } else { ctx.load_texture("vitrea_marble_lg", img, egui::TextureOptions::LINEAR) };
+            let handle = if let Some((_, mut existing)) = prev_opt {
+                existing.set(img, egui::TextureOptions::LINEAR);
+                existing
+            } else {
+                ctx.load_texture("vitrea_marble_lg", img, egui::TextureOptions::LINEAR)
+            };
             ctx.data_mut(|d| d.insert_temp(cache_id, (state_hash, handle.clone())));
             handle
         }
     };
     let mut mesh = egui::epaint::Mesh::with_texture(tex_handle.id());
-    mesh.add_rect_with_uv(bowl_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), Color32::from(egui::epaint::Hsva::new(0.0, 0.0, 1.0, 1.0)));
+    mesh.add_rect_with_uv(
+        bowl_rect,
+        Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
+        Color32::from(egui::epaint::Hsva::new(0.0, 0.0, 1.0, 1.0)),
+    );
     painter.add(Shape::mesh(mesh));
 
     let fine_r = r_bowl * m.joystick_fine_ratio.points();
@@ -431,9 +449,8 @@ impl<'a> MacFreeJoystickBowl<'a> {
         let mut mem = ui.ctx().data_mut(|d| d.get_temp::<FreeJoystickMemory>(mem_id).unwrap_or_default());
 
         let now = ui.input(|i| i.time);
-        let pointer_pos = response
-            .interact_pointer_pos()
-            .or_else(|| ui.input(|i| i.pointer.hover_pos().or_else(|| i.pointer.latest_pos())));
+        let pointer_pos =
+            response.interact_pointer_pos().or_else(|| ui.input(|i| i.pointer.hover_pos().or_else(|| i.pointer.latest_pos())));
         let (hovered_undo, hovered_redo) = pointer_pos
             .map(|pos| hit_test_undo_redo_arcs(pos, hub_center, (r_outer, r_skirt_out), arcs, (undo_rect, redo_rect), m))
             .unwrap_or((false, false));
@@ -491,50 +508,14 @@ impl<'a> MacFreeJoystickBowl<'a> {
         let painter = ui.painter_at(rect.intersect(ui.clip_rect()));
         let marble_center = hub_center + animated_offset;
         let puck_r = m.joystick_puck_radius.points() * (s + s * 0.5);
-        let undo_act = if hovered_undo && self.can_undo { 1.0 } else { 0.0 };
-        let redo_act = if hovered_redo && self.can_redo { 1.0 } else { 0.0 };
+        let (undo_act, redo_act) = (if hovered_undo && self.can_undo { 1.0 } else { 0.0 }, if hovered_redo && self.can_redo { 1.0 } else { 0.0 });
         paint_3d_recessed_bowl(
             &painter,
-            MarblePaintSpec {
-                id_source: self.id_source,
-                hub_center,
-                marble_center,
-                r_outer,
-                r_bowl: r_clover_out,
-                r_skirt_in,
-                r_skirt_out,
-                undo_arc_deg: arcs.0,
-                redo_arc_deg: arcs.1,
-                undo_active_weight: undo_act,
-                redo_active_weight: redo_act,
-                puck_r,
-                scale: s,
-                accent_col,
-            },
+            MarblePaintSpec { id_source: self.id_source, hub_center, marble_center, r_outer, r_bowl: r_clover_out, r_skirt_in, r_skirt_out, undo_arc_deg: arcs.0, redo_arc_deg: arcs.1, undo_active_weight: undo_act, redo_active_weight: redo_act, puck_r, scale: s, accent_col },
             theme,
             m,
         );
-
-        paint_undo_redo_crescent_arcs(
-            &painter,
-            theme,
-            m,
-            (hub_center, r_skirt_in, r_skirt_out, s),
-            arcs,
-            UndoRedoPaintStyle { can_undo: self.can_undo, can_redo: self.can_redo, hovered_undo, hovered_redo, accent_col },
-        );
-
-        MacFreeJoystickResponse {
-            response,
-            nudge_delta,
-            marble_center,
-            hub_center,
-            undo_clicked,
-            redo_clicked,
-            undo_rect,
-            redo_rect,
-            effective_glass_accent: accent_col,
-            taptic_event,
-        }
+        paint_undo_redo_crescent_arcs(&painter, theme, m, (hub_center, r_skirt_in, r_skirt_out, s), arcs, UndoRedoPaintStyle { can_undo: self.can_undo, can_redo: self.can_redo, hovered_undo, hovered_redo, accent_col });
+        MacFreeJoystickResponse { response, nudge_delta, marble_center, hub_center, undo_clicked, redo_clicked, undo_rect, redo_rect, effective_glass_accent: accent_col, taptic_event }
     }
 }

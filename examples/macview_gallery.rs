@@ -237,7 +237,10 @@ impl GalleryApp {
             Stroke::new(1.0, theme.separator()),
         );
 
-        let menu_inner_rect = Rect::from_min_max(pos2(menu_bar_rect.min.x + theme.stack_view().default_spacing.points(), menu_bar_rect.min.y), menu_bar_rect.max);
+        let menu_inner_rect = Rect::from_min_max(
+            pos2(menu_bar_rect.min.x + theme.stack_view().default_spacing.points(), menu_bar_rect.min.y),
+            menu_bar_rect.max,
+        );
         let mut menu_ui = ui.new_child(
             egui::UiBuilder::new().id_salt("gallery_menu_bar").max_rect(menu_inner_rect).layout(Layout::left_to_right(Align::Center)),
         );

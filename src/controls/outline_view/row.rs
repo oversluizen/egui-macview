@@ -42,6 +42,41 @@ impl<'a> MacOutlineRow<'a> {
         self.cursor_x += size + self.theme.outline_view().content_spacing.points();
     }
 
+    /// Renders a leading template icon (`16×16 pt`, `accessory_size`) tinted with `tint` (e.g. `theme.effective_control_accent`).
+    pub fn leading_icon(&mut self, tint: egui::Color32, drawer: impl FnOnce(&Painter, Rect, egui::Color32)) {
+        let size = self.theme.outline_view().accessory_size.points();
+        let rect = Rect::from_center_size(Pos2::new(self.cursor_x + size * 0.5, self.row_rect.center().y), Vec2::splat(size));
+        let eff_tint = if self.selected {
+            self.theme.selected_control_background_style().primary_text_color(self.theme)
+        } else {
+            tint
+        };
+        let painter = self.ui.painter_at(rect);
+        drawer(&painter, rect, eff_tint);
+        self.cursor_x += size + self.theme.outline_view().accessory_spacing.points();
+    }
+
+    /// Renders a right-aligned source-list count badge (`GSSourceListBadgeCell`, e.g. `"0"`, `"7"`) before the row label.
+    pub fn badge(&mut self, text: &str) {
+        if text.is_empty() {
+            return;
+        }
+        let metrics = self.theme.outline_view();
+        let (font_id, _) = self.theme.semibold_font_id(self.ui, metrics.header_font_size.points());
+        let col = if self.selected {
+            self.theme.selected_control_background_style().primary_text_color(self.theme)
+        } else {
+            self.theme.secondary_label()
+        };
+        let max_badge_w = metrics.accessory_size.points() * 2.0;
+        let galley = self.theme.layout_tracked_galley(self.ui, text, font_id, col, max_badge_w);
+        let bw = galley.size().x;
+        self.accessory_cursor_right -= bw + metrics.edge_padding.points();
+        let pos = Pos2::new(self.accessory_cursor_right, self.row_rect.center().y - galley.size().y * 0.5);
+        self.ui.painter_at(self.row_rect).galley(pos, galley, col);
+        self.accessory_cursor_right -= metrics.accessory_spacing.points();
+    }
+
     /// Renders the primary text label of the row with Apple HIG optical tracking and elision.
     pub fn label(&mut self, text: &str) {
         let spacing = self.theme.outline_view().content_spacing.points();

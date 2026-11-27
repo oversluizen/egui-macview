@@ -27,7 +27,7 @@ impl ValueTransformer {
     #[inline]
     pub fn apply_bool(&self, val: bool) -> bool {
         match self {
-            Self::NegateBoolean => !val,
+            Self::NegateBoolean | Self::IsNil => !val,
             _ => val,
         }
     }
@@ -36,10 +36,8 @@ impl ValueTransformer {
     #[inline]
     pub fn apply_str(&self, val: &str) -> bool {
         match self {
-            Self::IsNotNil => !val.is_empty(),
-            Self::IsNil => val.is_empty(),
-            Self::NegateBoolean => val.is_empty(),
-            Self::Identity | Self::Custom(_) => !val.is_empty(),
+            Self::IsNotNil | Self::Identity | Self::Custom(_) => !val.is_empty(),
+            Self::IsNil | Self::NegateBoolean => val.is_empty(),
         }
     }
 }
@@ -234,7 +232,7 @@ fn apply_attr(r: &mut Rect, attr: ConstraintAttr, rel: ConstraintRelation, val: 
 }
 
 /// Evaluates an inline arithmetic expression (`+`, `-`, `*`, `/`, parentheses, unary `-`)
-/// for `NumberField` (`GSCalculatingNumberFormatter` / `NSNumberFormatter`, `REQ-013-02E`).
+/// for `NumberField` (`NSNumberFormatter`, `REQ-013-02E`).
 pub fn evaluate_arithmetic_expr(input: &str) -> Option<f64> {
     struct Parser<'a> {
         bytes: &'a [u8],
@@ -333,5 +331,223 @@ pub fn evaluate_arithmetic_expr(input: &str) -> Option<f64> {
         Some(val)
     } else {
         None
+    }
+}
+
+/// Returns the macOS AppKit `-[NSView alignmentRectInsets]` (`[top, left, bottom, right]` in points)
+/// for a given [`crate::scene::ir::SceneNodeKind`], verified against live macOS AppKit telemetry
+/// (`REQ-013-10.1` & `REQ-013-10.2`).
+pub fn appkit_alignment_rect_insets(kind: &crate::scene::ir::SceneNodeKind) -> [f32; 4] {
+    use crate::scene::ir::SceneNodeKind;
+    match kind {
+        SceneNodeKind::Label => [0.0, 2.0, 0.0, 2.0],
+        SceneNodeKind::ComboBox { .. } => [1.0, 1.0, 2.0, 3.0],
+        SceneNodeKind::Checkbox => [1.0, 2.0, 1.0, 0.0],
+        SceneNodeKind::PushButton { .. } => [1.0, 1.0, 1.0, 1.0],
+        _ => [0.0, 0.0, 0.0, 0.0],
+    }
+}
+
+pub(crate) fn unroll_ibtool_nsmatrix(
+    st: &mut crate::scene::nib_ibtool::IbDecodeState<'_>,
+    child_obj: usize,
+    parent_node_id: crate::scene::ir::NodeId,
+) {
+    use crate::scene::ir::{NodeId, SceneNodeKind, VisibilityRule};
+    use crate::scene::nib_frontend::mk_node;
+    use crate::scene::nib_ibtool::IbVal;
+    let mut m_frame = st.graph.resolve_rect(child_obj).unwrap_or([0.0, 0.0, 170.0, 52.0]);
+    let root_flipped = st.nodes.first().is_some_and(|n| matches!(n.kind, SceneNodeKind::Container { is_flipped: true }));
+    if !root_flipped {
+        if let Some(p_node) = st.nodes.iter().find(|n| n.id == parent_node_id) {
+            if p_node.parent.is_some() {
+                m_frame[0] += p_node.nib_frame[0];
+                m_frame[1] += p_node.nib_frame[1];
+            }
+        }
+    }
+    let cells =
+        st.graph.prop_val(child_obj, "NSCells").and_then(IbVal::as_obj_ref).map(|a| st.graph.resolve_array_refs(a)).unwrap_or_default();
+    let matrix_cell_cls = cells.iter().find_map(|&c| st.graph.prop_val(c, "NSClassName").and_then(|v| st.graph.resolve_str(v)));
+    if matrix_cell_cls.as_deref().is_some_and(|s| s.contains("ColorLabel")) {
+        let ib_id = ["NSReuseIdentifierKey", "NSUserInterfaceItemIdentifier", "NSIdentifier", "NSID"]
+            .into_iter()
+            .find_map(|k| st.graph.prop_val(child_obj, k).and_then(|v| st.graph.resolve_str(v)))
+            .unwrap_or_else(|| format!("_NS:{child_obj}"));
+        let nid = NodeId(st.next_id);
+        st.next_id += 1;
+        let mut t_node = mk_node(
+            nid.0,
+            &ib_id,
+            Some(parent_node_id.0),
+            vec![],
+            SceneNodeKind::TagColorPicker,
+            "",
+            "",
+            "small",
+            m_frame,
+            0,
+            None,
+            None,
+            None,
+            VisibilityRule::Always,
+        );
+        t_node.custom_class = Some("NSMatrix".into());
+        t_node.cell_class = matrix_cell_cls;
+        if let Some(p_node) = st.nodes.iter_mut().find(|n| n.id == parent_node_id) {
+            p_node.children.push(nid);
+        }
+        st.obj_to_node_idx.insert(child_obj, st.nodes.len());
+        st.nodes.push(t_node);
+        return;
+    }
+    let row_cnt = cells.len().max(1);
+    let row_h = (m_frame[3] / row_cnt as f32).max(16.0);
+    for (r_idx, cell_obj) in cells.into_iter().enumerate() {
+        let nid = NodeId(st.next_id);
+        st.next_id += 1;
+        let cell_title = st
+            .graph
+            .prop_val(cell_obj, "NSContents")
+            .or_else(|| st.graph.prop_val(cell_obj, "NSTitle"))
+            .and_then(|v| st.graph.resolve_str(v))
+            .unwrap_or_default();
+        let cell_y = m_frame[1] + ((row_cnt - 1 - r_idx) as f32) * row_h;
+        let cell_rect = [m_frame[0], cell_y, m_frame[2], row_h];
+        let r_node = mk_node(
+            nid.0,
+            &format!("nib-matrix-{child_obj}-{r_idx}"),
+            Some(parent_node_id.0),
+            vec![],
+            SceneNodeKind::RadioButton,
+            &cell_title,
+            "",
+            "regular",
+            cell_rect,
+            0,
+            None,
+            None,
+            None,
+            VisibilityRule::Always,
+        );
+        if let Some(p_node) = st.nodes.iter_mut().find(|n| n.id == parent_node_id) {
+            p_node.children.push(nid);
+        }
+        st.obj_to_node_idx.insert(cell_obj, st.nodes.len());
+        st.nodes.push(r_node);
+    }
+}
+
+pub(crate) fn collect_ibtool_subviews(
+    st: &mut crate::scene::nib_ibtool::IbDecodeState<'_>,
+    parent_view_obj: usize,
+    parent_node_id: crate::scene::ir::NodeId,
+) {
+    use crate::scene::ir::{NodeId, SceneNodeKind, VisibilityRule};
+    use crate::scene::nib_ibtool::IbVal;
+    use crate::scene::nib_ibtool_widgets::build_ibtool_node;
+
+    let subviews = st
+        .graph
+        .prop_val(parent_view_obj, "NSSubviews")
+        .and_then(IbVal::as_obj_ref)
+        .map(|arr| st.graph.resolve_array_refs(arr))
+        .unwrap_or_default();
+    for child_obj in subviews {
+        if st.graph.obj_class(child_obj) == "NSMatrix" {
+            unroll_ibtool_nsmatrix(st, child_obj, parent_node_id);
+            continue;
+        }
+        let nid = NodeId(st.next_id);
+        st.next_id += 1;
+        let node = build_ibtool_node(st, child_obj, nid, parent_node_id);
+        let is_box = matches!(node.kind, SceneNodeKind::BoxContainer);
+        let raw_c = st.graph.obj_class(child_obj);
+        let custom_c = st.graph.prop_val(child_obj, "NSClassName").and_then(|v| st.graph.resolve_str(v)).unwrap_or_default();
+        let orig_c = st.graph.prop_val(child_obj, "NSOriginalClassName").and_then(|v| st.graph.resolve_str(v)).unwrap_or_default();
+        let eff_c = if !custom_c.is_empty() {
+            custom_c.as_str()
+        } else if !orig_c.is_empty() {
+            orig_c.as_str()
+        } else {
+            raw_c
+        };
+        let is_container_view =
+            (matches!(eff_c, "NSView" | "NSCustomView" | "NSSplitView" | "NSStackView" | "NSStackViewContainer" | "NSClipView")
+                || (eff_c.ends_with("View")
+                    && !eff_c.contains("Table")
+                    && !eff_c.contains("Outline")
+                    && !eff_c.contains("Text")
+                    && !eff_c.contains("Image")
+                    && !eff_c.contains("Tab")
+                    && !eff_c.contains("Scroll")))
+                && st.graph.prop_val(child_obj, "NSSubviews").is_some();
+        if let Some(p_node) = st.nodes.iter_mut().find(|n| n.id == parent_node_id) {
+            p_node.children.push(nid);
+        }
+        let cur_node_idx = st.nodes.len();
+        st.obj_to_node_idx.insert(child_obj, cur_node_idx);
+        st.nodes.push(node);
+        if is_box {
+            if let Some(cv_obj) = st.graph.prop_val(child_obj, "NSContentView").and_then(IbVal::as_obj_ref) {
+                st.obj_to_node_idx.insert(cv_obj, cur_node_idx);
+                collect_ibtool_subviews(st, cv_obj, nid);
+            } else if st.graph.prop_val(child_obj, "NSSubviews").is_some() {
+                collect_ibtool_subviews(st, child_obj, nid);
+            }
+        } else if is_container_view {
+            collect_ibtool_subviews(st, child_obj, nid);
+        } else if eff_c.contains("ScrollView")
+            && !matches!(st.nodes.last().map(|n| &n.kind), Some(SceneNodeKind::TableView { .. } | SceneNodeKind::CustomCanvasSlot { .. }))
+        {
+            if let Some(doc_obj) = crate::scene::nib_varint::resolve_scroll_doc_view(st.graph, child_obj) {
+                st.obj_to_node_idx.insert(doc_obj, cur_node_idx);
+                collect_ibtool_subviews(st, doc_obj, nid);
+            } else if st.graph.prop_val(child_obj, "NSSubviews").is_some() {
+                collect_ibtool_subviews(st, child_obj, nid);
+            }
+        } else if matches!(st.nodes.last().map(|n| &n.kind), Some(SceneNodeKind::TabView { .. })) {
+            if let Some(tab_arr) = st.graph.prop_val(child_obj, "NSTabViewItems").and_then(IbVal::as_obj_ref) {
+                for (tab_index, ti) in st.graph.resolve_array_refs(tab_arr).into_iter().enumerate() {
+                    if let Some(tv_view) = st.graph.prop_val(ti, "NSView").and_then(IbVal::as_obj_ref) {
+                        let tv_cls = st.graph.obj_class(tv_view);
+                        let tv_orig =
+                            st.graph.prop_val(tv_view, "NSOriginalClassName").and_then(|v| st.graph.resolve_str(v)).unwrap_or_default();
+                        let start_idx = st.nodes.len();
+                        if tv_cls.contains("ScrollView") || tv_orig.contains("ScrollView") || tv_cls == "NSClassSwapper" {
+                            let sub_id = NodeId(st.next_id);
+                            st.next_id += 1;
+                            let mut sub_node = build_ibtool_node(st, tv_view, sub_id, nid);
+                            sub_node.visibility = VisibilityRule::WhenTabSelected { tab_view: nid, tab_index };
+                            if let Some(p_node) = st.nodes.iter_mut().find(|n| n.id == nid) {
+                                p_node.children.push(sub_id);
+                            }
+                            let sub_idx = st.nodes.len();
+                            st.obj_to_node_idx.insert(tv_view, sub_idx);
+                            if let Some(doc_obj) = crate::scene::nib_varint::resolve_scroll_doc_view(st.graph, tv_view) {
+                                st.obj_to_node_idx.insert(doc_obj, sub_idx);
+                            }
+                            st.nodes.push(sub_node);
+                        } else {
+                            let p_rect = st.nodes.iter().find(|n| n.id == nid).map(|n| n.nib_frame).unwrap_or_default();
+                            st.obj_to_node_idx.insert(tv_view, cur_node_idx);
+                            let before_tab = st.nodes.len();
+                            collect_ibtool_subviews(st, tv_view, nid);
+                            for sn in &mut st.nodes[before_tab..] {
+                                if sn.parent == Some(nid) && sn.nib_frame[0] == 0.0 && sn.nib_frame[1] == 0.0 {
+                                    sn.nib_frame[0] = p_rect[0];
+                                    sn.nib_frame[1] = p_rect[1];
+                                }
+                            }
+                        }
+                        for sub_node in &mut st.nodes[start_idx..] {
+                            if matches!(sub_node.visibility, VisibilityRule::Always) {
+                                sub_node.visibility = VisibilityRule::WhenTabSelected { tab_view: nid, tab_index };
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }

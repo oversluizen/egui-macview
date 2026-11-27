@@ -7,11 +7,9 @@
 //! `NSProgressIndicator`, `NSTokenField`, `NSTextView`, `NSBox`, `NSCustomView`, `NSClassSwapper`).
 
 use crate::scene::constraints::CompiledConstraintSchedule;
-use crate::scene::ir::{
-    BindingId, CustomClassMapper, MacSceneIR, NodeId, SceneCompileError, SceneNode, SceneNodeKind, VisibilityRule,
-};
-use crate::scene::nib_ibtool_widgets::{build_ibtool_node, wire_ibtool_connectors};
+use crate::scene::ir::{BindingId, CustomClassMapper, MacSceneIR, NodeId, SceneCompileError, SceneNode, SceneNodeKind, VisibilityRule};
 use crate::scene::nib_varint::read_nib_varint;
+use crate::scene::wire_ibtool_connectors;
 use std::collections::BTreeMap;
 
 #[derive(Debug, Clone)]
@@ -53,7 +51,9 @@ impl IbVal {
             17 => {
                 let (x, y, w, h) = (f32_at(1)?, f32_at(5)?, f32_at(9)?, f32_at(13)?);
                 let (dw, dh) = (f64_at(1)?, f64_at(9)?);
-                let is_f64_sz = (1.0..=10000.0).contains(&dw) && (1.0..=10000.0).contains(&dh) && (w == 0.0 || h == 0.0 || (x.abs() < 1e-10 && y != 0.0));
+                let is_f64_sz = (1.0..=10000.0).contains(&dw)
+                    && (1.0..=10000.0).contains(&dh)
+                    && (w == 0.0 || h == 0.0 || (x.abs() < 1e-10 && y != 0.0));
                 Some(if is_f64_sz { [0.0, 0.0, dw, dh] } else { [x, y, w, h] })
             }
             33 => Some([f64_at(1)?, f64_at(9)?, f64_at(17)?, f64_at(25)?]),
@@ -163,18 +163,21 @@ impl IbNibGraph {
                 if let Some(IbVal::Bytes(b)) = self.prop_val(*idx, "NS.bytes") {
                     return std::str::from_utf8(b.strip_suffix(&[0]).unwrap_or(b.as_slice())).ok().map(str::to_string);
                 }
-                [
-                    "NS.string",
-                    "NSString",
-                    "NSResourceName",
-                    "NSContents",
-                    "NSTitle",
-                    "NSImageName",
-                    "NSColorName",
-                    "NSName",
-                ]
-                .into_iter()
-                .find_map(|k| self.prop_val(*idx, k).and_then(|v| self.resolve_str(v)))
+                if let Some(s) =
+                    ["NS.string", "NSString", "NSResourceName", "NSContents", "NSTitle", "NSImageName", "NSColorName", "NSName"]
+                        .into_iter()
+                        .find_map(|k| self.prop_val(*idx, k).and_then(|v| self.resolve_str(v)))
+                {
+                    return Some(s);
+                }
+                self.prop_val(*idx, "NSImageReps")
+                    .and_then(IbVal::as_obj_ref)
+                    .map(|a| self.resolve_array_refs(a))
+                    .unwrap_or_default()
+                    .into_iter()
+                    .find_map(|r| {
+                        self.prop_val(r, "NSResourceName").or_else(|| self.prop_val(r, "NSImageName")).and_then(|v| self.resolve_str(v))
+                    })
             }
             _ => None,
         }
@@ -212,6 +215,51 @@ impl IbNibGraph {
             }
         }
         None
+    }
+
+    pub fn resolve_dict_str(&self, dict_idx: usize, target_key: &str) -> Option<String> {
+        for pair in self.resolve_array_refs(dict_idx).chunks(2) {
+            if pair.len() == 2 {
+                if self.resolve_str(&IbVal::ObjRef(pair[0])).as_deref() == Some(target_key) {
+                    return self.resolve_str(&IbVal::ObjRef(pair[1]));
+                }
+                if self.resolve_str(&IbVal::ObjRef(pair[1])).as_deref() == Some(target_key) {
+                    return self.resolve_str(&IbVal::ObjRef(pair[0]));
+                }
+            }
+        }
+        None
+    }
+
+    /// Decodes a named controller root view (e.g. `outlet_label == "contentView"` or `"leftSideBarContainerView"`) from an `NIBArchive` (`REQ-013-09.2`).
+    pub fn decode_outlet_root(bytes: &[u8], outlet_label: &str, mapper: &CustomClassMapper) -> Result<MacSceneIR, SceneCompileError> {
+        let graph = Self::parse(bytes)?;
+        let find_outlet = |name: &str, only_owner: bool| -> Option<usize> {
+            (0..graph.objects.len()).find_map(|i| {
+                if graph.obj_class(i) != "NSNibOutletConnector" {
+                    return None;
+                }
+                if only_owner
+                    && graph
+                        .prop_val(i, "NSSource")
+                        .and_then(IbVal::as_obj_ref)
+                        .is_some_and(|s| s != 2 && graph.obj_class(s) != "NSCustomObject")
+                {
+                    return None;
+                }
+                (graph.prop_val(i, "NSLabel").and_then(|v| graph.resolve_str(v)).as_deref() == Some(name))
+                    .then(|| graph.prop_val(i, "NSDestination").and_then(IbVal::as_obj_ref))?
+            })
+        };
+        let target_idx = find_outlet(outlet_label, true)
+            .or_else(|| find_outlet(outlet_label, false))
+            .ok_or_else(|| SceneCompileError(format!("Outlet `{outlet_label}` not found in NIBArchive")))?;
+        let root_idx = if outlet_label == "contentView" && graph.prop_val(target_idx, "NSSubviews").is_none() {
+            find_outlet("view", true).unwrap_or(target_idx)
+        } else {
+            target_idx
+        };
+        decode_ibtool_nib_archive_at_root(&graph, mapper, Some(root_idx))
     }
 
     pub fn resolve_rect(&self, obj_idx: usize) -> Option<[f32; 4]> {
@@ -282,6 +330,8 @@ pub(crate) struct IbDecodeState<'a> {
     pub mapper: &'a CustomClassMapper,
     pub nodes: Vec<SceneNode>,
     pub obj_to_node_idx: BTreeMap<usize, usize>,
+    pub outlets: BTreeMap<String, NodeId>,
+    pub button_menus: super::ir::ButtonMenuMap,
     pub next_id: u32,
     pub next_binding: u32,
     pub next_action: u32,
@@ -290,6 +340,14 @@ pub(crate) struct IbDecodeState<'a> {
 
 /// Decodes a genuine Xcode 16.2 `ibtool --compile` `NIBArchive` containing `NSIBObjectData`.
 pub(crate) fn decode_ibtool_nib_archive(graph: &IbNibGraph, mapper: &CustomClassMapper) -> Result<MacSceneIR, SceneCompileError> {
+    decode_ibtool_nib_archive_at_root(graph, mapper, None)
+}
+
+pub(crate) fn decode_ibtool_nib_archive_at_root(
+    graph: &IbNibGraph,
+    mapper: &CustomClassMapper,
+    explicit_root: Option<usize>,
+) -> Result<MacSceneIR, SceneCompileError> {
     let mut runtime_attrs: BTreeMap<usize, BTreeMap<String, String>> = BTreeMap::new();
     for obj_i in 0..graph.objects.len() {
         if graph.obj_class(obj_i) == "NSIBUserDefinedRuntimeAttributesConnector" {
@@ -326,17 +384,36 @@ pub(crate) fn decode_ibtool_nib_archive(graph: &IbNibGraph, mapper: &CustomClass
         }
         total
     };
+    let owner_outlet_view = (0..graph.objects.len()).find_map(|i| {
+        if graph.obj_class(i) != "NSNibOutletConnector" {
+            return None;
+        }
+        let lbl = graph.prop_val(i, "NSLabel").and_then(|v| graph.resolve_str(v))?;
+        if lbl != "view" && lbl != "contentView" {
+            return None;
+        }
+        let src = graph.prop_val(i, "NSSource").and_then(IbVal::as_obj_ref)?;
+        if src != 2 && graph.obj_class(src) != "NSCustomObject" {
+            return None;
+        }
+        let dst = graph.prop_val(i, "NSDestination").and_then(IbVal::as_obj_ref)?;
+        (count_descendants(dst) > 0).then_some((lbl == "view", dst))
+    });
     let best_free = (0..graph.objects.len())
         .filter(|&i| graph.prop_val(i, "NSSuperview").is_none() && graph.prop_val(i, "NSSubviews").is_some())
         .max_by_key(|&i| count_descendants(i));
     let win_view = win_idx.and_then(|w| graph.prop_val(w, "NSWindowView").and_then(IbVal::as_obj_ref));
-    let root_view_idx = if best_free.map(count_descendants).unwrap_or(0) > win_view.map(count_descendants).unwrap_or(0) {
-        best_free.or(win_view)
-    } else {
-        win_view.or(best_free)
-    }
-    .or_else(|| (0..graph.objects.len()).find(|&i| graph.obj_class(i).ends_with("View") && graph.prop_val(i, "NSSuperview").is_none()))
-    .unwrap_or(0);
+    let root_view_idx = explicit_root
+        .or_else(|| owner_outlet_view.map(|(_, d)| d))
+        .or_else(|| {
+            if best_free.map(count_descendants).unwrap_or(0) > win_view.map(count_descendants).unwrap_or(0) {
+                best_free.or(win_view)
+            } else {
+                win_view.or(best_free)
+            }
+        })
+        .or_else(|| (0..graph.objects.len()).find(|&i| graph.obj_class(i).ends_with("View") && graph.prop_val(i, "NSSuperview").is_none()))
+        .unwrap_or(0);
     let win_title =
         win_idx.and_then(|w| graph.prop_val(w, "NSWindowTitle").and_then(|v| graph.resolve_str(v))).unwrap_or_else(|| "Window".to_string());
     let root_ib_id = ["NSReuseIdentifierKey", "NSUserInterfaceItemIdentifier", "NSIdentifier", "NSID"]
@@ -348,11 +425,15 @@ pub(crate) fn decode_ibtool_nib_archive(graph: &IbNibGraph, mapper: &CustomClass
                 .iter()
                 .find_map(|(_, v)| graph.resolve_str(v).filter(|s| !s.is_empty() && !s.starts_with('{') && !s.starts_with("NS")))
         })
-        .unwrap_or_else(|| "root-view".to_string());
-    let root_rect = graph.resolve_rect(root_view_idx).unwrap_or([0.0, 0.0, 480.0, 320.0]);
-    let root_flipped = runtime_attrs.get(&root_view_idx).and_then(|m| m.get("ibFlipped")).is_some_and(|v| v == "YES");
+        .unwrap_or_else(|| format!("_NS:{root_view_idx}"));
+    let mut root_rect = graph.resolve_rect(root_view_idx).unwrap_or([0.0, 0.0, 480.0, 320.0]);
+    let is_window_shell = win_idx.is_some() && explicit_root.is_none() && count_descendants(root_view_idx) == 0;
+    if is_window_shell {
+        root_rect[3] = crate::tokens::MacDesignTokens::default_shared().macview.metrics.toolbar.height_compact.points();
+    }
+    let root_flipped = is_window_shell || runtime_attrs.get(&root_view_idx).and_then(|m| m.get("ibFlipped")).is_some_and(|v| v == "YES");
 
-    let root_node = crate::scene::nib_frontend::mk_node(
+    let mut root_node = crate::scene::nib_frontend::mk_node(
         1,
         &root_ib_id,
         None,
@@ -368,6 +449,24 @@ pub(crate) fn decode_ibtool_nib_archive(graph: &IbNibGraph, mapper: &CustomClass
         None,
         VisibilityRule::Always,
     );
+    let r_cls = graph.obj_class(root_view_idx);
+    let r_cust = graph.prop_val(root_view_idx, "NSClassName").and_then(|v| graph.resolve_str(v)).or_else(|| {
+        is_window_shell
+            .then(|| win_idx.and_then(|w| graph.prop_val(w, "NSWindowClass").and_then(|v| graph.resolve_str(v))))
+            .flatten()
+            .or_else(|| is_window_shell.then(|| "NSWindowTemplate".to_string()))
+    });
+    root_node.populate_ibtool_typed_fields(
+        graph,
+        root_view_idx,
+        None,
+        0,
+        0.0,
+        r_cls,
+        r_cls,
+        r_cust.as_deref().unwrap_or(r_cls),
+        r_cust.as_deref(),
+    );
 
     let mut st = IbDecodeState {
         graph,
@@ -375,138 +474,63 @@ pub(crate) fn decode_ibtool_nib_archive(graph: &IbNibGraph, mapper: &CustomClass
         mapper,
         nodes: vec![root_node],
         obj_to_node_idx: BTreeMap::from([(root_view_idx, 0)]),
+        outlets: BTreeMap::new(),
+        button_menus: BTreeMap::new(),
         next_id: 2,
         next_binding: 1,
         next_action: 1,
         binding_by_path: BTreeMap::new(),
     };
-    collect_ibtool_subviews(&mut st, root_view_idx, NodeId(1));
+    crate::scene::constraints::collect_ibtool_subviews(&mut st, root_view_idx, NodeId(1));
     wire_ibtool_connectors(&mut st);
+    if is_window_shell {
+        st.outlets.insert("window".to_string(), NodeId(1));
+    }
 
     let root_w = st.nodes[0].nib_frame[2].max(1.0);
     let root_h = st.nodes[0].nib_frame[3].max(1.0);
-    Ok(MacSceneIR::from_nodes(NodeId(1), [root_w, root_h], st.nodes, CompiledConstraintSchedule::default()))
+    let nib_specs = crate::scene::nib_ibtool_widgets::collect_ibtool_constraint_specs(&st);
+    let mut scene = MacSceneIR::from_nodes(NodeId(1), [root_w, root_h], st.nodes, CompiledConstraintSchedule::default());
+    scene.nib_constraints = nib_specs;
+    scene.outlets = st.outlets;
+    scene.button_menus = st.button_menus;
+    scene.solve_autolayout();
+    Ok(scene)
 }
 
-fn collect_ibtool_subviews(st: &mut IbDecodeState<'_>, parent_view_obj: usize, parent_node_id: NodeId) {
-    let subviews = st
-        .graph
-        .prop_val(parent_view_obj, "NSSubviews")
-        .and_then(IbVal::as_obj_ref)
-        .map(|arr| st.graph.resolve_array_refs(arr))
-        .unwrap_or_default();
-
-    for child_obj in subviews {
-        if st.graph.obj_class(child_obj) == "NSMatrix" {
-            let m_frame = st.graph.resolve_rect(child_obj).unwrap_or([0.0, 0.0, 170.0, 52.0]);
-            let cells = st
-                .graph
-                .prop_val(child_obj, "NSCells")
-                .and_then(IbVal::as_obj_ref)
-                .map(|a| st.graph.resolve_array_refs(a))
-                .unwrap_or_default();
-            let row_cnt = cells.len().max(1);
-            let row_h = (m_frame[3] / row_cnt as f32).max(16.0);
-            for (r_idx, cell_obj) in cells.into_iter().enumerate() {
-                let nid = NodeId(st.next_id);
-                st.next_id += 1;
-                let cell_title = st
-                    .graph
-                    .prop_val(cell_obj, "NSContents")
-                    .or_else(|| st.graph.prop_val(cell_obj, "NSTitle"))
-                    .and_then(|v| st.graph.resolve_str(v))
-                    .unwrap_or_default();
-                let cell_y = m_frame[1] + ((row_cnt - 1 - r_idx) as f32) * row_h;
-                let cell_rect = [m_frame[0], cell_y, m_frame[2], row_h];
-                let r_node = crate::scene::nib_frontend::mk_node(
-                    nid.0,
-                    &format!("nib-matrix-{child_obj}-{r_idx}"),
-                    Some(parent_node_id.0),
-                    vec![],
-                    SceneNodeKind::RadioButton,
-                    &cell_title,
-                    "",
-                    "regular",
-                    cell_rect,
-                    0,
-                    None,
-                    None,
-                    None,
-                    VisibilityRule::Always,
-                );
-                if let Some(p_node) = st.nodes.iter_mut().find(|n| n.id == parent_node_id) {
-                    p_node.children.push(nid);
+pub(crate) fn compute_scene_hidden_and_y_shifts(
+    scene: &MacSceneIR,
+    data_source: &dyn crate::scene::runtime::MacSceneDataSource,
+) -> (std::collections::BTreeSet<NodeId>, BTreeMap<NodeId, f32>) {
+    let mut hidden_ids = std::collections::BTreeSet::new();
+    for n in &scene.nodes {
+        let self_hidden = n.is_hidden
+            || n.hidden_binding.is_some_and(|hb| n.value_transformer.apply_bool(data_source.get_bool(hb)))
+            || n.parent.is_some_and(|pid| hidden_ids.contains(&pid));
+        if self_hidden {
+            hidden_ids.insert(n.id);
+        }
+    }
+    let mut y_shifts = BTreeMap::new();
+    if let Some(root) = scene.nodes.first().filter(|r| r.stack_orientation == Some(1) && r.detaches_hidden_views) {
+        let spacing = if root.stack_spacing > 0.0 { root.stack_spacing } else { 2.0 };
+        let mut acc_shift = 0.0_f32;
+        for &cid in &root.children {
+            if hidden_ids.contains(&cid) {
+                if let Some(rn) = scene.nodes.iter().find(|n| n.id == cid) {
+                    acc_shift += rn.nib_frame[3] + spacing;
                 }
-                st.obj_to_node_idx.insert(cell_obj, st.nodes.len());
-                st.nodes.push(r_node);
+            } else if acc_shift > 0.0 {
+                y_shifts.insert(cid, -acc_shift);
             }
-            continue;
         }
-        let nid = NodeId(st.next_id);
-        st.next_id += 1;
-        let node = build_ibtool_node(st, child_obj, nid, parent_node_id);
-        let is_box = matches!(node.kind, SceneNodeKind::BoxContainer);
-        let raw_c = st.graph.obj_class(child_obj);
-        let custom_c = st.graph.prop_val(child_obj, "NSClassName").and_then(|v| st.graph.resolve_str(v)).unwrap_or_default();
-        let orig_c = st.graph.prop_val(child_obj, "NSOriginalClassName").and_then(|v| st.graph.resolve_str(v)).unwrap_or_default();
-        let eff_c = if !custom_c.is_empty() { custom_c.as_str() } else if !orig_c.is_empty() { orig_c.as_str() } else { raw_c };
-        let is_container_view = (matches!(
-            eff_c,
-            "NSView" | "NSCustomView" | "NSSplitView" | "NSStackView" | "NSStackViewContainer" | "NSClipView"
-        ) || (eff_c.ends_with("View") && !eff_c.contains("Table") && !eff_c.contains("Outline") && !eff_c.contains("Text") && !eff_c.contains("Image") && !eff_c.contains("Tab") && !eff_c.contains("Scroll")))
-            && st.graph.prop_val(child_obj, "NSSubviews").is_some();
-        if let Some(p_node) = st.nodes.iter_mut().find(|n| n.id == parent_node_id) {
-            p_node.children.push(nid);
-        }
-        st.obj_to_node_idx.insert(child_obj, st.nodes.len());
-        st.nodes.push(node);
-        if is_box {
-            if let Some(cv_obj) = st.graph.prop_val(child_obj, "NSContentView").and_then(IbVal::as_obj_ref) {
-                collect_ibtool_subviews(st, cv_obj, nid);
-            } else if st.graph.prop_val(child_obj, "NSSubviews").is_some() {
-                collect_ibtool_subviews(st, child_obj, nid);
-            }
-        } else if is_container_view {
-            collect_ibtool_subviews(st, child_obj, nid);
-        } else if eff_c.contains("ScrollView") && !matches!(st.nodes.last().map(|n| &n.kind), Some(SceneNodeKind::TableView { .. })) {
-            let doc_opt = st
-                .graph
-                .prop_val(child_obj, "NSDocView")
-                .and_then(IbVal::as_obj_ref)
-                .or_else(|| {
-                    st.graph
-                        .prop_val(child_obj, "NSContentView")
-                        .and_then(IbVal::as_obj_ref)
-                        .and_then(|cv| st.graph.prop_val(cv, "NSDocView").and_then(IbVal::as_obj_ref))
-                })
-                .or_else(|| {
-                    st.graph
-                        .prop_val(child_obj, "NSSubviews")
-                        .and_then(IbVal::as_obj_ref)
-                        .into_iter()
-                        .flat_map(|a| st.graph.resolve_array_refs(a))
-                        .find_map(|sub| {
-                            st.graph.prop_val(sub, "NSDocView").and_then(IbVal::as_obj_ref).or_else(|| {
-                                st.graph
-                                    .prop_val(sub, "NSSubviews")
-                                    .and_then(IbVal::as_obj_ref)
-                                    .and_then(|ca| st.graph.resolve_array_refs(ca).into_iter().next())
-                            })
-                        })
-                });
-            if let Some(doc_obj) = doc_opt {
-                collect_ibtool_subviews(st, doc_obj, nid);
-            } else if st.graph.prop_val(child_obj, "NSSubviews").is_some() {
-                collect_ibtool_subviews(st, child_obj, nid);
-            }
-        } else if matches!(st.nodes.last().map(|n| &n.kind), Some(SceneNodeKind::TabView { .. })) {
-            if let Some(tab_arr) = st.graph.prop_val(child_obj, "NSTabViewItems").and_then(IbVal::as_obj_ref) {
-                for ti in st.graph.resolve_array_refs(tab_arr) {
-                    if let Some(tv_view) = st.graph.prop_val(ti, "NSView").and_then(IbVal::as_obj_ref) {
-                        collect_ibtool_subviews(st, tv_view, nid);
-                    }
+        if !y_shifts.is_empty() {
+            for n in &scene.nodes {
+                if let Some(sh) = n.parent.and_then(|pid| y_shifts.get(&pid).copied()) {
+                    y_shifts.insert(n.id, sh);
                 }
             }
         }
     }
+    (hidden_ids, y_shifts)
 }

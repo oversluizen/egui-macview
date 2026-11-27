@@ -76,7 +76,7 @@ pub fn render_overlay_thumb(
     let travel = (avail - thumb_len).max(0.0);
     let frac = if max_scroll > 0.0 { *offset / max_scroll } else { 0.0 };
 
-    if thumb_len < min_visible_len {
+    if thumb_len < min_visible_len || alpha <= f32::EPSILON {
         return false;
     }
 

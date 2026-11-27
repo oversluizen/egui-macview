@@ -2,13 +2,15 @@
 
 use crate::controls::{
     MacCheckbox, MacCircularSlider, MacColorWell, MacComboBox, MacControlSize, MacDate, MacDatePicker, MacDatePickerElementFlags,
-    MacDatePickerStyle, MacDisclosureButton, MacDisclosureGroup, MacFontWeight, MacHelpButton, MacImageView, MacInlineActionButton,
-    MacLabel, MacLabelColor, MacLevelIndicator, MacLevelIndicatorStyle, MacOriginAnchor, MacOriginMatrix, MacProgressIndicator,
-    MacRatingIndicator, MacRuleEditor, MacRuleRow, MacSlider, MacStepper, MacTableActionBar, MacTagColorPicker,
+    MacDatePickerStyle, MacDisclosureButton, MacDisclosureGroup, MacImageView, MacLabel, MacLabelColor, MacLevelIndicator,
+    MacLevelIndicatorStyle, MacOriginAnchor, MacOriginMatrix, MacProgressIndicator, MacRatingIndicator, MacRuleEditor, MacRuleRow,
+    MacSlider, MacStepper, MacTableActionBar, MacTagColorPicker,
 };
 use crate::scene::ir::{SceneNode, SceneNodeKind};
 use crate::scene::runtime::MacSceneDataSource;
-use crate::scene::runtime_tabs::{render_search_field_node, render_tab_view_node, render_table_view_node};
+use crate::scene::runtime_tabs::{
+    render_help_button_node, render_inline_action_button_node, render_search_field_node, render_tab_view_node, render_table_view_node,
+};
 use crate::theme::MacTheme;
 use egui::{Rect, Ui, UiBuilder};
 
@@ -20,28 +22,56 @@ pub(crate) fn render_label_node(
     rect: Rect,
     ctrl_size: MacControlSize,
 ) {
-    let dyn_txt = node.value_binding.map(|b| data_source.get_str(b)).unwrap_or("");
+    let formatted_pattern = node.display_pattern.as_ref().and_then(|pat| {
+        if node.display_pattern_bindings.is_empty() {
+            return None;
+        }
+        let mut s = pat.clone();
+        let mut any_non_empty = false;
+        for &(slot, bid, _) in &node.display_pattern_bindings {
+            let val = data_source.get_str(bid);
+            if !val.is_empty() {
+                any_non_empty = true;
+            }
+            let token = format!("%{{value{slot}}}@");
+            s = s.replace(&token, val);
+        }
+        any_non_empty.then_some(s)
+    });
+    let dyn_txt = formatted_pattern
+        .as_deref()
+        .unwrap_or_else(|| node.value_binding.map(|b| data_source.get_str(b)).unwrap_or(""));
     let text = if dyn_txt.is_empty() { node.title.as_str() } else { dyn_txt };
-    let meta = node.icon_name.as_deref().unwrap_or("");
-    let weight = if meta.contains("semibold") {
-        MacFontWeight::Semibold
-    } else if meta.contains("bold") {
-        MacFontWeight::Bold
-    } else if meta.contains("medium") {
-        MacFontWeight::Medium
-    } else {
-        MacFontWeight::Regular
+    let align = match node.text_alignment {
+        crate::scene::ir::MacTextAlignment::Right => egui::Align::Max,
+        crate::scene::ir::MacTextAlignment::Center => egui::Align::Center,
+        _ => egui::Align::Min,
     };
-    let color = if meta.contains("secondary") {
-        MacLabelColor::Secondary
-    } else if meta.contains("tertiary") {
-        MacLabelColor::Tertiary
-    } else {
-        MacLabelColor::Primary
+    let lm = theme.label_metrics();
+    let mini_max_pt = lm.mini_font_size.points() + 0.5;
+    let small_max_pt = lm.small_font_size.points() + 0.5;
+    let effective_size = match node.font_size_pt {
+        Some(pt) if pt <= mini_max_pt => MacControlSize::Mini,
+        Some(pt) if pt <= small_max_pt => MacControlSize::Small,
+        _ => ctrl_size,
     };
-    let extra_w = theme.table_view().header_height.points();
-    let label_rect = egui::Rect::from_min_size(rect.min, egui::vec2(rect.width() + extra_w, rect.height()));
-    MacLabel::new(text).weight(weight).color(color).control_size(ctrl_size).theme(theme).fixed_rect(label_rect).show(ui);
+    let label_rect = if matches!(align, egui::Align::Center) && node.value_binding.is_some() {
+        let expand_w = rect.width().max(theme.popover_metrics().full_popover_width.points());
+        egui::Rect::from_center_size(rect.center(), egui::vec2(expand_w, rect.height()))
+    } else if matches!(align, egui::Align::Max | egui::Align::Center) {
+        rect
+    } else {
+        let extra_w = theme.table_view().header_height.points();
+        egui::Rect::from_min_size(rect.min, egui::vec2(rect.width() + extra_w, rect.height()))
+    };
+    MacLabel::new(text)
+        .weight(node.font_weight)
+        .color(node.label_color)
+        .alignment(align)
+        .control_size(effective_size)
+        .theme(theme)
+        .fixed_rect(label_rect)
+        .show(ui);
 }
 
 pub(crate) fn render_checkbox_node(
@@ -218,11 +248,14 @@ pub(crate) fn render_extended_node(
                 .map(|b| data_source.get_str(b).to_string())
                 .unwrap_or_else(|| ui.data(|d| d.get_temp::<String>(fb_id)).unwrap_or_else(|| node.title.clone()));
             let refs: Vec<&str> = options.iter().map(String::as_str).collect();
+            let on_sidebar = theme.is_sidebar_surface(theme.active_surface_at(ui, rect.center()));
+            let is_pill = on_sidebar || node.bezel_style == 1 || (!node.draws_background && node.is_bezeled);
             let changed = ui
                 .add_enabled_ui(enabled, |en_ui| {
                     MacComboBox::new((en_ui.scope_id(), "nib_cb", node.id.0), &mut text, &refs)
                         .theme(theme)
                         .control_size(ctrl_size)
+                        .recessed_pill(is_pill)
                         .fixed_rect(rect)
                         .show(en_ui)
                         .changed()
@@ -305,7 +338,7 @@ pub(crate) fn render_extended_node(
             render_tab_view_node(ui, theme, data_source, node, rect, ctrl_size);
         }
         SceneNodeKind::TableView { columns } => {
-            render_table_view_node(ui, theme, node, rect, columns);
+            render_table_view_node(ui, theme, data_source, node, rect, columns);
         }
         SceneNodeKind::RuleEditor => {
             const DEFAULT_CRITERIA: &[&[&str]] = &[&["Key", "Value"], &["==", "!="], &["True", "False"]];
@@ -315,9 +348,8 @@ pub(crate) fn render_extended_node(
             let re_id = ui.scope_id().with(("nib_re_rows", node.id.0));
             let r0: Vec<usize> = (0..col_len).map(|_| 0).collect();
             let r1: Vec<usize> = (0..col_len).map(|_| 1).collect();
-            let mut rules = ui
-                .data(|d| d.get_temp::<Vec<MacRuleRow>>(re_id))
-                .unwrap_or_else(|| vec![MacRuleRow::new(r0), MacRuleRow::new(r1)]);
+            let mut rules =
+                ui.data(|d| d.get_temp::<Vec<MacRuleRow>>(re_id)).unwrap_or_else(|| vec![MacRuleRow::new(r0), MacRuleRow::new(r1)]);
             let prev_len = rules.len();
             let mut c_ui = ui.new_child(UiBuilder::new().id_salt(("nib_re_ui", node.id.0)).max_rect(rect));
             c_ui.set_clip_rect(rect.intersect(ui.clip_rect()));
@@ -398,56 +430,16 @@ pub(crate) fn render_extended_node(
             }
         }
         SceneNodeKind::HelpButton => {
-            let pop_id = ui.scope_id().with(("nib_help_pop_open", node.id.0));
-            let mut is_open = ui.data(|d| d.get_temp::<bool>(pop_id)).unwrap_or(false);
-            let btn_resp = MacHelpButton::new().theme(theme).control_size(ctrl_size).enabled(enabled).fixed_rect(rect).show(ui);
-            if btn_resp.clicked() {
-                is_open = !is_open;
-                if let Some(act) = node.action {
-                    data_source.on_action(act, node.id);
-                }
-            }
-            if is_open {
-                let pm = theme.popover_metrics();
-                let pop_w = pm.full_popover_width.points();
-                let pop_h = pm.compact_panel_height.points() + pm.arrow_height.points();
-                let screen_min_x = ui.ctx().content_rect().min.x;
-                let pop_x = (rect.center().x - pop_w * 0.5).max(screen_min_x + pm.inner_padding.points());
-                let pop_rect = Rect::from_min_size(egui::pos2(pop_x, rect.max.y), egui::vec2(pop_w, pop_h));
-                let help_txt = if node.tooltip.is_empty() { node.title.as_str() } else { node.tooltip.as_str() };
-                egui::Area::new(pop_id.with("fg_area")).order(egui::Order::Foreground).fixed_pos(pop_rect.min).show(ui.ctx(), |area_ui| {
-                    crate::surfaces::MacPopover::new().theme(theme).arrow_edge(crate::surfaces::MacPopoverArrowEdge::Top).show(
-                        area_ui,
-                        pop_rect,
-                        |pop_ui| {
-                            pop_ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
-                            pop_ui.set_max_width(pop_w - pm.inner_padding.points() * 2.0);
-                            pop_ui.label(
-                                egui::RichText::new(help_txt).size(theme.label_metrics().small_font_size.points()).color(theme.label()),
-                            );
-                        },
-                    );
-                });
-                let esc = ui.input(|i| i.key_pressed(egui::Key::Escape));
-                let clicked_out = !btn_resp.clicked()
-                    && ui.input(|i| {
-                        i.pointer.any_pressed() && i.pointer.interact_pos().is_some_and(|p| !pop_rect.contains(p) && !rect.contains(p))
-                    });
-                if esc || clicked_out {
-                    is_open = false;
-                }
-            }
-            ui.data_mut(|d| d.insert_temp(pop_id, is_open));
+            render_help_button_node(ui, theme, data_source, node, rect, ctrl_size, enabled);
         }
         SceneNodeKind::InlineActionButton => {
-            if MacInlineActionButton::new(node.title.as_str()).theme(theme).enabled(enabled).fixed_rect(rect).show(ui).clicked() {
-                if let Some(act) = node.action {
-                    data_source.on_action(act, node.id);
-                }
-            }
+            render_inline_action_button_node(ui, theme, data_source, node, rect, enabled);
         }
         SceneNodeKind::ImageView { icon_name, is_template } => {
-            MacImageView::from_resource_name(icon_name).theme(theme).template(*is_template).fixed_rect(rect).show(ui);
+            let tint = if *is_template { theme.secondary_label() } else { theme.label() };
+            if !data_source.paint_scene_icon_scaled(ui, theme, icon_name, rect, tint, (node.image_scaling, node.symbol_point_size)) {
+                MacImageView::from_resource_name(icon_name).theme(theme).template(*is_template).scaling(crate::controls::MacImageScaling::from_nib_code(node.image_scaling)).symbol_point_size(node.symbol_point_size).fixed_rect(rect).show(ui);
+            }
         }
         SceneNodeKind::Stepper { step } => {
             let fb_id = ui.scope_id().with(("nib_stp", node.id.0));
@@ -479,11 +471,20 @@ pub(crate) fn render_extended_node(
                 .value_binding
                 .and_then(|b| (data_source.get_i64(b) >= 0).then(|| data_source.get_i64(b) as usize))
                 .or_else(|| ui.data(|d| d.get_temp::<Option<usize>>(fb_id)).flatten());
-            if MacTagColorPicker::new(&mut tag).theme(theme).enabled(enabled).fixed_rect(rect).show(ui).changed() {
+            let is_two_row = rect.height() >= theme.table_view().header_height.points()
+                && rect.width() < theme.popover_metrics().compact_panel_width.points();
+            let mut picker = MacTagColorPicker::new(&mut tag).theme(theme).enabled(enabled).fixed_rect(rect);
+            if is_two_row {
+                picker = picker.columns(6).rows(2).include_clear_swatch(false);
+            }
+            if picker.show(ui).changed() {
                 if let Some(b) = node.value_binding {
                     data_source.set_i64(b, tag.map(|i| i as i64).unwrap_or(-1));
                 } else {
                     ui.data_mut(|d| d.insert_temp(fb_id, tag));
+                }
+                if let Some(act) = node.action {
+                    data_source.on_action(act, node.id);
                 }
             }
         }

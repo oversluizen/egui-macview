@@ -139,12 +139,8 @@ fn test_command_palette_fuzzy_subsequence_scoring_and_escape() {
 #[test]
 fn test_gallery_v05_five_state_studio_and_frameless_decorations() {
     let app = gallery_app::GalleryApp::new();
-    let all_icons: Vec<&str> = app
-        .center
-        .screen_nib_scenes
-        .iter()
-        .flat_map(|(sc, _)| sc.nodes().iter().filter_map(|n| n.icon_name.as_deref()))
-        .collect();
+    let all_icons: Vec<&str> =
+        app.center.screen_nib_scenes.iter().flat_map(|(sc, _)| sc.nodes().iter().filter_map(|n| n.icon_name.as_deref())).collect();
     assert!(all_icons.contains(&"NSTokenField"), "Gallery NIB scenes must include NSTokenField");
     assert!(all_icons.contains(&"NSProgressBar"), "Gallery NIB scenes must include NSProgressBar");
     assert!(all_icons.contains(&"NSLevelIndicator"), "Gallery NIB scenes must include NSLevelIndicator");

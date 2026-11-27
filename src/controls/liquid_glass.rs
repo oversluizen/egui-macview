@@ -49,7 +49,8 @@ pub fn sdf_annular_rounded_sector(
     corner_radius: f32,
     _m: &ThumbDialMetrics,
 ) -> f32 {
-    vitrea::sdf_annular_rounded_sector_sample(glam_pt(pt), glam_pt(center), (r_in, r_out), (center_deg, half_sweep_deg), corner_radius).distance
+    vitrea::sdf_annular_rounded_sector_sample(glam_pt(pt), glam_pt(center), (r_in, r_out), (center_deg, half_sweep_deg), corner_radius)
+        .distance
 }
 
 /// Evaluates the exact signed distance $d_{\text{stadium}}(p)$ to a curved semicircular stadium
@@ -352,9 +353,20 @@ pub fn deform_viscous_droplet_point(pt: Pos2, center: Pos2, vel_offset: Vec2, r_
 
 /// Evaluates the per-vertex 3D point-light physical Schlick-Fresnel & Blinn-Phong proximity glint (`REQ-016-02.2`)
 /// via `vitrea::evaluate_schlick_fresnel_and_blinn_phong`.
-pub fn evaluate_vertex_cursor_fresnel_lighting(vertex_pos: Pos2, normal_3d: [f32; 3], cursor_pos: Option<Pos2>, proximity_radius: f32) -> f32 {
+pub fn evaluate_vertex_cursor_fresnel_lighting(
+    vertex_pos: Pos2,
+    normal_3d: [f32; 3],
+    cursor_pos: Option<Pos2>,
+    proximity_radius: f32,
+) -> f32 {
     let ior = vitrea::LiquidGlassOpticalParams::default().ior_glass;
-    vitrea::evaluate_schlick_fresnel_and_blinn_phong(glam_pt(vertex_pos), vitrea::GlamVec3::from_array(normal_3d), cursor_pos.map(glam_pt), proximity_radius, ior)
+    vitrea::evaluate_schlick_fresnel_and_blinn_phong(
+        glam_pt(vertex_pos),
+        vitrea::GlamVec3::from_array(normal_3d),
+        cursor_pos.map(glam_pt),
+        proximity_radius,
+        ior,
+    )
 }
 
 /// Triangulates and paints the concave smooth-minimum metaball meniscus bridge ($d_{\text{union}}(p) \le 0$)
@@ -368,7 +380,12 @@ pub fn paint_meniscus_smooth_union_bridge(
     bridge_col: Color32,
     m: &ThumbDialMetrics,
 ) {
-    let bridge_mesh = vitrea::tessellate_meniscus_bridge(glam_pt(center), (r_in, r_out, corner_r, smooth_k), (deg_a, half_sweep_a, lift_a), (deg_b, half_sweep_b, lift_b));
+    let bridge_mesh = vitrea::tessellate_meniscus_bridge(
+        glam_pt(center),
+        (r_in, r_out, corner_r, smooth_k),
+        (deg_a, half_sweep_a, lift_a),
+        (deg_b, half_sweep_b, lift_b),
+    );
     if bridge_mesh.positions.is_empty() || bridge_mesh.indices.is_empty() {
         return;
     }

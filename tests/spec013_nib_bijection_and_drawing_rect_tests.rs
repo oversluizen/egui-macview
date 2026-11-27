@@ -7,10 +7,7 @@ mod common;
 use egui::{pos2, vec2, Color32, Context, Pos2, RawInput, Rect, Vec2};
 use egui_macview::{
     controls::MacControlSize,
-    scene::{
-        BindingId, CompiledConstraintSchedule, LayoutPolicy, MacSceneDataSource, MacSceneIR, NodeId, SceneNode, SceneNodeKind,
-        ValueTransformer, VisibilityRule,
-    },
+    scene::{BindingId, CompiledConstraintSchedule, LayoutPolicy, MacSceneDataSource, MacSceneIR, NodeId, SceneNode, SceneNodeKind},
     setup_custom_macview_fonts, setup_symbols_font, MacAppearance, MacInputCell, MacTheme, MacThumbnailCell, INTER_REGULAR_FONT_BYTES,
     INTER_SEMIBOLD_FONT_BYTES,
 };
@@ -191,51 +188,26 @@ impl MacSceneDataSource for ShapeBoundsStore {
 }
 
 fn build_inspector_view_gs_shape_bounds_scene() -> MacSceneIR {
-    let mk = |id: u32, ib_id: &str, kind: SceneNodeKind, title: &str, frame: [f32; 4], bid: Option<u32>| SceneNode {
-        id: NodeId(id),
-        ib_object_id: ib_id.into(),
-        parent: Some(NodeId(1)),
-        children: vec![],
-        kind,
-        title: title.into(),
-        tooltip: String::new(),
-        control_size: "small".into(),
-        nib_frame: frame,
-        alignment_rect: frame,
-        autoresizing_mask: 36, // flexibleMaxX | flexibleMinY
-        enabled: true,
-        value_binding: bid.map(BindingId),
-        binding_path: bid.map(|b| format!("field_{b}")),
-        value_transformer: ValueTransformer::Identity,
-        action: None,
-        action_selector: None,
-        icon_name: None,
-        visibility: VisibilityRule::Always,
-        labeled_by: None,
+    let mk = |id: u32, ib_id: &str, kind: SceneNodeKind, title: &str, frame: [f32; 4], bid: Option<u32>| {
+        let mut n = SceneNode::new(NodeId(id), kind);
+        n.ib_object_id = ib_id.into();
+        n.parent = Some(NodeId(1));
+        n.title = title.into();
+        n.control_size = "small".into();
+        n.nib_frame = frame;
+        n.alignment_rect = frame;
+        n.autoresizing_mask = 36;
+        n.value_binding = bid.map(BindingId);
+        n.binding_path = bid.map(|b| format!("field_{b}"));
+        n
     };
 
-    let root = SceneNode {
-        id: NodeId(1),
-        ib_object_id: "root-shape-bounds".into(),
-        parent: None,
-        children: (2..=10).map(NodeId).collect(),
-        kind: SceneNodeKind::Container { is_flipped: false },
-        title: "InspectorViewGSShapeBounds".into(),
-        tooltip: String::new(),
-        control_size: "regular".into(),
-        nib_frame: [0.0, 0.0, 192.0, 44.0],
-        alignment_rect: [0.0, 0.0, 192.0, 44.0],
-        autoresizing_mask: 0,
-        enabled: true,
-        value_binding: None,
-        binding_path: None,
-        value_transformer: ValueTransformer::Identity,
-        action: None,
-        action_selector: None,
-        icon_name: None,
-        visibility: VisibilityRule::Always,
-        labeled_by: None,
-    };
+    let mut root = SceneNode::new(NodeId(1), SceneNodeKind::Container { is_flipped: false });
+    root.ib_object_id = "root-shape-bounds".into();
+    root.children = (2..=10).map(NodeId).collect();
+    root.title = "InspectorViewGSShapeBounds".into();
+    root.nib_frame = [0.0, 0.0, 192.0, 44.0];
+    root.alignment_rect = [0.0, 0.0, 192.0, 44.0];
 
     let nodes = vec![
         root,
@@ -286,7 +258,12 @@ fn oracle_1_exact_apple_nib_coordinate_bijection_inspector_shape_bounds() {
 
     let (ctx, theme) = common::headless_ctx(MacAppearance::DarkAqua);
     let mut store = ShapeBoundsStore {
-        vals: BTreeMap::from([(BindingId(1), "120".into()), (BindingId(2), "-40".into()), (BindingId(3), "680".into()), (BindingId(4), "700".into())]),
+        vals: BTreeMap::from([
+            (BindingId(1), "120".into()),
+            (BindingId(2), "-40".into()),
+            (BindingId(3), "680".into()),
+            (BindingId(4), "700".into()),
+        ]),
     };
     let mut used_rect = Rect::NOTHING;
     let shapes = common::run_frame(&ctx, RawInput::default(), vec2(800.0, 600.0), |ui| {
@@ -344,11 +321,7 @@ fn oracle_2_mac_input_cell_nib_2pt_inset_zero_truncation_and_framebuffer_pixels(
         let r_child_36x18 = Rect::from_min_size(pos2(224.0, 8.0), vec2(36.0, 18.0));
 
         let (fb, shapes) = CpuFramebuffer::render(&ctx, vec2(272.0, 34.0), theme.window_background(), |ui| {
-            MacInputCell::new("hex_35", &mut u_hex_35)
-                .theme(&theme)
-                .control_size(MacControlSize::Small)
-                .fixed_rect(r_35)
-                .show(ui);
+            MacInputCell::new("hex_35", &mut u_hex_35).theme(&theme).control_size(MacControlSize::Small).fixed_rect(r_35).show(ui);
             ui.put(r_42, MacInputCell::new("hex_42", &mut u_hex_42).theme(&theme).control_size(MacControlSize::Small));
             MacInputCell::new("dim_100", &mut dim_100).theme(&theme).fixed_rect(r_32_a).show(ui);
             MacInputCell::new("dim_680", &mut dim_680).theme(&theme).fixed_rect(r_32_b).show(ui);
@@ -392,11 +365,9 @@ fn oracle_2_mac_input_cell_nib_2pt_inset_zero_truncation_and_framebuffer_pixels(
 
         // Verify visible foreground glyph pixels in all 4 character quarters of the 4-char "0048" fields (including 36x18 child-Ui!)
         let cell_bg = theme.control_background().to_array();
-        for (idx, field_rect, label) in [
-            (0usize, r_35, "0048 in 35x16"),
-            (1usize, r_42, "0048 in 42x16"),
-            (5usize, r_child_36x18, "0048 in 36x18 child-Ui"),
-        ] {
+        for (idx, field_rect, label) in
+            [(0usize, r_35, "0048 in 35x16"), (1usize, r_42, "0048 in 42x16"), (5usize, r_child_36x18, "0048 in 36x18 child-Ui")]
+        {
             let text_span_w = texts[idx].galley.size().x;
             for (q_idx, ch_name) in [(0usize, '0'), (1, '0'), (2, '4'), (3, '8')] {
                 let q0 = q_idx as f32 * 0.25;
@@ -432,11 +403,7 @@ fn oracle_3_mac_thumbnail_cell_clips_to_bounds_and_footer_isolation_framebuffer(
 
     // Render baseline cell WITHOUT custom_draw first
     let (fb_base, _) = CpuFramebuffer::render(&ctx, vec2(104.0, 104.0), theme.window_background(), |ui| {
-        MacThumbnailCell::new()
-            .theme(&theme)
-            .size(vec2(64.0, 64.0))
-            .footer_height(footer_h)
-            .paint_in_rect(ui.painter(), cell_rect, false);
+        MacThumbnailCell::new().theme(&theme).size(vec2(64.0, 64.0)).footer_height(footer_h).paint_in_rect(ui.painter(), cell_rect, false);
     });
 
     // Now render cell WITH an intentionally oversized custom_draw shape that tries to bleed into the 16pt footer and outside the 64x64 cell!
@@ -511,12 +478,13 @@ fn oracle_3_mac_thumbnail_cell_clips_to_bounds_and_footer_isolation_framebuffer(
                 .theme(&theme)
                 .fixed_rect(Rect::from_min_size(pos2(145.0, 82.0), vec2(32.0, 16.0)))
                 .show(ui);
-            ui.put(
-                Rect::from_min_size(pos2(185.0, 82.0), vec2(32.0, 16.0)),
-                MacInputCell::new("s_92", &mut dim_92).theme(&theme),
-            );
+            ui.put(Rect::from_min_size(pos2(185.0, 82.0), vec2(32.0, 16.0)), MacInputCell::new("s_92", &mut dim_92).theme(&theme));
             let mut c36_ui = ui.new_child(egui::UiBuilder::new().max_rect(Rect::from_min_size(pos2(12.0, 108.0), vec2(36.0, 18.0))));
-            MacInputCell::with_id(egui::Id::unique("s_child_36x18"), &mut u_hex_35).theme(&theme).width(36.0).height(18.0).show(&mut c36_ui);
+            MacInputCell::with_id(egui::Id::unique("s_child_36x18"), &mut u_hex_35)
+                .theme(&theme)
+                .width(36.0)
+                .height(18.0)
+                .show(&mut c36_ui);
             let cell_r = Rect::from_min_size(pos2(260.0, 16.0), vec2(72.0, 72.0));
             MacThumbnailCell::new()
                 .theme(&theme)

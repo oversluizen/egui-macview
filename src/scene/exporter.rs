@@ -229,3 +229,288 @@ fn emit_swiftui_node(scene: &MacSceneIR, node: &SceneNode, out: &mut String, ind
 fn escape_swift(s: &str) -> String {
     s.replace('\\', "\\\\").replace('"', "\\\"")
 }
+
+impl crate::scene::ir::MacSceneIR {
+    /// Updates `node.icon_name` during `awakeFromNib` (`REQ-013-10.1` §3.8.4).
+    pub fn set_node_icon_name(&mut self, id_or_outlet: &str, icon_name: &str) -> bool {
+        let Some(nid) = self.resolve_node_id(id_or_outlet) else { return false };
+        let Some(node) = self.nodes.iter_mut().find(|n| n.id == nid) else { return false };
+        node.icon_name = Some(icon_name.to_string());
+        true
+    }
+
+    /// Assigns an explicit `binding_path` (and allocates a `value_binding` if absent) during `awakeFromNib`.
+    pub fn set_node_binding_path(&mut self, id_or_outlet: &str, key_path: &str) -> bool {
+        let Some(nid) = self.resolve_node_id(id_or_outlet) else { return false };
+        let next_b = self.nodes.iter().filter_map(|n| n.value_binding).map(|b| b.0).max().unwrap_or(0) + 1;
+        let Some(node) = self.nodes.iter_mut().find(|n| n.id == nid) else { return false };
+        if node.value_binding.is_none() {
+            node.value_binding = Some(crate::scene::ir::BindingId(next_b));
+        }
+        node.binding_path = Some(key_path.to_string());
+        true
+    }
+
+    /// Updates `node.font_weight` and optional `node.font_name` during `awakeFromNib` (`REQ-013-10.1` §3.8.4).
+    pub fn set_node_font_weight(&mut self, id_or_outlet: &str, weight: crate::controls::MacFontWeight, font_name: Option<&str>) -> bool {
+        let Some(nid) = self.resolve_node_id(id_or_outlet) else { return false };
+        let Some(node) = self.nodes.iter_mut().find(|n| n.id == nid) else { return false };
+        node.font_weight = weight;
+        if let Some(name) = font_name {
+            node.font_name = Some(name.to_string());
+        }
+        true
+    }
+
+    /// Returns a mutable slice of all nodes in the scene arena for Stage-2 `initWithCoder:` / `awakeFromNib` class upgrades.
+    pub fn nodes_mut(&mut self) -> &mut [SceneNode] {
+        &mut self.nodes
+    }
+}
+
+impl SceneNode {
+    pub(crate) fn populate_xib_typed_fields(&mut self, elem: roxmltree::Node<'_, '_>, cell: Option<roxmltree::Node<'_, '_>>) {
+        use crate::scene::ir::MacTextAlignment;
+        let align_attr = cell.and_then(|c| c.attribute("alignment")).or_else(|| elem.attribute("alignment"));
+        self.text_alignment = match align_attr {
+            Some("right") => MacTextAlignment::Right,
+            Some("center") => MacTextAlignment::Center,
+            Some("justified") => MacTextAlignment::Justified,
+            Some("natural") => MacTextAlignment::Natural,
+            _ => MacTextAlignment::Left,
+        };
+        let bezel_attr = cell.and_then(|c| c.attribute("bezelStyle")).or_else(|| elem.attribute("bezelStyle"));
+        self.bezel_style = match bezel_attr {
+            Some("round" | "rounded" | "circular") => 1,
+            Some("regularSquare") => 2,
+            Some("disclosure") => 5,
+            Some("shadowlessSquare") => 6,
+            Some("texturedSquare") => 8,
+            Some("helpButton") => 9,
+            Some("smallSquare") => 10,
+            Some("texturedRounded" | "recessed") => 11,
+            Some("roundedDisclosure") => 12,
+            Some("inline") => 15,
+            _ => 0,
+        };
+        self.draws_background =
+            cell.and_then(|c| c.attribute("drawsBackground")).or_else(|| elem.attribute("drawsBackground")) == Some("YES");
+        self.is_bordered = cell.and_then(|c| c.attribute("bordered")).or_else(|| elem.attribute("bordered")) == Some("YES");
+        self.is_bezeled =
+            cell.and_then(|c| c.attribute("bezeled")).or_else(|| elem.attribute("bezeled")) == Some("YES") || self.bezel_style != 0;
+        let default_ed = matches!(self.kind, SceneNodeKind::TextField | SceneNodeKind::NumberField { .. } | SceneNodeKind::SearchField);
+        self.is_editable =
+            cell.and_then(|c| c.attribute("editable")).or_else(|| elem.attribute("editable")).map(|v| v == "YES").unwrap_or(default_ed);
+        self.is_selectable = cell
+            .and_then(|c| c.attribute("selectable"))
+            .or_else(|| elem.attribute("selectable"))
+            .map(|v| v == "YES")
+            .unwrap_or(self.is_editable);
+        let font_elem = cell
+            .and_then(|c| c.children().find(|ch| ch.has_tag_name("font")))
+            .or_else(|| elem.children().find(|ch| ch.has_tag_name("font")));
+        self.font_size_pt = font_elem.and_then(|fe| {
+            fe.attribute("size").and_then(|s| s.parse::<f32>().ok()).or_else(|| match fe.attribute("metaFont") {
+                Some("smallSystem") => Some(11.0),
+                Some("miniSystem") => Some(9.0),
+                Some(m) if m.starts_with("system") => Some(13.0),
+                _ => None,
+            })
+        });
+        let mfont = font_elem.and_then(|f| f.attribute("metaFont")).unwrap_or("");
+        let fname = font_elem.and_then(|f| f.attribute("name")).or_else(|| (!mfont.is_empty()).then_some(mfont));
+        self.font_name = fname.map(str::to_string);
+        let w_str = elem.attribute("fontWeight").unwrap_or_else(|| fname.unwrap_or(mfont));
+        self.font_weight = if w_str.contains("Semibold") || w_str.contains("semibold") {
+            crate::controls::MacFontWeight::Semibold
+        } else if w_str.contains("Bold") || w_str.contains("bold") {
+            crate::controls::MacFontWeight::Bold
+        } else if w_str.contains("Medium") || w_str.contains("medium") {
+            crate::controls::MacFontWeight::Medium
+        } else if w_str.contains("Light") || w_str.contains("light") {
+            crate::controls::MacFontWeight::Light
+        } else {
+            crate::controls::MacFontWeight::Regular
+        };
+        let cname = cell.and_then(|c| c.children().find(|ch| ch.has_tag_name("color"))).and_then(|cl| cl.attribute("name")).unwrap_or("");
+        let c_str = elem.attribute("textColor").unwrap_or(cname);
+        self.label_color = if c_str.contains("secondary") {
+            crate::controls::MacLabelColor::Secondary
+        } else if c_str.contains("tertiary") {
+            crate::controls::MacLabelColor::Tertiary
+        } else {
+            crate::controls::MacLabelColor::Primary
+        };
+        self.custom_class = elem.attribute("customClass").map(str::to_string);
+        self.cell_class = cell.and_then(|c| c.attribute("customClass")).map(str::to_string);
+        self.is_hidden = elem.attribute("hidden") == Some("YES");
+        if elem.has_tag_name("stackView") || self.custom_class.as_deref() == Some("NSStackView") {
+            self.stack_orientation = Some(if elem.attribute("orientation") == Some("vertical") { 1 } else { 0 });
+            self.stack_spacing = elem.attribute("spacing").and_then(|s| s.parse::<f32>().ok()).unwrap_or(2.0);
+            self.detaches_hidden_views = elem.attribute("detachesHiddenViews").map(|v| v == "YES").unwrap_or(true);
+        }
+        if elem.has_tag_name("visualEffectView") || self.custom_class.as_deref() == Some("NSVisualEffectView") {
+            self.draws_background = true;
+            self.custom_class.get_or_insert_with(|| "NSVisualEffectView".into());
+            let mat_code: u8 = match elem.attribute("material") {
+                Some("titlebar") => 3,
+                Some("menu") => 5,
+                Some("popover") => 6,
+                Some("headerView") => 10,
+                Some("sheet") => 11,
+                Some("windowBackground") => 12,
+                Some("hudWindow") => 13,
+                Some("contentBackground") => 18,
+                Some("underWindowBackground") => 21,
+                Some("underPageBackground") => 22,
+                _ => 7,
+            };
+            let behind_bit = if elem.attribute("blendingMode") == Some("behindWindow") { 0x80u8 } else { 0u8 };
+            self.bezel_style = mat_code | behind_bit;
+        }
+    }
+
+    pub(crate) fn populate_ibtool_typed_fields(
+        &mut self,
+        g: &crate::scene::nib_ibtool::IbNibGraph,
+        obj_i: usize,
+        cell_idx: Option<usize>,
+        cflags: u32,
+        font_pt: f64,
+        raw_cls: &str,
+        base_cls: &str,
+        effective_cls: &str,
+        custom_cls: Option<&str>,
+    ) {
+        use crate::scene::ir::MacTextAlignment;
+        use crate::scene::nib_ibtool::IbVal;
+        let vflags = g.prop_val(obj_i, "NSvFlags").and_then(IbVal::as_u32).unwrap_or(0);
+        self.is_hidden = (vflags & 0x8000_0000) != 0;
+        let cflags2 = cell_idx.and_then(|c| g.prop_val(c, "NSCellFlags2")).and_then(IbVal::as_u32).unwrap_or(0);
+        let btn_flags2 = cell_idx.and_then(|c| g.prop_val(c, "NSButtonFlags2")).and_then(IbVal::as_u32).unwrap_or(0);
+        let align_code = cell_idx
+            .and_then(|c| g.prop_val(c, "NSAlignment"))
+            .or_else(|| g.prop_val(obj_i, "NSAlignment"))
+            .and_then(IbVal::as_u32)
+            .unwrap_or_else(|| {
+                let a2 = (cflags2 >> 26) & 0x07;
+                if matches!(a2, 1..=4) {
+                    a2
+                } else {
+                    (cflags >> 2) & 0x07
+                }
+            });
+        self.text_alignment = match align_code {
+            1 => MacTextAlignment::Right,
+            2 => MacTextAlignment::Center,
+            3 => MacTextAlignment::Justified,
+            4 => MacTextAlignment::Natural,
+            _ => MacTextAlignment::Left,
+        };
+        self.cell_class = cell_idx.and_then(|c| {
+            g.prop_val(c, "NSClassName").and_then(|v| g.resolve_str(v)).or_else(|| {
+                let rc = g.obj_class(c);
+                (!rc.is_empty()).then(|| rc.to_string())
+            })
+        });
+        let raw_bezel = cell_idx
+            .and_then(|c| g.prop_val(c, "NSBezelStyle").or_else(|| g.prop_val(c, "NSTextBezelStyle")))
+            .or_else(|| g.prop_val(obj_i, "NSBezelStyle"))
+            .and_then(IbVal::as_u32)
+            .unwrap_or(btn_flags2 & 0x1F) as u8;
+        self.draws_background = cell_idx
+            .and_then(|c| g.prop_val(c, "NSDrawsBackground"))
+            .and_then(IbVal::as_u32)
+            .map(|v| v != 0)
+            .unwrap_or((cflags & 0x0400_0000) != 0);
+        self.is_bordered = (cflags & 0x0080_0000) != 0;
+        self.is_bezeled = (cflags & 0x0040_0000) != 0;
+        self.is_editable = (cflags & 0x4008_0000) != 0;
+        self.is_selectable = (cflags & 0x0004_0000) != 0 || self.is_editable;
+        let state_on = !effective_cls.contains("MenuButton")
+            && ((cflags & 0x8000_0000) != 0
+                || cell_idx
+                    .and_then(|c| g.prop_val(c, "NSContents").or_else(|| g.prop_val(c, "NSState")))
+                    .is_some_and(|v| g.resolve_str(v).as_deref() == Some("1") || v.as_u32() == Some(1)));
+        let alt_img = cell_idx.and_then(|c| g.prop_val(c, "NSAlternateImage")).and_then(|v| g.resolve_str(v)).unwrap_or_default();
+        let highlight_on = state_on && (alt_img.ends_with("Highlight") || (alt_img.is_empty() && raw_bezel == 1));
+        let base_bezel = if raw_bezel == 0 && !self.draws_background && self.is_bezeled { 1 } else { raw_bezel };
+        self.bezel_style = if base_cls.contains("Button") && highlight_on { base_bezel | 0x80 } else { base_bezel };
+        let font_ref = cell_idx
+            .and_then(|c| g.prop_val(c, "NSSupport").or_else(|| g.prop_val(c, "NSFont")))
+            .or_else(|| g.prop_val(obj_i, "NSSupport").or_else(|| g.prop_val(obj_i, "NSFont")));
+        let font_name = font_ref.and_then(|v| g.resolve_str(v)).unwrap_or_default();
+        let desc_wt = font_ref
+            .and_then(IbVal::as_obj_ref)
+            .and_then(|fi| g.prop_val(fi, "NSFontDescriptor").or_else(|| g.prop_val(fi, "NSFontDescriptorAttributes")))
+            .and_then(IbVal::as_obj_ref)
+            .and_then(|di| g.prop_val(di, "NSFontDescriptorAttributes").and_then(IbVal::as_obj_ref).or(Some(di)))
+            .and_then(|attr_d| {
+                g.resolve_dict_f64(attr_d, "NSFontWeight").or_else(|| {
+                    g.resolve_array_refs(attr_d)
+                        .into_iter()
+                        .find_map(|sub| g.resolve_dict_f64(sub, "NSFontWeight").or_else(|| g.resolve_dict_f64(sub, "NSFontWeightTrait")))
+                })
+            });
+        self.font_name = (!font_name.is_empty()).then(|| font_name.clone());
+        self.font_weight =
+            if font_name.contains("Demi") || font_name.contains("Semibold") || desc_wt.is_some_and(|w| (0.25..0.38).contains(&w)) {
+                crate::controls::MacFontWeight::Semibold
+            } else if font_name.contains("Bold") || desc_wt.is_some_and(|w| w >= 0.38) {
+                crate::controls::MacFontWeight::Bold
+            } else if font_name.contains("Medium") || desc_wt.is_some_and(|w| (0.15..0.25).contains(&w)) {
+                crate::controls::MacFontWeight::Medium
+            } else if font_name.contains("Light") || font_name.contains("Thin") || desc_wt.is_some_and(|w| w <= -0.2) {
+                crate::controls::MacFontWeight::Light
+            } else {
+                crate::controls::MacFontWeight::Regular
+            };
+        let color_name = cell_idx.and_then(|c| g.prop_val(c, "NSTextColor")).and_then(|v| g.resolve_str(v)).unwrap_or_default();
+        self.label_color = if color_name.contains("secondary") {
+            crate::controls::MacLabelColor::Secondary
+        } else if color_name.contains("tertiary") {
+            crate::controls::MacLabelColor::Tertiary
+        } else {
+            crate::controls::MacLabelColor::Primary
+        };
+        self.font_size_pt = (font_pt > 0.0).then_some(font_pt as f32);
+        self.custom_class = custom_cls.map(str::to_string).or_else(|| (raw_cls != base_cls).then(|| raw_cls.to_string()));
+        self.image_scaling = cell_idx
+            .and_then(|c| g.prop_val(c, "NSScale").or_else(|| g.prop_val(c, "NSImageScaling")))
+            .or_else(|| g.prop_val(obj_i, "NSScale").or_else(|| g.prop_val(obj_i, "NSImageScaling")))
+            .and_then(IbVal::as_u32)
+            .unwrap_or(0) as u8;
+        self.symbol_point_size = g
+            .prop_val(obj_i, "IBNSShadowedSymbolConfiguration")
+            .or_else(|| cell_idx.and_then(|c| g.prop_val(c, "IBNSShadowedSymbolConfiguration").or_else(|| g.prop_val(c, "NSSymbolConfiguration"))))
+            .and_then(IbVal::as_obj_ref)
+            .and_then(|sc| g.prop_val(sc, "NSPointSize").or_else(|| g.prop_val(sc, "NSSize")))
+            .and_then(|v| g.resolve_f64(v))
+            .filter(|&pt| pt > 0.0)
+            .map(|pt| pt as f32);
+        if g.obj_inherits(obj_i, "StackView") || base_cls.contains("StackView") || effective_cls.contains("StackView") {
+            self.stack_orientation = Some(g.prop_val(obj_i, "NSStackViewOrientation").and_then(IbVal::as_u32).unwrap_or(0) as u8);
+            self.stack_spacing = g.prop_val(obj_i, "NSStackViewSpacing").and_then(|v| g.resolve_f64(v)).unwrap_or(2.0) as f32;
+            self.detaches_hidden_views =
+                g.prop_val(obj_i, "NSStackViewDetachesHiddenViews").and_then(IbVal::as_u32).map(|v| v != 0).unwrap_or(true);
+        }
+        if g.obj_inherits(obj_i, "VisualEffectView") || base_cls.contains("VisualEffectView") || effective_cls.contains("VisualEffectView")
+        {
+            self.draws_background = true;
+            self.custom_class.get_or_insert_with(|| "NSVisualEffectView".into());
+            let mat = g
+                .prop_val(obj_i, "NSVisualEffectViewMaterial")
+                .or_else(|| g.prop_val(obj_i, "IBVisualEffectViewExternalMaterial"))
+                .or_else(|| g.prop_val(obj_i, "NSMaterial"))
+                .and_then(IbVal::as_u32)
+                .unwrap_or(7);
+            let blending_opt =
+                g.prop_val(obj_i, "NSVisualEffectViewBlendingMode").or_else(|| g.prop_val(obj_i, "NSBlendingMode")).and_then(IbVal::as_u32);
+            let is_behind = match blending_opt {
+                Some(b) => b == 0,
+                None => mat == 7 || mat == 21,
+            };
+            self.bezel_style = ((mat as u8).max(1) & 0x7F) | if is_behind { 0x80 } else { 0 };
+        }
+    }
+}

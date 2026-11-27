@@ -40,6 +40,10 @@ pub struct MacTokenField<'a> {
     placeholder: &'a str,
     max_chars: Option<usize>,
     width: Option<f32>,
+    fixed_rect: Option<Rect>,
+    font_size: Option<f32>,
+    recessed_pill: bool,
+    capsule_tint: Option<egui::Color32>,
     enabled: bool,
     theme: Option<&'a MacTheme>,
 }
@@ -49,7 +53,45 @@ impl<'a> MacTokenField<'a> {
     pub fn new(id_src: impl Hash + Debug, tokens: &'a mut Vec<String>, input_buffer: &'a mut String) -> Self {
         #[allow(deprecated)]
         let id = Id::new(id_src);
-        Self { id, tokens, input_buffer, placeholder: "Add token...", max_chars: None, width: None, enabled: true, theme: None }
+        Self {
+            id,
+            tokens,
+            input_buffer,
+            placeholder: "Add token...",
+            max_chars: None,
+            width: None,
+            fixed_rect: None,
+            font_size: None,
+            recessed_pill: false,
+            capsule_tint: None,
+            enabled: true,
+            theme: None,
+        }
+    }
+
+    /// Overrides the typography font size in points (`REQ-013-10.5`).
+    pub fn font_size(mut self, size_pt: f32) -> Self {
+        self.font_size = Some(size_pt);
+        self
+    }
+
+    /// Enables recessed sidebar pill styling (`#EAEAEA` / `#3A3A3A` field fill & compact border-tinted token capsules without `×` crosses, `REQ-013-10.5`).
+    pub fn recessed_pill(mut self, recessed: bool) -> Self {
+        self.recessed_pill = recessed;
+        self
+    }
+
+    /// Sets the field-scoped base tint color for compact token capsules (defaults to `theme.control_accent()`, or `theme.system_green()` for Unicode fields, `REQ-013-10.5`).
+    pub fn capsule_tint(mut self, tint: egui::Color32) -> Self {
+        self.capsule_tint = Some(tint);
+        self
+    }
+
+    /// Pins the token field to an exact NIB rectangle.
+    pub fn fixed_rect(mut self, rect: Rect) -> Self {
+        self.fixed_rect = Some(rect);
+        self.width = Some(rect.width());
+        self
     }
 
     /// Sets placeholder text shown when no tokens or input text are present.
@@ -101,13 +143,12 @@ impl<'a> Widget for MacTokenField<'a> {
         let theme: &MacTheme = &theme_cow;
         let tfm = theme.token_field();
         let pad_h = tfm.padding_horizontal.points();
-        let pad_v = tfm.padding_vertical.points();
         let pill_h = tfm.pill_height.points();
         let pill_r = CornerRadius::same(tfm.pill_corner_radius.points() as u8);
         let pill_pad_h = tfm.pill_padding_horizontal.points();
         let pill_spacing = tfm.pill_spacing.points();
         let row_spacing = tfm.row_spacing.points();
-        let font_sz = tfm.font_size.points();
+        let font_sz = self.font_size.unwrap_or_else(|| tfm.font_size.points());
         let remove_sz = tfm.remove_icon_size.points();
         let min_input_w = tfm.min_input_width.points();
         let width = self.width.unwrap_or_else(|| tfm.default_width.points());
@@ -170,11 +211,19 @@ impl<'a> Widget for MacTokenField<'a> {
         let mut pill_layouts = Vec::with_capacity(self.tokens.len());
         let (mut cursor_x, mut cursor_y) = (0.0f32, 0.0f32);
 
+        let single_line_fixed = self.recessed_pill || self.fixed_rect.is_some_and(|r| r.height() <= pill_h * 2.0);
+        let pad_v = if let Some(r) = self.fixed_rect.filter(|_| single_line_fixed) {
+            ((r.height() - pill_h) * 0.5).max(0.0)
+        } else {
+            tfm.padding_vertical.points()
+        };
+
         for (idx, tok) in self.tokens.iter().enumerate() {
             let galley = ui.painter().layout_no_wrap(tok.clone(), font_id.clone(), egui::Color32::PLACEHOLDER);
             let text_w = galley.size().x;
-            let w = (pill_pad_h * 2.0 + text_w + remove_sz).min(max_inner_w);
-            if cursor_x > 0.0 && cursor_x + w > max_inner_w {
+            let rm_extra = if single_line_fixed { 0.0 } else { remove_sz };
+            let w = (pill_pad_h * 2.0 + text_w + rm_extra).min(max_inner_w);
+            if !single_line_fixed && cursor_x > 0.0 && cursor_x + w > max_inner_w {
                 cursor_x = 0.0;
                 cursor_y += pill_h + row_spacing;
             }
@@ -182,7 +231,7 @@ impl<'a> Widget for MacTokenField<'a> {
             cursor_x += w + pill_spacing;
         }
 
-        if cursor_x > 0.0 && cursor_x + min_input_w > max_inner_w {
+        if !single_line_fixed && cursor_x > 0.0 && cursor_x + min_input_w > max_inner_w {
             cursor_x = 0.0;
             cursor_y += pill_h + row_spacing;
         }
@@ -191,9 +240,15 @@ impl<'a> Widget for MacTokenField<'a> {
         let cnt_h = self.max_chars.map_or(0.0, |_| tfm.counter_row_height.points());
         let total_h = (input_rel_y + pill_h + pad_v * 2.0 + cnt_h).max(tfm.min_height.points());
 
-        let alloc_sz = Vec2::new(width, total_h);
-        let (raw_rect, response) = ui.allocate_exact_size(alloc_sz, Sense::click());
-        let rect = subpixel_snap_rect(raw_rect, ui.ctx().pixels_per_point());
+        let (rect, response) = if let Some(fixed) = self.fixed_rect {
+            let snapped = subpixel_snap_rect(fixed, ui.ctx().pixels_per_point());
+            let resp = ui.interact(snapped, self.id.with("token_fixed_rect"), Sense::click());
+            (snapped, resp)
+        } else {
+            let alloc_sz = Vec2::new(width, total_h);
+            let (raw_rect, resp) = ui.allocate_exact_size(alloc_sz, Sense::click());
+            (subpixel_snap_rect(raw_rect, ui.ctx().pixels_per_point()), resp)
+        };
         let pointer_in_rect = self.enabled
             && ui.is_rect_visible(rect)
             && ui.input(|i| {
@@ -212,10 +267,17 @@ impl<'a> Widget for MacTokenField<'a> {
             theme.paint_focus_ring(&painter, rect, bezel_r);
         }
 
-        let border_col = if is_focused { theme.control_accent() } else { theme.separator() };
+        let surface_bg = theme.active_surface_at(ui, rect.center());
+        let ctrl_bg = if single_line_fixed && !is_focused { theme.recessed_pill_fill_on(surface_bg) } else { theme.control_background() };
+        let border_col = if is_focused {
+            theme.control_accent()
+        } else if single_line_fixed {
+            theme.recessed_pill_border_on(ctrl_bg)
+        } else {
+            theme.separator()
+        };
         let border_s = Stroke::new(tfm.border_width.points(), border_col);
         let bezel_cr = CornerRadius::same(bezel_r as u8);
-        let ctrl_bg = theme.control_background();
         painter.rect(rect, bezel_cr, ctrl_bg, border_s, StrokeKind::Inside);
 
         let in_x = rect.left() + pad_h + input_rel_x;
@@ -267,27 +329,39 @@ impl<'a> Widget for MacTokenField<'a> {
                 selected_tok = Some(idx);
             }
 
-            let (pill_bg, pill_fg, x_fg) = if selected_tok == Some(idx) && self.enabled {
-                (theme.control_accent(), sel_fg, sel_fg)
-            } else if rm_resp.hovered() && self.enabled {
-                (theme.selected_control(), sel_fg, sel_fg)
+            let (pill_bg, pill_fg, x_fg, cur_border) = if selected_tok == Some(idx) && self.enabled {
+                (theme.control_accent(), sel_fg, sel_fg, pill_border)
+            } else if rm_resp.hovered() && self.enabled && !single_line_fixed {
+                (theme.selected_control(), sel_fg, sel_fg, pill_border)
+            } else if single_line_fixed {
+                let base_tint = self.capsule_tint.unwrap_or_else(|| theme.control_accent());
+                let tint_bg = crate::theme::alpha_composite(base_tint.gamma_multiply(0.5), theme.control_background());
+                let tint_border = Stroke::new(tfm.border_width.points(), theme.recessed_pill_border_on(tint_bg));
+                (tint_bg, theme.label(), theme.secondary_label(), tint_border)
             } else {
-                (theme.control(), theme.label(), theme.secondary_label())
+                (theme.control(), theme.label(), theme.secondary_label(), pill_border)
             };
-            painter.rect(pill_rect, pill_r, pill_bg, pill_border, StrokeKind::Inside);
+            let eff_pill_r = if single_line_fixed { CornerRadius::same(tfm.row_spacing.points().round() as u8) } else { pill_r };
+            painter.rect(pill_rect, eff_pill_r, pill_bg, cur_border, StrokeKind::Inside);
 
-            let clip_r = (rm_rect.left() - 2.0).max(pill_rect.left());
-            let text_clip = Rect::from_min_max(pill_rect.min, Pos2::new(clip_r, pill_rect.max.y));
-            let text_anchor = Pos2::new(pill_rect.left() + pill_pad_h, pill_rect.center().y);
-            let text_pos = align_lc.anchor_size(text_anchor, galley.size()).min;
-            let clip_p = painter.with_clip_rect(text_clip);
-            clip_p.galley(text_pos, galley, pill_fg);
+            if single_line_fixed {
+                let text_anchor = pill_rect.center();
+                let text_pos = Align2::CENTER_CENTER.anchor_size(text_anchor, galley.size()).min;
+                painter.with_clip_rect(pill_rect).galley(text_pos, galley, pill_fg);
+            } else {
+                let clip_r = (rm_rect.left() - 2.0).max(pill_rect.left());
+                let text_clip = Rect::from_min_max(pill_rect.min, Pos2::new(clip_r, pill_rect.max.y));
+                let text_anchor = Pos2::new(pill_rect.left() + pill_pad_h, pill_rect.center().y);
+                let text_pos = align_lc.anchor_size(text_anchor, galley.size()).min;
+                let clip_p = painter.with_clip_rect(text_clip);
+                clip_p.galley(text_pos, galley, pill_fg);
 
-            let c = rm_rect.center();
-            let x_stroke = Stroke::new(tfm.remove_icon_stroke.points(), x_fg);
-            let (x0, x1, y0, y1) = (c.x - span, c.x + span, c.y - span, c.y + span);
-            painter.line_segment([Pos2::new(x0, y0), Pos2::new(x1, y1)], x_stroke);
-            painter.line_segment([Pos2::new(x0, y1), Pos2::new(x1, y0)], x_stroke);
+                let c = rm_rect.center();
+                let x_stroke = Stroke::new(tfm.remove_icon_stroke.points(), x_fg);
+                let (x0, x1, y0, y1) = (c.x - span, c.x + span, c.y - span, c.y + span);
+                painter.line_segment([Pos2::new(x0, y0), Pos2::new(x1, y1)], x_stroke);
+                painter.line_segment([Pos2::new(x0, y1), Pos2::new(x1, y0)], x_stroke);
+            }
         }
 
         if let Some(idx) = remove_idx.filter(|&i| i < self.tokens.len()) {

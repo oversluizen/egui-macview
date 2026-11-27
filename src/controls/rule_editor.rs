@@ -125,7 +125,7 @@ impl<'a> Widget for MacRuleEditor<'a> {
                 Vec2::new(btn_sz, btn_sz),
             );
 
-            // [+] button (Glyphs 4 delicate circular badge inside 20x20pt hit target)
+            // [+] button (delicate circular badge inside 20x20pt hit target)
             let plus_id = self.id_salt.with("plus").with(r_idx);
             let plus_resp = ui.interact(plus_rect, plus_id, Sense::click());
             let plus_hovered = plus_resp.hovered();
@@ -155,7 +155,7 @@ impl<'a> Widget for MacRuleEditor<'a> {
                 response.mark_changed();
             }
 
-            // [-] button (Glyphs 4 delicate circular badge inside 20x20pt hit target)
+            // [-] button (delicate circular badge inside 20x20pt hit target)
             let minus_id = self.id_salt.with("minus").with(r_idx);
             let minus_resp = ui.interact(minus_rect, minus_id, Sense::click());
             let minus_hovered = minus_resp.hovered();

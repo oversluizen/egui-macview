@@ -179,6 +179,13 @@ impl<'a> MacMenuBar<'a> {
         let mut open_rect = None;
         let mut bar_union_rect = Rect::NOTHING;
 
+        let bar_bg_rect = Rect::from_min_size(ui.cursor().min, Vec2::new(ui.available_width(), bar_height));
+        ui.painter().rect_filled(bar_bg_rect, CornerRadius::ZERO, theme.window_background());
+        ui.painter().line_segment(
+            [bar_bg_rect.left_bottom(), bar_bg_rect.right_bottom()],
+            Stroke::new(border_w, theme.separator()),
+        );
+
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 0.0;
             for (idx, menu) in self.menus.iter().enumerate() {
@@ -186,7 +193,8 @@ impl<'a> MacMenuBar<'a> {
                 let text = &menu.title;
                 let text_color = if is_open { on_accent } else { theme.label() };
 
-                let galley = ui.painter().layout_no_wrap(text.clone(), font_id.clone(), egui::Color32::PLACEHOLDER);
+                let item_font = if idx == 0 { theme.semibold_font_id(ui, mb_metrics.font_size.points()).0 } else { font_id.clone() };
+                let galley = ui.painter().layout_no_wrap(text.clone(), item_font, egui::Color32::PLACEHOLDER);
                 let item_width = galley.size().x + padding_h * 2.0;
                 let (rect, resp) = ui.allocate_exact_size(Vec2::new(item_width, bar_height), Sense::click());
                 bar_union_rect = bar_union_rect.union(rect);

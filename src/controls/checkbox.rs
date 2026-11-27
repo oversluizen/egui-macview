@@ -261,7 +261,12 @@ impl<'a> Widget for MacCheckbox<'a> {
                 painter.circle_filled(box_rect.center(), box_sz * cm.mixed_bar_inset_ratio.points(), glyph_fg);
             }
         } else {
-            painter.rect(box_rect, CornerRadius::same(corner_r.round() as u8), fill_color, stroke, StrokeKind::Inside);
+            let cr = CornerRadius::same(corner_r.round() as u8);
+            if is_active && !self.unaccented {
+                theme.paint_accent_control_bezel(&painter, box_rect, cr, fill_color, border_w);
+            } else {
+                painter.rect(box_rect, cr, fill_color, stroke, StrokeKind::Inside);
+            }
             let glyph_stroke = Stroke::new(check_stroke_w, glyph_fg);
             if self.mixed {
                 let (inset, cy) = (box_sz * cm.mixed_bar_inset_ratio.points(), box_rect.center().y);

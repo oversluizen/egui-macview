@@ -38,12 +38,23 @@ pub struct MacSearchField<'a> {
     height: Option<f32>,
     corner_radius: Option<f32>,
     enabled: bool,
+    suppress_leading_icon: bool,
 }
 
 impl<'a> MacSearchField<'a> {
     /// Creates a new search field bound to a mutable string buffer.
     pub fn new(text: &'a mut String) -> Self {
-        Self { id: None, text, placeholder: "Search", theme: None, width: None, height: None, corner_radius: None, enabled: true }
+        Self {
+            id: None,
+            text,
+            placeholder: "Search",
+            theme: None,
+            width: None,
+            height: None,
+            corner_radius: None,
+            enabled: true,
+            suppress_leading_icon: false,
+        }
     }
 
     /// Sets explicit widget identifier for focus management.
@@ -85,6 +96,12 @@ impl<'a> MacSearchField<'a> {
     /// Enables or disables the control.
     pub fn enabled(mut self, enabled: bool) -> Self {
         self.enabled = enabled;
+        self
+    }
+
+    /// Suppresses the default procedural magnifying glass when the host paints an `NSSearchButtonCell` template icon.
+    pub fn suppress_leading_icon(mut self, suppress: bool) -> Self {
+        self.suppress_leading_icon = suppress;
         self
     }
 
@@ -162,15 +179,21 @@ impl<'a> Widget for MacSearchField<'a> {
         let text_min_x = rect.left() + padding_h + icon_size + content_gap;
         let text_max_x = if has_text { rect.right() - padding_h - clear_size - content_gap } else { rect.right() - padding_h };
         let v_padding = metrics.padding_vertical.points();
+        let text_min_y = rect.top() + v_padding;
         let text_rect = Rect::from_min_max(
-            Pos2::new(text_min_x, rect.top() + v_padding),
-            Pos2::new(text_max_x.max(text_min_x), rect.bottom() - v_padding),
+            Pos2::new(text_min_x, text_min_y),
+            Pos2::new(text_max_x.max(text_min_x + 1.0), (rect.bottom() - v_padding).max(text_min_y + 1.0)),
         );
         let font_id = FontId::proportional(metrics.font_size.points());
 
         // 1. Paint pill background, border, focus ring, and leading icon BEFORE TextEdit so text is never obscured!
         let painter = ui.painter_at(rect);
-        let bg_color = theme.control_background();
+        let surface_bg = theme.active_surface_at(ui, rect.center());
+        let bg_color = if theme.is_sidebar_surface(surface_bg) && !is_focused_pre {
+            theme.recessed_pill_fill_on(surface_bg)
+        } else {
+            theme.control_background()
+        };
         let border_stroke = if is_focused_pre {
             Stroke::new(metrics.border_width.points(), theme.control_accent())
         } else {
@@ -183,17 +206,19 @@ impl<'a> Widget for MacSearchField<'a> {
 
         painter.rect(rect, CornerRadius::same(corner_radius as u8), bg_color, border_stroke, StrokeKind::Inside);
 
-        let icon_cx = rect.left() + padding_h + icon_size * 0.5;
-        let icon_cy = rect.center().y;
-        let glass_r = metrics.glass_radius.points();
-        let stroke = Stroke::new(icon_stroke, theme.placeholder_text());
-        let icon_offset = metrics.border_width.points();
-        let ring_center = Pos2::new(icon_cx - icon_offset, icon_cy - icon_offset);
-        painter.circle_stroke(ring_center, glass_r, stroke);
+        if !self.suppress_leading_icon {
+            let icon_cx = rect.left() + padding_h + icon_size * 0.5;
+            let icon_cy = rect.center().y;
+            let glass_r = metrics.glass_radius.points();
+            let stroke = Stroke::new(icon_stroke, theme.placeholder_text());
+            let icon_offset = metrics.border_width.points();
+            let ring_center = Pos2::new(icon_cx - icon_offset, icon_cy - icon_offset);
+            painter.circle_stroke(ring_center, glass_r, stroke);
 
-        let handle_start = Pos2::new(ring_center.x + glass_r * 0.5, ring_center.y + glass_r * 0.5);
-        let handle_end = Pos2::new(icon_cx + icon_size * 0.5, icon_cy + icon_size * 0.5);
-        painter.line_segment([handle_start, handle_end], stroke);
+            let handle_start = Pos2::new(ring_center.x + glass_r * 0.5, ring_center.y + glass_r * 0.5);
+            let handle_end = Pos2::new(icon_cx + icon_size * 0.5, icon_cy + icon_size * 0.5);
+            painter.line_segment([handle_start, handle_end], stroke);
+        }
 
         if !has_text && !is_focused_pre {
             painter.text(

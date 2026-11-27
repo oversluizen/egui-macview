@@ -57,6 +57,7 @@ pub fn decode_real_nib_archive_v1(bytes: &[u8], mapper: &CustomClassMapper) -> R
     let mut next_binding = 1u32;
     let mut next_action = 1u32;
     let mut binding_by_path: std::collections::BTreeMap<String, BindingId> = std::collections::BTreeMap::new();
+    let mut outlets: std::collections::BTreeMap<String, NodeId> = std::collections::BTreeMap::new();
 
     for (obj_i, &(cls_idx, v_start, v_len)) in objects.iter().enumerate() {
         let raw_cls = classes.get(cls_idx).map(String::as_str).unwrap_or("NSView");
@@ -73,6 +74,7 @@ pub fn decode_real_nib_archive_v1(bytes: &[u8], mapper: &CustomClassMapper) -> R
         let mut cell_ref: Option<usize> = None;
         let mut mask = 0u8;
         let mut is_unflipped = false;
+        let mut vflags_bezel = 0u8;
 
         for (k_idx, val) in props {
             let k_name = keys.get(*k_idx).map(String::as_str).unwrap_or("");
@@ -112,6 +114,7 @@ pub fn decode_real_nib_archive_v1(bytes: &[u8], mapper: &CustomClassMapper) -> R
                     if let Some(v) = val.as_u32() {
                         mask = (v & 0x3F) as u8;
                         is_unflipped = (v & 0x80) != 0;
+                        vflags_bezel = ((v >> 16) & 0xFF) as u8;
                     }
                 }
                 _ => {}
@@ -160,7 +163,7 @@ pub fn decode_real_nib_archive_v1(bytes: &[u8], mapper: &CustomClassMapper) -> R
         let id = (nodes.len() + 1) as u32;
         let ib_id = ib_id_opt.unwrap_or_else(|| format!("nib-{obj_i}"));
         obj_to_node_idx[obj_i] = Some(nodes.len());
-        nodes.push(mk_node(
+        let mut node = mk_node(
             id,
             &ib_id,
             if nodes.is_empty() { None } else { Some(1) },
@@ -175,7 +178,12 @@ pub fn decode_real_nib_archive_v1(bytes: &[u8], mapper: &CustomClassMapper) -> R
             None,
             icon_opt.as_deref(),
             VisibilityRule::Always,
-        ));
+        );
+        node.custom_class = custom_cls;
+        if vflags_bezel != 0 {
+            node.bezel_style = vflags_bezel;
+        }
+        nodes.push(node);
     }
 
     for &(cls_idx, v_start, v_len) in &objects {
@@ -209,7 +217,13 @@ pub fn decode_real_nib_archive_v1(bytes: &[u8], mapper: &CustomClassMapper) -> R
                 _ => {}
             }
         }
-        if cls_name == "NSNibControlConnector" {
+        if cls_name == "NSNibOutletConnector" {
+            if let Some(n_idx) = dst_obj.or(src_obj).and_then(|o| obj_to_node_idx.get(o).copied().flatten()) {
+                if !label_str.is_empty() {
+                    outlets.insert(label_str, nodes[n_idx].id);
+                }
+            }
+        } else if cls_name == "NSNibControlConnector" {
             if let Some(n_idx) = src_obj.and_then(|o| obj_to_node_idx.get(o).copied().flatten()) {
                 nodes[n_idx].action = Some(ActionId(next_action));
                 nodes[n_idx].action_selector = Some(label_str);
@@ -235,7 +249,9 @@ pub fn decode_real_nib_archive_v1(bytes: &[u8], mapper: &CustomClassMapper) -> R
     }
     let root_w = nodes.first().map(|n| n.nib_frame[2]).unwrap_or(480.0).max(1.0);
     let root_h = nodes.first().map(|n| n.nib_frame[3]).unwrap_or(320.0).max(1.0);
-    Ok(MacSceneIR::from_nodes(NodeId(1), [root_w, root_h], nodes, CompiledConstraintSchedule::default()))
+    let mut scene = MacSceneIR::from_nodes(NodeId(1), [root_w, root_h], nodes, CompiledConstraintSchedule::default());
+    scene.outlets = outlets;
+    Ok(scene)
 }
 
 pub(crate) fn classify_nib_control(
@@ -288,6 +304,7 @@ pub fn build_real_varint_nib_archive() -> Vec<u8> {
         "NSLabel",
         "NSKeyPath",
         "NSValueTransformerName",
+        "NSDestination",
     ];
     let mut keys_sec = Vec::new();
     for k in key_names {
@@ -304,6 +321,7 @@ pub fn build_real_varint_nib_archive() -> Vec<u8> {
         "NSButtonCell",
         "NSNibControlConnector",
         "NSNibBindingConnector",
+        "NSNibOutletConnector",
     ];
     let mut cls_sec = Vec::new();
     for c in cls_names {
@@ -366,8 +384,10 @@ pub fn build_real_varint_nib_archive() -> Vec<u8> {
     push_bytes_val(&mut vals_sec, 10, b"values.originAnchor\0");
     push_ref_val(&mut vals_sec, 8, 4);
     push_bytes_val(&mut vals_sec, 10, b"values.snapToPixelGrid\0");
+    push_ref_val(&mut vals_sec, 12, 2);
+    push_bytes_val(&mut vals_sec, 9, b"scaleField\0");
 
-    let objs: [(u32, u32, u32); 13] = [
+    let objs: [(u32, u32, u32); 14] = [
         (0, 0, 1),
         (1, 1, 2),
         (2, 3, 4),
@@ -381,6 +401,7 @@ pub fn build_real_varint_nib_archive() -> Vec<u8> {
         (7, 21, 3),
         (7, 24, 2),
         (7, 26, 2),
+        (8, 28, 2),
     ];
     let mut objs_sec = Vec::new();
     for (c, vs, vl) in objs {
@@ -395,7 +416,7 @@ pub fn build_real_varint_nib_archive() -> Vec<u8> {
     let cls_off = val_off + vals_sec.len() as u32;
 
     let mut out = Vec::from(&b"NIBArchive\x01\x00\x00\x00"[..]);
-    for u in [0u32, objs.len() as u32, obj_off, key_names.len() as u32, key_off, 28u32, val_off, cls_names.len() as u32, cls_off] {
+    for u in [0u32, objs.len() as u32, obj_off, key_names.len() as u32, key_off, 30u32, val_off, cls_names.len() as u32, cls_off] {
         out.extend_from_slice(&u.to_le_bytes());
     }
     out.resize(52, 0);
@@ -404,4 +425,117 @@ pub fn build_real_varint_nib_archive() -> Vec<u8> {
     out.extend_from_slice(&vals_sec);
     out.extend_from_slice(&cls_sec);
     out
+}
+
+pub(crate) fn resolve_scroll_doc_view(g: &crate::scene::nib_ibtool::IbNibGraph, obj_i: usize) -> Option<usize> {
+    use crate::scene::nib_ibtool::IbVal;
+    g.prop_val(obj_i, "NSDocView")
+        .and_then(IbVal::as_obj_ref)
+        .or_else(|| {
+            g.prop_val(obj_i, "NSContentView")
+                .and_then(IbVal::as_obj_ref)
+                .and_then(|cv| g.prop_val(cv, "NSDocView").and_then(IbVal::as_obj_ref))
+        })
+        .or_else(|| {
+            g.prop_val(obj_i, "NSSubviews").and_then(IbVal::as_obj_ref).into_iter().flat_map(|a| g.resolve_array_refs(a)).find_map(|sub| {
+                g.prop_val(sub, "NSDocView").and_then(IbVal::as_obj_ref).or_else(|| {
+                    g.prop_val(sub, "NSSubviews").and_then(IbVal::as_obj_ref).into_iter().flat_map(|ca| g.resolve_array_refs(ca)).find(
+                        |&c| {
+                            let cls = g.obj_class(c);
+                            !cls.contains("Scroller") && !cls.contains("HeaderView") && !cls.contains("ClipView")
+                        },
+                    )
+                })
+            })
+        })
+}
+
+pub(crate) fn decode_ibtool_scrollview_kind(
+    g: &crate::scene::nib_ibtool::IbNibGraph,
+    obj_i: usize,
+    explicit_icon: Option<String>,
+) -> Option<(SceneNodeKind, Option<String>)> {
+    use crate::scene::nib_ibtool::IbVal;
+    let doc_idx = resolve_scroll_doc_view(g, obj_i)?;
+    let tv_cls = g.obj_class(doc_idx);
+    let tv_orig = g.prop_val(doc_idx, "NSOriginalClassName").and_then(|v| g.resolve_str(v)).unwrap_or_default();
+    let is_outline = tv_cls.contains("OutlineView") || tv_orig.contains("OutlineView") || g.obj_inherits(doc_idx, "OutlineView");
+    if tv_cls.contains("TableView") || tv_orig.contains("TableView") || is_outline {
+        let col_arr = g.prop_val(doc_idx, "NSTableColumns").and_then(IbVal::as_obj_ref);
+        let columns: Vec<(String, f32)> = col_arr
+            .map(|a| g.resolve_array_refs(a))
+            .unwrap_or_default()
+            .into_iter()
+            .map(|col_idx| {
+                let hdr_title = g
+                    .prop_val(col_idx, "NSHeaderCell")
+                    .and_then(IbVal::as_obj_ref)
+                    .and_then(|hc| g.prop_val(hc, "NSContents").or_else(|| g.prop_val(hc, "NSTitle")))
+                    .or_else(|| g.prop_val(col_idx, "NSTitle"))
+                    .or_else(|| g.prop_val(col_idx, "NSIdentifier"))
+                    .and_then(|v| g.resolve_str(v))
+                    .unwrap_or_default();
+                let col_w = g.prop_val(col_idx, "NSWidth").and_then(|v| g.resolve_f64(v)).unwrap_or(100.0) as f32;
+                (hdr_title, col_w)
+            })
+            .collect();
+        return Some((SceneNodeKind::TableView { columns }, explicit_icon.or_else(|| is_outline.then(|| "NSOutlineView".into()))));
+    }
+    let has_no_subviews = g.prop_val(doc_idx, "NSSubviews").and_then(IbVal::as_obj_ref).is_none_or(|a| g.resolve_array_refs(a).is_empty());
+    if has_no_subviews && !tv_cls.contains("TextView") && !tv_orig.contains("TextView") {
+        let doc_custom = g.prop_val(doc_idx, "NSClassName").and_then(|v| g.resolve_str(v));
+        return Some((SceneNodeKind::CustomCanvasSlot { class_name: doc_custom.as_deref().unwrap_or(tv_cls).to_string() }, explicit_icon));
+    }
+    None
+}
+
+pub(crate) fn wire_ibtool_outlet_and_menu(st: &mut crate::scene::nib_ibtool::IbDecodeState<'_>, obj_i: usize) {
+    use crate::scene::nib_ibtool::IbVal;
+    let src_obj = st.graph.prop_val(obj_i, "NSSource").and_then(IbVal::as_obj_ref);
+    let dst_obj = st.graph.prop_val(obj_i, "NSDestination").and_then(IbVal::as_obj_ref);
+    let lbl = st.graph.prop_val(obj_i, "NSLabel").and_then(|v| st.graph.resolve_str(v));
+    if let (Some(outlet_lbl), Some(&n_idx)) = (lbl.as_deref(), dst_obj.and_then(|o| st.obj_to_node_idx.get(&o))) {
+        if !outlet_lbl.is_empty() {
+            st.outlets.insert(outlet_lbl.to_string(), st.nodes[n_idx].id);
+        }
+    } else if lbl.as_deref() == Some("menu") {
+        if let (Some(&src_idx), Some(menu_idx)) = (src_obj.and_then(|o| st.obj_to_node_idx.get(&o)), dst_obj) {
+            if st.graph.obj_inherits(menu_idx, "NSMenu") {
+                let item_refs =
+                    st.graph.prop_val(menu_idx, "NSMenuItems").and_then(IbVal::as_obj_ref).map(|a| st.graph.resolve_array_refs(a)).unwrap_or_default();
+                let mut rows = Vec::with_capacity(item_refs.len());
+                for mi in item_refs {
+                    let mi_title = st.graph.prop_val(mi, "NSTitle").and_then(|v| st.graph.resolve_str(v)).unwrap_or_default();
+                    if mi_title.is_empty() {
+                        continue;
+                    }
+                    let mi_ib = st
+                        .graph
+                        .prop_val(mi, "NSUserInterfaceItemIdentifier")
+                        .and_then(|v| st.graph.resolve_str(v))
+                        .unwrap_or_else(|| format!("_NS:{mi}"));
+                    let raw_kp = (0..st.graph.objects.len()).find_map(|bi| {
+                        (st.graph.obj_class(bi) == "NSNibBindingConnector"
+                            && st.graph.prop_val(bi, "NSSource").and_then(IbVal::as_obj_ref) == Some(mi))
+                        .then(|| st.graph.prop_val(bi, "NSKeyPath").and_then(|v| st.graph.resolve_str(v)))?
+                    });
+                    let (bid_opt, kp_opt) = if let Some(kp) = raw_kp {
+                        let norm = flatten_controller_key_path(&kp);
+                        let bid = *st.binding_by_path.entry(norm.clone()).or_insert_with(|| {
+                            let b = BindingId(st.next_binding);
+                            st.next_binding += 1;
+                            b
+                        });
+                        (Some(bid), Some(norm))
+                    } else {
+                        (None, None)
+                    };
+                    rows.push((mi_ib, mi_title, bid_opt, kp_opt));
+                }
+                if !rows.is_empty() {
+                    st.button_menus.insert(st.nodes[src_idx].id, rows);
+                }
+            }
+        }
+    }
 }

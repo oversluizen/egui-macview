@@ -45,6 +45,7 @@ pub struct MacComboBox<'a, T: AsRef<str>> {
     pub(super) theme: Option<&'a MacTheme>,
     pub(super) width: Option<f32>,
     pub(super) fixed_rect: Option<Rect>,
+    pub(super) recessed_pill: bool,
 }
 
 impl<'a, T: AsRef<str>> MacComboBox<'a, T> {
@@ -58,7 +59,14 @@ impl<'a, T: AsRef<str>> MacComboBox<'a, T> {
             theme: None,
             width: None,
             fixed_rect: None,
+            recessed_pill: false,
         }
+    }
+
+    /// Renders the combo box with a recessed sidebar pill surface (`drawsBackground == false && isBezeled == true`).
+    pub fn recessed_pill(mut self, recessed: bool) -> Self {
+        self.recessed_pill = recessed;
+        self
     }
 
     /// Sets the control size (`Regular`, `Small`, or `Mini`).
@@ -187,7 +195,12 @@ impl<'a, T: AsRef<str>> MacComboBox<'a, T> {
         let (frame_rect, visual_rect, mut response) = if let Some(fixed) = self.fixed_rect {
             let sf = subpixel_snap_rect(fixed, ppp);
             let resp = ui.interact(sf, self.id_salt.with("fixed_combo"), sense);
-            (sf, theme.clamp_nib_visual_rect(sf, self.visual_height(), ppp), resp)
+            let vis = if self.recessed_pill {
+                subpixel_snap_rect(Rect::from_center_size(sf.center(), Vec2::new(sf.width(), self.visual_height())), ppp)
+            } else {
+                theme.clamp_nib_visual_rect(sf, self.visual_height(), ppp)
+            };
+            (sf, vis, resp)
         } else {
             let (r, resp) = ui.allocate_exact_size(layout.total_rect.size(), sense);
             let snapped = subpixel_snap_rect(r, ppp);
@@ -213,10 +226,18 @@ impl<'a, T: AsRef<str>> MacComboBox<'a, T> {
             is_open = true;
         }
 
-        let painter = ui.painter_at(frame_rect);
-        let border_col =
-            if enabled && response.has_focus() { theme.control_accent() } else { theme.apply_enabled(theme.separator(), enabled) };
-        let bg_fill = theme.apply_enabled(theme.control_background(), enabled);
+        let painter = ui.painter_at(frame_rect.union(visual_rect));
+        let surface_bg = theme.active_surface_at(ui, visual_rect.center());
+        let base_bg =
+            if self.recessed_pill && !response.has_focus() { theme.recessed_pill_fill_on(surface_bg) } else { theme.control_background() };
+        let bg_fill = theme.apply_enabled(base_bg, enabled);
+        let border_col = if enabled && response.has_focus() {
+            theme.control_accent()
+        } else if self.recessed_pill {
+            theme.recessed_pill_border_on(bg_fill)
+        } else {
+            theme.apply_enabled(theme.separator(), enabled)
+        };
         painter.rect(
             visual_rect,
             CornerRadius::same(layout.corner_radius as u8),
@@ -224,10 +245,12 @@ impl<'a, T: AsRef<str>> MacComboBox<'a, T> {
             Stroke::new(1.0, border_col),
             StrokeKind::Inside,
         );
-        painter.line_segment(
-            [Pos2::new(btn_rect.min.x, visual_rect.min.y), Pos2::new(btn_rect.min.x, visual_rect.max.y)],
-            Stroke::new(1.0, theme.apply_enabled(theme.separator(), enabled)),
-        );
+        if !self.recessed_pill {
+            painter.line_segment(
+                [Pos2::new(btn_rect.min.x, visual_rect.min.y), Pos2::new(btn_rect.min.x, visual_rect.max.y)],
+                Stroke::new(1.0, theme.apply_enabled(theme.separator(), enabled)),
+            );
+        }
 
         let pointer_pos = ui.input(|i| i.pointer.hover_pos());
         let btn_hovered = enabled && pointer_pos.is_some_and(|p| btn_rect.contains(p));
@@ -254,15 +277,22 @@ impl<'a, T: AsRef<str>> MacComboBox<'a, T> {
         } else if btn_down {
             theme.selected_control()
         } else {
-            theme.control_accent()
+            theme.effective_control_accent(ui.ctx())
         };
-        painter.rect_filled(badge_rect, CornerRadius::same(badge_r as u8), badge_fill);
+        let badge_cr = CornerRadius::same(badge_r as u8);
+        if enabled && !btn_down {
+            theme.paint_accent_control_bezel(&painter, badge_rect, badge_cr, badge_fill, 1.0);
+        } else {
+            painter.rect_filled(badge_rect, badge_cr, badge_fill);
+        }
 
         let (cx, cy) = (badge_rect.center().x, badge_rect.center().y);
         let (ch_hw, ch_hh) = (metrics.chevron_half_width.points(), metrics.chevron_half_height.points());
         let ch_stroke = Stroke::new(metrics.chevron_stroke_width.points(), theme.apply_enabled(theme.on_accent_text(), enabled));
-        painter.line_segment([Pos2::new(cx - ch_hw, cy - ch_hh * 0.5), Pos2::new(cx, cy + ch_hh)], ch_stroke);
-        painter.line_segment([Pos2::new(cx, cy + ch_hh), Pos2::new(cx + ch_hw, cy - ch_hh * 0.5)], ch_stroke);
+        painter.add(egui::Shape::line(
+            vec![Pos2::new(cx - ch_hw, cy - ch_hh * 0.5), Pos2::new(cx, cy + ch_hh * 0.5), Pos2::new(cx + ch_hw, cy - ch_hh * 0.5)],
+            ch_stroke,
+        ));
 
         let mut child_ui = ui.new_child(UiBuilder::new().id_salt(self.id_salt.with("text_edit")).max_rect(text_rect));
         let font_sz = match self.control_size {
@@ -315,7 +345,8 @@ impl<'a, T: AsRef<str>> MacComboBox<'a, T> {
                     text_col,
                     text_rect.width().max(0.0),
                 );
-                let text_y = theme.baseline_text_y(visual_rect, baseline_from_top, ascender, ppp);
+                let eff_baseline_from_top = baseline_from_top - (self.visual_height() - visual_rect.height()).max(0.0) * 0.5;
+                let text_y = theme.baseline_text_y(visual_rect, eff_baseline_from_top, ascender, ppp);
                 painter.with_clip_rect(text_rect).galley(Pos2::new(text_rect.left(), text_y), galley, text_col);
             }
         }

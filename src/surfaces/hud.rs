@@ -7,8 +7,7 @@
 use crate::controls::{MacControlSize, MacInputCell};
 use crate::theme::MacTheme;
 use egui::{
-    Align, Align2, Context, CornerRadius, FontId, Id, Layout, Order, Pos2, Rect, Response, RichText, Sense, Stroke, Ui,
-    UiBuilder, Vec2,
+    Align, Align2, Context, CornerRadius, FontId, Id, Layout, Order, Pos2, Rect, Response, RichText, Sense, Stroke, Ui, UiBuilder, Vec2,
 };
 use std::hash::Hash;
 
@@ -192,7 +191,7 @@ impl<'a> MacFloatingInfoBox<'a> {
         )
     }
 
-    /// Paints an inline NIB Inspector HUD pill surface (`GSInfoBox*` rounded translucent container).
+    /// Paints an inline NIB Inspector HUD pill surface (rounded translucent container).
     pub fn paint_pill(ui: &mut Ui, rect: Rect, with_header_divider: bool, theme: &MacTheme) {
         let pm = theme.popover_metrics();
         let corner_r = pm.hud_corner_radius.points() as u8;

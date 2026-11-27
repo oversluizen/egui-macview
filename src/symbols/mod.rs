@@ -24,6 +24,9 @@ pub const INTER_SEMIBOLD_FONT_BYTES: &[u8] = include_bytes!("../../assets/fonts/
 /// Name key used to register `Inter-SemiBold` in `egui::FontDefinitions` and `FontFamily::Name`.
 pub const INTER_SEMIBOLD_FONT_NAME: &str = "Inter-SemiBold";
 
+/// Name key used to register an optional High-Legibility (`CTFeature 35,12` / `ss06`) proportional font.
+pub const STYLISTIC_ALT_FONT_NAME: &str = "SF-Pro-Text-Alt";
+
 /// Enumeration of monochrome AppKit vector symbols mapped to CupertinoIcons font codepoints.
 ///
 /// # Example
@@ -221,8 +224,43 @@ pub fn setup_macview_fonts(fonts: &mut egui::FontDefinitions) {
 /// This enables external applications to inject custom licensed fonts at startup without
 /// `egui-macview` bundling or referencing proprietary third-party font assets.
 pub fn setup_custom_macview_fonts(fonts: &mut egui::FontDefinitions, regular_ttf: Vec<u8>, semibold_ttf: Option<Vec<u8>>) {
+    setup_custom_macview_font_suite(fonts, regular_ttf, semibold_ttf, None, None);
+}
+
+/// Installs a complete 4-slot host font suite (`Regular`, `Semibold`, `Light`, and `Monospace`)
+/// into `fonts` while preserving `CupertinoIcons` PUA symbols (`SPEC-015` `REQ-015-01`).
+pub fn setup_custom_macview_font_suite(
+    fonts: &mut egui::FontDefinitions,
+    regular_ttf: Vec<u8>,
+    semibold_ttf: Option<Vec<u8>>,
+    light_ttf: Option<Vec<u8>>,
+    monospace_ttf: Option<Vec<u8>>,
+) {
     setup_symbols_font(fonts);
     fonts.font_data.insert(INTER_REGULAR_FONT_NAME.to_owned(), std::sync::Arc::new(egui::FontData::from_owned(regular_ttf.clone())));
     let sb_bytes = semibold_ttf.unwrap_or(regular_ttf);
     fonts.font_data.insert(INTER_SEMIBOLD_FONT_NAME.to_owned(), std::sync::Arc::new(egui::FontData::from_owned(sb_bytes)));
+    if let Some(l_bytes) = light_ttf {
+        fonts.font_data.insert("macview_custom_light".to_owned(), std::sync::Arc::new(egui::FontData::from_owned(l_bytes)));
+        let light_fam = fonts.families.entry(egui::FontFamily::Name("Ubuntu-Light".into())).or_default();
+        light_fam.retain(|f| f != "macview_custom_light");
+        light_fam.insert(0, "macview_custom_light".to_owned());
+    }
+    if let Some(m_bytes) = monospace_ttf {
+        fonts.font_data.insert("macview_custom_mono".to_owned(), std::sync::Arc::new(egui::FontData::from_owned(m_bytes)));
+        let mono_fam = fonts.families.entry(egui::FontFamily::Monospace).or_default();
+        mono_fam.retain(|f| f != "macview_custom_mono");
+        mono_fam.insert(0, "macview_custom_mono".to_owned());
+    }
+}
+
+/// Registers an optional High-Legibility (`CTFeature 35,12` / `ss06`) proportional font family (`STYLISTIC_ALT_FONT_NAME`).
+pub fn setup_custom_macview_stylistic_alt_font(fonts: &mut egui::FontDefinitions, alt_ttf: Vec<u8>) {
+    fonts.font_data.insert(STYLISTIC_ALT_FONT_NAME.to_owned(), std::sync::Arc::new(egui::FontData::from_owned(alt_ttf)));
+    let fam = fonts.families.entry(egui::FontFamily::Name(STYLISTIC_ALT_FONT_NAME.into())).or_default();
+    fam.retain(|f| f != STYLISTIC_ALT_FONT_NAME);
+    fam.insert(0, STYLISTIC_ALT_FONT_NAME.to_owned());
+    if !fam.iter().any(|f| f == CUPERTINO_ICONS_FONT_NAME) {
+        fam.push(CUPERTINO_ICONS_FONT_NAME.to_owned());
+    }
 }

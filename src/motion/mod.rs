@@ -126,14 +126,7 @@ impl CASpring {
 
     /// Evaluates both the position $y(t)$ and the closed-form analytical velocity $\dot{y}(t) = \frac{dy}{dt}$
     /// for a stateful `CASpring` transition toward `target` at timestamp `now` (`REQ-016-B1.13a`).
-    pub fn animate_f32_with_velocity_at(
-        &self,
-        ctx: &egui::Context,
-        id: egui::Id,
-        target: f32,
-        now: f64,
-        frame_paced: bool,
-    ) -> (f32, f32) {
+    pub fn animate_f32_with_velocity_at(&self, ctx: &egui::Context, id: egui::Id, target: f32, now: f64, frame_paced: bool) -> (f32, f32) {
         let stored = ctx.data(|d| d.get_temp::<(f32, f32, f64)>(id));
         let Some((prev_target, start_val, start_time)) = stored else {
             ctx.data_mut(|d| d.insert_temp(id, (target, target, now)));

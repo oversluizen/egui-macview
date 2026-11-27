@@ -1,7 +1,7 @@
 //! Layer 1 XML `.xib` Frontend (`XibXmlFrontend` via `roxmltree`) and Apple `.strings`
 //! Localization Catalog (`StringsCatalog` with text & `plist` binary support, `SPEC-013 §2.3..2.4`).
 
-use crate::scene::constraints::{CompiledConstraintSchedule, ConstraintAttr, ConstraintRelation, LayoutConstraintSpec, ValueTransformer};
+use crate::scene::constraints::{CompiledConstraintSchedule, ConstraintAttr, ConstraintRelation, LayoutConstraintSpec};
 use crate::scene::ir::{ActionId, BindingId, MacSceneIR, NodeId, SceneCompileError, SceneNode, SceneNodeKind, VisibilityRule};
 use std::collections::BTreeMap;
 
@@ -11,6 +11,9 @@ pub use crate::scene::StringsCatalog;
 pub fn flatten_controller_key_path(raw: &str) -> String {
     for prefix in ["arrangedObjects.", "selection.", "values."] {
         if let Some(stripped) = raw.strip_prefix(prefix) {
+            if stripped.starts_with('@') {
+                return raw.to_string();
+            }
             return stripped.to_string();
         }
     }
@@ -89,16 +92,9 @@ impl XibXmlFrontend {
             if matches!(kind, SceneNodeKind::HelpButton) && title.is_empty() {
                 title = "?".to_string();
             }
-            let control_size = cell
-                .and_then(|c| c.attribute("controlSize"))
-                .or_else(|| elem.attribute("controlSize"))
-                .unwrap_or("regular")
-                .to_string();
-            let tooltip = elem
-                .attribute("toolTip")
-                .or_else(|| cell.and_then(|c| c.attribute("toolTip")))
-                .unwrap_or("")
-                .to_string();
+            let control_size =
+                cell.and_then(|c| c.attribute("controlSize")).or_else(|| elem.attribute("controlSize")).unwrap_or("regular").to_string();
+            let tooltip = elem.attribute("toolTip").or_else(|| cell.and_then(|c| c.attribute("toolTip"))).unwrap_or("").to_string();
             let mask = parse_xib_autoresizing(elem);
             let enabled = elem.attribute("enabled") != Some("NO");
             let icon_meta = extract_xib_icon_meta(elem, cell, &kind);
@@ -154,28 +150,29 @@ impl XibXmlFrontend {
             if let Some(p_node) = nodes.iter_mut().find(|n| n.id == parent_id) {
                 p_node.children.push(id);
             }
-            nodes.push(SceneNode {
-                id,
-                ib_object_id: ib_id,
-                parent: Some(parent_id),
-                children: vec![],
+            let mut node = crate::scene::nib_frontend::mk_node(
+                id.0,
+                &ib_id,
+                Some(parent_id.0),
+                vec![],
                 kind,
-                title,
-                tooltip,
-                control_size,
-                nib_frame: rect,
-                alignment_rect: rect,
-                autoresizing_mask: mask,
-                enabled,
-                value_binding,
-                binding_path,
-                value_transformer: ValueTransformer::Identity,
-                action,
-                action_selector,
-                icon_name: icon_meta,
+                &title,
+                &tooltip,
+                &control_size,
+                rect,
+                mask,
+                None,
+                None,
+                icon_meta.as_deref(),
                 visibility,
-                labeled_by: None,
-            });
+            );
+            node.enabled = enabled;
+            node.value_binding = value_binding;
+            node.binding_path = binding_path;
+            node.action = action;
+            node.action_selector = action_selector;
+            node.populate_xib_typed_fields(elem, cell);
+            nodes.push(node);
         }
         let schedule = parse_xib_constraints(&doc, &ib_to_node);
         let root_w = nodes[0].nib_frame[2].max(320.0);
@@ -221,31 +218,6 @@ fn extract_xib_icon_meta(elem: roxmltree::Node<'_, '_>, cell: Option<roxmltree::
         return Some(img.to_string());
     }
     match kind {
-        SceneNodeKind::Label => {
-            let mfont =
-                cell.and_then(|c| c.children().find(|ch| ch.has_tag_name("font"))).and_then(|f| f.attribute("metaFont")).unwrap_or("");
-            let w_fallback = if mfont.contains("Semibold") {
-                "semibold"
-            } else if mfont.contains("Bold") {
-                "bold"
-            } else if mfont.contains("Medium") {
-                "medium"
-            } else {
-                "regular"
-            };
-            let w = elem.attribute("fontWeight").unwrap_or(w_fallback);
-            let cname =
-                cell.and_then(|c| c.children().find(|ch| ch.has_tag_name("color"))).and_then(|cl| cl.attribute("name")).unwrap_or("");
-            let c_fallback = if cname.contains("secondary") {
-                "secondary"
-            } else if cname.contains("tertiary") {
-                "tertiary"
-            } else {
-                "primary"
-            };
-            let c = elem.attribute("textColor").unwrap_or(c_fallback);
-            (w != "regular" || c != "primary").then(|| format!("NSLabel:{w}:{c}"))
-        }
         SceneNodeKind::Checkbox => {
             if elem.attribute("bezelStyle") == Some("disclosure") || cell.and_then(|c| c.attribute("bezelStyle")) == Some("disclosure") {
                 Some("NSDisclosureButton".into())
@@ -448,10 +420,20 @@ fn parse_xib_constraints(doc: &roxmltree::Document<'_>, ib_to_node: &BTreeMap<St
     for c in doc.descendants().filter(|d| d.has_tag_name("constraint")) {
         let first_item = c.attribute("firstItem").and_then(|id| ib_to_node.get(id).copied());
         let second_item = c.attribute("secondItem").and_then(|id| ib_to_node.get(id).copied());
-        let (first_attr, second_attr) = (parse_attr_name(c.attribute("firstAttribute").unwrap_or("")), parse_attr_name(c.attribute("secondAttribute").unwrap_or("")));
+        let (first_attr, second_attr) =
+            (parse_attr_name(c.attribute("firstAttribute").unwrap_or("")), parse_attr_name(c.attribute("secondAttribute").unwrap_or("")));
         let constant = c.attribute("constant").and_then(|s| s.parse::<f32>().ok()).unwrap_or(0.0);
         if first_item.is_some() && first_attr != ConstraintAttr::NotAnAttribute {
-            specs.push(LayoutConstraintSpec { first_item, first_attr, relation: ConstraintRelation::Equal, second_item, second_attr, multiplier: 1.0, constant, priority: 1000 });
+            specs.push(LayoutConstraintSpec {
+                first_item,
+                first_attr,
+                relation: ConstraintRelation::Equal,
+                second_item,
+                second_attr,
+                multiplier: 1.0,
+                constant,
+                priority: 1000,
+            });
         }
     }
     CompiledConstraintSchedule::compile(specs)
@@ -479,13 +461,43 @@ fn parse_attr_name(s: &str) -> ConstraintAttr {
 }
 
 fn find_child_rect(elem: roxmltree::Node<'_, '_>) -> Option<[f32; 4]> {
-    let r = elem.children().find(|c| c.has_tag_name("rect") && c.attribute("key") == Some("frame")).or_else(|| elem.children().find(|c| c.has_tag_name("rect")))?;
-    Some([r.attribute("x")?.parse().ok()?, r.attribute("y")?.parse().ok()?, r.attribute("width")?.parse().ok()?, r.attribute("height")?.parse().ok()?])
+    let r = elem
+        .children()
+        .find(|c| c.has_tag_name("rect") && c.attribute("key") == Some("frame"))
+        .or_else(|| elem.children().find(|c| c.has_tag_name("rect")))?;
+    Some([
+        r.attribute("x")?.parse().ok()?,
+        r.attribute("y")?.parse().ok()?,
+        r.attribute("width")?.parse().ok()?,
+        r.attribute("height")?.parse().ok()?,
+    ])
 }
 
 fn parse_xib_autoresizing(elem: roxmltree::Node<'_, '_>) -> u8 {
     let Some(am) = elem.children().find(|c| c.has_tag_name("autoresizingMask")) else { return 0 };
-    [("flexibleMinX", 0x01), ("widthSizable", 0x02), ("flexibleMaxX", 0x04), ("flexibleMinY", 0x08), ("heightSizable", 0x10), ("flexibleMaxY", 0x20)]
-        .into_iter()
-        .fold(0u8, |acc, (k, bit)| if am.attribute(k) == Some("YES") { acc | bit } else { acc })
+    [
+        ("flexibleMinX", 0x01),
+        ("widthSizable", 0x02),
+        ("flexibleMaxX", 0x04),
+        ("flexibleMinY", 0x08),
+        ("heightSizable", 0x10),
+        ("flexibleMaxY", 0x20),
+    ]
+    .into_iter()
+    .fold(0u8, |acc, (k, bit)| if am.attribute(k) == Some("YES") { acc | bit } else { acc })
+}
+
+pub(crate) fn parse_nib_key_equiv(ke: &str) -> Option<egui::Key> {
+    let ch = ke.chars().next()?.to_ascii_uppercase();
+    egui::Key::from_name(&ch.to_string()).or(match ch {
+        '+' | '=' => Some(egui::Key::Plus),
+        '-' => Some(egui::Key::Minus),
+        ',' => Some(egui::Key::Comma),
+        '.' => Some(egui::Key::Period),
+        '/' => Some(egui::Key::Slash),
+        '\r' | '\n' => Some(egui::Key::Enter),
+        '\u{8}' | '\u{7f}' => Some(egui::Key::Backspace),
+        ' ' => Some(egui::Key::Space),
+        _ => None,
+    })
 }

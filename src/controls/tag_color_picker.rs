@@ -28,6 +28,7 @@ pub struct MacTagColorPicker<'a> {
     custom_dot_size: Option<f32>,
     custom_spacing: Option<(f32, f32)>,
     include_clear_swatch: bool,
+    inner_selection_ring: bool,
     palette: Option<&'a [Color32]>,
     control_size: MacControlSize,
     fixed_rect: Option<Rect>,
@@ -45,12 +46,19 @@ impl<'a> MacTagColorPicker<'a> {
             custom_dot_size: None,
             custom_spacing: None,
             include_clear_swatch: true,
+            inner_selection_ring: false,
             palette: None,
             control_size: MacControlSize::Regular,
             fixed_rect: None,
             enabled: true,
             theme: None,
         }
+    }
+
+    /// Enables an inset inner white selection ring (`GSColorLabelButtonCell` style) instead of a checkmark (`REQ-013-10.5`).
+    pub fn inner_selection_ring(mut self, enabled: bool) -> Self {
+        self.inner_selection_ring = enabled;
+        self
     }
 
     /// Sets the number of columns per row (default `12` for `1x12`, or `6` for `2x6`).
@@ -149,8 +157,10 @@ impl Widget for MacTagColorPicker<'_> {
         let diam = self.custom_dot_size.unwrap_or(def_diam);
         let (col_gap, row_gap) = self.custom_spacing.unwrap_or((def_spacing, def_spacing));
 
-        let default_palette = theme.tag_label_palette();
-        let colors: &[Color32] = self.palette.unwrap_or(&default_palette);
+        let p11 = theme.tag_label_palette();
+        let p12 = [p11[0], p11[1], p11[2], p11[3], p11[4], p11[5], p11[6], p11[7], p11[8], p11[9], p11[10], theme.secondary_label()];
+        let default_slice: &[Color32] = if self.rows == Some(2) && !self.include_clear_swatch { &p12 } else { &p11 };
+        let colors: &[Color32] = self.palette.unwrap_or(default_slice);
         let color_count = colors.len();
         let total_count = color_count + usize::from(self.include_clear_swatch);
         let cols =
@@ -227,20 +237,26 @@ impl Widget for MacTagColorPicker<'_> {
                 let fill = swatch_c.gamma_multiply(alpha);
                 painter.circle(center, sw_r, fill, Stroke::new(border_w, swatch_border));
                 if is_selected_color {
-                    painter.circle_stroke(center, ring_r, Stroke::new(ring_w, fill));
-                    let (min_x, min_y) = (center.x - radius, center.y - radius);
-                    let p1 = Pos2::new(min_x + diam * tm.check_p1_x.points(), min_y + diam * tm.check_p1_y.points());
-                    let p2 = Pos2::new(min_x + diam * tm.check_p2_x.points(), min_y + diam * tm.check_p2_y.points());
-                    let p3 = Pos2::new(min_x + diam * tm.check_p3_x.points(), min_y + diam * tm.check_p3_y.points());
-                    let on_acc = theme.on_accent_text();
-                    let chk_col = if crate::theme::contrast_ratio(on_acc, swatch_c) < 2.0 {
-                        crate::theme::MacBackgroundStyle::Light.primary_text_color(theme)
+                    if self.inner_selection_ring || (self.rows.is_some() && !self.include_clear_swatch) {
+                        let inner_white_r = (sw_r - ring_w - border_w).max(1.0);
+                        painter.circle_stroke(center, inner_white_r, Stroke::new(ring_w, theme.on_accent_text().gamma_multiply(alpha)));
+                        painter.circle_stroke(center, sw_r, Stroke::new(border_w, swatch_border));
                     } else {
-                        on_acc
-                    };
-                    let chk_stroke = Stroke::new(tm.checkmark_stroke_width.points(), chk_col.gamma_multiply(alpha));
-                    painter.line_segment([p1, p2], chk_stroke);
-                    painter.line_segment([p2, p3], chk_stroke);
+                        painter.circle_stroke(center, ring_r, Stroke::new(ring_w, fill));
+                        let (min_x, min_y) = (center.x - radius, center.y - radius);
+                        let p1 = Pos2::new(min_x + diam * tm.check_p1_x.points(), min_y + diam * tm.check_p1_y.points());
+                        let p2 = Pos2::new(min_x + diam * tm.check_p2_x.points(), min_y + diam * tm.check_p2_y.points());
+                        let p3 = Pos2::new(min_x + diam * tm.check_p3_x.points(), min_y + diam * tm.check_p3_y.points());
+                        let on_acc = theme.on_accent_text();
+                        let chk_col = if crate::theme::contrast_ratio(on_acc, swatch_c) < 2.0 {
+                            crate::theme::MacBackgroundStyle::Light.primary_text_color(theme)
+                        } else {
+                            on_acc
+                        };
+                        let chk_stroke = Stroke::new(tm.checkmark_stroke_width.points(), chk_col.gamma_multiply(alpha));
+                        painter.line_segment([p1, p2], chk_stroke);
+                        painter.line_segment([p2, p3], chk_stroke);
+                    }
                 }
             }
         }

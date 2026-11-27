@@ -86,7 +86,8 @@ fn synthesize_drum_matrix_rgba(ds: &DrumMatrixSpec, theme: &MacTheme, m: &ThumbD
         glare_angle_rad: std::f32::consts::FRAC_PI_4,
         ..Default::default()
     };
-    let (fill_a, act_a, hov_a, spec_a) = (m.glass_fill_alpha.points(), m.active_fill_opacity.points(), m.hover_fill_opacity.points(), m.glass_specular_alpha.points());
+    let (fill_a, act_a, hov_a, spec_a) =
+        (m.glass_fill_alpha.points(), m.active_fill_opacity.points(), m.hover_fill_opacity.points(), m.glass_specular_alpha.points());
     let max_u8 = f32::from(u8::MAX);
     let cursor_pt = Some(vitrea::GlamVec2::new(w * 0.5, h * (0.5 + ds.ptr_bias)));
     let _ = spec_rgb;
@@ -436,11 +437,8 @@ impl<'a> MacEdgeThumbwheel<'a> {
 
         let bw = m.border_stroke_width.points();
         let is_light = theme.appearance == crate::theme::MacAppearance::Aqua;
-        let glass_housing = if is_light {
-            theme.box_background()
-        } else {
-            theme.popover_background().gamma_multiply(m.glass_fill_alpha.points())
-        };
+        let glass_housing =
+            if is_light { theme.box_background() } else { theme.popover_background().gamma_multiply(m.glass_fill_alpha.points()) };
         let border_stroke = Stroke::new(bw, theme.separator());
         let specular_col = theme.specular_rim_top();
         painter.rect_filled(rect.translate(Vec2::new(0.0, bw * 2.0)), outer_cr, theme.drop_shadow());
@@ -463,10 +461,7 @@ impl<'a> MacEdgeThumbwheel<'a> {
 
         let r_cyl = inner_rect.height() * 0.5;
         let y_c = inner_rect.center().y;
-        let ptr_bias = pointer_pos
-            .filter(|p| rect.contains(*p))
-            .map(|p| ((p.y - y_c) / r_cyl.max(1.0)).clamp(-0.5, 0.5))
-            .unwrap_or(0.0);
+        let ptr_bias = pointer_pos.filter(|p| rect.contains(*p)).map(|p| ((p.y - y_c) / r_cyl.max(1.0)).clamp(-0.5, 0.5)).unwrap_or(0.0);
         let cap_w = (m.ring_gap.points() * 2.0 * s).min(inner_rect.width() * m.hover_fill_opacity.points());
         let inner_cr_pt = ((m.edge_wheel_corner_radius.points() * s) - pad).max(1.0);
         paint_raytraced_edge_thumbwheel_quad(

@@ -424,9 +424,7 @@ impl super::CenterState {
                 SceneNodeKind::PopUpButton { options } | SceneNodeKind::ComboBox { options } => {
                     options.get(opt_idx).or_else(|| options.first()).map(String::as_str)
                 }
-                SceneNodeKind::SegmentedControl { segments } => {
-                    segments.get(opt_idx).or_else(|| segments.first()).map(String::as_str)
-                }
+                SceneNodeKind::SegmentedControl { segments } => segments.get(opt_idx).or_else(|| segments.first()).map(String::as_str),
                 _ => None,
             })
             .unwrap_or("")

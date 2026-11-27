@@ -213,13 +213,12 @@ impl<'a> MacScrollView<'a> {
         let mut st = sv_state.map(|(s, _)| s).unwrap_or(ScrollViewTempState {
             drag_offset: None,
             prev_offset: current_offset,
-            last_active: now,
+            last_active: -1.0e9,
             initialized: false,
         });
         let scrolled_this_frame = (current_offset - st.prev_offset).length_sq() > f32::EPSILON;
         st.prev_offset = current_offset;
         let mut last_active = st.last_active;
-        let initialized = st.initialized;
         st.initialized = true;
 
         let is_pointer_in_viewport = ui.rect_contains_pointer(viewport_rect);
@@ -236,7 +235,10 @@ impl<'a> MacScrollView<'a> {
         let in_scrollbar_zone =
             (self.vertical && ui.rect_contains_pointer(v_zone)) || (self.horizontal && ui.rect_contains_pointer(h_zone));
 
-        if scrolled_this_frame || (is_pointer_in_viewport && has_scroll_delta) || (in_scrollbar_zone && pointer_moving) {
+        let timeout_secs = fade_timeout as f64;
+        let fade_duration = timeout_secs * 0.5 * 0.5;
+        let is_already_visible = (now - last_active) < (timeout_secs + fade_duration);
+        if scrolled_this_frame || (is_pointer_in_viewport && has_scroll_delta) || (is_already_visible && in_scrollbar_zone && pointer_moving) {
             last_active = now;
             st.last_active = now;
         }
@@ -244,13 +246,11 @@ impl<'a> MacScrollView<'a> {
         let has_v = self.vertical && max_scroll_y > 0.0;
         let has_h = self.horizontal && max_scroll_x > 0.0;
         let elapsed = (now - last_active).max(0.0);
-        let timeout_secs = fade_timeout as f64;
-        let fade_duration = timeout_secs * 0.5 * 0.5;
         let alpha = if !self.auto_hide {
             1.0
         } else if !(has_v || has_h) {
             0.0
-        } else if !initialized || elapsed < timeout_secs {
+        } else if elapsed < timeout_secs {
             let remaining = (timeout_secs - elapsed) as f32;
             if remaining > 0.0 {
                 ui.ctx().request_repaint_after_secs(remaining);

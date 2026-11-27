@@ -1,15 +1,13 @@
 //! Layer 3: Dual-Mode Layout Solver (`ExactAppleNib` & `AdaptiveSemanticReflow`),
 //! 120 FPS Renderer, and Zero-Allocation `MacSceneDataSource` Bridge (`SPEC-013 §4`).
 
-use crate::controls::{
-    MacBox, MacButtonCell, MacControlSize, MacInputCell, MacPopUpButton, MacRadioButton, MacSegmentedControl, MacSwitch, MacTextView,
-    MacTokenField,
-};
+use crate::controls::{MacBox, MacButtonCell, MacControlSize, MacInputCell, MacPopUpButton, MacRadioButton, MacSwitch, MacTextView};
 use crate::scene::ir::{ActionId, BindingId, LayoutPolicy, MacSceneIR, NodeId, SceneNode, SceneNodeKind};
 pub use crate::scene::normalizer::apply_autoresizing_mask;
+use crate::scene::runtime_tabs::{render_segmented_control_node, render_token_field_node, render_window_titlebar_container};
 use crate::scene::runtime_widgets::{render_checkbox_node, render_extended_node, render_label_node, render_slider_node};
 use crate::theme::MacTheme;
-use egui::{pos2, vec2, Pos2, Rect, Ui, UiBuilder, Vec2};
+use egui::{pos2, vec2, Rect, Ui, Vec2};
 use std::collections::BTreeMap;
 
 /// Zero-allocation host state and action bridge for [`MacSceneIR`] (`REQ-013-03` §4.3).
@@ -64,6 +62,27 @@ pub trait MacSceneDataSource {
     }
     /// Renders the body of an active `<tabViewItem>` inside an `NSTabView` node.
     fn render_tab_item(&mut self, _ui: &mut Ui, _theme: &MacTheme, _id: NodeId, _ib_object_id: &str, _tab_idx: usize, _rect: Rect) {}
+    /// Optional host icon painter (`SPEC-013 §3.1.6` Tier 2); returns `true` when the host painted `icon_name` inside `rect`.
+    fn paint_scene_icon(&mut self, _ui: &mut Ui, _theme: &MacTheme, _icon_name: &str, _rect: Rect, _tint: egui::Color32) -> bool {
+        false
+    }
+    /// Optional host icon painter with explicit AppKit `NSImageScaling` (`0..=3`) and `NSImageSymbolConfiguration.NSPointSize`.
+    fn paint_scene_icon_scaled(&mut self, ui: &mut Ui, theme: &MacTheme, icon_name: &str, rect: Rect, tint: egui::Color32, (_image_scaling, _symbol_point_size): (u8, Option<f32>)) -> bool {
+        self.paint_scene_icon(ui, theme, icon_name, rect, tint)
+    }
+    /// Optional host data-source renderer for `NSTableView` / `NSOutlineView` nodes (`SceneNodeKind::TableView`).
+    /// Returns `true` when the host rendered the table or outline view inside `rect`.
+    fn render_table_or_outline(&mut self, _ui: &mut Ui, _theme: &MacTheme, _node_meta: (NodeId, &str, bool), _columns: &[(String, f32)], _rect: Rect) -> bool {
+        false
+    }
+    /// Resolves the active tab index for an `NSTabView` node (`SceneNodeKind::TabView`).
+    fn resolve_active_tab(&self, _id: NodeId, _ib_object_id: &str, default_tab: usize) -> usize {
+        default_tab
+    }
+    /// Resolves an optional custom capsule tint color for an `NSTokenField` node (`REQ-013-10.5`).
+    fn resolve_token_capsule_tint(&self, _id: NodeId, _ib_object_id: &str, _theme: &MacTheme) -> Option<egui::Color32> {
+        None
+    }
 }
 
 pub(crate) fn solve_scene_layout(
@@ -78,22 +97,7 @@ pub(crate) fn solve_scene_layout(
 
     match policy {
         LayoutPolicy::ExactAppleNib => {
-            let [w0, h0] = scene.design_size;
-            for node in &scene.nodes {
-                if !node.visibility.is_visible(workspace_flags) || !filter_mask.contains(node.id) {
-                    continue;
-                }
-                let [x, y, w, h] = apply_autoresizing_mask(
-                    node.alignment_rect,
-                    node.autoresizing_mask,
-                    [w0.max(1.0), h0.max(1.0)],
-                    [viewport_size.x.max(1.0), viewport_size.y.max(1.0)],
-                );
-                out.insert(node.id, Rect::from_min_size(pos2(x, y), vec2(w, h)));
-            }
-            if !scene.constraints.steps().is_empty() {
-                scene.constraints.evaluate(Rect::from_min_size(Pos2::ZERO, viewport_size), &mut out);
-            }
+            crate::scene::stack_reflow::solve_exact_apple_nib_layout(scene, viewport_size, workspace_flags, &filter_mask, &mut out);
         }
         LayoutPolicy::AdaptiveSemanticReflow => {
             let tokens = crate::tokens::MacDesignTokens::default_shared();
@@ -194,7 +198,6 @@ impl MacSceneIR {
         workspace_flags: u64,
         search_query: &str,
     ) {
-        let origin = ui.cursor().min.to_vec2();
         let pm = theme.popover_metrics();
         let min_vp_w = pm.full_popover_width.points();
         let min_vp_h = pm.compact_panel_width.points();
@@ -202,35 +205,90 @@ impl MacSceneIR {
             LayoutPolicy::ExactAppleNib => vec2(self.design_size[0].max(1.0), self.design_size[1].max(1.0)),
             LayoutPolicy::AdaptiveSemanticReflow => vec2(self.design_size[0].max(min_vp_w), self.design_size[1].max(min_vp_h)),
         };
-        let scale_x = 1.0;
-        let solved = self.solve_layout(viewport, policy, workspace_flags, search_query);
+        let target_rect = Rect::from_min_size(ui.cursor().min, viewport);
+        self.show_in_rect(ui, target_rect, theme, data_source, policy, workspace_flags, search_query);
+    }
 
+    /// Renders the compiled scene inside an explicit `target_rect`, applying AppKit `NSAutoresizingMaskOptions`
+    /// (`resizeWithOldSuperviewSize:`) from `self.design_size` to `target_rect.size()` (`REQ-013-03`).
+    pub fn show_in_rect(
+        &self,
+        ui: &mut Ui,
+        target_rect: Rect,
+        theme: &MacTheme,
+        data_source: &mut dyn MacSceneDataSource,
+        policy: LayoutPolicy,
+        workspace_flags: u64,
+        search_query: &str,
+    ) {
+        let origin = target_rect.min.to_vec2();
+        let viewport = vec2(target_rect.width().max(1.0), target_rect.height().max(1.0));
+        let scale_x = 1.0;
+        let solved = self.solve_layout_cached(ui.ctx(), viewport, policy, workspace_flags, search_query);
+
+        let mut deferred_inline_buttons = Vec::new();
+        let (hidden_ids, y_shifts) = self.compute_hidden_and_y_shifts(data_source);
         for node in &self.nodes {
+            if !hidden_ids.contains(&node.id)
+                && matches!(&node.kind, SceneNodeKind::ImageView { icon_name, .. } if icon_name.contains("Background"))
+            {
+                if let Some(&local_rect) = solved.get(&node.id) {
+                    let y_off = y_shifts.get(&node.id).copied().unwrap_or(0.0);
+                    let rect = Rect::from_min_size(
+                        pos2(local_rect.min.x * scale_x, local_rect.min.y + y_off),
+                        vec2(local_rect.width() * scale_x, local_rect.height()),
+                    )
+                    .translate(origin);
+                    let ctrl_size = data_source.resolve_control_size(node.id, &node.ib_object_id, node.mac_control_size());
+                    render_extended_node(ui, theme, data_source, node, rect, ctrl_size, true);
+                }
+            }
+        }
+        for node in &self.nodes {
+            if hidden_ids.contains(&node.id)
+                || matches!(&node.kind, SceneNodeKind::ImageView { icon_name, .. } if icon_name.contains("Background"))
+            {
+                continue;
+            }
             if let crate::scene::ir::VisibilityRule::WhenTabSelected { tab_view, tab_index } = node.visibility {
-                let active_tab = self
-                    .nodes
-                    .iter()
-                    .find(|n| n.id == tab_view)
+                let tv_node = self.nodes.iter().find(|n| n.id == tab_view);
+                let default_tab = tv_node
                     .and_then(|tv| tv.value_binding)
                     .map(|b| data_source.get_i64(b).max(0) as usize)
                     .unwrap_or_else(|| ui.data(|d| d.get_temp::<usize>(ui.scope_id().with(("nib_tv_sel", tab_view.0)))).unwrap_or(0));
-                if active_tab != tab_index {
+                let tv_ib = tv_node.map(|n| n.ib_object_id.as_str()).unwrap_or("");
+                if data_source.resolve_active_tab(tab_view, tv_ib, default_tab) != tab_index {
                     continue;
                 }
             }
             let Some(&local_rect) = solved.get(&node.id) else {
                 continue;
             };
+            let y_off = y_shifts.get(&node.id).copied().unwrap_or(0.0);
             let scaled_rect = Rect::from_min_size(
-                pos2(local_rect.min.x * scale_x, local_rect.min.y),
+                pos2(local_rect.min.x * scale_x, local_rect.min.y + y_off),
                 vec2(local_rect.width() * scale_x, local_rect.height()),
             );
             let rect = scaled_rect.translate(origin);
             let ctrl_size = data_source.resolve_control_size(node.id, &node.ib_object_id, node.mac_control_size());
-            let enabled = data_source.is_node_enabled(node.id, &node.ib_object_id, true);
+            let default_en =
+                node.enabled_binding.map(|eb| node.enabled_transformer.apply_bool(data_source.get_bool(eb))).unwrap_or(node.enabled);
+            let enabled = data_source.is_node_enabled(node.id, &node.ib_object_id, default_en);
+            if matches!(node.kind, SceneNodeKind::InlineActionButton) {
+                deferred_inline_buttons.push((node, rect, ctrl_size, enabled));
+                continue;
+            }
 
             match &node.kind {
-                SceneNodeKind::Container { .. } => {}
+                SceneNodeKind::Container { .. } => {
+                    if !render_window_titlebar_container(ui, theme, node, rect) {
+                        if let Some(mat_code) = node.visual_effect_material() {
+                            let mat_bg = theme.visual_effect_surface_color(mat_code, node.visual_effect_is_behind_window());
+                            ui.painter().rect_filled(rect, 0.0, mat_bg);
+                            theme.register_surface_rect(ui.ctx(), rect, mat_bg);
+                        }
+                    }
+                }
                 SceneNodeKind::BoxContainer => {
                     MacBox::new(node.title.as_str()).theme(theme).paint_at(ui, rect);
                 }
@@ -241,17 +299,31 @@ impl MacSceneIR {
                     render_label_node(ui, theme, data_source, node, rect, ctrl_size);
                 }
                 SceneNodeKind::PushButton { is_default, .. } => {
-                    let resp = MacButtonCell::new(node.title.as_str())
-                        .theme(theme)
-                        .selected(*is_default)
-                        .control_size(ctrl_size)
-                        .enabled(enabled)
-                        .fixed_rect(rect)
-                        .show(ui);
-                    if resp.clicked() {
-                        if let Some(act) = node.action {
-                            data_source.on_action(act, node.id);
+                    let unb = !node.is_bordered && !node.is_bezeled && node.icon_name.is_some();
+                    let resp = if unb {
+                        ui.interact(rect, ui.scope_id().with(("nib_unb_btn", node.id.0, node.ib_object_id.as_str())), egui::Sense::click())
+                    } else {
+                        MacButtonCell::new(node.title.as_str()).id_salt(("nib_btn_cell", node.id.0)).theme(theme).selected(*is_default).control_size(ctrl_size).enabled(enabled).fixed_rect(rect).show(ui)
+                    };
+                    if let Some(ic) = node.icon_name.as_ref().filter(|_| node.title.is_empty() || unb) {
+                        let is_active = *is_default || (unb && (node.bezel_style & 0x80) != 0);
+                        let tint = match (unb, is_active) {
+                            (true, true) => theme.effective_control_accent(ui.ctx()),
+                            (true, false) => theme.secondary_label(),
+                            (false, true) => theme.on_accent_text(),
+                            (false, false) => theme.label(),
+                        };
+                        if !data_source.paint_scene_icon_scaled(ui, theme, ic, rect, tint, (node.image_scaling, node.symbol_point_size)) {
+                            crate::controls::MacImageView::from_resource_name(ic).theme(theme).template(true).scaling(crate::controls::MacImageScaling::from_nib_code(node.image_scaling)).symbol_point_size(node.symbol_point_size).fixed_rect(rect).show(ui);
                         }
+                    }
+                    if resp.clicked() {
+                        if self.button_menus.contains_key(&node.id) {
+                            let pop_id = egui::Id::NULL.with(("nib_attached_btn_menu", node.id.0));
+                            let cur_open = ui.ctx().data(|d| d.get_temp::<(bool, Option<usize>)>(pop_id)).is_some_and(|(o, _)| o);
+                            ui.ctx().data_mut(|d| d.insert_temp(pop_id, (!cur_open, None::<usize>)));
+                        }
+                        data_source.on_action(node.action.unwrap_or(ActionId(0)), node.id);
                     }
                 }
                 SceneNodeKind::Checkbox => {
@@ -301,17 +373,49 @@ impl MacSceneIR {
                 SceneNodeKind::TextField | SceneNodeKind::NumberField { .. } => {
                     if node.icon_name.as_deref() == Some("NSTokenField") {
                         render_token_field_node(ui, theme, data_source, node, rect, enabled);
+                    } else if (!node.is_editable && !node.draws_background && !node.is_bezeled && !node.is_bordered) || node.title == "--" {
+                        render_label_node(ui, theme, data_source, node, rect, ctrl_size);
                     } else {
                         let fb_id = ui.scope_id().with(("nib_txt", node.id.0));
                         let mut text = node
                             .value_binding
                             .map(|b| data_source.get_str(b).to_string())
                             .unwrap_or_else(|| ui.data(|d| d.get_temp::<String>(fb_id)).unwrap_or_else(|| node.title.clone()));
+                        if matches!(node.kind, SceneNodeKind::NumberField { .. }) {
+                            if let Some(sfx) = node.icon_name.as_ref().filter(|s| matches!(s.as_str(), "%" | "°")) {
+                                if !text.is_empty() && !text.ends_with(sfx.as_str()) {
+                                    text.push_str(sfx);
+                                }
+                            }
+                        }
+                        let t_align = match node.text_alignment {
+                            crate::scene::ir::MacTextAlignment::Right => egui::Align::Max,
+                            crate::scene::ir::MacTextAlignment::Center => egui::Align::Center,
+                            _ => egui::Align::Min,
+                        };
+                        let on_sidebar = theme.is_sidebar_surface(theme.active_surface_at(ui, rect.center()));
+                        let is_round_bezel = node.bezel_style == 1
+                            || node.cell_class.as_deref().is_some_and(|c| c.contains("RoundTextFieldCell"))
+                            || (!node.draws_background && node.is_bezeled);
+                        let is_pill = (on_sidebar && node.is_bezeled) || is_round_bezel;
+                        let is_mono = node.font_name.as_deref().is_some_and(|n| n.contains("Mono"));
+                        let is_alt = node.font_name.as_deref() == Some(".SFNS-Regular");
                         let mut cell = MacInputCell::with_id(ui.scope_id().with(("nib_input", node.id.0)), &mut text)
                             .theme(theme)
                             .control_size(ctrl_size)
+                            .text_align(t_align)
+                            .font_weight(node.font_weight)
+                            .monospace(is_mono)
+                            .stylistic_alt(is_alt)
+                            .recessed_pill(is_pill)
                             .enabled(enabled)
                             .fixed_rect(rect);
+                        if !is_round_bezel && node.draws_background {
+                            cell = cell.corner_radius(theme.text_field().regular.corner_radius.points());
+                        }
+                        if !node.title.is_empty() && node.value_binding.is_some() {
+                            cell = cell.placeholder(node.title.as_str());
+                        }
                         if let SceneNodeKind::NumberField { min, max, step, .. } = &node.kind {
                             let bound = f64::from(u16::MAX);
                             let min_step = f64::from(theme.slider().key_step_fraction.points());
@@ -320,7 +424,8 @@ impl MacSceneIR {
                         if cell.show(ui).changed() {
                             if let Some(b) = node.value_binding {
                                 if matches!(node.kind, SceneNodeKind::NumberField { .. }) {
-                                    if let Some(v) = crate::scene::constraints::evaluate_arithmetic_expr(&text) {
+                                    let clean_num = text.trim_end_matches(['%', '°']);
+                                    if let Some(v) = crate::scene::constraints::evaluate_arithmetic_expr(clean_num) {
                                         data_source.set_f64(b, v);
                                     }
                                 }
@@ -381,31 +486,7 @@ impl MacSceneIR {
                     }
                 }
                 SceneNodeKind::SegmentedControl { segments } => {
-                    let fb_id = ui.scope_id().with(("nib_seg", node.id.0));
-                    let sel = node
-                        .value_binding
-                        .map(|b| data_source.get_i64(b).max(0) as usize)
-                        .unwrap_or_else(|| ui.data(|d| d.get_temp::<usize>(fb_id)).unwrap_or(0));
-                    let refs: Vec<&str> = segments.iter().map(String::as_str).collect();
-                    if !refs.is_empty() {
-                        let mut next_sel = None;
-                        MacSegmentedControl::new(&refs, sel)
-                            .theme(theme)
-                            .control_size(ctrl_size)
-                            .enabled(enabled)
-                            .fixed_rect(rect)
-                            .show(ui, |idx| next_sel = Some(idx));
-                        if let Some(new_idx) = next_sel {
-                            if let Some(b) = node.value_binding {
-                                data_source.set_i64(b, new_idx as i64);
-                            } else {
-                                ui.data_mut(|d| d.insert_temp(fb_id, new_idx));
-                            }
-                            if let Some(act) = node.action {
-                                data_source.on_action(act, node.id);
-                            }
-                        }
-                    }
+                    render_segmented_control_node(ui, theme, data_source, node, rect, segments, (ctrl_size, enabled));
                 }
                 SceneNodeKind::Slider { min, max, tick_marks } => {
                     render_slider_node(ui, theme, data_source, node, rect, (*min, *max, *tick_marks), (ctrl_size, enabled));
@@ -416,8 +497,23 @@ impl MacSceneIR {
                 }
             }
         }
+        for (node, rect, ctrl_size, enabled) in deferred_inline_buttons {
+            render_extended_node(ui, theme, data_source, node, rect, ctrl_size, enabled);
+        }
+        self.render_attached_button_menus(ui, theme, data_source, &solved, origin);
         for node in &self.nodes {
             if let SceneNodeKind::CustomCanvasSlot { class_name } = &node.kind {
+                if let crate::scene::ir::VisibilityRule::WhenTabSelected { tab_view, tab_index } = node.visibility {
+                    let tv_node = self.nodes.iter().find(|n| n.id == tab_view);
+                    let default_tab = tv_node
+                        .and_then(|tv| tv.value_binding)
+                        .map(|b| data_source.get_i64(b).max(0) as usize)
+                        .unwrap_or_else(|| ui.data(|d| d.get_temp::<usize>(ui.scope_id().with(("nib_tv_sel", tab_view.0)))).unwrap_or(0));
+                    let tv_ib = tv_node.map(|n| n.ib_object_id.as_str()).unwrap_or("");
+                    if data_source.resolve_active_tab(tab_view, tv_ib, default_tab) != tab_index {
+                        continue;
+                    }
+                }
                 if let Some(&local_rect) = solved.get(&node.id) {
                     let scaled_rect = Rect::from_min_size(
                         pos2(local_rect.min.x * scale_x, local_rect.min.y),
@@ -428,34 +524,5 @@ impl MacSceneIR {
             }
         }
         ui.advance_cursor_after_rect(Rect::from_min_size(origin.to_pos2(), vec2(viewport.x * scale_x, viewport.y)));
-    }
-}
-
-fn render_token_field_node(
-    ui: &mut Ui,
-    theme: &MacTheme,
-    data_source: &mut dyn MacSceneDataSource,
-    node: &SceneNode,
-    rect: Rect,
-    enabled: bool,
-) {
-    let raw = node.value_binding.map(|b| data_source.get_str(b).to_string()).unwrap_or_else(|| node.title.clone());
-    let mut tokens: Vec<String> = raw.split(',').map(str::trim).filter(|s| !s.is_empty()).map(str::to_string).collect();
-    let prev = tokens.clone();
-    let draft_id = ui.scope_id().with(("nib_tok_draft", node.id.0));
-    let mut draft = ui.data(|d| d.get_temp::<String>(draft_id)).unwrap_or_default();
-    let mut c_ui = ui.new_child(UiBuilder::new().id_salt(("nib_tok_ui", node.id.0)).max_rect(rect));
-    c_ui.add_enabled_ui(enabled, |en_ui| {
-        MacTokenField::new((en_ui.scope_id(), "nib_tok", node.id.0), &mut tokens, &mut draft)
-            .max_chars(18)
-            .width(rect.width())
-            .theme(theme)
-            .show(en_ui);
-    });
-    ui.data_mut(|d| d.insert_temp(draft_id, draft));
-    if tokens != prev && enabled {
-        if let Some(b) = node.value_binding {
-            data_source.set_str(b, &tokens.join(","));
-        }
     }
 }

@@ -22,6 +22,10 @@ pub(crate) fn mk_node(
     icon: Option<&str>,
     visibility: VisibilityRule,
 ) -> SceneNode {
+    let is_ed = matches!(
+        kind,
+        SceneNodeKind::TextField | SceneNodeKind::NumberField { .. } | SceneNodeKind::SearchField | SceneNodeKind::ComboBox { .. }
+    );
     SceneNode {
         id: NodeId(id),
         ib_object_id: ib_id.into(),
@@ -43,6 +47,32 @@ pub(crate) fn mk_node(
         icon_name: icon.map(Into::into),
         visibility,
         labeled_by: None,
+        text_alignment: crate::scene::ir::MacTextAlignment::Left,
+        bezel_style: 0,
+        draws_background: is_ed,
+        is_bordered: false,
+        is_bezeled: is_ed,
+        is_editable: is_ed,
+        is_selectable: is_ed,
+        font_size_pt: None,
+        font_name: None,
+        font_weight: crate::controls::MacFontWeight::Regular,
+        label_color: crate::controls::MacLabelColor::Primary,
+        custom_class: None,
+        cell_class: None,
+        is_hidden: false,
+        hidden_binding: None,
+        hidden_path: None,
+        enabled_binding: None,
+        enabled_path: None,
+        enabled_transformer: ValueTransformer::Identity,
+        stack_orientation: None,
+        stack_spacing: 0.0,
+        detaches_hidden_views: false,
+        display_pattern: None,
+        display_pattern_bindings: Vec::new(),
+        image_scaling: 0,
+        symbol_point_size: None,
     }
 }
 
@@ -64,6 +94,15 @@ impl NibArchiveFrontend {
     /// Loads a `.nib` file or `.nib` bundle directory (`keyedobjects-101300.nib` / `keyedobjects.nib`) from disk (`REQ-013-05.2`).
     pub fn from_path(path: &std::path::Path, mapper: &CustomClassMapper) -> Result<MacSceneIR, SceneCompileError> {
         crate::scene::load_nib_from_path(path, mapper)
+    }
+
+    /// Loads a specific top-level controller outlet view (e.g. `"contentView"`, `"leftSideBarContainerView"`) from a `.nib` file on disk (`REQ-013-09.2`).
+    pub fn from_path_outlet(
+        path: &std::path::Path,
+        outlet_label: &str,
+        mapper: &CustomClassMapper,
+    ) -> Result<MacSceneIR, SceneCompileError> {
+        crate::scene::load_nib_from_path_outlet(path, Some(outlet_label), mapper)
     }
 
     /// Decodes a top-level AppKit `NSMenu` hierarchy (`MainMenu.nib`) from binary `.nib` bytes into `Vec<NSMenu>` (`REQ-013-09.2`).
@@ -103,20 +142,8 @@ impl NibArchiveFrontend {
     /// Encodes a slice of [`SceneNode`]s into a genuine binary `NIBArchive\x01\x00\x00\x00` varint stream (`REQ-013-05.5`).
     pub fn encode_nodes_to_nib_archive(nodes: &[SceneNode]) -> Vec<u8> {
         let key_names = [
-            "NSFrame",
-            "NSTitle",
-            "NSClassName",
-            "NSCell",
-            "NSvFlags",
-            "NSCellFlags",
-            "NSButtonFlags",
-            "NSKeyEquivalent",
-            "NSSource",
-            "NSLabel",
-            "NSKeyPath",
-            "NSUserInterfaceItemIdentifier",
-            "NSToolTip",
-            "NSImageName",
+            "NSFrame", "NSTitle", "NSClassName", "NSCell", "NSvFlags", "NSCellFlags", "NSButtonFlags",
+            "NSKeyEquivalent", "NSSource", "NSLabel", "NSKeyPath", "NSUserInterfaceItemIdentifier", "NSToolTip", "NSImageName",
         ];
         let mut keys_sec = Vec::new();
         for k in key_names {
@@ -125,16 +152,8 @@ impl NibArchiveFrontend {
         }
 
         let cls_names = [
-            "NSView",
-            "NSTextField",
-            "NSClassSwapper",
-            "NSButton",
-            "NSTextFieldCell",
-            "NSButtonCell",
-            "NSNibControlConnector",
-            "NSNibBindingConnector",
-            "NSBoxSeparator",
-            "NSSwitch",
+            "NSView", "NSTextField", "NSClassSwapper", "NSButton", "NSTextFieldCell", "NSButtonCell",
+            "NSNibControlConnector", "NSNibBindingConnector", "NSBoxSeparator", "NSSwitch",
         ];
         let mut cls_sec = Vec::new();
         for c in cls_names {
@@ -182,7 +201,7 @@ impl NibArchiveFrontend {
         for (i, n) in nodes.iter().enumerate() {
             let v_start = val_count;
             let (cls_idx, custom_cls_opt, cell_cls_opt) = match &n.kind {
-                SceneNodeKind::Container { .. } | SceneNodeKind::BoxContainer => (0u32, None, None),
+                SceneNodeKind::Container { .. } | SceneNodeKind::BoxContainer => (0u32, n.custom_class.as_deref(), None),
                 SceneNodeKind::Separator => (8u32, None, None),
                 SceneNodeKind::Label => (1u32, None, Some(4u32)),
                 SceneNodeKind::TextField => (1u32, None, Some(4u32)),
@@ -206,8 +225,9 @@ impl NibArchiveFrontend {
                 push_bytes(&mut vals_sec, &mut val_count, 2, ccls.as_bytes());
             }
             let unflipped_bit = if i == 0 && matches!(n.kind, SceneNodeKind::Container { is_flipped: false }) { 0x80i32 } else { 0 };
-            if n.autoresizing_mask != 0 || unflipped_bit != 0 {
-                push_int(&mut vals_sec, &mut val_count, 4, (n.autoresizing_mask as i32) | unflipped_bit);
+            let bezel_bits = i32::from(n.bezel_style) << 16;
+            if n.autoresizing_mask != 0 || unflipped_bit != 0 || bezel_bits != 0 {
+                push_int(&mut vals_sec, &mut val_count, 4, (n.autoresizing_mask as i32) | unflipped_bit | bezel_bits);
             }
             push_bytes(&mut vals_sec, &mut val_count, 11, n.ib_object_id.as_bytes());
             if !n.tooltip.is_empty() {
@@ -286,102 +306,12 @@ impl NibArchiveFrontend {
 
     fn default_fixture_nodes() -> Vec<SceneNode> {
         vec![
-            mk_node(
-                1,
-                "root",
-                None,
-                vec![2, 3, 4, 5, 6],
-                SceneNodeKind::Container { is_flipped: true },
-                "Window",
-                "",
-                "regular",
-                [0.0, 0.0, 480.0, 320.0],
-                18,
-                None,
-                None,
-                None,
-                VisibilityRule::Always,
-            ),
-            mk_node(
-                2,
-                "10",
-                Some(1),
-                vec![],
-                SceneNodeKind::Label,
-                "Scale:",
-                "",
-                "regular",
-                [20.0, 24.0, 60.0, 16.0],
-                0,
-                None,
-                None,
-                None,
-                VisibilityRule::Always,
-            ),
-            mk_node(
-                3,
-                "11",
-                Some(1),
-                vec![],
-                SceneNodeKind::CustomCanvasSlot { class_name: "SteppingTextField".into() },
-                "100",
-                "Scale percentage",
-                "regular",
-                [88.0, 21.0, 72.0, 22.0],
-                2,
-                Some((1, "values.scalePercent")),
-                None,
-                None,
-                VisibilityRule::Always,
-            ),
-            mk_node(
-                4,
-                "12",
-                Some(1),
-                vec![],
-                SceneNodeKind::CustomCanvasSlot { class_name: "OriginPointControl".into() },
-                "Origin",
-                "Transform origin anchor",
-                "regular",
-                [180.0, 18.0, 34.0, 34.0],
-                0,
-                Some((2, "values.originAnchor")),
-                None,
-                None,
-                VisibilityRule::Always,
-            ),
-            mk_node(
-                5,
-                "13",
-                Some(1),
-                vec![],
-                SceneNodeKind::Checkbox,
-                "Snap to Grid",
-                "Snap points to grid",
-                "small",
-                [20.0, 64.0, 140.0, 16.0],
-                0,
-                Some((3, "values.snapToGrid")),
-                None,
-                None,
-                VisibilityRule::Always,
-            ),
-            mk_node(
-                6,
-                "14",
-                Some(1),
-                vec![],
-                SceneNodeKind::PushButton { is_default: true, is_cancel: false },
-                "Apply",
-                "Apply transformation",
-                "regular",
-                [-6.0, -6.0, 131.0, 40.0],
-                9,
-                None,
-                Some((1, "applyTransform:")),
-                Some("NSAddTemplate"),
-                VisibilityRule::Always,
-            ),
+            mk_node(1, "root", None, vec![2, 3, 4, 5, 6], SceneNodeKind::Container { is_flipped: true }, "Window", "", "regular", [0.0, 0.0, 480.0, 320.0], 18, None, None, None, VisibilityRule::Always),
+            mk_node(2, "10", Some(1), vec![], SceneNodeKind::Label, "Scale:", "", "regular", [20.0, 24.0, 60.0, 16.0], 0, None, None, None, VisibilityRule::Always),
+            mk_node(3, "11", Some(1), vec![], SceneNodeKind::CustomCanvasSlot { class_name: "SteppingTextField".into() }, "100", "Scale percentage", "regular", [88.0, 21.0, 72.0, 22.0], 2, Some((1, "values.scalePercent")), None, None, VisibilityRule::Always),
+            mk_node(4, "12", Some(1), vec![], SceneNodeKind::CustomCanvasSlot { class_name: "OriginPointControl".into() }, "Origin", "Transform origin anchor", "regular", [180.0, 18.0, 34.0, 34.0], 0, Some((2, "values.originAnchor")), None, None, VisibilityRule::Always),
+            mk_node(5, "13", Some(1), vec![], SceneNodeKind::Checkbox, "Snap to Grid", "Snap points to grid", "small", [20.0, 64.0, 140.0, 16.0], 0, Some((3, "values.snapToGrid")), None, None, VisibilityRule::Always),
+            mk_node(6, "14", Some(1), vec![], SceneNodeKind::PushButton { is_default: true, is_cancel: false }, "Apply", "Apply transformation", "regular", [-6.0, -6.0, 131.0, 40.0], 9, None, Some((1, "applyTransform:")), Some("NSAddTemplate"), VisibilityRule::Always),
         ]
     }
 
@@ -554,5 +484,42 @@ impl NibArchiveFrontend {
             ),
         ];
         MacSceneIR::from_nodes(NodeId(1), [600.0, 38.0], nodes, CompiledConstraintSchedule::default())
+    }
+}
+
+pub(crate) fn render_scene_attached_button_menus(
+    scene: &MacSceneIR,
+    ui: &mut egui::Ui,
+    theme: &crate::theme::MacTheme,
+    data_source: &mut dyn crate::scene::runtime::MacSceneDataSource,
+    solved: &std::collections::BTreeMap<NodeId, egui::Rect>,
+    origin: egui::Vec2,
+) {
+    let mm = theme.menu_bar_metrics();
+    let row_h = mm.dropdown_item_height.points();
+    let pad_y = mm.dropdown_padding_y.points() * 2.0;
+    let bar_h = mm.bar_height.points();
+    for (&btn_id, menu_rows) in &scene.button_menus {
+        let pop_id = egui::Id::NULL.with(("nib_attached_btn_menu", btn_id.0));
+        let (mut open, mut sel) = ui.ctx().data(|d| d.get_temp::<(bool, Option<usize>)>(pop_id)).unwrap_or((false, None));
+        if !open {
+            continue;
+        }
+        let btn_rect = solved.get(&btn_id).copied().unwrap_or(egui::Rect::NOTHING).translate(origin);
+        let mut pos = egui::pos2(btn_rect.min.x, (btn_rect.min.y - (menu_rows.len() as f32 * row_h + pad_y)).max(bar_h));
+        let items: Vec<crate::navigation::NSMenuItem> = menu_rows
+            .iter()
+            .map(|(_, title, bid_opt, _)| {
+                let is_on = bid_opt.is_some_and(|bid| data_source.get_bool(bid));
+                crate::navigation::NSMenuItem::action(title.as_str(), title.as_str()).checked(is_on)
+            })
+            .collect();
+        if let Some(chosen) = crate::feedback::MacContextMenu::new(&items, &mut open, &mut pos, &mut sel).theme(theme).show(ui) {
+            if let Some((_, _, Some(bid), _)) = menu_rows.iter().find(|(_, t, _, _)| t == &chosen) {
+                let cur = data_source.get_bool(*bid);
+                data_source.set_bool(*bid, !cur);
+            }
+        }
+        ui.ctx().data_mut(|d| d.insert_temp(pop_id, (open, sel)));
     }
 }

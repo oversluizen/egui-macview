@@ -22,6 +22,44 @@ pub enum MacImageScaling {
     ProportionallyUpOrDown,
 }
 
+impl MacImageScaling {
+    /// Converts a raw NIB `NSScale` / `NSImageScaling` integer (`0..=3`) into [`MacImageScaling`].
+    pub const fn from_nib_code(code: u8) -> Self {
+        match code {
+            1 => Self::AxesIndependently,
+            2 => Self::None,
+            3 => Self::ProportionallyUpOrDown,
+            _ => Self::ProportionallyDown,
+        }
+    }
+}
+
+/// Computes the exact AppKit `-[NSImageCell imageRectForBounds:]` target rectangle for `bounds`,
+/// logical point size `natural_pt`, [`MacImageScaling`], and optional `NSImageSymbolConfiguration` `symbol_point_size`.
+pub fn compute_appkit_image_rect(
+    bounds: Rect,
+    natural_pt: Vec2,
+    scaling: MacImageScaling,
+    symbol_point_size: Option<f32>,
+) -> Rect {
+    let eff_nat = symbol_point_size.filter(|&pt| pt > 0.0).map(Vec2::splat).unwrap_or(natural_pt);
+    if eff_nat.x <= 0.0 || eff_nat.y <= 0.0 || bounds.width() <= 0.0 || bounds.height() <= 0.0 {
+        return bounds;
+    }
+    match scaling {
+        MacImageScaling::ProportionallyDown => {
+            let s = (bounds.width() / eff_nat.x).min(bounds.height() / eff_nat.y).min(1.0);
+            Rect::from_center_size(bounds.center(), eff_nat * s)
+        }
+        MacImageScaling::AxesIndependently => bounds,
+        MacImageScaling::None => Rect::from_center_size(bounds.center(), eff_nat),
+        MacImageScaling::ProportionallyUpOrDown => {
+            let s = (bounds.width() / eff_nat.x).min(bounds.height() / eff_nat.y);
+            Rect::from_center_size(bounds.center(), eff_nat * s)
+        }
+    }
+}
+
 /// AppKit `NSImageFrameStyle` border styles for [`MacImageView`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum MacImageFrameStyle {
@@ -56,7 +94,9 @@ pub struct MacImageView<'a> {
     symbol: Option<MacSymbol>,
     resource_name: Option<&'a str>,
     is_template: bool,
+    tint_override: Option<egui::Color32>,
     scaling: MacImageScaling,
+    symbol_point_size: Option<f32>,
     frame_style: MacImageFrameStyle,
     fixed_rect: Option<Rect>,
     theme: Option<&'a MacTheme>,
@@ -69,7 +109,9 @@ impl<'a> MacImageView<'a> {
             symbol: Some(symbol),
             resource_name: None,
             is_template: true,
+            tint_override: None,
             scaling: MacImageScaling::ProportionallyDown,
+            symbol_point_size: None,
             frame_style: MacImageFrameStyle::None,
             fixed_rect: None,
             theme: None,
@@ -78,26 +120,36 @@ impl<'a> MacImageView<'a> {
 
     /// Creates a new image view referencing an AppKit `NSResourceName` icon identifier.
     pub fn from_resource_name(name: &'a str) -> Self {
-        let is_template = name.ends_with("Template") || name.starts_with("NS");
+        let is_template = name.ends_with("Template") || name.starts_with("NS") || !name.contains('/');
         let symbol = match name {
-            "NSAddTemplate" => Some(MacSymbol::Plus),
-            "NSRemoveTemplate" => Some(MacSymbol::Minus),
-            "NSActionTemplate" => Some(MacSymbol::Gear),
-            "NSGoLeftTemplate" => Some(MacSymbol::ChevronLeft),
-            "NSGoRightTemplate" => Some(MacSymbol::ChevronRight),
-            "NSRefreshTemplate" => Some(MacSymbol::ArrowClockwise),
-            "NSStopProgressTemplate" => Some(MacSymbol::Xmark),
+            "NSAddTemplate" | "plus" | "plus.circle" => Some(MacSymbol::Plus),
+            "NSRemoveTemplate" | "minus" | "minus.circle" => Some(MacSymbol::Minus),
+            "NSActionTemplate" | "gear" | "gearshape" | "ellipsis.circle" => Some(MacSymbol::Gear),
+            "NSGoLeftTemplate" | "chevron.left" => Some(MacSymbol::ChevronLeft),
+            "NSGoRightTemplate" | "chevron.right" => Some(MacSymbol::ChevronRight),
+            "NSRefreshTemplate" | "arrow.clockwise" => Some(MacSymbol::ArrowClockwise),
+            "NSStopProgressTemplate" | "xmark" | "xmark.circle" => Some(MacSymbol::Xmark),
+            "NSSidebarTemplate" | "sidebar.left" | "sidebar.right" | "sidebar.leading" => Some(MacSymbol::SidebarLeading),
+            "magnifyingglass" => Some(MacSymbol::Search),
             _ => None,
         };
         Self {
             symbol,
             resource_name: Some(name),
             is_template,
+            tint_override: None,
             scaling: MacImageScaling::ProportionallyDown,
+            symbol_point_size: None,
             frame_style: MacImageFrameStyle::None,
             fixed_rect: None,
             theme: None,
         }
+    }
+
+    /// Overrides the monochrome template foreground tint color (`REQ-013-10.6`).
+    pub fn tint(mut self, color: egui::Color32) -> Self {
+        self.tint_override = Some(color);
+        self
     }
 
     /// Configures whether the image is treated as a monochrome `*Template` image tinted by the active surface.
@@ -109,6 +161,12 @@ impl<'a> MacImageView<'a> {
     /// Configures the `NSImageScaling` mode.
     pub fn scaling(mut self, scaling: MacImageScaling) -> Self {
         self.scaling = scaling;
+        self
+    }
+
+    /// Configures an explicit `NSImageSymbolConfiguration` point size override.
+    pub fn symbol_point_size(mut self, point_size: Option<f32>) -> Self {
+        self.symbol_point_size = point_size;
         self
     }
 
@@ -175,21 +233,80 @@ impl<'a> MacImageView<'a> {
             }
         };
 
-        let fg = if self.is_template { theme.label_on(surface_bg) } else { theme.control_accent() };
+        let res_name = self.resource_name.unwrap_or_default();
+        let is_sec_sym = matches!(res_name, "tag" | "tag.fill" | "u.square" | "info.circle" | "info.circle.fill");
+        let fg = self.tint_override.unwrap_or_else(|| {
+            if is_sec_sym {
+                theme.secondary_label_on(surface_bg)
+            } else if self.is_template {
+                theme.label_on(surface_bg)
+            } else {
+                theme.control_accent()
+            }
+        });
 
-        let min_dim = content_rect.width().min(content_rect.height());
-        let glyph_sz = match self.scaling {
-            MacImageScaling::None => default_sz.min(min_dim),
-            MacImageScaling::ProportionallyDown => default_sz.min(min_dim * 0.5),
-            MacImageScaling::AxesIndependently | MacImageScaling::ProportionallyUpOrDown => min_dim * 0.5,
-        };
+        let img_rect = compute_appkit_image_rect(
+            content_rect,
+            Vec2::splat(default_sz),
+            self.scaling,
+            self.symbol_point_size,
+        );
+        let min_dim = img_rect.width().min(img_rect.height());
+        let glyph_sz = min_dim * 0.5;
 
-        let label_str = if let Some(sym) = self.symbol { sym.as_str() } else { self.resource_name.unwrap_or_default() };
-
-        if !label_str.is_empty() {
-            let galley = theme.layout_tracked_galley(ui, label_str, FontId::proportional(glyph_sz.max(border_w)), fg, content_rect.width());
-            let pos = Pos2::new(content_rect.center().x - galley.size().x * 0.5, content_rect.center().y - galley.size().y * 0.5);
-            ui.painter().galley(pos, galley, fg);
+        let c = img_rect.center();
+        match res_name {
+            "tag" | "tag.fill" if self.symbol.is_none() => {
+                let s = (min_dim * 0.5 - photo_pad).max(photo_pad);
+                let pts = vec![
+                    Pos2::new(c.x, c.y - s),
+                    Pos2::new(c.x + s, c.y - s),
+                    Pos2::new(c.x + s, c.y),
+                    Pos2::new(c.x, c.y + s),
+                    Pos2::new(c.x - s, c.y),
+                ];
+                ui.painter().add(egui::Shape::closed_line(pts, Stroke::new(border_w, fg)));
+                ui.painter().circle_filled(Pos2::new(c.x + s * 0.5, c.y - s * 0.5), border_w, fg);
+            }
+            "u.square" if self.symbol.is_none() => {
+                let box_sz = (min_dim - bezel_r as f32).max(bezel_r as f32 * 2.0);
+                let sq = Rect::from_center_size(c, Vec2::splat(box_sz));
+                ui.painter().rect(
+                    sq,
+                    CornerRadius::same(photo_pad as u8),
+                    egui::Color32::TRANSPARENT,
+                    Stroke::new(border_w, fg),
+                    StrokeKind::Inside,
+                );
+                let u_sz = (box_sz - bezel_r as f32).max(border_w);
+                let galley = theme.layout_tracked_galley(ui, "U", FontId::proportional(u_sz), fg, box_sz);
+                let pos = Pos2::new(c.x - galley.size().x * 0.5, c.y - galley.size().y * 0.5);
+                ui.painter().galley(pos, galley, fg);
+            }
+            "info.circle" | "info.circle.fill" if self.symbol.is_none() => {
+                let rad = (min_dim * 0.5 - border_w).max(photo_pad);
+                let inner_fg = if res_name == "info.circle.fill" {
+                    ui.painter().circle_filled(c, rad, fg);
+                    theme.control_background()
+                } else {
+                    ui.painter().circle_stroke(c, rad, Stroke::new(border_w, fg));
+                    fg
+                };
+                ui.painter().circle_filled(Pos2::new(c.x, c.y - rad * 0.5), border_w, inner_fg);
+                ui.painter().line_segment(
+                    [Pos2::new(c.x, c.y - border_w * 0.5), Pos2::new(c.x, c.y + rad * 0.5)],
+                    Stroke::new(border_w + 0.5, inner_fg),
+                );
+            }
+            _ => {
+                let label_str = self.symbol.map_or(res_name, |sym| sym.as_str());
+                if !label_str.is_empty() {
+                    let galley =
+                        theme.layout_tracked_galley(ui, label_str, FontId::proportional(glyph_sz.max(border_w)), fg, content_rect.width());
+                    let pos = Pos2::new(c.x - galley.size().x * 0.5, c.y - galley.size().y * 0.5);
+                    ui.painter().galley(pos, galley, fg);
+                }
+            }
         }
 
         response

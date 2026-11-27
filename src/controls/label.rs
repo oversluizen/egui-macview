@@ -13,8 +13,10 @@ use crate::theme::MacTheme;
 use egui::{Align, Color32, FontId, Pos2, Rect, Response, Sense, Ui, Vec2, Widget, WidgetText};
 
 /// Font weight tiers for [`MacLabel`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub enum MacFontWeight {
+    /// Light display weight (`NSFontWeightLight`, used for large section titles).
+    Light,
     /// Standard regular weight (`NSFontWeightRegular`).
     #[default]
     Regular,
@@ -27,7 +29,7 @@ pub enum MacFontWeight {
 }
 
 /// Semantic AppKit label color tiers for [`MacLabel`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub enum MacLabelColor {
     /// Primary label color (`NSColor.labelColor`).
     #[default]
@@ -186,10 +188,15 @@ impl<'a> Widget for MacLabel<'a> {
         let surface_bg = theme.active_surface_at(ui, probe_pos);
         let text_color = theme.apply_enabled(self.resolved_color_on(theme, surface_bg), ui.is_enabled());
         let is_heavy = matches!(self.weight, MacFontWeight::Medium | MacFontWeight::Semibold | MacFontWeight::Bold);
-        let (font_id, has_semibold_family) =
-            if is_heavy { theme.semibold_font_id(ui, font_sz) } else { (FontId::proportional(font_sz), false) };
+        let (font_id, has_semibold_family) = if is_heavy {
+            theme.semibold_font_id(ui, font_sz)
+        } else if self.weight == MacFontWeight::Light {
+            (theme.light_font_id(ui, font_sz), false)
+        } else {
+            (FontId::proportional(font_sz), false)
+        };
 
-        let wrap_w = self.fixed_rect.map_or(f32::INFINITY, |r| r.width());
+        let wrap_w = self.fixed_rect.filter(|_| self.alignment == Align::Min).map_or(f32::INFINITY, |r| r.width());
         let galley = theme.layout_tracked_galley(ui, self.text.text(), font_id, text_color, wrap_w);
 
         let ppp = ui.ctx().pixels_per_point();
@@ -205,7 +212,8 @@ impl<'a> Widget for MacLabel<'a> {
             (subpixel_snap_rect(r, ppp), resp)
         };
 
-        let painter = ui.painter_at(rect.intersect(ui.clip_rect()));
+        let clip = if matches!(self.alignment, Align::Center | Align::Max) { ui.clip_rect() } else { rect.intersect(ui.clip_rect()) };
+        let painter = ui.painter_at(clip);
         let text_y = theme.baseline_text_y(rect, baseline_from_top, ascender, ppp);
         let text_x = match self.alignment {
             Align::Min => rect.left(),
@@ -219,7 +227,7 @@ impl<'a> Widget for MacLabel<'a> {
             let boost = match self.weight {
                 MacFontWeight::Bold => lm.bold_stroke_boost.points(),
                 MacFontWeight::Medium | MacFontWeight::Semibold => lm.semibold_stroke_boost.points(),
-                MacFontWeight::Regular => 0.0,
+                MacFontWeight::Light | MacFontWeight::Regular => 0.0,
             };
             if boost > 0.0 {
                 painter.galley(Pos2::new(pos.x + boost, pos.y), galley, text_color);

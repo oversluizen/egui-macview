@@ -86,3 +86,26 @@ pub enum WindowControlsStyle {
 - Disables client-side synthesized window controls completely.
 - Window decorations (title, minimize, maximize, close) are provided natively by the operating system window manager.
 - Reclaims toolbar margins for custom client items.
+
+---
+
+## 4. `NSWindowToolbarStyleUnifiedCompact` (`38.0 pt`) Three-Zone Layout & Two-Line Title/Subtitle Stack (`SPEC-005 §4`)
+
+When `MacToolbar` is configured with `.subtitle(...)` or rendered via `.show_unified_zones(ui, leading_nav, center_tools, trailing_items)` (or `.show_unified_zones_in_rect(ui, rect, leading_nav, center_tools, trailing_items)`), it implements the authentic macOS Sonoma `NSWindowToolbarStyleUnifiedCompact` (`38.0 pt`) layout measured from live AppKit `NSTitlebarView` / `NSToolbarView`:
+
+1. **Traffic Lights Geometry (AppKit `_NSThemeCloseWidget` / `_NSThemeWidget` / `_NSThemeZoomWidget`)**:
+   - Close center at $x = \text{rect.left()} + 18.0\,\text{pt}$ (`toolbar.traffic_light_leading_inset`, $12.0\,\text{pt}$ disc inside $14 \times 16\,\text{pt}$ widget box at $x = 12.0\,\text{pt}$),
+   - Minimize center at $x = \text{rect.left()} + 38.0\,\text{pt}$ ($20.0\,\text{pt}$ center pitch),
+   - Zoom center at $x = \text{rect.left()} + 58.0\,\text{pt}$ ($20.0\,\text{pt}$ center pitch).
+2. **Zone 1 — Leading Navigational Items (`NSToolbarItem.isNavigational = true`)**:
+   - Starts at $x = \text{rect.left()} + 79.0\,\text{pt}$ (`toolbar.traffic_lights_inset` $= 70.0\,\text{pt} + 9.0\,\text{pt}$ viewer inset, or `rect.left() + tb.edge_padding` in `NativeHost` / `WindowsCaptionButtons` styles).
+   - Vertically centered in the $38.0\,\text{pt}$ toolbar ($y \in [\text{top} + 6.0, \text{bottom} - 7.0]$, height $25.0\,\text{pt}$).
+3. **Zone 2 — Two-Line `NSToolbarTitleView` (`title` + `subtitle`)**:
+   - Positioned immediately after the leading navigational items (`x = leading_nav_max_x + 12.0 pt`, matching AppKit `inTB.x = 161.0 pt` when leading navigational items end at `149.0 pt`).
+   - When `subtitle` is non-empty:
+     - **Primary Title (`title`)**: Rendered on the top line at $y = \text{rect.top()} + 4.0\,\text{pt}$ using `theme.semibold_font_id(ui, 13.0)` (`.SFNS-Bold` / `.SFNS-Semibold` $13.0\,\text{pt}$) in `theme.label()`.
+     - **Subtitle (`subtitle`)**: Rendered on the bottom line at $y = \text{rect.top()} + 20.0\,\text{pt}$ using `FontId::proportional(11.0)` (`.SFNS-Regular` $11.0\,\text{pt}$) in `theme.secondary_label()`.
+   - When `subtitle` is empty, `title` is vertically centered at `rect.center().y` using `theme.semibold_font_id(ui, 13.0)`.
+4. **Zone 3 — Center Principal Item (`center_tools`) & Trailing Action Items (`trailing_items`)**:
+   - **Trailing Zone**: Laid out right-to-left ending at `rect.right() - 7.0 pt` (matching AppKit `NSToolbarButton` at `x = 1397..1433 pt` in a `1440 pt` window, i.e. `right - 43..right - 7 pt`).
+   - **Center Principal Zone**: Horizontally centered around `rect.center().x` (clamped so it never overlaps the title stack on the left or the trailing items on the right), vertically centered at `rect.center().y`.

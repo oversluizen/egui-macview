@@ -42,10 +42,7 @@ impl MobileWebSession {
         let ctx = Context::default();
         setup_system_or_custom_fonts(&ctx);
         #[allow(unused_mut)]
-        let mut session = Self {
-            web: MacWebGlSession::with_context(ctx),
-            app: GalleryApp::new(),
-        };
+        let mut session = Self { web: MacWebGlSession::with_context(ctx), app: GalleryApp::new() };
         #[cfg(not(target_arch = "wasm32"))]
         let _ = session.encode_frame(390.0, 844.0, 2.0, "");
         session

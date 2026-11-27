@@ -245,6 +245,7 @@ impl<'a> MacSplitView<'a> {
         // Draw hairline and handle
         let painter = ui.painter_at(container_rect);
         if let Some((p1, p2)) = divider_line {
+            painter.line_segment([p1, p2], Stroke::new(divider_thickness, theme.window_background()));
             painter.line_segment([p1, p2], Stroke::new(divider_thickness, theme.separator()));
         }
         if let Some(hr) = handle_rect {

@@ -21,6 +21,8 @@ pub struct MacOutlineRowResponse {
     pub double_clicked: bool,
     /// True if the disclosure triangle was clicked.
     pub disclosure_clicked: bool,
+    /// True if the trailing accessory action button (`...`) was clicked.
+    pub accessory_clicked: bool,
     /// True if the row is currently in an expanded state.
     pub is_expanded: bool,
     /// True if the row is currently selected.
@@ -88,23 +90,36 @@ impl<'a> MacOutlineView<'a> {
         self
     }
 
+    /// Renders the outline view container inside an explicit `rect` with a tree builder closure.
+    pub fn show_in_rect<R>(self, ui: &mut Ui, rect: Rect, content: impl FnOnce(&mut MacOutlineTree<'_>) -> R) -> R {
+        let mut child_ui = ui.new_child(egui::UiBuilder::new().id_salt(self.id).max_rect(rect).layout(egui::Layout::top_down(egui::Align::Min)));
+        child_ui.set_clip_rect(rect.intersect(ui.clip_rect()));
+        let theme_cow = MacTheme::resolve(self.theme, child_ui.ctx());
+        let theme: &MacTheme = &theme_cow;
+        child_ui.spacing_mut().item_spacing.y = theme.outline_view().item_spacing.points() * 0.0;
+        let mut tree = MacOutlineTree {
+            id: self.id,
+            ui: &mut child_ui,
+            theme,
+            row_height: self.row_height.unwrap_or_else(|| theme.outline_view().row_height.points()),
+            indent_step: self.indent_step.unwrap_or_else(|| theme.outline_view().indent_step.points()),
+        };
+        content(&mut tree)
+    }
+
     /// Renders the outline view container with a tree builder closure.
     pub fn show<R>(self, ui: &mut Ui, content: impl FnOnce(&mut MacOutlineTree<'_>) -> R) -> R {
         let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
         let theme: &MacTheme = &theme_cow;
-
-        ui.with_layout(egui::Layout::top_down(egui::Align::Min), |child_ui| {
-            let mut tree = MacOutlineTree {
-                id: self.id,
-                ui: child_ui,
-                theme,
-                row_height: self.row_height.unwrap_or_else(|| theme.outline_view().row_height.points()),
-                indent_step: self.indent_step.unwrap_or_else(|| theme.outline_view().indent_step.points()),
-            };
-
-            content(&mut tree)
-        })
-        .inner
+        ui.spacing_mut().item_spacing.y = theme.outline_view().item_spacing.points() * 0.0;
+        let mut tree = MacOutlineTree {
+            id: self.id,
+            ui,
+            theme,
+            row_height: self.row_height.unwrap_or_else(|| theme.outline_view().row_height.points()),
+            indent_step: self.indent_step.unwrap_or_else(|| theme.outline_view().indent_step.points()),
+        };
+        content(&mut tree)
     }
 }
 
@@ -209,8 +224,70 @@ impl<'t> MacOutlineTree<'t> {
             clicked: row_resp.clicked() && !disclosure_clicked && !row_builder.accessory_clicked,
             double_clicked: row_resp.double_clicked(),
             disclosure_clicked,
+            accessory_clicked: row_builder.accessory_clicked,
             is_expanded: *expanded,
             is_selected: selected,
+        }
+    }
+
+    /// Renders an AppKit `NSOutlineView` Source-List section header (`HeaderCell`) with optional trailing `...` (`NSActionTemplate`) action button.
+    pub fn section_header(
+        &mut self,
+        id_source: impl Hash + Debug,
+        title: &str,
+        has_action_button: bool,
+    ) -> MacOutlineRowResponse {
+        self.section_header_with_action(id_source, title, has_action_button, |painter, act_rect, tint| {
+            let dot_r = self.theme.outline_view().chevron_stroke_width.points();
+            let gap = self.theme.outline_view().accessory_spacing.points();
+            let c = act_rect.center();
+            for step in [-1.0_f32, 0.0, 1.0] {
+                painter.circle_filled(Pos2::new(c.x + step * gap, c.y), dot_r, tint);
+            }
+        })
+    }
+
+    /// Renders an AppKit `NSOutlineView` Source-List section header (`HeaderCell`) with a custom trailing action icon drawer.
+    pub fn section_header_with_action(
+        &mut self,
+        id_source: impl Hash + Debug,
+        title: &str,
+        has_action_button: bool,
+        action_drawer: impl FnOnce(&egui::Painter, Rect, egui::Color32),
+    ) -> MacOutlineRowResponse {
+        let row_id = self.id.with(id_source);
+        let avail_w = self.ui.available_width();
+        let (row_rect, row_resp) = self.ui.allocate_exact_size(Vec2::new(avail_w, self.row_height), Sense::click());
+        let metrics = self.theme.outline_view();
+        let pad_x = metrics.edge_padding.points() + metrics.disclosure_margin.points() * 2.0;
+        let acc_size = metrics.accessory_size.points();
+        let acc_space = metrics.accessory_spacing.points();
+        let mut accessory_clicked = false;
+        let mut right_bound = row_rect.right() - acc_space;
+        if has_action_button {
+            right_bound -= acc_size;
+            let act_rect = Rect::from_center_size(Pos2::new(right_bound + acc_size * 0.5, row_rect.center().y), Vec2::splat(acc_size));
+            right_bound -= acc_space;
+            let act_resp = self.ui.interact(act_rect, row_id.with("hdr_action"), Sense::click());
+            if act_resp.clicked() {
+                accessory_clicked = true;
+            }
+            let tint = if act_resp.hovered() { self.theme.label() } else { self.theme.secondary_label() };
+            action_drawer(&self.ui.painter_at(act_rect), act_rect, tint);
+        }
+        let avail_lbl_w = (right_bound - (row_rect.left() + pad_x)).max(0.0);
+        let (hdr_font, _) = self.theme.semibold_font_id(self.ui, metrics.header_font_size.points());
+        let hdr_col = self.theme.secondary_label();
+        let galley = self.theme.layout_tracked_galley(self.ui, title, hdr_font, hdr_col, avail_lbl_w);
+        let ty = row_rect.center().y - galley.size().y * 0.5;
+        self.ui.painter_at(row_rect).galley(Pos2::new(row_rect.left() + pad_x, ty), galley, hdr_col);
+        MacOutlineRowResponse {
+            clicked: row_resp.clicked() && !accessory_clicked,
+            double_clicked: row_resp.double_clicked(),
+            disclosure_clicked: false,
+            accessory_clicked,
+            is_expanded: true,
+            is_selected: false,
         }
     }
 }

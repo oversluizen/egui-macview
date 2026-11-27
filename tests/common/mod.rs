@@ -33,12 +33,7 @@ pub fn run_frame(ctx: &Context, mut input: RawInput, viewport: Vec2, mut f: impl
 }
 
 /// Executes a genuine 3-frame `egui` primary click (`Hover -> Press -> Release`) at `pos`.
-pub fn click_at_multi_frame(
-    ctx: &Context,
-    pos: Pos2,
-    viewport: Vec2,
-    mut f: impl FnMut(&mut egui::Ui),
-) -> Vec<egui::epaint::ClippedShape> {
+pub fn click_at_multi_frame(ctx: &Context, pos: Pos2, viewport: Vec2, mut f: impl FnMut(&mut egui::Ui)) -> Vec<egui::epaint::ClippedShape> {
     let hover = RawInput {
         screen_rect: Some(Rect::from_min_size(Pos2::ZERO, viewport)),
         events: vec![Event::PointerMoved(pos)],
@@ -111,8 +106,7 @@ pub struct RetinaCpuFramebuffer {
 
 impl RetinaCpuFramebuffer {
     pub fn render_retina(ctx: &Context, viewport: Vec2, scale: f32, bg: Color32, mut ui_fn: impl FnMut(&mut egui::Ui)) -> Self {
-        let mut fonts_map: std::collections::BTreeMap<egui::TextureId, (usize, usize, Vec<[u8; 4]>)> =
-            std::collections::BTreeMap::new();
+        let mut fonts_map: std::collections::BTreeMap<egui::TextureId, (usize, usize, Vec<[u8; 4]>)> = std::collections::BTreeMap::new();
         let mut shapes_out = Vec::new();
         for _ in 0..2 {
             let evs = ctx.data(|d| d.get_temp::<Vec<Event>>(egui::Id::NULL.with("retina_events"))).unwrap_or_default();
@@ -212,7 +206,7 @@ impl RetinaCpuFramebuffer {
                 let (c0, c1, c2) = (v0.color.to_array(), v1.color.to_array(), v2.color.to_array());
                 let mut rgba = [0u8; 4];
                 for ch in 0..4 {
-                    rgba[ch] = (w0 * c0[ch] as f32 + w1 * c1[ch] as f32 + w2 * c2[ch] as f32).clamp(0.0, 255.0) as u8;
+                    rgba[ch] = (w0 * c0[ch] as f32 + w1 * c1[ch] as f32 + w2 * c2[ch] as f32).round().clamp(0.0, 255.0) as u8;
                 }
                 if let Some((tw, th, tbuf)) = tex {
                     let u = (w0 * v0.uv.x + w1 * v1.uv.x + w2 * v2.uv.x).clamp(0.0, 1.0);

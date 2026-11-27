@@ -45,10 +45,7 @@ fn test_guard_zero_magic_numbers_and_colors_in_ui_components() {
             }
         }
     }
-    assert!(
-        magic_v.is_empty() && color_v.is_empty(),
-        "Magic Number Guard:\n{magic_v:#?}\nHardcoded Color & Spacing Guard:\n{color_v:#?}"
-    );
+    assert!(magic_v.is_empty() && color_v.is_empty(), "Magic Number Guard:\n{magic_v:#?}\nHardcoded Color & Spacing Guard:\n{color_v:#?}");
 }
 
 #[test]
@@ -466,6 +463,16 @@ fn test_guard_open_source_fonts_only_zero_proprietary_apple_fonts() {
     }
     let readme = fs::read_to_string(manifest_dir.join("README.md")).unwrap();
     assert!(readme.contains("not affiliated with, endorsed by, or sponsored by Apple Inc."));
+    let cargo_toml = fs::read_to_string(manifest_dir.join("Cargo.toml")).unwrap();
+    let pkg_ver = cargo_toml
+        .lines()
+        .find_map(|l| l.strip_prefix("version = \"").and_then(|r| r.strip_suffix('"')))
+        .expect("Cargo.toml package version");
+    let changelog = fs::read_to_string(manifest_dir.join("CHANGELOG.md")).unwrap();
+    assert!(
+        changelog.contains(&format!("## [{pkg_ver}]")),
+        "CHANGELOG.md must contain a release heading `## [{pkg_ver}]` matching Cargo.toml version"
+    );
     let forbidden = ["SFNS.ttf", "SFNS.otf", "SFPro.ttf", "SFCompact.ttf", "Menlo.ttc", "LucidaGrande.ttc", "Apple Symbols.ttf"];
     for file in collect_rs_files(&manifest_dir.join("src")) {
         let content = fs::read_to_string(&file).unwrap();

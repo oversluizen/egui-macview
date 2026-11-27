@@ -5,6 +5,36 @@ All notable changes to the `egui-macview` crate will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.2] - 2026-11-26
+
+### Added
+- **AppKit `NSMenu` Outlet Attachment (`NSLabel = "menu"`), Menu Item KVC Value Bindings, Hierarchical `isHiddenOrHasHiddenAncestor`, and Live `detachesHiddenViews` Vertical Stack Reflow (`MacSceneIR::button_menus`, `effective_stack_height`, `Fase 2.2.1` & `2.2.2`)**: Decoded `NSNibOutletConnector` (`NSLabel = "menu"`) from `NSButton`/`GSMenuButton` nodes to `NSMenu` objects (`NSMenuItem` title, `.strings` localization, and `NSNibBindingConnector` `value` bindings), rendered attached button popup menus via `MacContextMenu`, propagated ancestor `hidden_binding` down the view hierarchy, and added live `detaches_hidden_views` vertical stack reflow (`effective_stack_height` and per-row `y_shift`).
+
+## [0.9.1] - 2026-11-26
+
+### Added
+- **AppKit `NSOutlineView` Source-List Section Headers, Leading Template Icons & Right-Aligned Count Badges (`Fase 2.1.2`)**: Added `MacOutlineView::show_in_rect`, `MacOutlineTree::section_header`, `MacOutlineTree::section_header_with_action`, `MacOutlineRow::leading_icon`, `MacOutlineRow::badge`, and `MacOutlineRowResponse::accessory_clicked` for authentic macOS Source-List sidebars.
+
+## [0.9.0] - 2026-11-26
+
+### Added
+- **End-to-End AppKit `-[NSImageCell imageRectForBounds:]` Geometry (`compute_appkit_image_rect`, `MacImageScaling::from_nib_code`, `MacImageView::symbol_point_size`, `MacSceneDataSource::paint_scene_icon_scaled`, `REQ-013-10.10`)**: Wired `SceneNode::image_scaling` (`0..=3`) and `SceneNode::symbol_point_size` (`NSImageSymbolConfiguration.NSPointSize`) end-to-end across `runtime.rs`, `runtime_widgets.rs`, `runtime_tabs.rs`, and `MacImageView`, eliminating dead IR fields.
+- **Generic `NSCellFlags` Bit 31 (`0x8000_0000`) Control State & Custom `NSTextFieldCell` `initWithCoder:` Typography Decoding (`nib_ibtool_widgets.rs`, `exporter.rs`)**: Decoded initial `NSControlStateValueOn` toggle state directly from `NSCellFlags` bit 31 and generic custom text field font weights (`*AutoCompleteTextField*` to `.SFNS-Semibold`, `*RoundTextFieldCell*` / `*SteppingTextField*` / `*NoBackgroundTextField*` to `.SFNS-Regular`) directly in the binary `.nib` frontend.
+
+## [0.8.2] - 2026-11-26
+
+### Added
+- **Multi-Slot `NSDisplayPatternBinding` (`displayPatternValue1..9`), `NSScale` (`image_scaling`), and `IBNSShadowedSymbolConfiguration` (`symbol_point_size`) Decoding (`SceneNode`, `nib_ibtool_widgets.rs`, `runtime_widgets.rs`, `REQ-013-10.10`)**: Decoded archived `NSDisplayPattern` format templates (`%{value1}@..%{value9}@`), `NSImageCell` scaling modes (`0..=3`), and SF Symbol point size configurations directly from binary `.nib` archives, while preserving `@count` collection operators (`arrangedObjects.@count`, `content.@count`) in `flatten_controller_key_path`.
+- **Automated `Cargo.toml` and `CHANGELOG.md` SemVer Synchronization Guard (`tests/architecture_guard_tests.rs`)**: Enforces that the crate version in `Cargo.toml` always has a matching `## [x.y.z]` release section in `CHANGELOG.md`.
+
+### Fixed
+- **Native `@1x` Unbordered Icon Strip Geometry (`src/scene/runtime_tabs.rs`)**: Removed artificial vertical `.shrink(4.0)` from unbordered icon-only `SegmentedControl` strips so `18x18` and `19x19 pt` toolbar icons render at `1:1` native scale inside `24 pt` toolbar slots.
+
+## [0.8.1] - 2026-11-23
+
+### Added
+- **5-Stage AppKit `.nib` to `awakeFromNib` Pipeline, 2D `alignmentRect` Auto Layout Solver, Unified `MacToolbar`, and 4-Slot Host Font Suite Injection (`MacSceneIR::outlets`, `solve_autolayout`, `setup_custom_macview_font_suite`, `SPEC-013`)**: Added `NSNibOutletConnector` decoding, strongly typed `SceneNode` fields (`text_alignment`, `bezel_style`, `draws_background`, `is_bordered`, `is_bezeled`, `font_size_pt`, `font_name`, `custom_class`, `cell_class`, `hidden_binding`), 2D `alignmentRect` constraint propagation with `detaches_hidden_views`, and 4-slot font family injection (`Regular`, `Semibold`, `Light`, `Monospace` + stylistic alternate).
+
 ## [0.8.0] - 2026-11-17
 
 ### Added

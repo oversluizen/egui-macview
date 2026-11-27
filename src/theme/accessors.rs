@@ -54,6 +54,28 @@ impl MacTheme {
         self.typography().tracking_for_size(size_pt as f64) as f32
     }
 
+    /// Resolves the `Ubuntu-Light` / `NSFontWeightLight` [`FontId`] when registered in `ui.ctx()`, or falls back to [`FontId::proportional`].
+    pub fn light_font_id(&self, ui: &Ui, size_pt: f32) -> FontId {
+        static LIGHT_FAMILY: std::sync::OnceLock<egui::FontFamily> = std::sync::OnceLock::new();
+        let family = LIGHT_FAMILY.get_or_init(|| egui::FontFamily::Name("Ubuntu-Light".into()));
+        if ui.fonts(|f| f.families().contains(family)) {
+            FontId::new(size_pt, family.clone())
+        } else {
+            FontId::proportional(size_pt)
+        }
+    }
+
+    /// Resolves the High-Legibility (`CTFeature 35,12` / `ss06`) [`FontId`] when registered in `ui.ctx()`, or falls back to [`FontId::proportional`].
+    pub fn stylistic_alt_font_id(&self, ui: &Ui, size_pt: f32) -> FontId {
+        static ALT_FAMILY: std::sync::OnceLock<egui::FontFamily> = std::sync::OnceLock::new();
+        let family = ALT_FAMILY.get_or_init(|| egui::FontFamily::Name(crate::symbols::STYLISTIC_ALT_FONT_NAME.into()));
+        if ui.fonts(|f| f.families().contains(family)) {
+            FontId::new(size_pt, family.clone())
+        } else {
+            FontId::proportional(size_pt)
+        }
+    }
+
     /// Resolves the `Inter-SemiBold` [`FontId`] when registered in `ui.ctx()`, or falls back
     /// to [`FontId::proportional`], returning `(font_id, has_semibold_family)` with zero
     /// per-widget `Arc<str>` or `Vec<FontFamily>` heap allocations.
@@ -377,7 +399,16 @@ impl MacTheme {
     /// typographic ascender lands on `rect.top() + first_baseline_from_top`
     /// (`NSLayoutConstraint` `firstBaseline` parity).
     pub fn baseline_text_y(&self, rect: egui::Rect, first_baseline_from_top: f32, ascender: f32, ppp: f32) -> f32 {
-        crate::layout::subpixel_snap(rect.top() + (first_baseline_from_top - ascender), ppp)
+        let lm = self.label_metrics();
+        let (font_sz, descender) = if ascender >= lm.regular_ascender.points() - 0.5 {
+            (lm.regular_font_size.points(), lm.regular_descender.points().abs())
+        } else if ascender >= lm.small_ascender.points() - 0.5 {
+            (lm.small_font_size.points(), lm.small_descender.points().abs())
+        } else {
+            (lm.mini_font_size.points(), lm.mini_descender.points().abs())
+        };
+        let egui_ascent = ascender * (font_sz / (ascender + descender).max(1.0));
+        crate::layout::subpixel_snap(rect.top() + (first_baseline_from_top - egui_ascent), ppp)
     }
 
     /// Clamps an AppKit NIB layout `frame_rect` (which may include outer shadow or focus-ring

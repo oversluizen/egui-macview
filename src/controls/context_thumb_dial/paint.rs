@@ -31,9 +31,8 @@ pub(crate) fn eval_shared_dish_matrix_at(
     // Energy-preserving Gaussian spread for B_sharp (blur_scale = 1.0) vs B_blur (blur_scale > 1.0) (REQ-016-B1.10b):
     let b_s = blur_scale.max(1.0);
     let grid_step = sc.r_hub.max(2.0);
-    let grid_d = (d_vec.x - (d_vec.x / grid_step).round() * grid_step)
-        .abs()
-        .min((d_vec.y - (d_vec.y / grid_step).round() * grid_step).abs());
+    let grid_d =
+        (d_vec.x - (d_vec.x / grid_step).round() * grid_step).abs().min((d_vec.y - (d_vec.y / grid_step).round() * grid_step).abs());
     let (r_fine, r_fast) = (sc.r_dish * m.joystick_fine_ratio.points(), sc.r_dish * m.joystick_fast_ratio.points());
     let ring_d = (r - r_fine).abs().min((r - r_fast).abs()).min((r - sc.r_dish).abs()).min((r - sc.r_outer).abs());
     let line_w = (m.active_stroke_width.points() * sc.scale * b_s).max(1.0);
@@ -69,14 +68,21 @@ pub(crate) fn paint_raytraced_rosette_quad(
     let mut base_hasher = std::collections::hash_map::DefaultHasher::new();
     let max_u8 = f32::from(u8::MAX);
     (tex_dim, theme.appearance == crate::theme::MacAppearance::Aqua, sc.accent_col.to_array()).hash(&mut base_hasher);
-    (((sc.undo_active_weight * max_u8).round() as i32), ((sc.redo_active_weight * max_u8).round() as i32), sc.undo_arc_deg.0.to_bits()).hash(&mut base_hasher);
+    (((sc.undo_active_weight * max_u8).round() as i32), ((sc.redo_active_weight * max_u8).round() as i32), sc.undo_arc_deg.0.to_bits())
+        .hash(&mut base_hasher);
     let base_hash = base_hasher.finish();
     let mut mem_hashes = Vec::with_capacity(sc.members.len());
     let mut full_hasher = base_hasher;
     for c in &sc.members {
         let mut mh = std::collections::hash_map::DefaultHasher::new();
         ((c.center.x * 2.0).round() as i32, (c.center.y * 2.0).round() as i32, (c.radii.1 * 2.0).round() as i32).hash(&mut mh);
-        ((c.active_weight * max_u8).round() as i32, (c.lift_weight * max_u8).round() as i32, (c.deform_vel.x).round() as i32, (c.deform_vel.y).round() as i32).hash(&mut mh);
+        (
+            (c.active_weight * max_u8).round() as i32,
+            (c.lift_weight * max_u8).round() as i32,
+            (c.deform_vel.x).round() as i32,
+            (c.deform_vel.y).round() as i32,
+        )
+            .hash(&mut mh);
         let h = mh.finish();
         h.hash(&mut full_hasher);
         mem_hashes.push(h);
@@ -91,7 +97,9 @@ pub(crate) fn paint_raytraced_rosette_quad(
         prev_opt => {
             let prev_buf = ctx.data(|d| d.get_temp::<(u64, Vec<u64>, std::sync::Arc<Vec<u8>>)>(buf_cache_id));
             let mut flat = match prev_buf {
-                Some((pbh, ref pmh, ref arc)) if pbh == base_hash && arc.len() == tex_dim * tex_dim * 4 && pmh.len() == mem_hashes.len() => {
+                Some((pbh, ref pmh, ref arc))
+                    if pbh == base_hash && arc.len() == tex_dim * tex_dim * 4 && pmh.len() == mem_hashes.len() =>
+                {
                     let mut buf = (**arc).clone();
                     let pad_px = m.bevel_width_pt.points() * sc.scale * 2.0;
                     let (mut x0, mut y0, mut x1, mut y1) = (tex_dim, tex_dim, 0usize, 0usize);
@@ -305,19 +313,15 @@ pub(super) fn paint_dial_layers(
                 m,
             );
             let _core_n = super::super::liquid_glass::dome_surface_normal_3d_from_sample(
-                vitrea::SdfSample2d { distance: core_d, gradient: vitrea::SdfSample2d { distance: 0.0, gradient: Default::default() }.gradient },
+                vitrea::SdfSample2d {
+                    distance: core_d,
+                    gradient: vitrea::SdfSample2d { distance: 0.0, gradient: Default::default() }.gradient,
+                },
                 m.bevel_width_pt.points(),
             );
-            let fg_col = if is_held || is_latched {
-                MacBackgroundStyle::from_color(st.accent_col).primary_text_color(theme)
-            } else {
-                theme.label()
-            };
-            let hint_col = if is_held || is_latched {
-                fg_col.gamma_multiply(m.glass_fill_alpha.points())
-            } else {
-                theme.secondary_label()
-            };
+            let fg_col =
+                if is_held || is_latched { MacBackgroundStyle::from_color(st.accent_col).primary_text_color(theme) } else { theme.label() };
+            let hint_col = if is_held || is_latched { fg_col.gamma_multiply(m.glass_fill_alpha.points()) } else { theme.secondary_label() };
             let icon_y_off = (m.hint_vertical_offset.points() + m.label_vertical_offset.points() * 0.5) * s;
             let lbl_y_off = m.border_stroke_width.points() * s;
             let hint_y_off = (m.hint_vertical_offset.points() + m.label_vertical_offset.points()) * s;

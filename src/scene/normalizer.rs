@@ -48,7 +48,9 @@ impl CustomClassMapper {
 
     /// Returns true if `class_name` maps to an `InlineActionButton`.
     pub fn is_inline_button(&self, class_name: &str) -> bool {
-        self.inline_button_classes.contains(class_name) || class_name.contains("MouseOverButton")
+        self.inline_button_classes.contains(class_name)
+            || class_name.contains("MouseOverButton")
+            || class_name.contains("OriginMetrics")
     }
 
     /// Returns true if `class_name` maps to a `ColorWell`.
@@ -137,30 +139,28 @@ pub fn normalize_nib_alignment_rect(
     let sheet_min_h = h_lrg + hover_th;
     let std_min_h = h_reg + hover_th;
     match kind {
-        SceneNodeKind::PushButton { .. } => {
-            if (w - h).abs() > 2.0 {
-                if h >= sheet_min_h {
-                    x += inset_btn;
-                    y += inset_btn;
-                    w = (w - inset_btn_w).max(min_btn_w);
-                    h = h_lrg;
-                } else if h >= std_min_h {
-                    x += inset_btn;
-                    y += (h - h_reg) * 0.5;
-                    w = (w - inset_btn_w).max(min_btn_w);
-                    h = h_reg;
-                } else {
-                    let target_h = match size {
-                        MacControlSize::Large => h_lrg,
-                        MacControlSize::Regular | MacControlSize::CompactInfobox => h_reg,
-                        MacControlSize::Small => h_sml,
-                        MacControlSize::Mini => h_mni,
-                    };
-                    if h > target_h {
-                        y += (h - target_h) * 0.5;
-                        h = target_h;
-                    }
-                }
+        SceneNodeKind::PushButton { .. } if (w - h).abs() > 2.0 && h >= sheet_min_h => {
+            x += inset_btn;
+            y += inset_btn;
+            w = (w - inset_btn_w).max(min_btn_w);
+            h = h_lrg;
+        }
+        SceneNodeKind::PushButton { .. } if (w - h).abs() > 2.0 && w > h && h >= std_min_h => {
+            x += inset_btn;
+            y += (h - h_reg) * 0.5;
+            w = (w - inset_btn_w).max(min_btn_w);
+            h = h_reg;
+        }
+        SceneNodeKind::PushButton { .. } if (w - h).abs() > 2.0 && w > h => {
+            let target_h = match size {
+                MacControlSize::Large => h_lrg,
+                MacControlSize::Regular | MacControlSize::CompactInfobox => h_reg,
+                MacControlSize::Small => h_sml,
+                MacControlSize::Mini => h_mni,
+            };
+            if h > target_h {
+                y += (h - target_h) * 0.5;
+                h = target_h;
             }
         }
         SceneNodeKind::PopUpButton { .. } => {
@@ -296,6 +296,9 @@ fn solve_axis(pos0: f32, len0: f32, old_total: f32, new_total: f32, flex_min: bo
     if delta.abs() <= f32::EPSILON || (!flex_min && !flex_size && !flex_max) {
         return (pos0, len0);
     }
+    if flex_size && !flex_min && !flex_max {
+        return (pos0, (len0 + delta).max(1.0));
+    }
     let min_m = pos0.max(0.0);
     let sz = len0.max(0.0);
     let max_m = (old_total - (pos0 + len0)).max(0.0);
@@ -316,7 +319,7 @@ fn solve_axis(pos0: f32, len0: f32, old_total: f32, new_total: f32, flex_min: bo
             delta / (flex_count as f32)
         }
     };
-    (pos0 + share(min_m, flex_min), (len0 + share(sz, flex_size)).max(1.0))
+    (pos0 + share(min_m, flex_min), (len0 + share(sz, flex_size)).max(len0.min(1.0)))
 }
 
 impl MacSceneIR {
@@ -401,4 +404,194 @@ impl MacSceneIR {
         }
         Ok(())
     }
+
+    /// Rebuilds the lowercase `SceneSearchIndex` (`REQ-013-02` §3.3).
+    pub fn rebuild_search_index(&mut self) {
+        self.search_index.clear();
+        let mut label_text_by_control = BTreeMap::new();
+        for pair in &self.labeled_pairs {
+            if let Some(lbl) = self.nodes.iter().find(|n| n.id == pair.label_node) {
+                label_text_by_control.insert(pair.control_node, lbl.title.to_lowercase());
+            }
+        }
+        for n in &self.nodes {
+            let mut tokens = format!(
+                "{} {} {}",
+                n.title.to_lowercase(),
+                n.tooltip.to_lowercase(),
+                n.binding_path.as_deref().unwrap_or("").to_lowercase()
+            );
+            if let Some(paired_lbl) = label_text_by_control.get(&n.id) {
+                tokens.push(' ');
+                tokens.push_str(paired_lbl);
+            }
+            self.search_index.insert(n.id, tokens);
+        }
+    }
+
+    /// Queries the built-in `SceneSearchIndex` (`< 5 us`).
+    pub fn filter_by_search(&self, query: &str) -> SceneFilterMask {
+        let q = query.trim().to_lowercase();
+        let mut mask = SceneFilterMask::default();
+        if q.is_empty() {
+            for n in &self.nodes {
+                mask.matched_nodes.insert(n.id);
+            }
+            return mask;
+        }
+        for (id, text) in &self.search_index {
+            if text.contains(&q) {
+                mask.matched_nodes.insert(*id);
+            }
+        }
+        for pair in &self.labeled_pairs {
+            if mask.matched_nodes.contains(&pair.label_node) {
+                mask.matched_nodes.insert(pair.control_node);
+            } else if mask.matched_nodes.contains(&pair.control_node) {
+                mask.matched_nodes.insert(pair.label_node);
+            }
+        }
+        mask
+    }
+
+    /// Reverse Z-order canvas hit-testing for Studio selection (`REQ-013-02I`).
+    pub fn hit_test(&self, pos: egui::Pos2, solved_rects: &BTreeMap<NodeId, egui::Rect>) -> Option<NodeId> {
+        for n in self.nodes.iter().rev() {
+            if matches!(n.kind, SceneNodeKind::Container { .. }) {
+                continue;
+            }
+            if let Some(rect) = solved_rects.get(&n.id) {
+                if rect.contains(pos) {
+                    return Some(n.id);
+                }
+            }
+        }
+        None
+    }
+
+    /// Appends a child [`SceneNode`] under `parent_id` during `awakeFromNib` / `windowDidLoad` (`REQ-013-10.7`),
+    /// assigning the next monotonic [`NodeId`] and registering `node.ib_object_id` in `self.outlets`.
+    pub fn append_child_node(&mut self, parent_id: NodeId, mut node: SceneNode) -> NodeId {
+        let next_id = NodeId(self.nodes.iter().map(|n| n.id.0).max().unwrap_or(0) + 1);
+        node.id = next_id;
+        node.parent = Some(parent_id);
+        node.alignment_rect = node.nib_frame;
+        if let Some(p) = self.nodes.iter_mut().find(|n| n.id == parent_id) {
+            p.children.push(next_id);
+        }
+        if !node.ib_object_id.is_empty() {
+            self.outlets.insert(node.ib_object_id.clone(), next_id);
+        }
+        self.nodes.push(node);
+        self.rebuild_search_index();
+        next_id
+    }
+}
+
+pub(crate) fn add_scene_anchor_constraint(
+    scene: &mut MacSceneIR,
+    first_id_or_outlet: &str,
+    attr1: crate::scene::constraints::ConstraintAttr,
+    second_id_or_outlet: Option<&str>,
+    attr2: crate::scene::constraints::ConstraintAttr,
+    constant: f32,
+) -> bool {
+    let Some(first_id) = scene.resolve_node_id(first_id_or_outlet) else { return false };
+    let second_id = match second_id_or_outlet {
+        Some(s) => {
+            let Some(sid) = scene.resolve_node_id(s) else { return false };
+            Some(sid)
+        }
+        None => None,
+    };
+    scene.nib_constraints.push(crate::scene::constraints::LayoutConstraintSpec {
+        first_item: Some(first_id),
+        first_attr: attr1,
+        relation: crate::scene::constraints::ConstraintRelation::Equal,
+        second_item: second_id,
+        second_attr: attr2,
+        multiplier: 1.0,
+        constant,
+        priority: 1000,
+    });
+    scene.solve_autolayout();
+    true
+}
+
+pub(crate) fn pin_scene_node_to_superview_edges(scene: &mut MacSceneIR, child_id_or_outlet: &str) -> bool {
+    use crate::scene::constraints::{ConstraintAttr, ConstraintRelation, LayoutConstraintSpec};
+    let Some(child_id) = scene.resolve_node_id(child_id_or_outlet) else { return false };
+    let parent_id = scene.nodes.iter().find(|n| n.id == child_id).and_then(|n| n.parent);
+    for attr in [ConstraintAttr::Leading, ConstraintAttr::Trailing, ConstraintAttr::Top, ConstraintAttr::Bottom] {
+        scene.nib_constraints.push(LayoutConstraintSpec {
+            first_item: Some(child_id),
+            first_attr: attr,
+            relation: ConstraintRelation::Equal,
+            second_item: parent_id,
+            second_attr: attr,
+            multiplier: 1.0,
+            constant: 0.0,
+            priority: 1000,
+        });
+    }
+    scene.solve_autolayout();
+    true
+}
+
+pub(crate) fn extract_scene_outlet_subscene(scene: &MacSceneIR, id_or_outlet: &str) -> Option<MacSceneIR> {
+    let root_id = scene.resolve_node_id(id_or_outlet)?;
+    let mut keep = BTreeSet::new();
+    let mut stack = vec![root_id];
+    while let Some(curr) = stack.pop() {
+        if keep.insert(curr) {
+            if let Some(node) = scene.nodes.iter().find(|n| n.id == curr) {
+                stack.extend(node.children.iter().copied());
+            }
+        }
+    }
+    let mut sub_nodes: Vec<SceneNode> = Vec::with_capacity(keep.len());
+    let [rx, ry, rw, rh] = scene.nodes.iter().find(|n| n.id == root_id).map(|n| n.nib_frame).unwrap_or([0.0, 0.0, 1.0, 1.0]);
+    if let Some(mut rnode) = scene.nodes.iter().find(|n| n.id == root_id).cloned() {
+        rnode.parent = None;
+        rnode.nib_frame = [0.0, 0.0, rw.max(1.0), rh.max(1.0)];
+        rnode.children.retain(|c| keep.contains(c));
+        sub_nodes.push(rnode);
+    }
+    for n in &scene.nodes {
+        if n.id != root_id && keep.contains(&n.id) {
+            let mut cn = n.clone();
+            if cn.nib_frame[0] >= rx && cn.nib_frame[1] >= ry && (rx > 0.0 || ry > 0.0) {
+                cn.nib_frame[0] -= rx;
+                cn.nib_frame[1] -= ry;
+            }
+            cn.children.retain(|c| keep.contains(c));
+            sub_nodes.push(cn);
+        }
+    }
+    let sub_w = rw.max(1.0);
+    let sub_h = rh.max(1.0);
+    let sub_specs: Vec<_> = scene
+        .nib_constraints
+        .iter()
+        .filter(|c| c.first_item.is_some_and(|f| keep.contains(&f)) && c.second_item.is_none_or(|s| keep.contains(&s)))
+        .cloned()
+        .collect();
+    let schedule = crate::scene::constraints::CompiledConstraintSchedule::compile(sub_specs.clone());
+    let mut sub_scene = MacSceneIR::from_nodes(root_id, [sub_w, sub_h], sub_nodes, schedule);
+    sub_scene.nib_constraints = sub_specs;
+    for (k, &v) in &scene.outlets {
+        if keep.contains(&v) {
+            sub_scene.outlets.insert(k.clone(), v);
+        }
+    }
+    for (&k, v) in &scene.button_menus {
+        if keep.contains(&k) {
+            sub_scene.button_menus.insert(k, v.clone());
+        }
+    }
+    Some(sub_scene)
+}
+
+pub(crate) fn solve_scene_autolayout(scene: &mut MacSceneIR) {
+    crate::scene::storyboard::solve_scene_autolayout_2d(scene);
 }

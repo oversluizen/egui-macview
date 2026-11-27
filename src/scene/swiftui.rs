@@ -1,7 +1,8 @@
 //! Layer 1 Declarative SwiftUI-Subset Importer (`SwiftUiFrontend`, `SPEC-013 §2.6` / `REQ-013-01E`).
 
-use crate::scene::constraints::{CompiledConstraintSchedule, ValueTransformer};
-use crate::scene::ir::{ActionId, BindingId, MacSceneIR, NodeId, SceneCompileError, SceneNode, SceneNodeKind, VisibilityRule};
+use crate::scene::constraints::CompiledConstraintSchedule;
+use crate::scene::ir::{ActionId, BindingId, MacSceneIR, NodeId, SceneCompileError, SceneNodeKind, VisibilityRule};
+use crate::scene::nib_frontend::mk_node;
 
 /// Pure-Rust declarative SwiftUI-subset parser (`REQ-013-01E`).
 pub struct SwiftUiFrontend;
@@ -16,28 +17,22 @@ impl SwiftUiFrontend {
             return Err(SceneCompileError("Empty SwiftUI source".into()));
         }
 
-        let mut nodes = vec![SceneNode {
-            id: NodeId(1),
-            ib_object_id: "swiftui-root".into(),
-            parent: None,
-            children: vec![],
-            kind: SceneNodeKind::Container { is_flipped: true },
-            title: "SwiftUIView".into(),
-            tooltip: String::new(),
-            control_size: "regular".into(),
-            nib_frame: [0.0, 0.0, 520.0, 360.0],
-            alignment_rect: [0.0, 0.0, 520.0, 360.0],
-            autoresizing_mask: 18,
-            enabled: true,
-            value_binding: None,
-            binding_path: None,
-            value_transformer: ValueTransformer::Identity,
-            action: None,
-            action_selector: None,
-            icon_name: None,
-            visibility: VisibilityRule::Always,
-            labeled_by: None,
-        }];
+        let mut nodes = vec![mk_node(
+            1,
+            "swiftui-root",
+            None,
+            vec![],
+            SceneNodeKind::Container { is_flipped: true },
+            "SwiftUIView",
+            "",
+            "regular",
+            [0.0, 0.0, 520.0, 360.0],
+            18,
+            None,
+            None,
+            None,
+            VisibilityRule::Always,
+        )];
 
         let mut next_id = 2u32;
         let mut next_binding_auto = 1u32;
@@ -76,28 +71,22 @@ impl SwiftUiFrontend {
                     let sep_id = NodeId(next_id);
                     next_id += 1;
                     nodes[0].children.push(sep_id);
-                    nodes.push(SceneNode {
-                        id: sep_id,
-                        ib_object_id: format!("sep-{}", sep_id.0),
-                        parent: Some(NodeId(1)),
-                        children: vec![],
-                        kind: SceneNodeKind::Separator,
-                        title: String::new(),
-                        tooltip: String::new(),
-                        control_size: "regular".into(),
-                        nib_frame: [20.0, cursor_y, 480.0, 2.0],
-                        alignment_rect: [20.0, cursor_y, 480.0, 2.0],
-                        autoresizing_mask: 2,
-                        enabled: true,
-                        value_binding: None,
-                        binding_path: None,
-                        value_transformer: ValueTransformer::Identity,
-                        action: None,
-                        action_selector: None,
-                        icon_name: None,
-                        visibility: VisibilityRule::Always,
-                        labeled_by: None,
-                    });
+                    nodes.push(mk_node(
+                        sep_id.0,
+                        &format!("sep-{}", sep_id.0),
+                        Some(1),
+                        vec![],
+                        SceneNodeKind::Separator,
+                        "",
+                        "",
+                        "regular",
+                        [20.0, cursor_y, 480.0, 2.0],
+                        2,
+                        None,
+                        None,
+                        None,
+                        VisibilityRule::Always,
+                    ));
                     cursor_y += 18.0;
                 }
                 if line.starts_with("Section(") {
@@ -106,28 +95,22 @@ impl SwiftUiFrontend {
                             let box_id = NodeId(next_id);
                             next_id += 1;
                             nodes[0].children.push(box_id);
-                            nodes.push(SceneNode {
-                                id: box_id,
-                                ib_object_id: format!("box-{}", box_id.0),
-                                parent: Some(NodeId(1)),
-                                children: vec![],
-                                kind: SceneNodeKind::BoxContainer,
-                                title: sec_title,
-                                tooltip: String::new(),
-                                control_size: "regular".into(),
-                                nib_frame: [12.0, cursor_y, 496.0, 120.0],
-                                alignment_rect: [12.0, cursor_y, 496.0, 120.0],
-                                autoresizing_mask: 2,
-                                enabled: true,
-                                value_binding: None,
-                                binding_path: None,
-                                value_transformer: ValueTransformer::Identity,
-                                action: None,
-                                action_selector: None,
-                                icon_name: None,
-                                visibility: VisibilityRule::Always,
-                                labeled_by: None,
-                            });
+                            nodes.push(mk_node(
+                                box_id.0,
+                                &format!("box-{}", box_id.0),
+                                Some(1),
+                                vec![],
+                                SceneNodeKind::BoxContainer,
+                                &sec_title,
+                                "",
+                                "regular",
+                                [12.0, cursor_y, 496.0, 120.0],
+                                2,
+                                None,
+                                None,
+                                None,
+                                VisibilityRule::Always,
+                            ));
                         }
                     }
                     section_count += 1;
@@ -153,28 +136,22 @@ impl SwiftUiFrontend {
                 let lid = NodeId(next_id);
                 next_id += 1;
                 nodes[0].children.push(lid);
-                nodes.push(SceneNode {
-                    id: lid,
-                    ib_object_id: format!("lbl-{}", lid.0),
-                    parent: Some(NodeId(1)),
-                    children: vec![],
-                    kind: SceneNodeKind::Label,
-                    title: lbl_text,
-                    tooltip: String::new(),
-                    control_size: extract_control_size(inner_stmt),
-                    nib_frame: [lbl_x, cursor_y + 2.0, lbl_w, 16.0],
-                    alignment_rect: [lbl_x, cursor_y + 2.0, lbl_w, 16.0],
-                    autoresizing_mask: 0,
-                    enabled: true,
-                    value_binding: None,
-                    binding_path: None,
-                    value_transformer: ValueTransformer::Identity,
-                    action: None,
-                    action_selector: None,
-                    icon_name: None,
-                    visibility: VisibilityRule::Always,
-                    labeled_by: None,
-                });
+                nodes.push(mk_node(
+                    lid.0,
+                    &format!("lbl-{}", lid.0),
+                    Some(1),
+                    vec![],
+                    SceneNodeKind::Label,
+                    &lbl_text,
+                    "",
+                    &extract_control_size(inner_stmt),
+                    [lbl_x, cursor_y + 2.0, lbl_w, 16.0],
+                    0,
+                    None,
+                    None,
+                    None,
+                    VisibilityRule::Always,
+                ));
             }
 
             let cid = NodeId(next_id);
@@ -187,31 +164,30 @@ impl SwiftUiFrontend {
             let tooltip = extract_modifier_quoted(inner_stmt, ".help(").unwrap_or_default();
             let (w, h) = extract_frame_size(inner_stmt).unwrap_or((120.0, 22.0));
             let (value_binding, binding_path) = extract_binding(inner_stmt, &mut next_binding_auto);
-
             let (kind, action, action_selector, icon_name) = classify_swiftui_control(inner_stmt, &title, &mut next_action);
 
-            nodes.push(SceneNode {
-                id: cid,
-                ib_object_id: format!("ctrl-{}", cid.0),
-                parent: Some(NodeId(1)),
-                children: vec![],
+            let mut ctrl_node = mk_node(
+                cid.0,
+                &format!("ctrl-{}", cid.0),
+                Some(1),
+                vec![],
                 kind,
-                title,
-                tooltip,
-                control_size,
-                nib_frame: [ctrl_x, cursor_y, w, h],
-                alignment_rect: [ctrl_x, cursor_y, w, h],
-                autoresizing_mask: 0,
-                enabled,
-                value_binding,
-                binding_path,
-                value_transformer: ValueTransformer::Identity,
-                action,
-                action_selector,
-                icon_name,
-                visibility: VisibilityRule::Always,
-                labeled_by: None,
-            });
+                &title,
+                &tooltip,
+                &control_size,
+                [ctrl_x, cursor_y, w, h],
+                0,
+                None,
+                None,
+                icon_name.as_deref(),
+                VisibilityRule::Always,
+            );
+            ctrl_node.enabled = enabled;
+            ctrl_node.value_binding = value_binding;
+            ctrl_node.binding_path = binding_path;
+            ctrl_node.action = action;
+            ctrl_node.action_selector = action_selector;
+            nodes.push(ctrl_node);
 
             if in_hstack {
                 hstack_x = ctrl_x + w + 24.0;
@@ -380,3 +356,4 @@ fn extract_binding(s: &str, next_auto: &mut u32) -> (Option<BindingId>, Option<S
     *next_auto += 1;
     (Some(bid), Some(token))
 }
+

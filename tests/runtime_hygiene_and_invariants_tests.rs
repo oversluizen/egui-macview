@@ -515,7 +515,8 @@ fn run_req013_02s_suite() {
         .expect("s5-pop-codec")
         .alignment_rect[2];
     assert!(s5_w >= 228.0, "REQ-013-02S.5: s5-pop-codec width ({s5_w}) must be >= 228pt so stream titles never clip");
-    let rw_src = std::fs::read_to_string("assets/nib_showcase/2_Theme_and_Appearance_Studio.xib").expect("read 2_Theme_and_Appearance_Studio.xib");
+    let rw_src =
+        std::fs::read_to_string("assets/nib_showcase/2_Theme_and_Appearance_Studio.xib").expect("read 2_Theme_and_Appearance_Studio.xib");
     assert!(
         rw_src.contains("\"AVPlayer HUD\"") && rw_src.contains("\"Collection Grid\"") && rw_src.contains("\"Clock &amp; Calendar\""),
         "REQ-013-02S.5: s6-tabs in 2_Theme_and_Appearance_Studio.xib must use concise non-overlapping tab labels"

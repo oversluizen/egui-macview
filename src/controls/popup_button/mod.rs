@@ -243,7 +243,8 @@ impl<'a> Widget for MacPopUpButton<'a> {
         );
 
         let text_color = theme.apply_enabled(theme.label(), enabled);
-        let text_top_y = theme.baseline_text_y(visual_rect, baseline_from_top, ascender, ppp);
+        let eff_baseline_from_top = baseline_from_top - (visual_h - visual_rect.height()).max(0.0) * 0.5;
+        let text_top_y = theme.baseline_text_y(visual_rect, eff_baseline_from_top, ascender, ppp);
         let badge_inset = metrics.popup_gap.points();
         let badge_w = chevron_size + chevron_spacing + badge_inset;
         let text_right = if self.accent_badge {

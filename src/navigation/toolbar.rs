@@ -24,6 +24,10 @@ pub struct MacToolbarResponse {
     pub drag_started: bool,
     /// Bounding rectangle of the rendered toolbar.
     pub rect: Rect,
+    /// Bounding rectangle of the rendered primary title text (or `Rect::NOTHING` if empty).
+    pub title_rect: Rect,
+    /// Bounding rectangle of the rendered subtitle text (or `Rect::NOTHING` if empty).
+    pub subtitle_rect: Rect,
 }
 
 /// Unified window header and toolbar (`SPEC-005`) with configurable `WindowControlsStyle`.
@@ -48,6 +52,7 @@ pub struct MacToolbarResponse {
 pub struct MacToolbar<'a> {
     id: Id,
     title: String,
+    subtitle: String,
     style: Option<WindowControlsStyle>,
     is_maximized: Option<&'a mut bool>,
     compact: bool,
@@ -59,7 +64,16 @@ impl<'a> MacToolbar<'a> {
     /// Creates a new `MacToolbar` with the given ID or window title.
     pub fn new(title: impl Into<String>) -> Self {
         let title_str = title.into();
-        Self { id: Id::NULL.with(&title_str), title: title_str, style: None, is_maximized: None, compact: true, height: None, theme: None }
+        Self {
+            id: Id::NULL.with(&title_str),
+            title: title_str,
+            subtitle: String::new(),
+            style: None,
+            is_maximized: None,
+            compact: true,
+            height: None,
+            theme: None,
+        }
     }
 
     /// Overrides the widget `Id`.
@@ -71,6 +85,12 @@ impl<'a> MacToolbar<'a> {
     /// Sets the window title text.
     pub fn title(mut self, title: impl Into<String>) -> Self {
         self.title = title.into();
+        self
+    }
+
+    /// Sets the secondary subtitle text displayed below the primary title in unified compact mode (`SPEC-005 §4`).
+    pub fn subtitle(mut self, subtitle: impl Into<String>) -> Self {
+        self.subtitle = subtitle.into();
         self
     }
 
@@ -134,10 +154,10 @@ impl<'a> MacToolbar<'a> {
         match style {
             WindowControlsStyle::AppleTrafficLights => {
                 let r = tb.traffic_light_radius.points();
-                let diameter = r * 2.0;
+                let diameter = r + r;
                 let spacing = tb.traffic_light_spacing.points();
                 let cy = rect.center().y;
-                let c1_x = rect.left() + diameter * 2.0;
+                let c1_x = rect.left() + tb.traffic_light_leading_inset.points();
                 let c2_x = c1_x + diameter + spacing;
                 let c3_x = c2_x + diameter + spacing;
 
@@ -269,11 +289,31 @@ impl<'a> MacToolbar<'a> {
             }
         }
 
+        let mut title_rect = Rect::NOTHING;
+        let mut subtitle_rect = Rect::NOTHING;
         if !self.title.is_empty() {
-            let title_galley = painter.layout_no_wrap(self.title, FontId::proportional(title_font_pt), egui::Color32::PLACEHOLDER);
-            let title_pos = Align2::LEFT_CENTER.anchor_size(Pos2::new(content_left, rect.center().y), title_galley.size()).min;
-            content_left += title_galley.size().x + tb.item_spacing.points() * 2.0;
-            painter.galley(title_pos, title_galley, theme.label());
+            let (title_font, _) = theme.semibold_font_id(ui, title_font_pt);
+            let title_galley = painter.layout_no_wrap(self.title, title_font, egui::Color32::PLACEHOLDER);
+            if self.subtitle.is_empty() {
+                let title_pos = Align2::LEFT_CENTER.anchor_size(Pos2::new(content_left, rect.center().y), title_galley.size()).min;
+                title_rect = Rect::from_min_size(title_pos, title_galley.size());
+                content_left += title_galley.size().x + tb.item_spacing.points() + tb.item_spacing.points();
+                painter.galley(title_pos, title_galley, theme.label());
+            } else {
+                let title_pos = Pos2::new(content_left, rect.top() + tb.unified_title_top.points());
+                let sub_galley = painter.layout_no_wrap(
+                    self.subtitle,
+                    FontId::proportional(tb.unified_subtitle_font_size.points()),
+                    egui::Color32::PLACEHOLDER,
+                );
+                let sub_pos = Pos2::new(content_left, rect.top() + tb.unified_subtitle_top.points());
+                title_rect = Rect::from_min_size(title_pos, title_galley.size());
+                subtitle_rect = Rect::from_min_size(sub_pos, sub_galley.size());
+                let stack_w = title_galley.size().x.max(sub_galley.size().x);
+                content_left += stack_w + tb.item_spacing.points() + tb.item_spacing.points();
+                painter.galley(title_pos, title_galley, theme.label());
+                painter.galley(sub_pos, sub_galley, theme.secondary_label());
+            }
         }
 
         let inner_rect =
@@ -285,7 +325,131 @@ impl<'a> MacToolbar<'a> {
 
         let drag_started = bg_resp.drag_started() && !close_clicked && !minimize_clicked && !zoom_toggled;
 
-        MacToolbarResponse { response: bg_resp, close_clicked, minimize_clicked, zoom_toggled, drag_started, rect }
+        MacToolbarResponse {
+            response: bg_resp,
+            close_clicked,
+            minimize_clicked,
+            zoom_toggled,
+            drag_started,
+            rect,
+            title_rect,
+            subtitle_rect,
+        }
+    }
+
+    /// Renders a three-zone macOS Sonoma `NSWindowToolbarStyleUnifiedCompact` (`SPEC-005 §4`) toolbar inside `rect`:
+    /// 1. Leading navigational items (`leading_nav`) starting at `unified_nav_leading_inset` (`79.0pt`),
+    /// 2. Two-line `NSToolbarTitleStackView` (`title` + `subtitle`) immediately after `leading_nav`,
+    /// 3. Horizontally centered principal items (`center_tools`) and right-aligned trailing items (`trailing_items`).
+    pub fn show_unified_zones_in_rect(
+        mut self,
+        ui: &mut Ui,
+        rect: Rect,
+        leading_nav: impl FnOnce(&mut Ui),
+        center_tools: impl FnOnce(&mut Ui),
+        trailing_items: impl FnOnce(&mut Ui),
+    ) -> MacToolbarResponse {
+        let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
+        let theme: &MacTheme = &theme_cow;
+        let tb = theme.toolbar_metrics().clone();
+        let title_font_pt = theme.popover_metrics().header_font_size.points();
+        let style = self.style.unwrap_or(theme.window_controls_style);
+        let saved_title = std::mem::take(&mut self.title);
+        let saved_subtitle = std::mem::take(&mut self.subtitle);
+        let tb_id = self.id;
+
+        let mut title_rect = Rect::NOTHING;
+        let mut subtitle_rect = Rect::NOTHING;
+        let nav_x = match style {
+            WindowControlsStyle::AppleTrafficLights => rect.left() + tb.unified_nav_leading_inset.points(),
+            _ => rect.left() + tb.edge_padding.points(),
+        };
+        let trail_max_x = match style {
+            WindowControlsStyle::WindowsCaptionButtons => {
+                let bw = tb.caption_button_width.points();
+                rect.right() - (bw + bw + bw) - tb.unified_trailing_inset.points()
+            }
+            _ => rect.right() - tb.unified_trailing_inset.points(),
+        };
+
+        let mut resp = self.show_in_rect(ui, rect, |inner_ui| {
+            let nav_rect = Rect::from_min_max(Pos2::new(nav_x, rect.top()), Pos2::new(trail_max_x, rect.bottom()));
+            let mut nav_ui = inner_ui.new_child(
+                UiBuilder::new().id_salt((tb_id, "unified_nav")).max_rect(nav_rect).layout(Layout::left_to_right(Align::Center)),
+            );
+            nav_ui.spacing_mut().item_spacing.x = 0.0;
+            leading_nav(&mut nav_ui);
+            let nav_end_x = nav_ui.min_rect().max.x.max(nav_x);
+
+            let mut title_end_x = nav_end_x;
+            if !saved_title.is_empty() {
+                let tx = nav_end_x + tb.unified_title_gap.points();
+                let painter = inner_ui.painter_at(rect);
+                let (title_font, _) = theme.semibold_font_id(inner_ui, title_font_pt);
+                let title_galley = painter.layout_no_wrap(saved_title, title_font, egui::Color32::PLACEHOLDER);
+                if saved_subtitle.is_empty() {
+                    let t_pos = Align2::LEFT_CENTER.anchor_size(Pos2::new(tx, rect.center().y), title_galley.size()).min;
+                    title_rect = Rect::from_min_size(t_pos, title_galley.size());
+                    title_end_x = title_rect.max.x;
+                    painter.galley(t_pos, title_galley, theme.label());
+                } else {
+                    let t_pos = Pos2::new(tx, rect.top() + tb.unified_title_top.points());
+                    let sub_galley = painter.layout_no_wrap(
+                        saved_subtitle,
+                        FontId::proportional(tb.unified_subtitle_font_size.points()),
+                        egui::Color32::PLACEHOLDER,
+                    );
+                    let s_pos = Pos2::new(tx, rect.top() + tb.unified_subtitle_top.points());
+                    title_rect = Rect::from_min_size(t_pos, title_galley.size());
+                    subtitle_rect = Rect::from_min_size(s_pos, sub_galley.size());
+                    title_end_x = title_rect.max.x.max(subtitle_rect.max.x);
+                    painter.galley(t_pos, title_galley, theme.label());
+                    painter.galley(s_pos, sub_galley, theme.secondary_label());
+                }
+            }
+
+            let trail_rect = Rect::from_min_max(Pos2::new(title_end_x, rect.top()), Pos2::new(trail_max_x, rect.bottom()));
+            let mut trail_ui = inner_ui.new_child(
+                UiBuilder::new().id_salt((tb_id, "unified_trailing")).max_rect(trail_rect).layout(Layout::right_to_left(Align::Center)),
+            );
+            trail_ui.spacing_mut().item_spacing.x = 0.0;
+            trailing_items(&mut trail_ui);
+            let trail_start_x = trail_ui.min_rect().min.x.min(trail_max_x);
+
+            let avail_center_half = (rect.center().x - title_end_x).min(trail_start_x - rect.center().x).max(0.0);
+            let center_zone = Rect::from_min_max(
+                Pos2::new(rect.center().x - avail_center_half, rect.top()),
+                Pos2::new(rect.center().x + avail_center_half, rect.bottom()),
+            );
+            let mut center_ui = inner_ui.new_child(
+                UiBuilder::new()
+                    .id_salt((tb_id, "unified_center"))
+                    .max_rect(center_zone)
+                    .layout(Layout::centered_and_justified(egui::Direction::LeftToRight)),
+            );
+            center_ui.spacing_mut().item_spacing.x = 0.0;
+            center_tools(&mut center_ui);
+        });
+        resp.title_rect = title_rect;
+        resp.subtitle_rect = subtitle_rect;
+        resp
+    }
+
+    /// Allocates full width and renders a three-zone macOS Sonoma `NSWindowToolbarStyleUnifiedCompact` (`SPEC-005 §4`) toolbar.
+    pub fn show_unified_zones(
+        self,
+        ui: &mut Ui,
+        leading_nav: impl FnOnce(&mut Ui),
+        center_tools: impl FnOnce(&mut Ui),
+        trailing_items: impl FnOnce(&mut Ui),
+    ) -> MacToolbarResponse {
+        let theme_cow = MacTheme::resolve(self.theme, ui.ctx());
+        let theme: &MacTheme = &theme_cow;
+        let tb = theme.toolbar_metrics();
+        let target_h = self.height.unwrap_or_else(|| if self.compact { tb.height_compact.points() } else { tb.height_unified.points() });
+        let avail_w = ui.available_width().max(tb.traffic_lights_inset.points());
+        let (rect, _) = ui.allocate_exact_size(Vec2::new(avail_w, target_h), Sense::hover());
+        self.show_unified_zones_in_rect(ui, rect, leading_nav, center_tools, trailing_items)
     }
 
     /// Allocates full width and renders the toolbar with center/trailing controls closure.

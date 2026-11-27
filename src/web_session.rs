@@ -129,7 +129,14 @@ impl MacWebGlSession {
 
     /// Steps the UI across the batched input command log `body` and serializes the resulting
     /// multi-texture `MWGL` binary WebGL2 frame.
-    pub fn encode_frame(&mut self, width_arg: f32, height_arg: f32, dpr_arg: f32, body: &str, mut render_ui: impl FnMut(&mut Ui)) -> Vec<u8> {
+    pub fn encode_frame(
+        &mut self,
+        width_arg: f32,
+        height_arg: f32,
+        dpr_arg: f32,
+        body: &str,
+        mut render_ui: impl FnMut(&mut Ui),
+    ) -> Vec<u8> {
         if (width_arg - 390.0).abs() > 0.5 || (height_arg - 844.0).abs() > 0.5 {
             self.last_viewport = (width_arg.clamp(240.0, 2560.0), height_arg.clamp(240.0, 2560.0), dpr_arg.clamp(1.0, 3.0));
         }
@@ -164,7 +171,12 @@ impl MacWebGlSession {
                     (self.last_pos, has_press_in_current_pass) = (p, true);
                     if let Some(cur) = event_passes.last_mut() {
                         cur.push(Event::PointerMoved(p));
-                        cur.push(Event::PointerButton { pos: p, button: PointerButton::Primary, pressed: true, modifiers: Modifiers::NONE });
+                        cur.push(Event::PointerButton {
+                            pos: p,
+                            button: PointerButton::Primary,
+                            pressed: true,
+                            modifiers: Modifiers::NONE,
+                        });
                     }
                 }
                 ["U", x, y] => {
@@ -176,7 +188,12 @@ impl MacWebGlSession {
                     }
                     if let Some(cur) = event_passes.last_mut() {
                         cur.push(Event::PointerMoved(p));
-                        cur.push(Event::PointerButton { pos: p, button: PointerButton::Primary, pressed: false, modifiers: Modifiers::NONE });
+                        cur.push(Event::PointerButton {
+                            pos: p,
+                            button: PointerButton::Primary,
+                            pressed: false,
+                            modifiers: Modifiers::NONE,
+                        });
                     }
                 }
                 ["W", dx, dy] => {
@@ -328,33 +345,34 @@ impl MacWebGlSession {
                     }
                 } else {
                     let rgba: Vec<u8> = color_img.pixels.iter().flat_map(|p| p.to_array()).collect();
-                    let in_place = if let (Some(sub), Some(&(ox, oy, tw, th))) = (self.textures.get_mut(&tex_id), self.uv_rects.get(&tex_id)) {
-                        if sub.width == w && sub.height == h && (tw as usize) == w && (th as usize) == h && !self.atlas_dirty {
-                            sub.rgba.copy_from_slice(&rgba);
-                            let mw = self.atlas_width as usize;
-                            for row in 0..h {
-                                let src_s = row * w * 4;
-                                let dst_s = (((oy as usize) + row) * mw + (ox as usize)) * 4;
-                                if dst_s + w * 4 <= self.atlas_rgba.len() {
-                                    self.atlas_rgba[dst_s..dst_s + w * 4].copy_from_slice(&rgba[src_s..src_s + w * 4]);
+                    let in_place =
+                        if let (Some(sub), Some(&(ox, oy, tw, th))) = (self.textures.get_mut(&tex_id), self.uv_rects.get(&tex_id)) {
+                            if sub.width == w && sub.height == h && (tw as usize) == w && (th as usize) == h && !self.atlas_dirty {
+                                sub.rgba.copy_from_slice(&rgba);
+                                let mw = self.atlas_width as usize;
+                                for row in 0..h {
+                                    let src_s = row * w * 4;
+                                    let dst_s = (((oy as usize) + row) * mw + (ox as usize)) * 4;
+                                    if dst_s + w * 4 <= self.atlas_rgba.len() {
+                                        self.atlas_rgba[dst_s..dst_s + w * 4].copy_from_slice(&rgba[src_s..src_s + w * 4]);
+                                    }
                                 }
+                                self.atlas_version = self.atlas_version.wrapping_add(1).max(1);
+                                self.atlas_dirty_rect = Some(match self.atlas_dirty_rect {
+                                    Some((rx, ry, rw, rh)) => {
+                                        let (x0, y0) = (rx.min(ox), ry.min(oy));
+                                        let (x1, y1) = ((rx + rw).max(ox + tw), (ry + rh).max(oy + th));
+                                        (x0, y0, x1 - x0, y1 - y0)
+                                    }
+                                    None => (ox, oy, tw, th),
+                                });
+                                true
+                            } else {
+                                false
                             }
-                            self.atlas_version = self.atlas_version.wrapping_add(1).max(1);
-                            self.atlas_dirty_rect = Some(match self.atlas_dirty_rect {
-                                Some((rx, ry, rw, rh)) => {
-                                    let (x0, y0) = (rx.min(ox), ry.min(oy));
-                                    let (x1, y1) = ((rx + rw).max(ox + tw), (ry + rh).max(oy + th));
-                                    (x0, y0, x1 - x0, y1 - y0)
-                                }
-                                None => (ox, oy, tw, th),
-                            });
-                            true
                         } else {
                             false
-                        }
-                    } else {
-                        false
-                    };
+                        };
                     if !in_place {
                         self.textures.insert(tex_id, SubTextureEntry { width: w, height: h, rgba });
                         self.atlas_dirty = true;
