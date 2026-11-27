@@ -169,7 +169,7 @@ impl<'a> MacScrollView<'a> {
         let mut area = ScrollArea::new([self.horizontal, self.vertical])
             .id_salt(self.id.with("scroll_area"))
             .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
-            .scroll_source(egui::containers::scroll_area::ScrollSource::MOUSE_WHEEL)
+            .scroll_source(egui::containers::scroll_area::ScrollSource::SCROLL_BAR | egui::containers::scroll_area::ScrollSource::MOUSE_WHEEL)
             .auto_shrink([false, false])
             .min_scrolled_width(min_w)
             .min_scrolled_height(min_h);
@@ -237,11 +237,11 @@ impl<'a> MacScrollView<'a> {
 
         let timeout_secs = fade_timeout as f64;
         let fade_duration = timeout_secs * 0.5 * 0.5;
-        let is_already_visible = (now - last_active) < (timeout_secs + fade_duration);
-        if scrolled_this_frame || (is_pointer_in_viewport && has_scroll_delta) || (is_already_visible && in_scrollbar_zone && pointer_moving) {
+        if scrolled_this_frame || (is_pointer_in_viewport && has_scroll_delta) || in_scrollbar_zone {
             last_active = now;
             st.last_active = now;
         }
+        let _ = pointer_moving;
 
         let has_v = self.vertical && max_scroll_y > 0.0;
         let has_h = self.horizontal && max_scroll_x > 0.0;

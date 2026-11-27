@@ -68,6 +68,7 @@ pub struct MacInputCell<'a> {
     pub(super) numeric_config: Option<(RangeInclusive<f64>, f64)>,
     pub(super) liquid_glass_pill: bool,
     pub(super) recessed_pill: bool,
+    pub(super) borderless: bool,
     pub(super) monospace: bool,
     pub(super) stylistic_alt: bool,
 }
@@ -101,9 +102,17 @@ impl<'a> MacInputCell<'a> {
             numeric_config: None,
             liquid_glass_pill: false,
             recessed_pill: false,
+            borderless: false,
             monospace: false,
             stylistic_alt: false,
         }
+    }
+
+    /// Configures an AppKit borderless/transparent text cell (`drawsBackground == NO && isBezeled == NO && isBordered == NO`):
+    /// draws zero background or border when unfocused, revealing its bezel only while actively focused for editing.
+    pub fn borderless(mut self, borderless: bool) -> Self {
+        self.borderless = borderless;
+        self
     }
 
     /// Selects the monospace `FontFamily::Monospace` slot (`REQ-013-10.4`).

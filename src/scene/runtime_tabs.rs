@@ -203,7 +203,9 @@ pub(crate) fn render_inline_action_button_node(
             ui.painter_at(rect).rect_filled(bezel_rect, egui::CornerRadius::same(4), fill);
         }
         let is_on = (node.bezel_style & 0x80) != 0 || matches!(node.kind, SceneNodeKind::PushButton { is_default: true, .. });
-        let tint = if is_on {
+        let tint = if !enabled {
+            theme.tertiary_label()
+        } else if is_on {
             theme.effective_control_accent(ui.ctx())
         } else {
             theme.secondary_label()

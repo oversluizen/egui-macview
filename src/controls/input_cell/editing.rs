@@ -311,7 +311,7 @@ pub(super) fn show_input_cell(cell: MacInputCell<'_>, ui: &mut Ui) -> Response {
             border_stroke,
             theme.specular_rim_top().gamma_multiply(alpha_factor),
         );
-    } else {
+    } else if !cell.borderless || show_focus {
         painter.rect(rect, CornerRadius::same(corner_radius as u8), bg_color, border_stroke, StrokeKind::Inside);
         if !cell.recessed_pill {
             painter.line_segment(

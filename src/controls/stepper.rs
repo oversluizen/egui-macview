@@ -142,7 +142,6 @@ impl<'a> Widget for MacStepper<'a> {
         let width = self.width.unwrap_or_else(|| metrics.width.points());
         let height = self.height.unwrap_or_else(|| metrics.height.points());
         let corner_radius = self.corner_radius.unwrap_or_else(|| metrics.corner_radius.points());
-        let divider_thickness = metrics.divider_thickness.points();
         let arrow_size = metrics.arrow_size.points();
         let arrow_stroke = metrics.arrow_stroke_width.points();
 
@@ -249,8 +248,8 @@ impl<'a> Widget for MacStepper<'a> {
             theme.paint_focus_ring(&painter, rect, corner_radius);
         }
 
-        // Outer bezel
-        let bg_color = theme.control_background();
+        // Outer bezel (macOS 26 Tahoe translucent capsule: transparent in Normal, subtle hover/press highlight)
+        let bg_color = egui::Color32::TRANSPARENT;
         let border_stroke = if response.has_focus() {
             Stroke::new(metrics.border_width.points(), theme.control_accent())
         } else {
@@ -258,10 +257,6 @@ impl<'a> Widget for MacStepper<'a> {
         };
 
         painter.rect(rect, CornerRadius::same(corner_radius as u8), bg_color, border_stroke, StrokeKind::Inside);
-        painter.line_segment(
-            [Pos2::new(rect.min.x + 1.0, rect.max.y), Pos2::new(rect.max.x - 1.0, rect.max.y)],
-            Stroke::new(1.0, theme.caret_micro_shadow()),
-        );
 
         // Highlight compartments on hover / click
         if self.enabled {
@@ -269,13 +264,13 @@ impl<'a> Widget for MacStepper<'a> {
                 painter.rect_filled(
                     top_rect,
                     CornerRadius { nw: corner_radius as u8, ne: corner_radius as u8, sw: 0, se: 0 },
-                    theme.selected_control_inactive(),
+                    theme.inspector_pressed_fill(),
                 );
             } else if top_resp.hovered() {
                 painter.rect_filled(
                     top_rect,
                     CornerRadius { nw: corner_radius as u8, ne: corner_radius as u8, sw: 0, se: 0 },
-                    theme.control(),
+                    theme.inspector_hover_fill(),
                 );
             }
 
@@ -283,26 +278,19 @@ impl<'a> Widget for MacStepper<'a> {
                 painter.rect_filled(
                     bottom_rect,
                     CornerRadius { nw: 0, ne: 0, sw: corner_radius as u8, se: corner_radius as u8 },
-                    theme.selected_control_inactive(),
+                    theme.inspector_pressed_fill(),
                 );
             } else if bottom_resp.hovered() {
                 painter.rect_filled(
                     bottom_rect,
                     CornerRadius { nw: 0, ne: 0, sw: corner_radius as u8, se: corner_radius as u8 },
-                    theme.control(),
+                    theme.inspector_hover_fill(),
                 );
             }
         }
 
-        // Divider line between segments
-        let divider_y = rect.center().y;
-        painter.line_segment(
-            [Pos2::new(rect.left(), divider_y), Pos2::new(rect.right(), divider_y)],
-            Stroke::new(divider_thickness, theme.separator()),
-        );
-
         // Chevrons
-        let arrow_color = if !self.enabled { theme.placeholder_text() } else { theme.label() };
+        let arrow_color = if !self.enabled { theme.placeholder_text() } else { theme.secondary_label() };
         let arrow_stroke_style = Stroke::new(arrow_stroke, arrow_color);
         let arrow_half_w = arrow_size * 0.5;
         let arrow_delta = metrics.arrow_delta.points();

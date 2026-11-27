@@ -400,10 +400,12 @@ impl MacSceneIR {
                             _ => egui::Align::Min,
                         };
                         let on_sidebar = theme.is_sidebar_surface(theme.active_surface_at(ui, rect.center()));
-                        let is_round_bezel = node.bezel_style == 1
-                            || node.cell_class.as_deref().is_some_and(|c| c.contains("RoundTextFieldCell"))
-                            || (!node.draws_background && node.is_bezeled);
-                        let is_pill = (on_sidebar && node.is_bezeled) || is_round_bezel;
+                        let is_borderless = !node.draws_background && !node.is_bezeled && !node.is_bordered && (node.bezel_style & 0x7F) == 0;
+                        let is_round_bezel = !is_borderless
+                            && (node.bezel_style == 1
+                                || node.cell_class.as_deref().is_some_and(|c| c.contains("RoundTextFieldCell"))
+                                || (!node.draws_background && node.is_bezeled));
+                        let is_pill = !is_borderless && ((on_sidebar && node.is_bezeled) || (!node.draws_background && is_round_bezel));
                         let is_mono = node.font_name.as_deref().is_some_and(|n| n.contains("Mono"));
                         let is_alt = node.font_name.as_deref() == Some(".SFNS-Regular");
                         let mut cell = MacInputCell::with_id(ui.scope_id().with(("nib_input", node.id.0)), &mut text)
@@ -414,9 +416,12 @@ impl MacSceneIR {
                             .monospace(is_mono)
                             .stylistic_alt(is_alt)
                             .recessed_pill(is_pill)
+                            .borderless(is_borderless)
                             .enabled(enabled)
                             .fixed_rect(rect);
-                        if !is_round_bezel && node.draws_background {
+                        if is_round_bezel && !is_pill {
+                            cell = cell.corner_radius(theme.button().small.corner_radius.points());
+                        } else if !is_round_bezel && node.draws_background {
                             cell = cell.corner_radius(theme.text_field().regular.corner_radius.points());
                         }
                         if !node.title.is_empty() && (node.value_binding.is_some() || node.title == "--") {

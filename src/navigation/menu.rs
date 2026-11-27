@@ -188,6 +188,19 @@ impl<'a> MacMenuBar<'a> {
 
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 0.0;
+            // Leading macOS Apple Menu Logo (``, U+F8FF) before the bold Application Menu (`idx == 0`):
+            {
+                let apple_font = theme.semibold_font_id(ui, mb_metrics.font_size.points() + border_w).0;
+                let apple_galley = ui.painter().layout_no_wrap("\u{F8FF}".to_string(), apple_font, egui::Color32::PLACEHOLDER);
+                let apple_w = (apple_galley.size().x + padding_h * 2.0).max(bar_height);
+                let (apple_rect, _) = ui.allocate_exact_size(Vec2::new(apple_w, bar_height), Sense::hover());
+                bar_union_rect = bar_union_rect.union(apple_rect);
+                ui.painter().galley(
+                    Pos2::new(apple_rect.center().x - apple_galley.size().x * 0.5, apple_rect.center().y - apple_galley.size().y * 0.5),
+                    apple_galley,
+                    theme.label(),
+                );
+            }
             for (idx, menu) in self.menus.iter().enumerate() {
                 let is_open = *self.open_menu_idx == Some(idx);
                 let text = &menu.title;

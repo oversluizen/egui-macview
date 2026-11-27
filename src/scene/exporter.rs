@@ -422,7 +422,7 @@ impl SceneNode {
             .and_then(|c| g.prop_val(c, "NSDrawsBackground"))
             .and_then(IbVal::as_u32)
             .map(|v| v != 0)
-            .unwrap_or((cflags & 0x0400_0000) != 0);
+            .unwrap_or((cflags & 0x0100_0000) != 0);
         self.is_bordered = (cflags & 0x0080_0000) != 0;
         self.is_bezeled = (cflags & 0x0040_0000) != 0;
         self.is_editable = (cflags & 0x4008_0000) != 0;

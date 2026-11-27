@@ -285,9 +285,9 @@ impl Widget for MacOriginMatrix<'_> {
         }
 
         let surface = theme.active_surface_at(ui, rect.center());
-        let line_col = theme.tertiary_label_on(surface).gamma_multiply(alpha);
+        let line_col = theme.separator().gamma_multiply(alpha);
         let line_stroke = Stroke::new(om.line_stroke_width.points(), line_col);
-        for edge in [0usize, 2usize] {
+        for edge in [0usize, 1usize, 2usize] {
             let r_start = Self::node_center(rect, MacOriginAnchor::from_row_col(edge, 0), cell_step);
             let r_end = Self::node_center(rect, MacOriginAnchor::from_row_col(edge, 2), cell_step);
             painter.line_segment([r_start, r_end], line_stroke);
@@ -298,15 +298,20 @@ impl Widget for MacOriginMatrix<'_> {
 
         let hover_pos = ui.input(|i| i.pointer.hover_pos());
         let widget_hovered = enabled && (response.hovered() || hover_pos.is_some_and(|hp| rect.contains(hp)));
+        let ring_stroke = Stroke::new(1.0, theme.secondary_label_on(surface).gamma_multiply(alpha));
         for anchor in MacOriginAnchor::ALL {
             let pos = Self::node_center(rect, anchor, cell_step);
             if anchor == active {
-                painter.circle_filled(pos, om.active_node_radius.points(), theme.control_accent().gamma_multiply(alpha));
+                painter.circle_filled(pos, om.active_node_radius.points(), theme.secondary_label_on(surface).gamma_multiply(alpha));
             } else {
                 let hovered = widget_hovered && hover_pos.is_some_and(|hp| hp.distance(pos) <= cell_step * 0.5);
                 let rad = if hovered { om.hover_node_radius.points() } else { om.node_radius.points() };
-                let fill_col = if hovered { theme.label_on(surface) } else { theme.secondary_label_on(surface) };
-                painter.circle_filled(pos, rad, fill_col.gamma_multiply(alpha));
+                let fill_col = if hovered {
+                    theme.selected_control_inactive().gamma_multiply(alpha)
+                } else {
+                    theme.control_background().gamma_multiply(alpha)
+                };
+                painter.circle(pos, rad, fill_col, ring_stroke);
             }
         }
         response
