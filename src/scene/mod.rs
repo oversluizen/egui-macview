@@ -225,46 +225,7 @@ pub(crate) fn load_nib_from_path_outlet(
             ] {
                 if loc_cand.is_file() {
                     if let Ok(sbytes) = std::fs::read(&loc_cand) {
-                        if let Ok(plist::Value::Dictionary(dict)) = plist::from_bytes::<plist::Value>(&sbytes) {
-                            let root_flipped =
-                                scene.nodes.first().is_some_and(|n| matches!(n.kind, SceneNodeKind::Container { is_flipped: true }));
-                            let design_h = scene.design_size[1];
-                            for node in &mut scene.nodes {
-                                if let Some(val) = dict.get(&node.title).and_then(plist::Value::as_string) {
-                                    let new_title = val.replace('’', "'");
-                                    if node.title != new_title {
-                                        node.title = new_title;
-                                        if matches!(node.kind, SceneNodeKind::Label) && node.value_binding.is_none() {
-                                            let pt = node.font_size_pt.unwrap_or(match node.control_size.as_str() {
-                                                "mini" | "Mini" => 9.0,
-                                                "small" | "Small" => 11.0,
-                                                _ => 13.0,
-                                            });
-                                            let old_cx = node.nib_frame[0] + node.nib_frame[2] * 0.5;
-                                            node.nib_frame[2] = keyed_archiver::measure_appkit_label_text_width(&node.title, pt) + 4.0;
-                                            if node.text_alignment == crate::scene::ir::MacTextAlignment::Center {
-                                                node.nib_frame[0] = (old_cx - node.nib_frame[2] * 0.5).max(0.0);
-                                            }
-                                            node.alignment_rect = normalizer::normalize_nib_alignment_rect(
-                                                &node.kind,
-                                                node.mac_control_size(),
-                                                node.nib_frame,
-                                                design_h,
-                                                root_flipped,
-                                            );
-                                        }
-                                    }
-                                }
-                            }
-                            for items in scene.button_menus.values_mut() {
-                                for (_, mi_title, _, _) in items {
-                                    if let Some(val) = dict.get(mi_title).and_then(plist::Value::as_string) {
-                                        *mi_title = val.replace('’', "'");
-                                    }
-                                }
-                            }
-                            scene.solve_autolayout();
-                            scene.rebuild_search_index();
+                        if apply_localizable_plist_bytes(&mut scene, &sbytes) {
                             break;
                         }
                     }
@@ -273,6 +234,51 @@ pub(crate) fn load_nib_from_path_outlet(
         }
     }
     Ok(scene)
+}
+
+pub(crate) fn apply_localizable_plist_bytes(scene: &mut MacSceneIR, sbytes: &[u8]) -> bool {
+    let Ok(plist::Value::Dictionary(dict)) = plist::from_bytes::<plist::Value>(sbytes) else {
+        return false;
+    };
+    let root_flipped = scene.nodes.first().is_some_and(|n| matches!(n.kind, SceneNodeKind::Container { is_flipped: true }));
+    let design_h = scene.design_size[1];
+    for node in &mut scene.nodes {
+        if let Some(val) = dict.get(&node.title).and_then(plist::Value::as_string) {
+            let new_title = val.replace('’', "'");
+            if node.title != new_title {
+                node.title = new_title;
+                if matches!(node.kind, SceneNodeKind::Label) && node.value_binding.is_none() {
+                    let pt = node.font_size_pt.unwrap_or(match node.control_size.as_str() {
+                        "mini" | "Mini" => 9.0,
+                        "small" | "Small" => 11.0,
+                        _ => 13.0,
+                    });
+                    let old_cx = node.nib_frame[0] + node.nib_frame[2] * 0.5;
+                    node.nib_frame[2] = keyed_archiver::measure_appkit_label_text_width(&node.title, pt) + 4.0;
+                    if node.text_alignment == crate::scene::ir::MacTextAlignment::Center {
+                        node.nib_frame[0] = (old_cx - node.nib_frame[2] * 0.5).max(0.0);
+                    }
+                    node.alignment_rect = normalizer::normalize_nib_alignment_rect(
+                        &node.kind,
+                        node.mac_control_size(),
+                        node.nib_frame,
+                        design_h,
+                        root_flipped,
+                    );
+                }
+            }
+        }
+    }
+    for items in scene.button_menus.values_mut() {
+        for (_, mi_title, _, _) in items {
+            if let Some(val) = dict.get(mi_title).and_then(plist::Value::as_string) {
+                *mi_title = val.replace('’', "'");
+            }
+        }
+    }
+    scene.solve_autolayout();
+    scene.rebuild_search_index();
+    true
 }
 
 pub(crate) fn parse_brace_rect(raw: &str) -> Option<[f32; 4]> {

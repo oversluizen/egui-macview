@@ -91,6 +91,39 @@ impl NibArchiveFrontend {
         }
     }
 
+    /// Decodes a named controller outlet subscene (e.g. `"contentView"`, `"leftSideBarContainerView"`, `"sidebarDetailViewStack"`) directly from binary `.nib` bytes.
+    pub fn from_bytes_outlet(
+        bytes: &[u8],
+        outlet_label: &str,
+        mapper: &CustomClassMapper,
+    ) -> Result<MacSceneIR, SceneCompileError> {
+        crate::scene::nib_ibtool::IbNibGraph::decode_outlet_root(bytes, outlet_label, mapper)
+    }
+
+    /// Decodes a binary `.nib` buffer (or optional `outlet_label` subscene) and applies optional `.strings` and `Localizable.strings` bytes in memory (works on both native and `wasm32`).
+    pub fn from_bytes_with_strings(
+        nib_bytes: &[u8],
+        outlet_label: Option<&str>,
+        strings_bytes: Option<&[u8]>,
+        localizable_bytes: Option<&[u8]>,
+        mapper: &CustomClassMapper,
+    ) -> Result<MacSceneIR, SceneCompileError> {
+        let mut scene = if let Some(lbl) = outlet_label {
+            Self::from_bytes_outlet(nib_bytes, lbl, mapper)?
+        } else {
+            Self::from_bytes(nib_bytes, mapper)?
+        };
+        if let Some(sb) = strings_bytes {
+            if let Ok(cat) = crate::scene::StringsCatalog::from_bytes(sb) {
+                scene.apply_strings_catalog(&cat);
+            }
+        }
+        if let Some(lb) = localizable_bytes {
+            crate::scene::apply_localizable_plist_bytes(&mut scene, lb);
+        }
+        Ok(scene)
+    }
+
     /// Loads a `.nib` file or `.nib` bundle directory (`keyedobjects-101300.nib` / `keyedobjects.nib`) from disk (`REQ-013-05.2`).
     pub fn from_path(path: &std::path::Path, mapper: &CustomClassMapper) -> Result<MacSceneIR, SceneCompileError> {
         crate::scene::load_nib_from_path(path, mapper)
