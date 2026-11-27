@@ -254,6 +254,9 @@ pub struct SceneNode {
     pub action_selector: Option<String>,
     /// Optional icon resource name.
     pub icon_name: Option<String>,
+    /// Optional alternate icon resource name (`NSButtonCell.NSAlternateImage`, `REQ-013-10.11`).
+    #[serde(default)]
+    pub alternate_icon_name: Option<String>,
     /// Declarative workspace/context visibility rule.
     pub visibility: VisibilityRule,
     /// Paired semantic label node inferred by `SpatialSemanticNormalizer`.

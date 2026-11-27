@@ -89,9 +89,10 @@ impl<'a> MacStepper<'a> {
     }
 }
 
-/// Consumes an arrow key (`ArrowUp` / `ArrowDown`) with optional `Cmd`/`Ctrl` (`cmd_mult`)
-/// or `Shift` (`shift_mult`) accelerator multiplier.
+/// Consumes an arrow key (`ArrowUp` / `ArrowDown`) with optional `Cmd`/`Ctrl` (`cmd_mult`),
+/// `Shift` (`shift_mult`), or `Alt`/`Option` (`1.0 / shift_mult`) accelerator multiplier (`REQ-013-10.11`).
 pub(crate) fn consume_step_arrow_mult(ui: &mut Ui, key: Key, cmd_mult: f64, shift_mult: f64) -> Option<f64> {
+    let alt_mult = 1.0 / shift_mult.max(1.0);
     ui.input_mut(|i| {
         if i.consume_key(egui::Modifiers::COMMAND, key)
             || i.consume_key(egui::Modifiers::CTRL, key)
@@ -100,6 +101,8 @@ pub(crate) fn consume_step_arrow_mult(ui: &mut Ui, key: Key, cmd_mult: f64, shif
             Some(cmd_mult)
         } else if i.consume_key(egui::Modifiers::SHIFT, key) {
             Some(shift_mult)
+        } else if i.consume_key(egui::Modifiers::ALT, key) {
+            Some(alt_mult)
         } else if i.consume_key(egui::Modifiers::NONE, key) {
             Some(1.0)
         } else {

@@ -179,7 +179,16 @@ pub(crate) fn render_inline_action_button_node(
     rect: Rect,
     enabled: bool,
 ) {
-    let icon_cand = node.icon_name.as_deref().or_else(|| node.action_selector.as_deref().map(|s| s.trim_end_matches(':')));
+    let bound_on = node
+        .value_binding
+        .filter(|_| node.alternate_icon_name.is_some())
+        .map(|b| node.value_transformer.apply_bool(data_source.get_bool(b)));
+    let base_icon = node.icon_name.as_deref().or_else(|| node.action_selector.as_deref().map(|s| s.trim_end_matches(':')));
+    let icon_cand = if bound_on == Some(true) {
+        node.alternate_icon_name.as_deref().or(base_icon)
+    } else {
+        base_icon
+    };
     if let Some(ic) = icon_cand {
         let id = ui.scope_id().with(("nib_inline_icon_btn", node.id.0));
         let sense = if enabled { egui::Sense::click() } else { egui::Sense::hover() };
@@ -200,6 +209,9 @@ pub(crate) fn render_inline_action_button_node(
             MacImageView::from_resource_name(ic).theme(theme).template(true).tint(tint).scaling(crate::controls::MacImageScaling::from_nib_code(node.image_scaling)).symbol_point_size(node.symbol_point_size).fixed_rect(rect).show(ui);
         }
         if resp.clicked() && enabled {
+            if let (Some(bid), Some(cur)) = (node.value_binding, bound_on) {
+                data_source.set_bool(bid, node.value_transformer.apply_bool(!cur));
+            }
             let pop_id = egui::Id::NULL.with(("nib_attached_btn_menu", node.id.0));
             let cur_open = ui.ctx().data(|d| d.get_temp::<(bool, Option<usize>)>(pop_id)).is_some_and(|(o, _)| o);
             ui.ctx().data_mut(|d| d.insert_temp(pop_id, (!cur_open, None::<usize>)));

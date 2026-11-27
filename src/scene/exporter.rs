@@ -433,6 +433,9 @@ impl SceneNode {
                     .and_then(|c| g.prop_val(c, "NSContents").or_else(|| g.prop_val(c, "NSState")))
                     .is_some_and(|v| g.resolve_str(v).as_deref() == Some("1") || v.as_u32() == Some(1)));
         let alt_img = cell_idx.and_then(|c| g.prop_val(c, "NSAlternateImage")).and_then(|v| g.resolve_str(v)).unwrap_or_default();
+        if !alt_img.is_empty() {
+            self.alternate_icon_name = Some(alt_img.clone());
+        }
         let highlight_on = state_on && (alt_img.ends_with("Highlight") || (alt_img.is_empty() && raw_bezel == 1));
         let base_bezel = if raw_bezel == 0 && !self.draws_background && self.is_bezeled { 1 } else { raw_bezel };
         self.bezel_style = if base_cls.contains("Button") && highlight_on { base_bezel | 0x80 } else { base_bezel };

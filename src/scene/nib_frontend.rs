@@ -45,6 +45,7 @@ pub(crate) fn mk_node(
         action: action.map(|(a, _)| ActionId(a)),
         action_selector: action.map(|(_, s)| s.into()),
         icon_name: icon.map(Into::into),
+        alternate_icon_name: None,
         visibility,
         labeled_by: None,
         text_alignment: crate::scene::ir::MacTextAlignment::Left,

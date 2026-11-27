@@ -15,8 +15,18 @@ struct InputCellTransactionState {
     focus_ring_start: f64,
 }
 
-fn decimal_places_if_valid(s: &str) -> usize {
+fn strip_unit_suffix(s: &str) -> (&str, &str) {
     let t = s.trim();
+    for sfx in ["%", "°"] {
+        if let Some(num) = t.strip_suffix(sfx) {
+            return (num.trim(), sfx);
+        }
+    }
+    (t, "")
+}
+
+fn decimal_places_if_valid(s: &str) -> usize {
+    let (t, _) = strip_unit_suffix(s);
     if t.parse::<f64>().is_ok() {
         t.split_once('.').map_or(0, |(_, f)| f.split(['e', 'E']).next().unwrap_or("").len())
     } else {
@@ -25,11 +35,14 @@ fn decimal_places_if_valid(s: &str) -> usize {
 }
 
 fn format_stepped_number(reference: &str, fallback_ref: &str, step: f64, val: f64) -> String {
+    let (_, ref_sfx) = strip_unit_suffix(reference);
+    let (_, fb_sfx) = strip_unit_suffix(fallback_ref);
+    let sfx = if !ref_sfx.is_empty() { ref_sfx } else { fb_sfx };
     let ref_decimals = decimal_places_if_valid(reference).max(decimal_places_if_valid(fallback_ref));
     let step_decimals =
-        if (step - step.round()).abs() > f64::EPSILON { format!("{step}").split_once('.').map_or(1, |(_, f)| f.len()) } else { 0 };
+        if (step - step.round()).abs() > f64::EPSILON { format!("{step:.2}").trim_end_matches('0').split_once('.').map_or(0, |(_, f)| f.len()) } else { 0 };
     let prec = ref_decimals.max(step_decimals);
-    format!("{val:.prec$}")
+    format!("{val:.prec$}{sfx}")
 }
 
 pub(super) fn show_input_cell(cell: MacInputCell<'_>, ui: &mut Ui) -> Response {
@@ -178,15 +191,36 @@ pub(super) fn show_input_cell(cell: MacInputCell<'_>, ui: &mut Ui) -> Response {
             let stepper_tokens = &theme.control_metrics().stepper;
             let shift_mult = stepper_tokens.shift_multiplier.points() as f64;
             let cmd_mult = stepper_tokens.cmd_multiplier.points() as f64;
-            let num_delta = super::super::stepper::consume_step_arrow_mult(ui, Key::ArrowUp, cmd_mult, shift_mult)
-                .map(|m| step * m)
-                .or_else(|| super::super::stepper::consume_step_arrow_mult(ui, Key::ArrowDown, cmd_mult, shift_mult).map(|m| -step * m));
-            if let Some(delta) = num_delta {
+            let wheel_mult = ui.input(|i| {
+                let dy = i.smooth_scroll_delta.y;
+                if dy.abs() < f32::EPSILON {
+                    None
+                } else {
+                    let dir = if dy > 0.0 { 1.0 } else { -1.0 };
+                    let m = if i.modifiers.command || i.modifiers.ctrl || i.modifiers.mac_cmd {
+                        cmd_mult
+                    } else if i.modifiers.shift {
+                        shift_mult
+                    } else if i.modifiers.alt {
+                        1.0 / shift_mult.max(1.0)
+                    } else {
+                        1.0
+                    };
+                    Some(dir * m)
+                }
+            });
+            let step_mult = super::super::stepper::consume_step_arrow_mult(ui, Key::ArrowUp, cmd_mult, shift_mult)
+                .or_else(|| super::super::stepper::consume_step_arrow_mult(ui, Key::ArrowDown, cmd_mult, shift_mult).map(|m| -m))
+                .or(wheel_mult);
+            if let Some(m) = step_mult {
+                let delta = step * m;
                 let cur_str = tx.as_ref().map(|s| s.buffer.as_str()).unwrap_or(cell.value.as_str());
                 let snap_str = tx.as_ref().map(|s| s.snapshot.as_str()).unwrap_or(cell.value.as_str());
-                let cur_val = cur_str.trim().parse::<f64>().or_else(|_| snap_str.trim().parse::<f64>()).unwrap_or(*range.start());
+                let (cur_num, _) = strip_unit_suffix(cur_str);
+                let (snap_num, _) = strip_unit_suffix(snap_str);
+                let cur_val = cur_num.parse::<f64>().or_else(|_| snap_num.parse::<f64>()).unwrap_or(*range.start());
                 let next_val = (cur_val + delta).clamp(*range.start(), *range.end());
-                let formatted = format_stepped_number(cur_str, snap_str, step, next_val);
+                let formatted = format_stepped_number(cur_str, snap_str, delta.abs(), next_val);
                 *cell.value = formatted.clone();
                 let st = tx.get_or_insert_with(InputCellTransactionState::default);
                 st.buffer = formatted.clone();

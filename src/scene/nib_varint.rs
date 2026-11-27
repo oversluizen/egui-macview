@@ -539,3 +539,20 @@ pub(crate) fn wire_ibtool_outlet_and_menu(st: &mut crate::scene::nib_ibtool::IbD
         }
     }
 }
+
+pub(crate) fn normalize_percentage_stepper_increments(nodes: &mut [SceneNode]) {
+    let pct_bindings: std::collections::BTreeSet<BindingId> = nodes
+        .iter()
+        .filter(|n| matches!(n.kind, SceneNodeKind::NumberField { .. }) && n.icon_name.as_deref() == Some("%"))
+        .filter_map(|n| n.value_binding)
+        .collect();
+    if !pct_bindings.is_empty() {
+        for node in nodes {
+            if let SceneNodeKind::Stepper { ref mut step } = node.kind {
+                if *step > 0.0 && *step < 0.1 && node.value_binding.is_some_and(|b| pct_bindings.contains(&b)) {
+                    *step = (*step * 100.0).round().max(1.0);
+                }
+            }
+        }
+    }
+}

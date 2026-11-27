@@ -563,4 +563,5 @@ pub(crate) fn wire_ibtool_connectors(st: &mut nib_ibtool::IbDecodeState<'_>) {
             }
         }
     }
+    nib_varint::normalize_percentage_stepper_increments(&mut st.nodes);
 }
