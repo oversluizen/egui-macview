@@ -193,20 +193,27 @@ pub(crate) fn render_inline_action_button_node(
         let id = ui.scope_id().with(("nib_inline_icon_btn", node.id.0));
         let sense = if enabled { egui::Sense::click() } else { egui::Sense::hover() };
         let resp = ui.interact(rect, id, sense);
-        if resp.hovered() && enabled {
-            let r = theme.button().regular.corner_radius.points() as u8;
-            ui.painter_at(rect).rect_filled(rect, egui::CornerRadius::same(r), theme.inspector_hover_fill());
+        if enabled && (resp.is_pointer_button_down_on() || resp.hovered()) {
+            let fill = if resp.is_pointer_button_down_on() {
+                theme.inspector_pressed_fill()
+            } else {
+                theme.inspector_hover_fill()
+            };
+            let bezel_rect = rect.shrink(1.0);
+            ui.painter_at(rect).rect_filled(bezel_rect, egui::CornerRadius::same(4), fill);
         }
         let is_on = (node.bezel_style & 0x80) != 0 || matches!(node.kind, SceneNodeKind::PushButton { is_default: true, .. });
         let tint = if is_on {
             theme.effective_control_accent(ui.ctx())
-        } else if resp.hovered() && enabled {
-            theme.label()
         } else {
             theme.secondary_label()
         };
-        if !data_source.paint_scene_icon_scaled(ui, theme, ic, rect, tint, (node.image_scaling, node.symbol_point_size)) && node.icon_name.is_some() {
-            MacImageView::from_resource_name(ic).theme(theme).template(true).tint(tint).scaling(crate::controls::MacImageScaling::from_nib_code(node.image_scaling)).symbol_point_size(node.symbol_point_size).fixed_rect(rect).show(ui);
+        if !data_source.paint_scene_icon_scaled(ui, theme, ic, rect, tint, (node.image_scaling, node.symbol_point_size)) {
+            if node.icon_name.is_some() {
+                MacImageView::from_resource_name(ic).theme(theme).template(true).tint(tint).scaling(crate::controls::MacImageScaling::from_nib_code(node.image_scaling)).symbol_point_size(node.symbol_point_size).fixed_rect(rect).show(ui);
+            } else if !node.title.is_empty() {
+                let _ = MacInlineActionButton::new(node.title.as_str()).theme(theme).enabled(enabled).fixed_rect(rect).show(ui);
+            }
         }
         if resp.clicked() && enabled {
             if let (Some(bid), Some(cur)) = (node.value_binding, bound_on) {

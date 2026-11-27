@@ -364,11 +364,19 @@ impl MacTheme {
         ensure_wcag_contrast(vibrant, surface_bg, min_ratio)
     }
 
-    /// Returns the subtle translucent grey rollover fill for borderless Pro-Inspector action buttons (`REQ-015-02`).
+    /// Returns the subtle translucent grey rollover fill for borderless Pro-Inspector action buttons (`REQ-015-02` / `Gate P7`: `-[GSMouseOverButton drawRect:]` `[NSColor.labelColor colorWithAlphaComponent:0.04]` -> `10/255`).
     pub fn inspector_hover_fill(&self) -> Color32 {
         match self.appearance {
-            MacAppearance::Aqua => Color32::from_rgba_unmultiplied(110, 110, 118, 38),
-            MacAppearance::Anthracite | MacAppearance::DarkAqua => Color32::from_rgba_unmultiplied(255, 255, 255, 36),
+            MacAppearance::Aqua => Color32::from_rgba_unmultiplied(0, 0, 0, 10),
+            MacAppearance::Anthracite | MacAppearance::DarkAqua => Color32::from_rgba_unmultiplied(255, 255, 255, 10),
+        }
+    }
+
+    /// Returns the highlighted/pressed translucent grey fill for borderless `GSMouseOverButton` controls (`Gate P7`: `-[GSMouseOverButton drawRect:]` `[NSColor.labelColor colorWithAlphaComponent:0.09]` -> `23/255`).
+    pub fn inspector_pressed_fill(&self) -> Color32 {
+        match self.appearance {
+            MacAppearance::Aqua => Color32::from_rgba_unmultiplied(0, 0, 0, 23),
+            MacAppearance::Anthracite | MacAppearance::DarkAqua => Color32::from_rgba_unmultiplied(255, 255, 255, 23),
         }
     }
 

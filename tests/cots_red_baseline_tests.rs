@@ -18,7 +18,7 @@ fn test_token_catalog_deserialization() {
 
     assert_eq!(tokens.name, "egui-macview Design Tokens");
     assert_eq!(tokens.version, "0.8.1");
-    assert_eq!(egui_macview::VERSION, "0.8.1");
+    assert_eq!(egui_macview::VERSION, env!("CARGO_PKG_VERSION"));
     assert!(!tokens.description.is_empty());
 
     let ctrl = tokens.control_metrics();
@@ -183,14 +183,22 @@ fn test_sf_pro_dynamic_tracking_optical_bounds() {
 #[test]
 fn test_version_synchronization_invariants() {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let pkg_ver = env!("CARGO_PKG_VERSION");
     let cargo_toml = fs::read_to_string(manifest_dir.join("Cargo.toml")).expect("read Cargo.toml");
-    assert!(cargo_toml.contains("version = \"0.8.1\""), "Cargo.toml must have version = \"0.8.1\"");
-    assert_eq!(egui_macview::VERSION, "0.8.1");
+    assert!(
+        cargo_toml.contains(&format!("version = \"{pkg_ver}\"")),
+        "Cargo.toml must have version = \"{pkg_ver}\""
+    );
+    assert_eq!(egui_macview::VERSION, pkg_ver);
 
     let tokens = MacDesignTokens::load_default();
     assert_eq!(tokens.version, "0.8.1");
 
     let changelog = fs::read_to_string(manifest_dir.join("CHANGELOG.md")).expect("read CHANGELOG.md");
+    assert!(
+        changelog.contains(&format!("## [{pkg_ver}]")),
+        "CHANGELOG.md must contain header for active version ## [{pkg_ver}]"
+    );
     for header in [
         "## [0.6.11] - 2026-11-12",
         "## [0.6.10] - 2026-11-12",

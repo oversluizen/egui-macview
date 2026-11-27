@@ -15,7 +15,7 @@ use egui_macview::{
 
 #[test]
 fn test_req_015_09_crate_version_v081() {
-    assert_eq!(VERSION, "0.8.1", "Crate version must be 0.8.1 for Milestone 0.8.1 release");
+    assert_eq!(VERSION, env!("CARGO_PKG_VERSION"), "Crate VERSION constant must match Cargo.toml package version");
 }
 
 #[test]
