@@ -14,9 +14,11 @@ pub(crate) fn build_ibtool_node(st: &mut IbDecodeState<'_>, obj_i: usize, nid: N
     let effective_cls = custom_cls.as_deref().unwrap_or(raw_cls);
     let rattrs = st.runtime_attrs.get(&obj_i);
 
+    let cell_idx = g.prop_val(obj_i, "NSCell").and_then(IbVal::as_obj_ref);
     let ib_id = ["NSReuseIdentifierKey", "NSUserInterfaceItemIdentifier", "NSIdentifier", "NSID"]
         .into_iter()
         .find_map(|k| g.prop_val(obj_i, k).and_then(|v| g.resolve_str(v)))
+        .or_else(|| cell_idx.and_then(|c| g.prop_val(c, "NSCellIdentifier")).and_then(|v| g.resolve_str(v)).filter(|s| !s.is_empty()))
         .unwrap_or_else(|| format!("_NS:{obj_i}"));
 
     let mut frame = g.resolve_rect(obj_i).unwrap_or([0.0, 0.0, 120.0, 22.0]);
@@ -36,7 +38,6 @@ pub(crate) fn build_ibtool_node(st: &mut IbDecodeState<'_>, obj_i: usize, nid: N
         }
     }
     let mask = g.prop_val(obj_i, "NSvFlags").and_then(IbVal::as_u32).map(|v| (v & 0x3F) as u8).unwrap_or(0);
-    let cell_idx = g.prop_val(obj_i, "NSCell").and_then(IbVal::as_obj_ref);
     let title_cell_idx = cell_idx.or_else(|| g.prop_val(obj_i, "NSTitleCell").and_then(IbVal::as_obj_ref));
     let mut title = title_cell_idx
         .and_then(|c| g.prop_val(c, "NSContents").or_else(|| g.prop_val(c, "NSTitle")).or_else(|| g.prop_val(c, "NSPlaceholderString")))

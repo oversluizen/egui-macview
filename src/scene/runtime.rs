@@ -373,14 +373,20 @@ impl MacSceneIR {
                 SceneNodeKind::TextField | SceneNodeKind::NumberField { .. } => {
                     if node.icon_name.as_deref() == Some("NSTokenField") {
                         render_token_field_node(ui, theme, data_source, node, rect, enabled);
-                    } else if (!node.is_editable && !node.draws_background && !node.is_bezeled && !node.is_bordered) || node.title == "--" {
+                    } else if !node.is_editable
+                        && !node.draws_background
+                        && !node.is_bezeled
+                        && !node.is_bordered
+                        && !matches!(node.kind, SceneNodeKind::NumberField { .. })
+                    {
                         render_label_node(ui, theme, data_source, node, rect, ctrl_size);
                     } else {
                         let fb_id = ui.scope_id().with(("nib_txt", node.id.0));
+                        let fallback_title = if node.title == "--" { "" } else { node.title.as_str() };
                         let mut text = node
                             .value_binding
                             .map(|b| data_source.get_str(b).to_string())
-                            .unwrap_or_else(|| ui.data(|d| d.get_temp::<String>(fb_id)).unwrap_or_else(|| node.title.clone()));
+                            .unwrap_or_else(|| ui.data(|d| d.get_temp::<String>(fb_id)).unwrap_or_else(|| fallback_title.to_string()));
                         if matches!(node.kind, SceneNodeKind::NumberField { .. }) {
                             if let Some(sfx) = node.icon_name.as_ref().filter(|s| matches!(s.as_str(), "%" | "°")) {
                                 if !text.is_empty() && !text.ends_with(sfx.as_str()) {
@@ -413,7 +419,7 @@ impl MacSceneIR {
                         if !is_round_bezel && node.draws_background {
                             cell = cell.corner_radius(theme.text_field().regular.corner_radius.points());
                         }
-                        if !node.title.is_empty() && node.value_binding.is_some() {
+                        if !node.title.is_empty() && (node.value_binding.is_some() || node.title == "--") {
                             cell = cell.placeholder(node.title.as_str());
                         }
                         if let SceneNodeKind::NumberField { min, max, step, .. } = &node.kind {
@@ -423,7 +429,7 @@ impl MacSceneIR {
                         }
                         if cell.show(ui).changed() {
                             if let Some(b) = node.value_binding {
-                                if matches!(node.kind, SceneNodeKind::NumberField { .. }) {
+                                if matches!(node.kind, SceneNodeKind::NumberField { .. }) && node.title != "--" {
                                     let clean_num = text.trim_end_matches(['%', '°']);
                                     if let Some(v) = crate::scene::constraints::evaluate_arithmetic_expr(clean_num) {
                                         data_source.set_f64(b, v);
@@ -432,6 +438,9 @@ impl MacSceneIR {
                                 data_source.set_str(b, &text);
                             } else {
                                 ui.data_mut(|d| d.insert_temp(fb_id, text));
+                            }
+                            if let Some(act) = node.action {
+                                data_source.on_action(act, node.id);
                             }
                         }
                     }

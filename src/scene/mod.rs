@@ -551,14 +551,19 @@ pub(crate) fn wire_ibtool_connectors(st: &mut nib_ibtool::IbDecodeState<'_>) {
             )
         {
             if let Some(ref sel) = node.action_selector {
-                let bid = *st.binding_by_path.entry(sel.clone()).or_insert_with(|| {
+                let bind_key = if sel == "setDimension:" && !node.ib_object_id.is_empty() && !node.ib_object_id.starts_with("_NS:") {
+                    format!("{sel}{}", node.ib_object_id)
+                } else {
+                    sel.clone()
+                };
+                let bid = *st.binding_by_path.entry(bind_key.clone()).or_insert_with(|| {
                     let b = BindingId(st.next_binding);
                     st.next_binding += 1;
                     b
                 });
                 node.value_binding = Some(bid);
                 if node.binding_path.is_none() {
-                    node.binding_path = Some(sel.clone());
+                    node.binding_path = Some(bind_key);
                 }
             }
         }
